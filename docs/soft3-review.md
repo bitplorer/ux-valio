@@ -29,6 +29,31 @@ Hang “before store” work on **`add_pre_validator`** (runs inside `pre_set`,
 return **is** stored). Hang “after store” work on **`add_post_set`** (return
 **is not** stored — same as valio).
 
+### Why `post_set` has a bag and `pre_set` does not (screenshot KEEP)
+
+Soft 1 `_processors` keys (`ux_valio/validators.py` L603–616) match the
+screenshot: `pre_validate`, `post_validate`, `post_set`, `pre_get`, `post_get`,
+`pre_delete`, `post_delete`. **No `pre_set`.** That is not E15 (silent drop).
+valio Door A has the same seven bags (`valio/validator/validators.py`
+L1757–1764) and the same `add_*` list (L1860–1952). Transform-before-validate
+is folded into **`pre_validate` only**, because that bag already runs *inside*
+descriptor `pre_set` *before* `validate` and *before* store:
+
+```
+__set__ → pre_set hook
+            → pre_validate processors  (transform; return kept)
+            → validate
+            → post_validate processors (transform; return kept)
+        → store that return
+        → post_set hook
+            → post_set processors      (side effect; return ignored)
+```
+
+`post_set` needs its own bag because it is a **different lifecycle moment**
+(after store). `pre_set` does not: a `_processors["pre_set"]` / `add_pre_set`
+API would be a second door onto the same moment as `add_pre_validator` (E14).
+Soft 3 KEEP. Behavior lock: `tests/test_soft3_honesty.py`::`test_no_add_pre_set_on_validator`.
+
 **valio@3415c03 cites**
 
 - Descriptor stores only `pre_set` return:
