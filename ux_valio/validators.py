@@ -10,16 +10,19 @@ Bound presence is None-only: ``0`` is specified. ``gt``/``lt`` exclusive;
 ``min_value``/``max_value`` inclusive. Multiple-of is remainder;
 ``multiple_of=0`` accepts only ``0``.
 
-Processors run then tasks run once. Only the ``pre_set`` processor return
-is stored. No asyncio.run in the setter.
+Processors run then tasks run once. Only the descriptor ``pre_set`` hook
+return is stored (that hook *is* pre_validate → validate → post_validate).
+There is no ``_processors["pre_set"]`` bag and no ``add_pre_set``.
+No asyncio.run in the setter.
 """
 
 from __future__ import annotations
 
 import re
+import types
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, Callable, Iterable, get_args, get_origin
+from typing import Any, Callable, Iterable, Union, get_args, get_origin
 
 from ux_valio.descriptor import Property
 from ux_valio.pattern import PatternType
@@ -28,21 +31,29 @@ Lookup = Callable[["ValidateProperty", Any, Any], Any]
 
 
 def _is_instance_of(value: Any, annotation: Any) -> bool:
+    """Door A type honesty: Union/Optional recurse; other origins use origin.
+
+    ``list[int]`` is a list, not an int. Parametrized args (element types,
+    Literal, Annotated) stay permissive on ``isinstance`` TypeError — Soft 1,
+    not typingx.
+    """
     if annotation is None:
         return True
     origin = get_origin(annotation)
+    if origin is Union or origin is types.UnionType:
+        args = get_args(annotation)
+        if not args:
+            return True
+        return any(_is_instance_of(value, arg) for arg in args)
+    if origin is type(None):
+        return value is None
     if origin is None:
         try:
             return isinstance(value, annotation)
         except TypeError:
             return True
-    if origin is type(None):
-        return value is None
-    args = tuple(arg for arg in get_args(annotation) if arg is not type(None))
-    if not args:
-        return value is None
     try:
-        return isinstance(value, args)
+        return isinstance(value, origin)
     except TypeError:
         return True
 
@@ -568,7 +579,6 @@ class Validator(ValidateProperty):
         debug: bool | None = None,
         logger: Any = False,
         cache_task: bool = True,
-        **kwargs: Any,
     ) -> None:
         if required is not None and not isinstance(required, bool):
             raise TypeError(
@@ -593,6 +603,8 @@ class Validator(ValidateProperty):
         self._processors: dict[str, dict[str, list[Callable[..., Any]]]] = {
             phase: defaultdict(list)
             for phase in (
+                # No "pre_set": ValidateProperty.pre_set *is* pre_validate →
+                # validate → post_validate. add_pre_set would be E14 dual-door.
                 "pre_validate",
                 "post_validate",
                 "post_set",
@@ -612,7 +624,6 @@ class Validator(ValidateProperty):
             doc=doc,
             debug=debug,
             logger=logger,
-            **kwargs,
         )
 
     def _unit_lookup(self) -> dict[str, Lookup]:
