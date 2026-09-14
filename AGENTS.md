@@ -12,7 +12,8 @@
   path fail-closed; processors then tasks once;
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
   before-store hangs on `add_pre_validator` / `add_validator` /
-  `add_pre_validator_task`; `add_*` accepts async (Soft 5 register OK);
+  `add_pre_validator_task`; `add_*` accepts async def and coroutine
+  results (Soft 5 register OK; no `_reject_coroutine_result`);
   sync path with no running loop TypeError names Soft 5 Door; running loop
   uses nest-safe worker bridge (never `asyncio.run` in `__set__`).
   `enable_async` is not a door (unknown-kwarg TypeError).

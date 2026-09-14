@@ -22,6 +22,7 @@ def test_no_add_pre_set_still_absent():
     assert "pre_set" not in Facade()._processors
     assert "pre_set" not in Facade()._tasks
     assert not hasattr(vmod, "_require_sync_callable")
+    assert not hasattr(vmod, "_reject_coroutine_result")
 
 
 def test_no_asyncio_run_in_set():
@@ -215,3 +216,49 @@ def test_async_post_set_runs_with_running_loop_return_ignored():
 
     host = _assign_on_running_loop(lambda: Host(x="kept"))
     assert host.x == "kept"
+
+
+def test_sync_wrap_returning_coroutine_registers_and_runs_with_loop():
+    """Follow-up: Soft 4 also TypeError'd coroutine *objects* at run.
+
+    valio `_processing` L1844–1846 asyncio.run'd ``iscoroutine(value)``.
+    Soft 4 leftover `_reject_coroutine_result` was temporary honesty, not
+    a class reject. Same wrap as the no-loop Soft 5 Door test; a running
+    loop drives the coroutine (nest-safe bridge).
+    """
+    v = Validator(debug=True)
+
+    async def upper(instance, value):
+        await asyncio.sleep(0)
+        return value.upper()
+
+    def wrap(instance, value):
+        return upper(instance, value)
+
+    v.add_pre_validator(wrap, namespace="Host")
+
+    @dataclass
+    class Host:
+        x: str = v
+
+    host = _assign_on_running_loop(lambda: Host(x="ada"))
+    assert host.x == "ADA"
+
+
+def test_sync_wrap_returning_coroutine_no_loop_is_soft5_door_not_class_reject():
+    v = Validator(debug=True)
+
+    async def upper(instance, value):
+        return value.upper()
+
+    def wrap(instance, value):
+        return upper(instance, value)
+
+    v.add_pre_validator(wrap, namespace="Host")
+
+    @dataclass
+    class Host:
+        x: str = v
+
+    with pytest.raises(TypeError, match="Soft 5 Door"):
+        Host(x="ada")

@@ -46,9 +46,11 @@ or `add_pre_validator_task` (side effect; return ignored). `add_post_set`
 runs after store; its return is ignored.
 
 `add_*` / `add_*_task` accept **sync or async** callables. `async def`
-registers (Soft 5). Soft 4's TypeError-at-register was leftover honesty:
-valio drove coroutines with `asyncio.run` in the setter (nested-loop
-hazard); Soft 1 retired that. Soft 4 did not mean "async is illegal forever."
+registers (Soft 5). Coroutine **objects** at run are not a second reject
+door: same run rules as `async def`. Soft 4's TypeError-at-register *and*
+`_reject_coroutine_result` were leftover honesty: valio drove both with
+`asyncio.run` in the setter (nested-loop hazard); Soft 1 retired that.
+Soft 4 did not mean "async / coroutines are illegal forever."
 
 **Run rules (Soft 5 Door):** on the sync descriptor path,
 - no running loop → `TypeError` naming Soft 5 Door

@@ -15,12 +15,12 @@ return is stored (that hook *is* pre_validate → validate → post_validate).
 There is no ``_processors["pre_set"]`` bag and no ``add_pre_set``.
 Before-store work hangs on ``add_pre_validator`` / ``add_validator`` /
 ``add_pre_validator_task``. ``add_*`` / ``add_*_task`` accept sync or
-async callables (Soft 5). Soft 4's TypeError-at-register was leftover
-honesty: valio drove coroutines via ``asyncio.run`` in the setter
-(nested-loop hazard); Soft 1 retired that — not "async is illegal
-forever." Sync descriptor path run rules: no running loop → TypeError
-naming the Soft 5 Door; running loop → nest-safe worker private loop.
-No asyncio.run in the setter.
+async callables (Soft 5). Soft 4 leftover: TypeError-at-register *and*
+``_reject_coroutine_result`` were temporary honesty (valio drove both via
+``asyncio.run`` in the setter). Coroutine functions register; coroutine
+objects follow run rules. Sync descriptor path: no running loop →
+TypeError naming the Soft 5 Door; running loop → nest-safe worker
+private loop. No asyncio.run in the setter.
 """
 
 from __future__ import annotations
@@ -71,9 +71,11 @@ def _soft5_bridge(coro: Any) -> Any:
 def _soft5_resolve(result: Any) -> Any:
     """Apply Soft 5 run rules to a processor/task/validator return.
 
-    Sync values pass through. Coroutine: if ``get_running_loop()`` exists,
-    nest-safe bridge; if not, TypeError naming the Soft 5 Door (do not
-    store the coroutine, do not run it on a nested setter loop).
+    Coroutine objects are not rejected as a class (Soft 4 leftover
+    ``_reject_coroutine_result``). Sync values pass through. Coroutine: if
+    ``get_running_loop()`` exists, nest-safe bridge; if not, TypeError
+    naming the Soft 5 Door (do not store the coroutine, do not drive it
+    from the setter with a nested loop).
     """
     if inspect.isasyncgen(result):
         raise TypeError(f"callable returned an async generator; {_SOFT5_DOOR}")

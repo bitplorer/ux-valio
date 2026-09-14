@@ -157,10 +157,12 @@ async def _coro(instance, value):
     return value
 
 
-def test_sync_processor_returning_coroutine_type_errors_and_does_not_store():
+def test_sync_processor_returning_coroutine_no_loop_is_soft5_door():
     """valio `_processing` L1844–1846 asyncio.run'd a coroutine return.
 
-    Soft 1 RETIRE of asyncio.run must not store the coroutine object instead.
+    Soft 4 leftover: `_reject_coroutine_result` TypeError'd the object so
+    Soft 1 would not store it. Soft 5 does not reject coroutines as a
+    class — no loop is Soft 5 Door (not asyncio.run, not store).
     """
     v = Validator(debug=True)
 
