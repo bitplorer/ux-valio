@@ -40,8 +40,41 @@ the door.
 
 **Only the descriptor `pre_set` hook return is stored.** That hook *is*
 `pre_validate → validate → post_validate`. There is no `_processors["pre_set"]`
-bag and no `add_pre_set` — hang before-store work on `add_pre_validator`.
-`add_post_set` runs after store; its return is ignored.
+bag and no `add_pre_set` — hang before-store work on `add_pre_validator`
+(transform; **return the value**), `add_validator` (check; return ignored),
+or `add_pre_validator_task` (side effect; return ignored). `add_post_set`
+runs after store; its return is ignored.
+
+`add_*` / `add_*_task` callables are **sync**. `async def` TypeErrors at
+registration. A sync callable that returns a coroutine TypeErrors at run
+and does **not** store the coroutine. `asyncio.run` is not used in `__set__`.
+
+### Before-store DB check (Register)
+
+valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
+for `add_pre_validator`). Door A hangs the same processor on the descriptor.
+A uniqueness **task** is the wrong bag (`cache_task` in valio skipped
+re-checks).
+
+```python
+from dataclasses import dataclass
+from ux_valio import StringValidator
+
+DB = {"taken"}
+username = StringValidator(debug=True, required=True, min_length=3)
+
+@dataclass
+class Register:
+    username: str = username
+
+    @username.add_pre_validator
+    def username_not_taken(self, value: str) -> str:
+        if value in DB:
+            raise ValueError("username already registered")
+        return value
+```
+
+Raise-only variant: `@username.add_validator` (no return needed).
 
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`

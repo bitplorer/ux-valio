@@ -13,11 +13,15 @@ Bound presence is None-only: ``0`` is specified. ``gt``/``lt`` exclusive;
 Processors run then tasks run once. Only the descriptor ``pre_set`` hook
 return is stored (that hook *is* pre_validate → validate → post_validate).
 There is no ``_processors["pre_set"]`` bag and no ``add_pre_set``.
-No asyncio.run in the setter.
+Before-store work hangs on ``add_pre_validator`` / ``add_validator`` /
+``add_pre_validator_task``. ``add_*`` callables are sync: coroutine
+functions TypeError at registration; coroutine results TypeError at run
+(not stored). No asyncio.run in the setter.
 """
 
 from __future__ import annotations
 
+import inspect
 import re
 import types
 from abc import ABC, abstractmethod
@@ -28,6 +32,29 @@ from ux_valio.descriptor import Property
 from ux_valio.pattern import PatternType
 
 Lookup = Callable[["ValidateProperty", Any, Any], Any]
+
+_ASYNC_DOOR_A = (
+    "Door A add_* is sync (asyncio.run in __set__ is retired)"
+)
+
+
+def _require_sync_callable(func: Callable[..., Any]) -> Callable[..., Any]:
+    # valio@3415c03 wrapped sync tasks via async_wrap and asyncio.run from
+    # _processing / _after_processing_run_tasks (validators.py L1835–1846,
+    # L807–811, L1956–1963). Soft NOT: do not port that into __set__.
+    if inspect.iscoroutinefunction(func) or inspect.isasyncgenfunction(func):
+        name = getattr(func, "__qualname__", repr(func))
+        raise TypeError(f"{name} is async; {_ASYNC_DOOR_A}")
+    return func
+
+
+def _reject_coroutine_result(result: Any) -> Any:
+    if inspect.iscoroutine(result) or inspect.isasyncgen(result):
+        closer = getattr(result, "close", None)
+        if callable(closer):
+            closer()
+        raise TypeError(f"callable returned a coroutine; {_ASYNC_DOOR_A}")
+    return result
 
 
 def _is_instance_of(value: Any, annotation: Any) -> bool:
@@ -643,20 +670,21 @@ class Validator(ValidateProperty):
         if instance is None:
             return
         for func in self._custom_validators[instance.__class__.__name__]:
-            func(instance, value)
+            _reject_coroutine_result(func(instance, value))
 
     def add_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._custom_validators[_namespace(func, namespace)].append(func)
         return func
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
         for func in self._processors[phase][instance.__class__.__name__]:
-            value = func(instance, value)
+            value = _reject_coroutine_result(func(instance, value))
         return value
 
     def _run_tasks(self, phase: str, instance: Any, value: Any) -> Any:
         for func in self._tasks[phase][instance.__class__.__name__]:
-            func(instance, value)
+            _reject_coroutine_result(func(instance, value))
         return value
 
     def _process_then_tasks(self, phase: str, instance: Any, value: Any) -> Any:
@@ -686,58 +714,72 @@ class Validator(ValidateProperty):
         return self._process_then_tasks("post_delete", instance, value)
 
     def add_pre_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._processors["pre_validate"][_namespace(func, namespace)].append(func)
         return func
 
     def add_post_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._processors["post_validate"][_namespace(func, namespace)].append(func)
         return func
 
     def add_post_set(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._processors["post_set"][_namespace(func, namespace)].append(func)
         return func
 
     def add_pre_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._processors["pre_get"][_namespace(func, namespace)].append(func)
         return func
 
     def add_post_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._processors["post_get"][_namespace(func, namespace)].append(func)
         return func
 
     def add_pre_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._processors["pre_delete"][_namespace(func, namespace)].append(func)
         return func
 
     def add_post_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._processors["post_delete"][_namespace(func, namespace)].append(func)
         return func
 
     def add_pre_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._tasks["pre_validate"][_namespace(func, namespace)].append(func)
         return func
 
     def add_post_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._tasks["post_validate"][_namespace(func, namespace)].append(func)
         return func
 
     def add_post_set_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._tasks["post_set"][_namespace(func, namespace)].append(func)
         return func
 
     def add_pre_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._tasks["pre_get"][_namespace(func, namespace)].append(func)
         return func
 
     def add_post_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._tasks["post_get"][_namespace(func, namespace)].append(func)
         return func
 
     def add_pre_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._tasks["pre_delete"][_namespace(func, namespace)].append(func)
         return func
 
     def add_post_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        func = _require_sync_callable(func)
         self._tasks["post_delete"][_namespace(func, namespace)].append(func)
         return func
 
