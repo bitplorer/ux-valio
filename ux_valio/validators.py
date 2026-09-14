@@ -106,6 +106,14 @@ def _bound(owner: Any, name: str) -> Any:
 
 
 def _namespace(func: Callable[..., Any], namespace: str | None) -> str:
+    """Bag key. valio@3415c03 ``add_pre_validator`` L1861:
+    ``namespace or str(func.__qualname__).split(".")[0]``.
+
+    A module-level function without ``namespace=`` keys by the function name,
+    which will not match ``instance.__class__.__name__``. A method on a
+    nested class (``test_fn.<locals>.Host.fn``) keys by ``test_fn``. Pass
+    ``namespace=`` or decorate a method on a module-level host class.
+    """
     return namespace or str(func.__qualname__).split(".")[0]
 
 

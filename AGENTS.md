@@ -13,4 +13,5 @@
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
   before-store hangs on `add_pre_validator` / `add_validator` /
   `add_pre_validator_task`; `add_*` is sync (async callable TypeError;
-  coroutine results are not stored).
+  coroutine results are not stored). `enable_async` is not a door
+  (unknown-kwarg TypeError). `cache_task` kwarg KEEP, cache behavior RETIRE.

@@ -11,6 +11,11 @@ Council lock carried from Soft 3: **do not invent `_processors["pre_set"]` /
 `add_pre_set`.** That bag is not in valio. Descriptor `pre_set` already owns
 `pre_validate → validate → post_validate`. Soft 4 **does not reopen** it.
 
+Soft 4 tip = the **named Soft4-DO honesty rows** in the table below
+(cartograph vs `asyncio.run` RETIRE; sync/async `add_*` honesty;
+decorator/`namespace` footguns; `enable_async` / `cache_task` claim vs tree)
+plus this pack. Register DB-check is **Soft 3 KEEP** (`add_pre_validator`).
+
 ---
 
 ## Intent Lock refresh
@@ -42,7 +47,7 @@ Door A usage that README implied but never named on the validator itself:
 
 | Unstated README move | What it actually is | Door A today |
 | --- | --- | --- |
-| `@user_field.add_pre_valiator` (typo) | Field mixin delegates to `Validator.add_pre_validator` | Hang `@username.add_pre_validator` on the descriptor |
+| `@user_field.add_pre_valiator` (typo) | Field mixin delegates to `Validator.add_pre_validator` | Hang `@username_field.add_pre_validator` on the descriptor (`user_field` / `user` name split). `username: str = username` is `NameError`. |
 | `@user_field.add_post_validator` `async def email_…` | Processor whose return is stored; valio would `asyncio.run` the coroutine | Sync callable only; async is TypeError |
 | `@password_field.add_validator` | Extra check inside `validate()`; return ignored | `add_validator` |
 | `valio.Validator.register(User)` | `ABC.register` virtual subclass, **not** a DB API | Do not teach. HOLD dual-schema |
@@ -218,22 +223,26 @@ from dataclasses import dataclass
 from ux_valio import StringValidator
 
 DB = {"taken"}
-username = StringValidator(debug=True, required=True, min_length=3)
+username_field = StringValidator(debug=True, required=True, min_length=3)
 
 @dataclass
 class Register:
-    username: str = username
+    username: str = username_field
 
-    @username.add_pre_validator
+    @username_field.add_pre_validator
     def username_not_taken(self, value: str) -> str:
         if value in DB:
             raise ValueError("username already registered")
         return value  # processor return is stored
 ```
 
-Raise-only variant: `@username.add_validator` (do not need to return
-`value`). Side-effect-only variant: `@username.add_pre_validator_task`
+Raise-only variant: `@username_field.add_validator` (do not need to return
+`value`). Side-effect-only variant: `@username_field.add_pre_validator_task`
 (does not rewrite the stored username; a raise still blocks the set).
+
+`username: str = username` is `NameError` — the class-body assignment makes
+`username` local, so the RHS cannot see the outer descriptor. valio README
+avoided this with Door B’s `user_field` / `user` split (L65–127).
 
 `valio.Validator.register(User)` in the same README (L51) is
 `abc.ABC.register` — virtual subclassing for dual-schema
@@ -282,9 +291,10 @@ ux-valio vs valio honesty gaps Soft 4 closes:
    valio would have `asyncio.run`’d it. Storing the coroutine is a lie.
 2. Hanging `async def` on a task created a never-awaited coroutine
    (`RuntimeWarning`) instead of running or refusing.
-3. Teaching said “only `pre_set` return is stored” without showing the
-   Register DB-check on `add_pre_validator`. User asked whether pre_set
-   processing/tasks exist — they do, under the validate-pipeline names.
+3. `enable_async` was claimed on valio and is **absent** on ux-valio;
+   `cache_task=True` is claimed-as-cache on valio and is a no-op kwarg here.
+4. Module-level `add_*` without `namespace=` is a silent no-op; class-body
+   `username: str = username` is `NameError`.
 
 ---
 
@@ -293,8 +303,9 @@ ux-valio vs valio honesty gaps Soft 4 closes:
 | Concern | valio@3415c03 | ux-valio | Soft 4 |
 | --- | --- | --- | --- |
 | Reused validator, same name, two classes | Allowed; bags keyed by class name | Soft 3: same name OK; different name `AttributeError` | KEEP |
-| Namespace miss (module-level decorator, no `namespace=`) | Silent no-op | Same | Leftover-teach + test. Do not invent fail-closed mismatch |
-| Nested qualname `Outer.Inner.fn` | `split(".")[0]` → `Outer` | Same | Residual |
+| Namespace miss (module-level decorator, no `namespace=`) | Silent no-op (L1861 vs L1836) | Same | Soft4-DO leftover-teach + test. Do not invent fail-closed mismatch |
+| Class-body `username: str = username` | README used Door B `user_field` / `user` (L65–127) | `NameError` (name is local) | Soft4-DO cartograph. Hang `username_field` |
+| Nested class / test-local class | `test_fn.<locals>.Host.fn` → first segment `test_fn` | Same silent no-op | Soft4-DO: pass `namespace="Host"` or define the class at module level |
 | Logger default | `logger=None` → file logs (`loggers.py` L58–78) | `None` coerced to `False` (OFF) | KEEP Soft 1 |
 | debug-swallow | falsy swallows set/get/delete; `__set_name__` always raises | Same | KEEP — do not flip |
 | debug-swallow + async TypeError at **run** | would swallow | swallows | KEEP. Prefer TypeError at **`add_*`** so `async def` never reaches `__set__` |
@@ -313,37 +324,38 @@ ux-valio vs valio honesty gaps Soft 4 closes:
 | Lock | Cite / test |
 | --- | --- |
 | Door A `field: T = SomeValidator(...)` | README; `tests/test_door_a_readme.py` |
-| No `_processors["pre_set"]` / `add_pre_set` / `add_pre_set_task` | valio bags L1757–1764; `tests/test_soft3_honesty.py` |
+| No `_processors["pre_set"]` / `add_pre_set` / `add_pre_set_task` | valio bags L1757–1764; `tests/test_soft3_honesty.py`; `test_no_add_pre_set_still_absent` |
 | `pre_set` hook **is** pre_validate → validate → post_validate | valio L182–192 |
-| Before-store work hangs on `add_pre_validator` / `add_validator` / `add_pre_validator_task` | this pack §B |
+| Register DB-check = `add_pre_validator` inside `pre_set` | valio L1860–1863; README L79–81 typo; Soft 3 KEEP |
 | Soft #2 falsy defaults | `tests/test_soft2_falsy_defaults.py` |
 | Soft #8 `None` ≠ `0` | `tests/test_soft8_bound_honesty.py` |
 | Soft #9 compose-not-inherit | `tests/test_compose_not_inherit.py` |
 | Soft #10 processors then tasks once | `tests/test_processors_then_tasks.py` |
 | Path fail-closed | `tests/test_path_fail_closed.py` |
 | Pattern `findall` | `tests/test_pattern_findall.py` |
-| debug-swallow | `tests/test_door_a_readme.py` |
+| debug-swallow | `tests/test_door_a_readme.py` — **do not flip** |
 | Logger default OFF | `test_logger_defaults_off` |
 | Annotation conflict fail-closed | `tests/test_annotation_conflict.py` |
 | Soft 3 generics / reuse / unknown kwargs | `tests/test_soft3_honesty.py` |
-| No `asyncio.run` in `__set__` | Soft NOT; this pack §C |
+| No `asyncio.run` in `__set__` | Soft 1 RETIRE; valio L807–811 / L1835–1846 is the retired claim |
 | No Cap / Field / Schema / Result / `mount_channel` / `rule/` | `__all__` |
 | Soft #3 PaymentCard / #4 named-once / #6 Expiry | still DEFER |
 
-## Soft4-DO (this PR — existing doors only)
+## Soft4-DO (this PR — named honesty rows only)
 
-| Row | Why it is a tip, not a new door | valio cite |
-| --- | --- | --- |
-| Leftover teaching: Register DB-check → `add_pre_validator` (return the value) or `add_validator` (raise-only). Not `add_pre_set`. Not a uniqueness **task**. | User ask #1; README L79–81 | `add_pre_validator` L1860–1863; Field L128–130; **no** `add_pre_set` in L1757–1764 |
-| Behavior tests for that teaching | Locks the answer | README RegisterUser L64–129 |
-| Sync/async honesty on existing `add_*` / `add_*_task` / `add_validator`: coroutinefunction TypeError at registration; coroutine **result** TypeError at run; do not store a coroutine; do not `asyncio.run` | User ask #3; valio claimed generic async via `__set__` `asyncio.run` which ux-valio retired, leaving a store-the-coroutine hole | `_processing` L1835–1846; `add_*_task` L1516–1518; `async_wrap` L1956–1963 |
+| Row | Why it is a tip, not a new door | valio@3415c03 cite | ux-valio |
+| --- | --- | --- | --- |
+| **Cartograph Door A unstated usage vs Soft 1 RETIRE of `asyncio.run` in `__set__`** | README hung `async def email_user_activity` on `add_post_validator` (L83–85) expecting the setter to drive async. Soft 1 retired `asyncio.run` in `__set__`. Storing a coroutine object would be a lie. Class-body `username: str = username` is `NameError`; Door B used `user_field` / `user` (L65–127). | `_after_processing_run_tasks` L807–811 (`asyncio.run(main(obj._job(...)))`); `_processing` L1844–1846 (`if asyncio.iscoroutine(value): value = asyncio.run(...)`); `Property.__set__` L264–268 (sync store of `pre_set` return); README L83–85, L65–127 | `inspect.iscoroutine` **rejects** (does not run). Hang `username_field`. Tests: `test_no_asyncio_run_or_enable_async_in_door_a_tree`, `test_same_name_descriptor_and_field_is_nameerror` |
+| **sync vs async processor/task registration honesty** | valio wrapped sync tasks (`async_wrap` L1956–1963) and optionally processors (`enable_async` L1837–1842). ux-valio has **0** `enable_async` / `import asyncio`. `async def` on existing `add_*` TypeErrors at registration; coroutine **results** TypeError at run. | `enable_async` ctor L1698, flag L1756, `validate()` L1782–1785, `_processing` L1837–1846; `add_pre_validator_task` L1516–1518 (`iscoroutinefunction` else `async_wrap`); `_after_processing_run_tasks` L807–811 | `_require_sync_callable` / `_reject_coroutine_result`. No `asyncio.run`. Tests: `test_async_def_add_*`, `test_sync_processor_returning_coroutine_*` |
+| **decorator / `namespace` footguns** | Bags key by `namespace or qualname.split(".")[0]`; run looks up `instance.__class__.__name__`. Module-level decorator without `namespace=` is a silent no-op. Method decorator matches only on a **module-level** class. Nested/`<locals>` classes need `namespace=`. Processor `None` return **is** stored. | `add_pre_validator` L1860–1863; `_processing` L1836; `add_validator` L1831–1832 | `_namespace` docstring. Tests: `test_module_level_decorator_without_namespace_does_not_fire`, `test_module_level_decorator_with_namespace_fires`, `test_method_decorator_namespace_matches_module_level_class`, `test_nested_class_method_decorator_qualname_does_not_match`, `test_add_pre_validator_implicit_none_is_stored` |
+| **claim vs tree for `enable_async` / `cache_task`** | valio claimed `enable_async` and `cache_task=True` (cache by `id(tasks)`). ux-valio Soft 1 tree: **0** `enable_async`; `cache_task` kwarg exists but **does not cache**. Do not invent the missing door; do not silently pretend cache works. | `enable_async` L1626, L1698, L1756, L1782–1785, L1837; `cache_task` `_init_task_state` L780–789; `_job` L1495–1500 | `enable_async=True` → `TypeError` (Soft 3 unknown kwargs). `cache_task=True` still runs every assignment. Tests: `test_enable_async_kwarg_is_type_error_not_a_new_door`, `test_cache_task_true_does_not_cache_tasks` |
 
 ## Soft4 DEFER
 
 | Row | Why not this tip |
 | --- | --- |
-| Invent `add_pre_set` / `_processors["pre_set"]` | No valio bag. E14 dual-door. KEEP closed |
-| `enable_async`, `async_wrap`, Cap Host, scheduling after `__set__` | New async product. Needs Cap or a running loop. STOP |
+| Invent `add_pre_set` / `_processors["pre_set"]` | No valio bag. E14 dual-door. **Soft 3 KEEP closed — do not flip** |
+| Restore `enable_async` / `async_wrap` / `asyncio.run` in `__set__` / Cap Host | New async product. STOP |
 | Soft #3 PaymentCard / #4 named-once / #6 Expiry | Named leaves, not hook honesty |
 | Field / Schema twins, dual-schema, typingx, pyparsing | HOLD |
 | Copy mutable `default=[]` | valio same share |
@@ -352,14 +364,14 @@ ux-valio vs valio honesty gaps Soft 4 closes:
 | Rollback store on `post_set` failure | Changes Door A |
 | Element-wise `list[int]` | typingx HOLD |
 | `task_interval` repeating job | valio `_job` does not actually loop-run |
-| `cache_task=True` actually caching | RETIRE cache; KEEP kwarg |
+| Make `cache_task=True` actually cache | RETIRE cache; KEEP kwarg (claim vs tree is the tip) |
 
 ## Soft4 RETIRE
 
 | Row | Notes |
 | --- | --- |
-| Door B `*Field` then `.validator` | Soft 1; README RegisterUser uses it — Door A hang replaces it |
-| `asyncio.run` / `run_until_complete` inside `__set__` | Soft NOT |
+| Door B `*Field` then `.validator` | Soft 1; README RegisterUser uses it — Door A `username_field` hang replaces it |
+| `asyncio.run` / `run_until_complete` inside `__set__` | Soft 1 RETIRE; Soft 4 does not restore |
 | Task result cache | valio L1495–1500; ux no-op kwarg |
 | Logger-on-by-`None` files | Soft 1 |
 | Star-import barrel, MI diamond, RGB/HSL | Soft 1 |
@@ -367,18 +379,19 @@ ux-valio vs valio honesty gaps Soft 4 closes:
 
 ---
 
-## Explicit answer (user DB-check)
+## Explicit answer (user DB-check) — Soft 3 KEEP
 
 **Register username uniqueness before store uses `add_pre_validator`
-(processor, return the value) or `add_validator` (check, raise).**
-Both run inside descriptor `pre_set`, before `__dict__` store.
+(processor, return the value).** It runs inside descriptor `pre_set`,
+before `__dict__` store.
+
 Cite: valio `ValidateProperty.pre_set` L182–192 + `add_pre_validator`
-L1860–1863 + `add_validator` L1828–1833.
+L1860–1863. README L79 `@user_field.add_pre_valiator` is a typo for Field
+`add_pre_validator` (`valio/field/fields.py` L128–130).
 
-It does **not** use `add_pre_set` (no such API). It does **not** need a
-task. `add_pre_validator_task` is the before-store **side-effect** bag,
-not the uniqueness bag.
+It does **not** use `add_pre_set` (no such API — bags L1757–1764). Soft 3
+absence lock stands. Soft 4 does **not** reopen it.
 
-Soft 3 KEEP (`no add_pre_set`) stands. Soft 4 leftover-teaches the missing
-Register example on Door A and fails closed if someone hangs `async def`
-on those same doors.
+Hang the descriptor as `username_field` (Door B name split). Soft 4’s named
+rows above are the honesty tip around that KEEP (async refuse, namespace,
+`enable_async` / `cache_task` claim vs tree).

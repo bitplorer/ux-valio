@@ -49,32 +49,39 @@ runs after store; its return is ignored.
 registration. A sync callable that returns a coroutine TypeErrors at run
 and does **not** store the coroutine. `asyncio.run` is not used in `__set__`.
 
-### Before-store DB check (Register)
+### Before-store DB check (Register) — Soft 3 KEEP
 
 valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
 for `add_pre_validator`). Door A hangs the same processor on the descriptor.
-A uniqueness **task** is the wrong bag (`cache_task` in valio skipped
-re-checks).
+Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong bag
+(valio `cache_task=True` skipped re-checks).
+
+Class-body `username: str = username` is `NameError` (the assignment makes
+`username` local). Match valio Field’s `user_field` / `user` split:
 
 ```python
 from dataclasses import dataclass
 from ux_valio import StringValidator
 
 DB = {"taken"}
-username = StringValidator(debug=True, required=True, min_length=3)
+username_field = StringValidator(debug=True, required=True, min_length=3)
 
 @dataclass
 class Register:
-    username: str = username
+    username: str = username_field
 
-    @username.add_pre_validator
+    @username_field.add_pre_validator
     def username_not_taken(self, value: str) -> str:
         if value in DB:
             raise ValueError("username already registered")
         return value
 ```
 
-Raise-only variant: `@username.add_validator` (no return needed).
+Module-level `@username_field.add_pre_validator` without `namespace="Register"`
+does not fire (bag key is the function name). A **module-level** method
+decorator’s `__qualname__` is `Register.fn`, which matches. A method on a
+class defined inside a function (`test_fn.<locals>.Register.fn`) keys as
+`test_fn` and silently does not fire — pass `namespace="Register"`.
 
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
