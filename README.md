@@ -45,9 +45,23 @@ bag and no `add_pre_set` — hang before-store work on `add_pre_validator`
 or `add_pre_validator_task` (side effect; return ignored). `add_post_set`
 runs after store; its return is ignored.
 
-`add_*` / `add_*_task` callables are **sync**. `async def` TypeErrors at
-registration. A sync callable that returns a coroutine TypeErrors at run
-and does **not** store the coroutine. `asyncio.run` is not used in `__set__`.
+`add_*` / `add_*_task` accept **sync or async** callables. `async def`
+registers (Soft 5). Coroutine **objects** at run are not a second reject
+door: same run rules as `async def`. Soft 4's TypeError-at-register *and*
+`_reject_coroutine_result` were leftover honesty: valio drove both with
+`asyncio.run` in the setter (nested-loop hazard); Soft 1 retired that.
+Soft 4 did not mean "async / coroutines are illegal forever."
+
+**Run rules (Soft 5 Door):** on the sync descriptor path,
+- no running loop → `TypeError` naming Soft 5 Door
+  (`await from async context / call via Soft5 helper`). Not silent `None`,
+  not `asyncio.run`.
+- running loop → nest-safe sync-bridge (private loop in a worker thread).
+  Assign from an async context (`asyncio.run` of a small harness or
+  pytest-asyncio). Same-thread `run_until_complete` on the caller's loop
+  is the retired nested-loop hazard.
+
+`asyncio.run` is not used in `__set__`.
 
 ### Before-store DB check (Register) — Soft 3 KEEP
 
