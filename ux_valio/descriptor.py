@@ -12,9 +12,10 @@ Class access (``obj is None``) returns ``None`` so dataclasses treat the
 descriptor as a missing field default and route ``Cls()`` through
 ``__set__(instance, None)``, which then applies ``default``.
 
-Only the ``pre_set`` return is stored. ``post_set`` / get / delete return
-values are ignored. ``__get__`` / ``__delete__`` pass ``self.name`` into
-hooks, not the stored value.
+Only the descriptor ``pre_set`` hook return is stored. That hook is the
+validate pipeline, not a ``_processors["pre_set"]`` bag. ``post_set`` /
+get / delete return values are ignored. ``__get__`` / ``__delete__`` pass
+``self.name`` into hooks, not the stored value.
 
 Logger default is OFF.
 
@@ -47,6 +48,8 @@ def _annotations_agree(left: Any, right: Any) -> bool:
 
 
 def _annotation_label(annotation: Any) -> str:
+    if isinstance(annotation, str):
+        return repr(annotation)
     return annotation.__name__ if hasattr(annotation, "__name__") else str(annotation)
 
 
@@ -60,7 +63,6 @@ class Property:
         doc: str | None = None,
         debug: bool | None = None,
         logger: Any = False,
-        **kwargs: Any,
     ) -> None:
         if name is not None and not isinstance(name, str):
             raise TypeError(
@@ -85,7 +87,6 @@ class Property:
         self.logger = False if logger is None else logger
         self.errors: list[BaseException] = []
         self.annotation = getattr(self, "annotation", None)
-        self.kwargs = kwargs
 
     def pre_set(self, obj: Any, value: Any) -> Any:
         return value
@@ -119,16 +120,15 @@ class Property:
     def __set_name__(self, owner: type, name: str) -> None:
         # valio@3415c03 valio/descriptor/descriptors.py L134–202:
         # _set_name + _may_set_or_ensure_annotation_match. Fail closed; not debug-swallow.
+        # Soft 3: name mismatch is always AttributeError. valio only raised when
+        # annotations agreed (dual-schema HOLD). A stuck name is a lie.
         try:
             if self.name is None:
                 self.name = name
             elif name != self.name:
-                annotations = getattr(owner, "__annotations__", None) or {}
-                owner_annotation = annotations.get(name)
-                if _annotations_agree(self.annotation, owner_annotation):
-                    raise AttributeError(
-                        f"{self.name} != {name}, attribute names did not match"
-                    )
+                raise AttributeError(
+                    f"{self.name} != {name}, attribute names did not match"
+                )
             self._bind_owner_annotation(owner, name)
         except Exception as err:
             self.errors.append(err)

@@ -29,7 +29,7 @@ class User:
 There is no Field twin and no Schema twin. `field: T = SomeValidator(...)` is
 the door.
 
-## KEEP: debug swallow, logger OFF
+## KEEP: debug swallow, logger OFF, pre_set hook
 
 - `debug=True` re-raises on a failed set/get/delete.
 - `debug` falsy (including the default `None`) swallows the exception, appends
@@ -37,6 +37,11 @@ the door.
   This swallow is KEEP. Soft 1 does not flip the product to fail-closed-by-default.
 - `logger` defaults **OFF** (`False`). Valio's `logger=None` enabled file
   logging; ux-valio does not.
+
+**Only the descriptor `pre_set` hook return is stored.** That hook *is*
+`pre_validate → validate → post_validate`. There is no `_processors["pre_set"]`
+bag and no `add_pre_set` — hang before-store work on `add_pre_validator`.
+`add_post_set` runs after store; its return is ignored.
 
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
