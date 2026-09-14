@@ -13,9 +13,11 @@ descriptor as a missing field default and route ``Cls()`` through
 ``__set__(instance, None)``, which then applies ``default``.
 
 Only the descriptor ``pre_set`` hook return is stored. That hook is the
-validate pipeline, not a ``_processors["pre_set"]`` bag. ``post_set`` /
-get / delete return values are ignored. ``__get__`` / ``__delete__`` pass
-``self.name`` into hooks, not the stored value.
+validate pipeline, not a ``_processors["pre_set"]`` bag. Hang before-store
+work on ``add_pre_validator`` / ``add_validator`` / ``add_pre_validator_task``.
+``post_set`` / get / delete return values are ignored. ``__get__`` /
+``__delete__`` pass ``self.name`` into hooks, not the stored value.
+``add_*`` is sync: no ``asyncio.run`` in ``__set__``.
 
 Logger default is OFF.
 

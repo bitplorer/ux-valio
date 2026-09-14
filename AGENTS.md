@@ -1,6 +1,6 @@
 # AGENTS.md
 
-**Soft LOCK.** Soft DO = Soft 3 Door A honesty harden.
+**Soft LOCK.** Soft DO = Soft 4 Door A intent / async / hook honesty.
 
 - Frozen reference: `bitplorer/valio` @ `3415c03`. Do not edit valio.
 - Public door: `field: T = SomeValidator(...)`.
@@ -10,4 +10,8 @@
 - KEEP: Soft #2 falsy defaults; Soft #8 bound honesty (`None` ≠ `0`);
   debug-swallow; logger default OFF; Pattern `findall`; compose-not-inherit;
   path fail-closed; processors then tasks once;
-  `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`).
+  `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
+  before-store hangs on `add_pre_validator` / `add_validator` /
+  `add_pre_validator_task`; `add_*` is sync (async callable TypeError;
+  coroutine results are not stored). `enable_async` is not a door
+  (unknown-kwarg TypeError). `cache_task` kwarg KEEP, cache behavior RETIRE.
