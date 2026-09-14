@@ -17,11 +17,37 @@ values are ignored. ``__get__`` / ``__delete__`` pass ``self.name`` into
 hooks, not the stored value.
 
 Logger default is OFF.
+
+``__set_name__`` is fail-closed on annotation conflict (Soft 2). If both
+``validator.annotation`` and the owner class annotation are set and they
+disagree, raise ``TypeError``. Owner wins only when the validator annotation
+was ``None``. The validator annotation is kept when the owner has none.
+Union forms are compared with stdlib ``get_origin`` / ``get_args``
+(``typing.Union`` and ``X | Y``), not typingx / typing_extensions.
 """
 
 from __future__ import annotations
 
-from typing import Any
+import types
+from typing import Any, Union, get_args, get_origin
+
+
+def _annotation_identity(annotation: Any) -> Any:
+    """Hashable identity for stdlib union forms. ``Union[X, Y]`` and ``X | Y`` agree."""
+    origin = get_origin(annotation)
+    if origin is Union or origin is types.UnionType:
+        return (Union, frozenset(_annotation_identity(arg) for arg in get_args(annotation)))
+    return annotation
+
+
+def _annotations_agree(left: Any, right: Any) -> bool:
+    if left is right:
+        return True
+    return _annotation_identity(left) == _annotation_identity(right)
+
+
+def _annotation_label(annotation: Any) -> str:
+    return annotation.__name__ if hasattr(annotation, "__name__") else str(annotation)
 
 
 class Property:
@@ -91,14 +117,38 @@ class Property:
             raise err
 
     def __set_name__(self, owner: type, name: str) -> None:
-        if self.name is None:
-            self.name = name
+        # valio@3415c03 valio/descriptor/descriptors.py L134–202:
+        # _set_name + _may_set_or_ensure_annotation_match. Fail closed; not debug-swallow.
+        try:
+            if self.name is None:
+                self.name = name
+            elif name != self.name:
+                annotations = getattr(owner, "__annotations__", None) or {}
+                owner_annotation = annotations.get(name)
+                if _annotations_agree(self.annotation, owner_annotation):
+                    raise AttributeError(
+                        f"{self.name} != {name}, attribute names did not match"
+                    )
+            self._bind_owner_annotation(owner, name)
+        except Exception as err:
+            self.errors.append(err)
+            raise
+
+    def _bind_owner_annotation(self, owner: type, name: str) -> None:
         annotations = getattr(owner, "__annotations__", None) or {}
         owner_annotation = annotations.get(name)
-        if self.annotation is None and owner_annotation is not None:
-            self.annotation = owner_annotation
-        elif owner_annotation is not None:
-            self.annotation = owner_annotation
+        if self.annotation is None:
+            if owner_annotation is not None:
+                self.annotation = owner_annotation
+            return
+        if owner_annotation is None:
+            return
+        if not _annotations_agree(self.annotation, owner_annotation):
+            raise TypeError(
+                f"{owner.__name__}.{self.name}: {_annotation_label(owner_annotation)}"
+                f" annotation did not match {type(self).__qualname__}: "
+                f"{_annotation_label(self.annotation)}"
+            )
 
     def __set__(self, obj: Any, value: Any) -> None:
         try:
