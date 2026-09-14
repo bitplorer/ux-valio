@@ -17,7 +17,7 @@ validate pipeline, not a ``_processors["pre_set"]`` bag. Hang before-store
 work on ``add_pre_validator`` / ``add_validator`` / ``add_pre_validator_task``.
 ``post_set`` / get / delete return values are ignored. ``__get__`` /
 ``__delete__`` pass ``self.name`` into hooks, not the stored value.
-``add_*`` is sync: no ``asyncio.run`` in ``__set__``.
+``add_*`` may be async (Soft 5). No ``asyncio.run`` in ``__set__``.
 
 Logger default is OFF.
 

@@ -70,17 +70,22 @@ def test_register_db_check_is_add_pre_validator_on_username_field():
 
 def test_no_asyncio_run_or_enable_async_in_door_a_tree():
     """valio `_processing` L1835–1846 and `_after_processing_run_tasks` L807–811
-    imported asyncio and called asyncio.run. Soft 1 RETIRE. Soft 4 does not
-    reintroduce the module or ``enable_async``. ``inspect.iscoroutine`` is
-    reject-only (no ``asyncio.run``).
+    called asyncio.run from the setter pipeline. Soft 1 RETIRE. Soft 5 may
+    import asyncio for get_running_loop / nest-safe bridge. ``enable_async``
+    stays not a door. ``asyncio.run`` / ``run_until_complete`` stay out of
+    ``Property.__set__`` and the processor/task runners.
     """
-    assert "asyncio" not in inspect.getsource(Property.__set__)
-    assert not hasattr(vmod, "asyncio")
+    set_src = inspect.getsource(Property.__set__)
+    assert "asyncio" not in set_src
+    assert "asyncio.run" not in set_src
+    assert "run_until_complete" not in set_src
     src = inspect.getsource(vmod)
-    assert "import asyncio" not in src
     assert "enable_async" not in src
     assert "asyncio.run" not in inspect.getsource(Validator._run_processors)
-    assert "asyncio.run" not in inspect.getsource(vmod._reject_coroutine_result)
+    assert "asyncio.run" not in inspect.getsource(Validator._run_tasks)
+    assert "run_until_complete" not in inspect.getsource(Validator._run_processors)
+    assert "run_until_complete" not in inspect.getsource(Validator._run_tasks)
+    assert "asyncio.run" not in inspect.getsource(vmod._soft5_resolve)
 
 
 def test_same_name_descriptor_and_field_is_nameerror():
@@ -99,36 +104,53 @@ def test_same_name_descriptor_and_field_is_nameerror():
 
 # --- Soft4-DO 2: sync vs async registration honesty ----------------------------
 
-def test_async_def_add_pre_validator_type_errors_at_registration():
+def test_async_def_add_pre_validator_registers():
+    """Soft 5 supersedes Soft 4 TypeError-at-register."""
     v = Validator(debug=True)
-    with pytest.raises(TypeError, match="async"):
-        @v.add_pre_validator
-        async def before(instance, value):
-            return value
+
+    @v.add_pre_validator
+    async def before(instance, value):
+        return value
+
+    assert inspect.iscoroutinefunction(before)
+    bagged = [fn for fns in v._processors["pre_validate"].values() for fn in fns]
+    assert before in bagged
 
 
-def test_async_def_add_validator_type_errors_at_registration():
+def test_async_def_add_validator_registers():
     v = Validator(debug=True)
-    with pytest.raises(TypeError, match="async"):
-        @v.add_validator
-        async def check(instance, value):
-            return value
+
+    @v.add_validator
+    async def check(instance, value):
+        return value
+
+    assert inspect.iscoroutinefunction(check)
+    bagged = [fn for fns in v._custom_validators.values() for fn in fns]
+    assert check in bagged
 
 
-def test_async_def_add_pre_validator_task_type_errors_at_registration():
+def test_async_def_add_pre_validator_task_registers():
     v = Validator(debug=True)
-    with pytest.raises(TypeError, match="async"):
-        @v.add_pre_validator_task
-        async def side(instance, value):
-            return value
+
+    @v.add_pre_validator_task
+    async def side(instance, value):
+        return value
+
+    assert inspect.iscoroutinefunction(side)
+    bagged = [fn for fns in v._tasks["pre_validate"].values() for fn in fns]
+    assert side in bagged
 
 
-def test_async_def_add_post_set_type_errors_at_registration():
+def test_async_def_add_post_set_registers():
     v = Validator(debug=True)
-    with pytest.raises(TypeError, match="async"):
-        @v.add_post_set
-        async def after(instance, value):
-            return value
+
+    @v.add_post_set
+    async def after(instance, value):
+        return value
+
+    assert inspect.iscoroutinefunction(after)
+    bagged = [fn for fns in v._processors["post_set"].values() for fn in fns]
+    assert after in bagged
 
 
 async def _coro(instance, value):
@@ -151,7 +173,7 @@ def test_sync_processor_returning_coroutine_type_errors_and_does_not_store():
     class Host:
         x: str = v
 
-    with pytest.raises(TypeError, match="coroutine"):
+    with pytest.raises(TypeError, match="Soft 5 Door"):
         Host(x="ada")
 
 

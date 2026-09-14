@@ -1,5 +1,12 @@
 # Soft 4 — valio intent pack (Door A hook / async honesty)
 
+> **Soft 5 supersedes TypeError-at-register.** Soft 4 fail-closed `async def`
+> at `add_*` because valio ran coroutines via `asyncio.run` in the setter.
+> That was leftover honesty, not "async is illegal forever." Soft 5 restores
+> registration and documents run rules. Soft 1 RETIRE of `asyncio.run` in
+> `__set__` still holds. See `docs/soft5-async-callables.md`.
+>
+
 Frozen reference: [`bitplorer/valio@3415c03`](https://github.com/bitplorer/valio/commit/3415c03e37085adda4040671a91eb19aa4fe4ac4)
 (Soft 10 compose). Soft-patch valio is **READ ONLY**.
 
