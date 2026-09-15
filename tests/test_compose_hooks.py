@@ -14,6 +14,7 @@ from ux_valio import (
     StringValidator,
     Validator,
 )
+from ux_valio.validators.hooks import _bag_key
 
 
 def test_compose_root_has_add_star_leaves_do_not():
@@ -29,14 +30,15 @@ def test_compose_root_has_add_star_leaves_do_not():
 
 def test_hang_after_compose_on_root():
     field = LengthValidator(min_length=1, debug=True) & RequiredValidator(required=True)
-    field.add_pre_validator(
-        lambda instance, value: value.strip() if isinstance(value, str) else value,
-        namespace="User",
-    )
 
     @dataclass
     class User:
         name: str = field
+
+    field.add_pre_validator(
+        lambda instance, value: value.strip() if isinstance(value, str) else value,
+        namespace=_bag_key(User),
+    )
 
     assert User(name="  Ada  ").name == "Ada"
 
@@ -52,22 +54,23 @@ def test_leaf_members_stay_bag_free_after_compose():
 
 def test_hang_on_facade_before_compose_still_runs():
     left = StringValidator(debug=True)
-    left.add_pre_validator(
-        lambda instance, value: value.strip() if isinstance(value, str) else value,
-        namespace="User",
-    )
     field = left & RequiredValidator(required=True)
 
     @dataclass
     class User:
         name: str = field
 
+    left.add_pre_validator(
+        lambda instance, value: value.strip() if isinstance(value, str) else value,
+        namespace=_bag_key(User),
+    )
+
     assert User(name="  Ada  ").name == "Ada"
 
 
 def test_nested_compose_with_hooks_is_not_flattened():
     inner = LengthValidator(min_length=1, debug=True) & RequiredValidator(required=True)
-    inner.add_pre_validator(lambda instance, value: value, namespace="User")
+    inner.add_pre_validator(lambda instance, value: value, namespace="compose.User")
     outer = inner & LengthValidator(max_length=10)
     assert len(outer.validators) == 2
     assert type(outer.validators[0]) is AllOf

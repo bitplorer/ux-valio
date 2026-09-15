@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hook bags key by `module.qualname` on register and lookup. Free functions
+  require `namespace=`. Class-object keys are rejected. Two same-named
+  classes in different modules no longer collide.
 - `PaymentCardValidator`: Visa / Mastercard / Amex / Discover / Rupay, each
   Luhn and brand via stdlib `re`. A Luhn-valid non-brand number is rejected.
 - `ExpiryValidator`: exclusive `expire_after` / `expire_on` /

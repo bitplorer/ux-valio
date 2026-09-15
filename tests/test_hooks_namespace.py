@@ -4,17 +4,20 @@
 from dataclasses import dataclass
 import inspect
 from pathlib import Path
+from types import ModuleType
+import sys
 
 import pytest
 
 from ux_valio.descriptor import Property
+from ux_valio.validators.hooks import _bag_key, _namespace
 from ux_valio import StringValidator, Validator
 from ux_valio.validators import Validator as Facade
 from ux_valio.validators.async_bridge import resolve_coroutine
 import ux_valio.validators as vmod
 
-# Module-level host: method ``__qualname__`` is ``_NsHost.strip`` so
-# split(".")[0] == ``_NsHost`` (valio L1861). Nested classes in tests do not.
+# Module-level host: method ``__qualname__`` is ``_NsHost.strip`` so the
+# bag key is ``module.qualname`` of ``_NsHost``, matching lookup.
 _ns_field = Validator(debug=True)
 
 
@@ -59,8 +62,9 @@ def test_register_db_check_is_add_pre_validator_on_username_field():
 
     Class-body ``username: str = username`` is NameError (local bind). Door A
     matches valio Field's ``user_field`` / ``user`` split: hang on
-    ``username_field``. Method decorator auto-namespace only for *module-level*
-    classes (qualname ``_Register.fn``). Nested test classes need ``namespace=``.
+    ``username_field``. Method decorator keys by owning-class
+    ``module.qualname`` (nested classes included). Free functions need
+    ``namespace=``.
     """
     assert _Register(username="ada").username == "ada"
     with pytest.raises(ValueError, match="already registered"):
@@ -102,22 +106,23 @@ def test_same_name_descriptor_and_field_is_nameerror():
 def test_async_def_add_pre_validator_registers():
     v = Validator(debug=True)
 
-    @v.add_pre_validator
     async def before(instance, value):
         return value
 
+    v.add_pre_validator(before, namespace="async.Host")
     assert inspect.iscoroutinefunction(before)
     bagged = [fn for fns in v._processors["pre_validate"].values() for fn in fns]
     assert before in bagged
+    assert "async.Host" in v._processors["pre_validate"]
 
 
 def test_async_def_add_validator_registers():
     v = Validator(debug=True)
 
-    @v.add_validator
     async def check(instance, value):
         return value
 
+    v.add_validator(check, namespace="async.Host")
     assert inspect.iscoroutinefunction(check)
     bagged = [fn for fns in v._custom_validators.values() for fn in fns]
     assert check in bagged
@@ -126,10 +131,10 @@ def test_async_def_add_validator_registers():
 def test_async_def_add_pre_validator_task_registers():
     v = Validator(debug=True)
 
-    @v.add_pre_validator_task
     async def side(instance, value):
         return value
 
+    v.add_pre_validator_task(side, namespace="async.Host")
     assert inspect.iscoroutinefunction(side)
     bagged = [fn for fns in v._tasks["pre_validate"].values() for fn in fns]
     assert side in bagged
@@ -138,10 +143,10 @@ def test_async_def_add_pre_validator_task_registers():
 def test_async_def_add_post_set_registers():
     v = Validator(debug=True)
 
-    @v.add_post_set
     async def after(instance, value):
         return value
 
+    v.add_post_set(after, namespace="async.Host")
     assert inspect.iscoroutinefunction(after)
     bagged = [fn for fns in v._processors["post_set"].values() for fn in fns]
     assert after in bagged
@@ -162,11 +167,11 @@ def test_sync_processor_returning_coroutine_no_loop_needs_running_loop():
     def wrap(instance, value):
         return _coro(instance, value)
 
-    v.add_pre_validator(wrap, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator(wrap, namespace=_bag_key(Host))
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
@@ -178,21 +183,55 @@ def test_sync_processor_returning_coroutine_debug_falsy_swallows_unset():
     def wrap(instance, value):
         return _coro(instance, value)
 
-    field.add_pre_validator(wrap, namespace="Host")
-
     @dataclass
     class Host:
         x: str = field
+
+    field.add_pre_validator(wrap, namespace=_bag_key(Host))
 
     assert Host(x="ada").x is None
     assert field.errors
     assert any(isinstance(err, TypeError) for err in field.errors)
 
 
-def test_module_level_decorator_without_namespace_does_not_fire():
-    """valio add_pre_validator L1861: namespace or qualname.split('.')[0].
+def test_free_function_without_namespace_is_type_error():
+    """A free function has no owning class; namespace= is required."""
+    field = Validator(debug=True)
 
-    Module-level ``strip`` keys the bag as ``strip``, not ``Host``.
+    def strip(instance, value):
+        return value.strip()
+
+    with pytest.raises(TypeError, match="namespace="):
+        field.add_pre_validator(strip)
+
+    with pytest.raises(TypeError, match="namespace="):
+        @field.add_pre_validator_task
+        def note(instance, value):
+            return value
+
+
+def test_explicit_namespace_override_matches_class_bag_key():
+    """namespace= is the bag key as-is; lookup uses the same module.qualname."""
+    field = Validator(debug=True)
+
+    @dataclass
+    class Host:
+        x: str = field
+
+    def strip(instance, value):
+        return value.strip() if isinstance(value, str) else value
+
+    key = f"{Host.__module__}.{Host.__qualname__}"
+    field.add_pre_validator(strip, namespace=key)
+    assert list(field._processors["pre_validate"]) == [key]
+    assert Host(x="  Ada  ").x == "Ada"
+
+
+def test_bare_name_namespace_does_not_match_module_qualname_lookup():
+    """leftover teaching: the old __name__ key is not rewritten to match.
+
+    namespace="Host" stays "Host". Lookup is module.qualname, so the
+    processor does not fire. Pass the class's module.qualname to override.
     """
     field = Validator(debug=True)
     fired = []
@@ -201,7 +240,7 @@ def test_module_level_decorator_without_namespace_does_not_fire():
         fired.append(value)
         return value.strip()
 
-    field.add_pre_validator(strip)
+    field.add_pre_validator(strip, namespace="Host")
 
     @dataclass
     class Host:
@@ -209,30 +248,21 @@ def test_module_level_decorator_without_namespace_does_not_fire():
 
     assert Host(x="  Ada  ").x == "  Ada  "
     assert fired == []
-
-
-def test_module_level_decorator_with_namespace_fires():
-    field = Validator(debug=True)
-
-    def strip(instance, value):
-        return value.strip() if isinstance(value, str) else value
-
-    field.add_pre_validator(strip, namespace="Host")
-
-    @dataclass
-    class Host:
-        x: str = field
-
-    assert Host(x="  Ada  ").x == "Ada"
+    assert "Host" in field._processors["pre_validate"]
+    assert f"{Host.__module__}.{Host.__qualname__}" not in field._processors[
+        "pre_validate"
+    ]
 
 
 def test_method_decorator_namespace_matches_module_level_class():
-    """Module-level ``_NsHost.strip`` → namespace ``_NsHost`` (valio L1861)."""
+    """Module-level ``_NsHost.strip`` keys ``module.qualname`` of ``_NsHost``."""
+    key = f"{_NsHost.__module__}.{_NsHost.__qualname__}"
+    assert list(_ns_field._processors["pre_validate"]) == [key]
     assert _NsHost(x="  Ada  ").x == "Ada"
 
 
-def test_nested_class_method_decorator_qualname_does_not_match():
-    """``test_fn.<locals>.Host.strip`` splits to the test name, not ``Host``."""
+def test_nested_class_method_decorator_uses_module_qualname():
+    """Nested ``Host.strip`` keys ``module.qualname``, not the test function name."""
     field = Validator(debug=True)
     fired = []
 
@@ -245,8 +275,10 @@ def test_nested_class_method_decorator_qualname_does_not_match():
             fired.append(value)
             return value.strip()
 
-    assert Host(x="  Ada  ").x == "  Ada  "
-    assert fired == []
+    key = f"{Host.__module__}.{Host.__qualname__}"
+    assert list(field._processors["pre_validate"]) == [key]
+    assert Host(x="  Ada  ").x == "Ada"
+    assert fired == ["  Ada  "]
 
 
 def test_add_pre_validator_implicit_none_is_stored():
@@ -257,11 +289,11 @@ def test_add_pre_validator_implicit_none_is_stored():
         if value == "taken":
             raise ValueError("taken")
 
-    username_field.add_pre_validator(forget_return, namespace="Register")
-
     @dataclass
     class Register:
         username: str = username_field
+
+    username_field.add_pre_validator(forget_return, namespace=_bag_key(Register))
 
     assert Register(username="ada").username is None
 
@@ -274,11 +306,11 @@ def test_add_pre_validator_task_does_not_rewrite_stored_value():
         seen.append(value)
         return "MUST_NOT_STORE"
 
-    username_field.add_pre_validator_task(note, namespace="Register")
-
     @dataclass
     class Register:
         username: str = username_field
+
+    username_field.add_pre_validator_task(note, namespace=_bag_key(Register))
 
     assert Register(username="ada").username == "ada"
     assert seen == ["ada"]
@@ -302,13 +334,102 @@ def test_cache_task_true_does_not_cache_tasks():
     def task(instance, value):
         log.append(value)
 
-    v.add_pre_validator_task(task, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator_task(task, namespace=_bag_key(Host))
 
     host = Host(x="a")
     host.x = "b"
     assert log == ["a", "b"]
     assert v.cache_task is True
+
+
+def test_same_class_name_different_modules_get_distinct_bags():
+    """Two User classes must not share a bag keyed by bare __name__."""
+    field = Validator(debug=True)
+    log = []
+
+    def _user_in(modname: str, tag: str):
+        ns = {
+            "__name__": modname,
+            "dataclass": dataclass,
+            "field": field,
+            "log": log,
+            "tag": tag,
+        }
+        exec(
+            "@dataclass\n"
+            "class User:\n"
+            "    x: str = field\n"
+            "    @field.add_pre_validator_task\n"
+            "    def note(self, value):\n"
+            "        log.append(tag)\n"
+            "        return value\n",
+            ns,
+        )
+        user = ns["User"]
+        mod = ModuleType(modname)
+        sys.modules[modname] = mod
+        mod.User = user
+        return user
+
+    UserA = _user_in("ux_valio_ns_a", "a")
+    UserB = _user_in("ux_valio_ns_b", "b")
+    assert UserA.__name__ == UserB.__name__ == "User"
+    assert UserA.__module__ != UserB.__module__
+    assert f"{UserA.__module__}.{UserA.__qualname__}" != (
+        f"{UserB.__module__}.{UserB.__qualname__}"
+    )
+
+    UserA(x="x")
+    assert log == ["a"]
+    log.clear()
+    UserB(x="x")
+    assert log == ["b"]
+
+
+def test_lookup_uses_same_key_helper_as_register():
+    """No __name__-only lookup path; register and lookup share _bag_key."""
+    for meth in ("_run_tasks", "_run_processors", "_run_custom_validators"):
+        src = inspect.getsource(getattr(Validator, meth))
+        assert "instance.__class__.__name__" not in src
+        assert "_bag_key" in src
+    ns_src = inspect.getsource(_namespace)
+    assert 'split(".")[0]' not in ns_src
+    assert "_bag_key" in ns_src
+
+    field = Validator(debug=True)
+
+    @dataclass
+    class Host:
+        x: str = field
+
+        @field.add_pre_validator
+        def strip(self, value):
+            return value.strip()
+
+    key = _bag_key(Host)
+    assert key == f"{Host.__module__}.{Host.__qualname__}"
+    assert list(field._processors["pre_validate"]) == [key]
+    assert _namespace(Host.strip, None) == key
+    assert Host(x="  Ada  ").x == "Ada"
+
+
+def test_class_object_namespace_is_type_error():
+    field = Validator(debug=True)
+
+    def fn(instance, value):
+        return value
+
+    @dataclass
+    class Host:
+        x: str = field
+
+    with pytest.raises(TypeError, match="namespace="):
+        field.add_pre_validator(fn, namespace=Host)
+
+    keys = list(field._processors["pre_validate"])
+    assert Host not in keys
+    assert all(isinstance(key, str) for key in keys)

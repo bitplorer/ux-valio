@@ -7,6 +7,7 @@ import pytest
 
 from ux_valio import IntegerValidator, Property, Validator
 from ux_valio.validators import Validator as Facade
+from ux_valio.validators.hooks import _bag_key
 
 
 def test_no_add_pre_set_on_validator():
@@ -32,11 +33,11 @@ def test_add_pre_validator_is_the_pre_set_pipeline():
     def strip(instance, value):
         return value.strip() if isinstance(value, str) else value
 
-    v.add_pre_validator(strip, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator(strip, namespace=_bag_key(Host))
 
     assert Host(x="  Ada  ").x == "Ada"
 

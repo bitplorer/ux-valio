@@ -13,6 +13,7 @@ import pytest
 from ux_valio.descriptor import Property
 from ux_valio import Validator
 from ux_valio.validators import Validator as Facade
+from ux_valio.validators.hooks import _bag_key
 import ux_valio.validators as vmod
 
 
@@ -35,21 +36,22 @@ def test_no_asyncio_run_in_set():
 def test_async_decorator_registers_pre_post_and_task():
     v = Validator(debug=True)
 
-    @v.add_pre_validator
     async def before(instance, value):
         return value
 
-    @v.add_post_validator
     async def after_validate(instance, value):
         return value
 
-    @v.add_post_set
     async def after_set(instance, value):
         return value
 
-    @v.add_pre_validator_task
     async def side(instance, value):
         return value
+
+    v.add_pre_validator(before, namespace="async.Host")
+    v.add_post_validator(after_validate, namespace="async.Host")
+    v.add_post_set(after_set, namespace="async.Host")
+    v.add_pre_validator_task(side, namespace="async.Host")
 
     assert inspect.iscoroutinefunction(before)
     assert inspect.iscoroutinefunction(after_validate)
@@ -63,11 +65,11 @@ def test_sync_path_without_loop_fail_closed_named_error():
     async def upper(instance, value):
         return value.upper()
 
-    v.add_pre_validator(upper, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator(upper, namespace=_bag_key(Host))
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
@@ -79,11 +81,11 @@ def test_sync_path_without_loop_does_not_store_coroutine():
     async def upper(instance, value):
         return value.upper()
 
-    v.add_pre_validator(upper, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator(upper, namespace=_bag_key(Host))
 
     with pytest.raises(TypeError, match="await from async context"):
         Host(x="ada")
@@ -95,11 +97,11 @@ def test_sync_path_without_loop_debug_falsy_swallows_unset():
     async def upper(instance, value):
         return value.upper()
 
-    field.add_pre_validator(upper, namespace="Host")
-
     @dataclass
     class Host:
         x: str = field
+
+    field.add_pre_validator(upper, namespace=_bag_key(Host))
 
     assert Host(x="ada").x is None
     assert field.errors
@@ -116,11 +118,11 @@ def test_async_task_sync_path_without_loop_fail_closed():
     async def note(instance, value):
         seen.append(value)
 
-    v.add_pre_validator_task(note, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator_task(note, namespace=_bag_key(Host))
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
@@ -146,11 +148,11 @@ def test_sync_path_with_running_loop_runs_async_processor():
         await asyncio.sleep(0)
         return value.upper()
 
-    v.add_pre_validator(upper, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator(upper, namespace=_bag_key(Host))
 
     host = _assign_on_running_loop(lambda: Host(x="ada"))
     assert host.x == "ADA"
@@ -165,11 +167,11 @@ def test_sync_path_with_running_loop_runs_async_task():
         log.append(value)
         return "MUST_NOT_STORE"
 
-    v.add_pre_validator_task(note, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator_task(note, namespace=_bag_key(Host))
 
     host = _assign_on_running_loop(lambda: Host(x="ada"))
     assert host.x == "ada"
@@ -189,12 +191,12 @@ def test_sync_path_with_running_loop_processors_then_tasks_once():
         await asyncio.sleep(0)
         log.append(("task", value))
 
-    v.add_pre_validator(proc, namespace="Host")
-    v.add_pre_validator_task(task, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator(proc, namespace=_bag_key(Host))
+    v.add_pre_validator_task(task, namespace=_bag_key(Host))
 
     host = _assign_on_running_loop(lambda: Host(x="raw"))
     assert host.x == "raw-p"
@@ -208,11 +210,11 @@ def test_async_post_set_runs_with_running_loop_return_ignored():
         await asyncio.sleep(0)
         return "SHOULD_NOT_STORE"
 
-    v.add_post_set(rewrite, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_post_set(rewrite, namespace=_bag_key(Host))
 
     host = _assign_on_running_loop(lambda: Host(x="kept"))
     assert host.x == "kept"
@@ -229,11 +231,11 @@ def test_sync_wrap_returning_coroutine_registers_and_runs_with_loop():
     def wrap(instance, value):
         return upper(instance, value)
 
-    v.add_pre_validator(wrap, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator(wrap, namespace=_bag_key(Host))
 
     host = _assign_on_running_loop(lambda: Host(x="ada"))
     assert host.x == "ADA"
@@ -248,11 +250,11 @@ def test_sync_wrap_returning_coroutine_no_loop_needs_helper_not_class_reject():
     def wrap(instance, value):
         return upper(instance, value)
 
-    v.add_pre_validator(wrap, namespace="Host")
-
     @dataclass
     class Host:
         x: str = v
+
+    v.add_pre_validator(wrap, namespace=_bag_key(Host))
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
