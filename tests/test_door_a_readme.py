@@ -119,7 +119,9 @@ def test_public_all_is_explicit_and_small():
     assert "Schema" not in ux_valio.__all__
     assert "Validator" in ux_valio.__all__
     assert "StringValidator" in ux_valio.__all__
-    assert len(ux_valio.__all__) < 40
+    assert "AllOf" in ux_valio.__all__
+    assert "MinLengthValidator" in ux_valio.__all__
+    assert len(ux_valio.__all__) < 50
 
 
 def test_no_field_schema_cap_on_package():

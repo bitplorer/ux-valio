@@ -1,18 +1,16 @@
 # SPDX-License-Identifier: MIT
-"""Soft 4: named Door A honesty rows only.
-
-Soft 3 KEEP: Register DB-check is add_pre_validator inside pre_set.
-No add_pre_set. No asyncio.run in __set__. debug-swallow stays.
-"""
+"""Hook / namespace honesty. No add_pre_set. No asyncio.run in __set__."""
 
 from dataclasses import dataclass
 import inspect
+from pathlib import Path
 
 import pytest
 
 from ux_valio.descriptor import Property
 from ux_valio import StringValidator, Validator
 from ux_valio.validators import Validator as Facade
+from ux_valio.validators.async_bridge import resolve_coroutine
 import ux_valio.validators as vmod
 
 # Module-level host: method ``__qualname__`` is ``_NsHost.strip`` so
@@ -44,7 +42,10 @@ class _Register:
         return value
 
 
-# --- Soft 3 KEEP (absence lock) ------------------------------------------------
+def _package_sources() -> list[str]:
+    root = Path(vmod.__file__).resolve().parent
+    return [path.read_text() for path in root.glob("*.py")]
+
 
 def test_no_add_pre_set_still_absent():
     assert not hasattr(Validator, "add_pre_set")
@@ -54,7 +55,7 @@ def test_no_add_pre_set_still_absent():
 
 
 def test_register_db_check_is_add_pre_validator_on_username_field():
-    """Soft 3 KEEP: before-store uniqueness hangs on add_pre_validator.
+    """Before-store uniqueness hangs on add_pre_validator.
 
     Class-body ``username: str = username`` is NameError (local bind). Door A
     matches valio Field's ``user_field`` / ``user`` split: hang on
@@ -66,30 +67,26 @@ def test_register_db_check_is_add_pre_validator_on_username_field():
         _Register(username="taken")
 
 
-# --- Soft4-DO 1: cartograph Door A vs Soft 1 RETIRE asyncio.run in __set__ -----
-
 def test_no_asyncio_run_or_enable_async_in_door_a_tree():
     """valio `_processing` L1835–1846 and `_after_processing_run_tasks` L807–811
-    called asyncio.run from the setter pipeline. Soft 1 RETIRE. Soft 5 may
-    import asyncio for get_running_loop / nest-safe bridge. ``enable_async``
-    stays not a door. ``asyncio.run`` / ``run_until_complete`` stay out of
-    ``Property.__set__`` and the processor/task runners.
+    called asyncio.run from the setter pipeline. That is retired.
+    ``enable_async`` stays not a door. ``asyncio.run`` / ``run_until_complete``
+    stay out of ``Property.__set__`` and the processor/task runners.
     """
     set_src = inspect.getsource(Property.__set__)
     assert "asyncio" not in set_src
     assert "asyncio.run" not in set_src
     assert "run_until_complete" not in set_src
-    src = inspect.getsource(vmod)
-    assert "enable_async" not in src
+    assert all("enable_async" not in src for src in _package_sources())
     assert "asyncio.run" not in inspect.getsource(Validator._run_processors)
     assert "asyncio.run" not in inspect.getsource(Validator._run_tasks)
     assert "run_until_complete" not in inspect.getsource(Validator._run_processors)
     assert "run_until_complete" not in inspect.getsource(Validator._run_tasks)
-    assert "asyncio.run" not in inspect.getsource(vmod._soft5_resolve)
+    assert "asyncio.run" not in inspect.getsource(resolve_coroutine)
 
 
 def test_same_name_descriptor_and_field_is_nameerror():
-    """Cartograph: Door A cannot bind ``username: str = username``.
+    """Door A cannot bind ``username: str = username``.
 
     Assignment of ``username`` in the class body makes that name local, so the
     RHS does not see the outer descriptor. valio README avoided this via Door B
@@ -102,10 +99,7 @@ def test_same_name_descriptor_and_field_is_nameerror():
             username: str = username
 
 
-# --- Soft4-DO 2: sync vs async registration honesty ----------------------------
-
 def test_async_def_add_pre_validator_registers():
-    """Soft 5 supersedes Soft 4 TypeError-at-register."""
     v = Validator(debug=True)
 
     @v.add_pre_validator
@@ -157,12 +151,11 @@ async def _coro(instance, value):
     return value
 
 
-def test_sync_processor_returning_coroutine_no_loop_is_soft5_door():
+def test_sync_processor_returning_coroutine_no_loop_needs_running_loop():
     """valio `_processing` L1844–1846 asyncio.run'd a coroutine return.
 
-    Soft 4 leftover: `_reject_coroutine_result` TypeError'd the object so
-    Soft 1 would not store it. Soft 5 does not reject coroutines as a
-    class — no loop is Soft 5 Door (not asyncio.run, not store).
+    Coroutine objects are not rejected as a class — no loop TypeErrors
+    (not asyncio.run, not store).
     """
     v = Validator(debug=True)
 
@@ -175,7 +168,7 @@ def test_sync_processor_returning_coroutine_no_loop_is_soft5_door():
     class Host:
         x: str = v
 
-    with pytest.raises(TypeError, match="Soft 5 Door"):
+    with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
 
 
@@ -195,8 +188,6 @@ def test_sync_processor_returning_coroutine_debug_falsy_swallows_unset():
     assert field.errors
     assert any(isinstance(err, TypeError) for err in field.errors)
 
-
-# --- Soft4-DO 3: decorator / namespace footguns --------------------------------
 
 def test_module_level_decorator_without_namespace_does_not_fire():
     """valio add_pre_validator L1861: namespace or qualname.split('.')[0].
@@ -293,21 +284,17 @@ def test_add_pre_validator_task_does_not_rewrite_stored_value():
     assert seen == ["ada"]
 
 
-# --- Soft4-DO 4: claim vs tree enable_async / cache_task -----------------------
-
 def test_enable_async_kwarg_is_type_error_not_a_new_door():
-    """valio claimed enable_async (validators.py L1698, L1756, L1782–1785).
-    ux-valio Soft 1 tree has 0 enable_async. Unknown kwargs stay TypeError.
-    """
+    """valio claimed enable_async. Unknown kwargs stay TypeError."""
     assert not hasattr(Validator(), "enable_async")
     with pytest.raises(TypeError, match="enable_async"):
         Validator(enable_async=True, debug=True)
 
 
 def test_cache_task_true_does_not_cache_tasks():
-    """valio cache_task=True (L780–789, L1495–1500) keyed by id(tasks).
+    """valio cache_task=True keyed by id(tasks).
 
-    ux-valio keeps the kwarg; tasks still run every phase (Soft 1 RETIRE cache).
+    ux-valio keeps the kwarg; tasks still run every phase (cache retired).
     """
     log = []
     v = Validator(debug=True, cache_task=True)

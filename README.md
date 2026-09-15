@@ -2,8 +2,8 @@
 
 Door A descriptor-on-dataclass validation. Greenfield reimplementation of
 [`bitplorer/valio`](https://github.com/bitplorer/valio) frozen at
-[`3415c03`](https://github.com/bitplorer/valio/commit/3415c03e37085adda4040671a91eb19aa4fe4ac4)
-(Soft 10). Valio itself is not edited.
+[`3415c03`](https://github.com/bitplorer/valio/commit/3415c03e37085adda4040671a91eb19aa4fe4ac4).
+Valio itself is not edited.
 
 ## Install
 
@@ -17,24 +17,29 @@ The public caller shape is a validator as the dataclass field default:
 
 ```python
 from dataclasses import dataclass
-from ux_valio import IntegerValidator, StringValidator, Validator
+from ux_valio import IntegerValidator, LengthValidator, RequiredValidator, StringValidator, Validator
 
 @dataclass
 class User:
     name: str = StringValidator(debug=True, max_length=50, required=True)
     rank: str = Validator(in_choice=["Male", "Female", "Trans"], default="Female")
     n: int = IntegerValidator(min_value=0, max_value=10, multiple_of=2, debug=True)
+    tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(required=True)
 ```
 
 There is no Field twin and no Schema twin. `field: T = SomeValidator(...)` is
 the door.
+
+Concern leaves (`LengthValidator`, `RequiredValidator`, …) and facades compose
+with `&` (AllOf) / `|` (AnyOf), or explicit `AllOf` / `AnyOf` / `Chain`, as
+**one** descriptor. Facades do not multiple-inherit leaves.
 
 ## KEEP: debug swallow, logger OFF, pre_set hook
 
 - `debug=True` re-raises on a failed set/get/delete.
 - `debug` falsy (including the default `None`) swallows the exception, appends
   it to `errors`, and leaves the attribute unset so later reads are `None`.
-  This swallow is KEEP. Soft 1 does not flip the product to fail-closed-by-default.
+  This swallow is KEEP. The product does not fail-closed-by-default.
 - `logger` defaults **OFF** (`False`). Valio's `logger=None` enabled file
   logging; ux-valio does not.
 
@@ -46,24 +51,20 @@ or `add_pre_validator_task` (side effect; return ignored). `add_post_set`
 runs after store; its return is ignored.
 
 `add_*` / `add_*_task` accept **sync or async** callables. `async def`
-registers (Soft 5). Coroutine **objects** at run are not a second reject
-door: same run rules as `async def`. Soft 4's TypeError-at-register *and*
-`_reject_coroutine_result` were leftover honesty: valio drove both with
-`asyncio.run` in the setter (nested-loop hazard); Soft 1 retired that.
-Soft 4 did not mean "async / coroutines are illegal forever."
+registers. Coroutine **objects** at run are not a second reject door: same
+run rules as `async def`.
 
-**Run rules (Soft 5 Door):** on the sync descriptor path,
-- no running loop → `TypeError` naming Soft 5 Door
-  (`await from async context / call via Soft5 helper`). Not silent `None`,
-  not `asyncio.run`.
+**Run rules:** on the sync descriptor path,
+- no running loop → `TypeError` (`async callable needs a running event loop / helper`).
+  Not silent `None`, not `asyncio.run`.
 - running loop → nest-safe sync-bridge (private loop in a worker thread).
   Assign from an async context (`asyncio.run` of a small harness or
   pytest-asyncio). Same-thread `run_until_complete` on the caller's loop
-  is the retired nested-loop hazard.
+  is a nested-loop hazard.
 
 `asyncio.run` is not used in `__set__`.
 
-### Before-store DB check (Register) — Soft 3 KEEP
+### Before-store DB check (Register)
 
 valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
 for `add_pre_validator`). Door A hangs the same processor on the descriptor.
@@ -103,6 +104,22 @@ exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
 
 `PatternValidator` matches with `re.findall` (substring), not `fullmatch`.
 
+## Typed facades
+
+`IntegerValidator`, `StringValidator`, `BooleanValidator`, `FloatValidator`,
+`DecimalValidator`, `BytesValidator`, `DateValidator` (`datetime.date`),
+`EmailValidator`, `UUIDValidator` (coerces UUID strings), `PathValidator`
+(coerces `str` → `pathlib.Path`; `path_exists=True` requires the path to
+exist), `IPv4Validator` / `IPv6Validator` / `IPAddressValidator`, and
+`EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`.
+
+Min/max length and value leaves (`MinLengthValidator`, `MaxLengthValidator`,
+`MinValueValidator`, `MaxValueValidator`) are public building blocks.
+
+`AttributeValidator` is **not** shipped. Check object attributes at the call
+site or with `add_validator`. Payment-card, named-once, and expiry leaves
+are out of scope. RGB/HSL color validators are retired.
+
 ## Migration (Door B → Door A)
 
 Valio README taught a second door: construct a `*Field`, hang decorators on
@@ -113,10 +130,9 @@ signature, and is untested. ux-valio retires Door B. Move the kwargs onto
 and hang `add_pre_validator` / `add_validator` on that descriptor. Star-import
 of valio's 306 names is gone; import the names in `__all__`.
 
-## Soft 1 surface
+## Public surface
 
-`Validator`, `StringValidator`, `IntegerValidator`, `BooleanValidator`,
-`TypeValidator`, `RequiredValidator`, `PatternValidator`, `LengthValidator`,
-`ValueValidator`, `MultipleValidator`, `ChoiceValidator`, `ReassignValidator`,
-and `Pattern` / `PatternType` combinators (`&` / `|`). Concern leaves compose
-on an ordered path. No multiple inheritance, no Cap Host, no `rule/`.
+`Validator`, typed facades, concern leaves, `AllOf` / `AnyOf` / `Chain`, and
+`Pattern` / `PatternType` combinators (`&` / `|`). Concern leaves also compose
+as validator objects (`LengthValidator(...) & RequiredValidator(...)`).
+No multiple inheritance of leaves, no Cap Host, no `rule/`.

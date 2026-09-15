@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: MIT
-"""Soft 2: fail-closed annotation conflict at descriptor assignment.
+"""Fail-closed annotation conflict at descriptor assignment.
 
 valio@3415c03 ``valio/descriptor/descriptors.py`` ``_may_set_or_ensure_annotation_match``
-(L157–202) raises when both sides are set and do not match. Soft 1 quietly
-overwrote. Owner wins only when ``validator.annotation`` was None. Validator
-annotation is kept when the owner has none.
+(L157–202) raises when both sides are set and do not match. Owner wins only
+when ``validator.annotation`` was None. Validator annotation is kept when the
+owner has none.
 
 Reuse with a matching annotation and a different field name raises
 ``AttributeError`` (same file ``_set_name`` L134–155). Dual-schema

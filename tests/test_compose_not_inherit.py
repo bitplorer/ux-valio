@@ -5,6 +5,10 @@ from ux_valio import (
     ChoiceValidator,
     IntegerValidator,
     LengthValidator,
+    MaxLengthValidator,
+    MaxValueValidator,
+    MinLengthValidator,
+    MinValueValidator,
     MultipleValidator,
     PatternValidator,
     ReassignValidator,
@@ -14,12 +18,6 @@ from ux_valio import (
     ValidateProperty,
     Validator,
     ValueValidator,
-)
-from ux_valio.validators import (
-    MaxLengthValidator,
-    MaxValueValidator,
-    MinLengthValidator,
-    MinValueValidator,
 )
 
 

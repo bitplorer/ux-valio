@@ -1,20 +1,27 @@
 # AGENTS.md
 
-**Soft LOCK.** Soft DO = Soft 5 restore async add_*/tasks (no asyncio.run in `__set__`).
+Door A only: `field: T = SomeValidator(...)`.
 
 - Frozen reference: `bitplorer/valio` @ `3415c03`. Do not edit valio.
-- Public door: `field: T = SomeValidator(...)`.
-- Soft NOT: Cap Host, `mount_channel`, Field twin, Schema twin, `rule/`,
-  Result type, RGB/HSL, star-import barrel, `asyncio.run` in `__set__`,
-  `add_pre_set` / `_processors["pre_set"]` (E14 dual-door).
-- KEEP: Soft #2 falsy defaults; Soft #8 bound honesty (`None` ≠ `0`);
-  debug-swallow; logger default OFF; Pattern `findall`; compose-not-inherit;
+- No Cap Host, `mount_channel`, Field twin, Schema twin, `rule/`,
+  Result type, RGB/HSL, or star-import barrel.
+- No `asyncio.run` in `__set__`. Nested loops use the nest-safe worker
+  bridge only.
+- No `add_pre_set` / `_processors["pre_set"]` (that would be a second door).
+- KEEP: falsy assigned `0` / `False` / `""` are not replaced by `default`;
+  bound honesty (`None` ≠ `0`); debug-swallow; logger default OFF;
+  Pattern `findall`; facades do not multiple-inherit concern leaves;
   path fail-closed; processors then tasks once;
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
   before-store hangs on `add_pre_validator` / `add_validator` /
   `add_pre_validator_task`; `add_*` accepts async def and coroutine
-  results (Soft 5 register OK; no `_reject_coroutine_result`);
-  sync path with no running loop TypeError names Soft 5 Door; running loop
-  uses nest-safe worker bridge (never `asyncio.run` in `__set__`).
+  results (no `_reject_coroutine_result`);
+  sync path with no running loop TypeError names the missing loop / helper;
+  running loop uses nest-safe worker bridge.
   `enable_async` is not a door (unknown-kwarg TypeError).
   `cache_task` kwarg KEEP, cache behavior RETIRE.
+- Validator objects compose with `&` / `|` or `AllOf` / `AnyOf` / `Chain`.
+  That is object composition, not leaf multiple-inheritance.
+- `AttributeValidator` is not shipped. Object-attribute presence checks
+  belong at the call site or on `add_validator`.
+- Payment-card / named-once / expiry leaves stay out of this tree.

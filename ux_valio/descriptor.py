@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
-"""Descriptor lifecycle (A9 unit 1).
+"""Descriptor lifecycle.
 
-``__set__`` applies ``default`` only when the assigned value ``is None``
-(Soft #2). Falsy assigned values ``0`` / ``False`` / ``""`` are kept.
+``__set__`` applies ``default`` only when the assigned value ``is None``.
+Falsy assigned values ``0`` / ``False`` / ``""`` are kept.
 
 ``debug`` falsy swallows exceptions, appends them to ``errors``, and does
 not re-raise. ``debug=True`` re-raises. This swallow is KEEP — not a
@@ -17,11 +17,11 @@ validate pipeline, not a ``_processors["pre_set"]`` bag. Hang before-store
 work on ``add_pre_validator`` / ``add_validator`` / ``add_pre_validator_task``.
 ``post_set`` / get / delete return values are ignored. ``__get__`` /
 ``__delete__`` pass ``self.name`` into hooks, not the stored value.
-``add_*`` may be async (Soft 5). No ``asyncio.run`` in ``__set__``.
+``add_*`` may be async. No ``asyncio.run`` in ``__set__``.
 
 Logger default is OFF.
 
-``__set_name__`` is fail-closed on annotation conflict (Soft 2). If both
+``__set_name__`` is fail-closed on annotation conflict. If both
 ``validator.annotation`` and the owner class annotation are set and they
 disagree, raise ``TypeError``. Owner wins only when the validator annotation
 was ``None``. The validator annotation is kept when the owner has none.
@@ -122,8 +122,7 @@ class Property:
     def __set_name__(self, owner: type, name: str) -> None:
         # valio@3415c03 valio/descriptor/descriptors.py L134–202:
         # _set_name + _may_set_or_ensure_annotation_match. Fail closed; not debug-swallow.
-        # Soft 3: name mismatch is always AttributeError. valio only raised when
-        # annotations agreed (dual-schema HOLD). A stuck name is a lie.
+        # Name mismatch is always AttributeError. A stuck name is a lie.
         try:
             if self.name is None:
                 self.name = name
