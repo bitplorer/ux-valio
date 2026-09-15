@@ -27,8 +27,9 @@ Logger default is OFF.
 ``validator.annotation`` and the owner class annotation are set and they
 disagree, raise ``TypeError``. Owner wins only when the validator annotation
 was ``None``. The validator annotation is kept when the owner has none.
-Union forms are compared with stdlib ``get_origin`` / ``get_args``
-(``typing.Union`` and ``X | Y``), not typingx / typing_extensions.
+Union forms and list/dict/tuple/set/frozenset aliases are compared with
+stdlib ``get_origin`` / ``get_args`` (``typing.Union`` and ``X | Y``;
+``list[T]`` and ``typing.List[T]``), not typingx / typing_extensions.
 """
 
 from __future__ import annotations
@@ -37,11 +38,22 @@ import types
 from typing import Any, Union, get_args, get_origin
 
 
+_CONTAINER_ORIGINS = (list, dict, tuple, set, frozenset)
+
+
 def _annotation_identity(annotation: Any) -> Any:
-    """Hashable identity for stdlib union forms. ``Union[X, Y]`` and ``X | Y`` agree."""
+    """Hashable identity for stdlib union and container alias forms.
+
+    ``Union[X, Y]`` and ``X | Y`` agree. ``list[T]`` and ``typing.List[T]``
+    agree. Bare ``list`` is not ``list[int]``.
+    """
     origin = get_origin(annotation)
     if origin is Union or origin is types.UnionType:
         return (Union, frozenset(_annotation_identity(arg) for arg in get_args(annotation)))
+    if origin in _CONTAINER_ORIGINS:
+        return (origin, tuple(_annotation_identity(arg) for arg in get_args(annotation)))
+    if annotation in _CONTAINER_ORIGINS:
+        return (annotation, ())
     return annotation
 
 

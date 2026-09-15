@@ -5,39 +5,118 @@ from __future__ import annotations
 
 import re
 import types
-from typing import Any, Union, get_args, get_origin
+from collections.abc import (
+    Callable as AbcCallable,
+    Collection,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    MutableSet,
+    Sequence,
+    Set as AbstractSet,
+)
+from typing import Annotated, Any, Literal, TypeVar, Union, get_args, get_origin
 
 from ux_valio.pattern import PatternType
 from ux_valio.validators.base import ValidateProperty
 from ux_valio.validators.bounds import bound
 
+_SEQUENCE_ORIGINS = (Sequence, MutableSequence)
+_MAPPING_ORIGINS = (Mapping, MutableMapping)
+_SET_ABC_ORIGINS = (AbstractSet, MutableSet)
+_COLLECTION_ORIGINS = (Collection,)
+
 
 def is_instance_of(value: Any, annotation: Any) -> bool:
-    """Door A type honesty: Union/Optional recurse; other origins use origin.
+    """Door A type honesty: origin+args recurse; unknown TypeError is False.
 
-    ``list[int]`` is a list, not an int. Parametrized args (element types,
-    Literal, Annotated) stay permissive on ``isinstance`` TypeError — not
-    typingx.
+    ``list[int]`` is a list of ints. Parametrized args (element types,
+    Literal membership, Annotated inner type) are checked. ``typing.Any``
+    and an unset ``None`` annotation accept. Not typingx.
     """
-    if annotation is None:
+    if annotation is None or annotation is Any:
         return True
+    if isinstance(annotation, str):
+        return False
+    supertype = getattr(annotation, "__supertype__", None)
+    if supertype is not None and get_origin(annotation) is None:
+        return is_instance_of(value, supertype)
+    if isinstance(annotation, TypeVar):
+        if annotation.__constraints__:
+            return any(is_instance_of(value, arg) for arg in annotation.__constraints__)
+        if annotation.__bound__ is not None:
+            return is_instance_of(value, annotation.__bound__)
+        return False
     origin = get_origin(annotation)
+    args = get_args(annotation)
+    if origin is Annotated:
+        if not args:
+            return False
+        return is_instance_of(value, args[0])
     if origin is Union or origin is types.UnionType:
-        args = get_args(annotation)
         if not args:
             return True
         return any(is_instance_of(value, arg) for arg in args)
     if origin is type(None):
         return value is None
-    if origin is None:
-        try:
-            return isinstance(value, annotation)
-        except TypeError:
-            return True
+    if origin is Literal:
+        return value in args
+    if origin is list:
+        return isinstance(value, list) and _elements_match(value, args)
+    if origin is set:
+        return isinstance(value, set) and _elements_match(value, args)
+    if origin is frozenset:
+        return isinstance(value, frozenset) and _elements_match(value, args)
+    if origin is dict:
+        return isinstance(value, dict) and _mapping_match(value, args)
+    if origin is tuple:
+        return isinstance(value, tuple) and _tuple_match(value, args)
+    if origin is AbcCallable:
+        return _isinstance_closed(value, origin)
+    if origin in _MAPPING_ORIGINS:
+        return isinstance(value, origin) and _mapping_match(value, args)
+    if origin in _SET_ABC_ORIGINS:
+        return isinstance(value, origin) and _elements_match(value, args)
+    if origin in _SEQUENCE_ORIGINS:
+        return isinstance(value, origin) and _elements_match(value, args)
+    if origin in _COLLECTION_ORIGINS:
+        return isinstance(value, origin) and _elements_match(value, args)
+    target = origin if origin is not None else annotation
+    return _isinstance_closed(value, target)
+
+
+def _isinstance_closed(value: Any, target: Any) -> bool:
     try:
-        return isinstance(value, origin)
+        return isinstance(value, target)
     except TypeError:
+        return False
+
+
+def _elements_match(value: Any, args: tuple[Any, ...]) -> bool:
+    if not args:
         return True
+    item_annotation = args[0]
+    return all(is_instance_of(item, item_annotation) for item in value)
+
+
+def _mapping_match(value: Any, args: tuple[Any, ...]) -> bool:
+    if not args:
+        return True
+    if len(args) != 2:
+        return False
+    key_annotation, value_annotation = args
+    return all(
+        is_instance_of(key, key_annotation) and is_instance_of(item, value_annotation)
+        for key, item in value.items()
+    )
+
+
+def _tuple_match(value: Any, args: tuple[Any, ...]) -> bool:
+    if len(args) == 2 and args[1] is Ellipsis:
+        return all(is_instance_of(item, args[0]) for item in value)
+    if len(value) != len(args):
+        return False
+    return all(is_instance_of(item, arg) for item, arg in zip(value, args, strict=True))
 
 
 class TypeValidator(ValidateProperty):

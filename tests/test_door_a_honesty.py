@@ -52,6 +52,8 @@ def test_list_int_annotation_accepts_list_rejects_int():
     assert Box(items=[1, 2]).items == [1, 2]
     with pytest.raises(TypeError, match="list"):
         Box(items=1)
+    with pytest.raises(TypeError):
+        Box(items=["a"])
 
 
 def test_dict_annotation_accepts_dict_rejects_str():
@@ -64,6 +66,8 @@ def test_dict_annotation_accepts_dict_rejects_str():
     assert Map(m={"a": 1}).m == {"a": 1}
     with pytest.raises(TypeError):
         Map(m="a")
+    with pytest.raises(TypeError):
+        Map(m={1: "a"})
 
 
 def test_list_int_or_none_accepts_list_and_none_rejects_int():
@@ -77,6 +81,8 @@ def test_list_int_or_none_accepts_list_and_none_rejects_int():
     assert Box(items=None).items is None
     with pytest.raises(TypeError):
         Box(items=1)
+    with pytest.raises(TypeError):
+        Box(items=["a"])
 
 
 def test_union_int_str_still_rejects_float():
