@@ -40,8 +40,13 @@ def test_check_functions_are_not_owned_public_api():
     assert "check_length" not in ux_valio.__all__
     assert "check_value" not in ux_valio.__all__
     assert "check_type" not in ux_valio.__all__
+    assert "check_instance" not in ux_valio.__all__
     assert not hasattr(ux_valio, "check_length")
+    assert not hasattr(ux_valio, "check_instance")
     assert not hasattr(ux_valio.validators, "check_length")
+    assert not hasattr(ux_valio.validators, "check_instance")
+    assert "ListValidator" not in ux_valio.__all__
+    assert not hasattr(ux_valio, "ListValidator")
 
 
 def test_min_max_leaves_are_exported():

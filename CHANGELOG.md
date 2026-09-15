@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Type membership walks parametrized args with stdlib `get_origin` /
+  `get_args`: `list[T]` / `dict[K, V]` / `set[T]` / `tuple` arity and
+  `tuple[T, ...]`, including nested forms. `typing.List[T]` agrees with
+  `list[T]` at bind time. `Literal` membership, `Annotated` strip, and
+  `NewType` unwrap. `isinstance` `TypeError` is fail-closed (`False`);
+  `typing.Any` and an unset annotation still accept. No public
+  `check_instance`.
 - Hook bags key by `module.qualname` on register and lookup. Free functions
   require `namespace=`. Class-object keys are rejected. Two same-named
   classes in different modules no longer collide.

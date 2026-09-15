@@ -12,7 +12,7 @@ Reuse with a matching annotation and a different field name raises
 """
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Dict, List, Optional, Set, Union
 
 import pytest
 
@@ -169,6 +169,41 @@ def test_property_conflict_message_names_owner_and_descriptor():
         @dataclass
         class Also:
             n: str = IntegerValidator(debug=True)
+
+
+def test_list_int_agrees_with_typing_list_int():
+    field = Validator(debug=True)
+    field.annotation = List[int]
+
+    @dataclass
+    class Box:
+        items: list[int] = field
+
+    assert field.annotation is List[int]
+    assert Box(items=[1]).items == [1]
+
+
+def test_dict_and_set_typing_aliases_agree_with_builtins():
+    dfield = Validator(debug=True)
+    dfield.annotation = Dict[str, int]
+    sfield = Validator(debug=True)
+    sfield.annotation = Set[int]
+
+    @dataclass
+    class Pair:
+        m: dict[str, int] = dfield
+        items: set[int] = sfield
+
+    assert Pair(m={"a": 1}, items={1}).m == {"a": 1}
+
+
+def test_bare_list_still_conflicts_with_list_int():
+    field = Validator(debug=True)
+    field.annotation = list
+    with pytest.raises(TypeError, match="did not match"):
+        @dataclass
+        class Box:
+            items: list[int] = field
 
 
 def test_descriptor_property_owner_none_keeps_unset_annotation():
