@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Soft #2: assigned 0 / False / '' must not be replaced by default."""
+"""Assigned 0 / False / '' must not be replaced by default."""
 
 from dataclasses import dataclass
 

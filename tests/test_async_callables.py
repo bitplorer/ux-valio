@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
-"""Soft 5: async add_*/tasks register; sync-path run rules; no asyncio.run in __set__.
+"""async add_*/tasks register; sync-path run rules; no asyncio.run in __set__.
 
-Soft 4 KEEP: no add_pre_set. Soft 1 RETIRE of asyncio.run in __set__ stays.
+No add_pre_set. asyncio.run in __set__ stays retired.
 """
 
 from dataclasses import dataclass
@@ -69,7 +69,7 @@ def test_sync_path_without_loop_fail_closed_named_error():
     class Host:
         x: str = v
 
-    with pytest.raises(TypeError, match="Soft 5 Door"):
+    with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
 
 
@@ -104,7 +104,7 @@ def test_sync_path_without_loop_debug_falsy_swallows_unset():
     assert Host(x="ada").x is None
     assert field.errors
     assert any(
-        isinstance(err, TypeError) and "Soft 5 Door" in str(err)
+        isinstance(err, TypeError) and "running event loop" in str(err)
         for err in field.errors
     )
 
@@ -122,7 +122,7 @@ def test_async_task_sync_path_without_loop_fail_closed():
     class Host:
         x: str = v
 
-    with pytest.raises(TypeError, match="Soft 5 Door"):
+    with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
     assert seen == []
 
@@ -219,13 +219,7 @@ def test_async_post_set_runs_with_running_loop_return_ignored():
 
 
 def test_sync_wrap_returning_coroutine_registers_and_runs_with_loop():
-    """Follow-up: Soft 4 also TypeError'd coroutine *objects* at run.
-
-    valio `_processing` L1844–1846 asyncio.run'd ``iscoroutine(value)``.
-    Soft 4 leftover `_reject_coroutine_result` was temporary honesty, not
-    a class reject. Same wrap as the no-loop Soft 5 Door test; a running
-    loop drives the coroutine (nest-safe bridge).
-    """
+    """Coroutine objects are driven by the nest-safe bridge when a loop runs."""
     v = Validator(debug=True)
 
     async def upper(instance, value):
@@ -245,7 +239,7 @@ def test_sync_wrap_returning_coroutine_registers_and_runs_with_loop():
     assert host.x == "ADA"
 
 
-def test_sync_wrap_returning_coroutine_no_loop_is_soft5_door_not_class_reject():
+def test_sync_wrap_returning_coroutine_no_loop_needs_helper_not_class_reject():
     v = Validator(debug=True)
 
     async def upper(instance, value):
@@ -260,5 +254,5 @@ def test_sync_wrap_returning_coroutine_no_loop_is_soft5_door_not_class_reject():
     class Host:
         x: str = v
 
-    with pytest.raises(TypeError, match="Soft 5 Door"):
+    with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")

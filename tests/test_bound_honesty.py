@@ -1,16 +1,19 @@
 # SPDX-License-Identifier: MIT
-"""Soft #8: 0 is a bound; gt/lt exclusive; remainder means multiple-of."""
+"""0 is a bound; gt/lt exclusive; remainder means multiple-of."""
 
 import pytest
 
 from ux_valio import (
     IntegerValidator,
     LengthValidator,
+    MaxLengthValidator,
+    MaxValueValidator,
+    MinLengthValidator,
+    MinValueValidator,
     MultipleValidator,
     Validator,
     ValueValidator,
 )
-from ux_valio.validators import MaxLengthValidator, MaxValueValidator, MinLengthValidator, MinValueValidator
 
 
 def test_min_value_zero_enforces_inclusive_floor():

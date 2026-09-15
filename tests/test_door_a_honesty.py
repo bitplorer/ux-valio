@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Soft 3: Door A honesty — generics, reuse, unknown kwargs. No add_pre_set."""
+"""Door A honesty — generics, reuse, unknown kwargs. No add_pre_set."""
 
 from dataclasses import dataclass
 
@@ -10,7 +10,7 @@ from ux_valio.validators import Validator as Facade
 
 
 def test_no_add_pre_set_on_validator():
-    """Council E14: pre_set is the validate pipeline, not a processor bag."""
+    """pre_set is the validate pipeline, not a processor bag."""
     assert not hasattr(Validator, "add_pre_set")
     assert not hasattr(Validator, "add_pre_set_task")
     assert "pre_set" not in Facade()._processors

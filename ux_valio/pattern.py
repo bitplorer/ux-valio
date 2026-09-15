@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Pattern combinators (A9 unit 6).
+"""Pattern combinators.
 
 ``PatternType`` supports ``&`` (concatenate) and ``|`` (alternation).
 ``PatternValidator`` matches with ``re.findall`` (substring), not fullmatch.
