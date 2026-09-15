@@ -133,6 +133,7 @@ def test_same_field_name_may_be_reused_across_classes():
 
 
 def test_unexpected_expire_before_kwarg_is_type_error():
+    """expire_* belong on ExpiryValidator; the fat Validator facade stays closed."""
     with pytest.raises(TypeError, match="expire_before"):
         Validator(expire_before="2020-01-01", debug=True)
 

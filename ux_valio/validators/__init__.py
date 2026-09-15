@@ -9,6 +9,7 @@ presence checks belong at the call site or on ``add_validator``.
 from ux_valio.validators.base import ValidateProperty
 from ux_valio.validators.compose import AllOf, AnyOf, Chain
 from ux_valio.validators.errors import ValidationErrors
+from ux_valio.validators.expiry import ExpiryValidator
 from ux_valio.validators.facade import BooleanValidator, IntegerValidator, StringValidator, Validator
 from ux_valio.validators.leaves import (
     ChoiceValidator,
@@ -19,6 +20,7 @@ from ux_valio.validators.leaves import (
     TypeValidator,
 )
 from ux_valio.validators.length import LengthValidator, MaxLengthValidator, MinLengthValidator
+from ux_valio.validators.payment import PaymentCardValidator
 from ux_valio.validators.typed import (
     BytesValidator,
     DateValidator,
@@ -47,6 +49,7 @@ __all__ = [
     "DecimalValidator",
     "EmailValidator",
     "EnumValidator",
+    "ExpiryValidator",
     "FloatValidator",
     "IPAddressValidator",
     "IPv4Validator",
@@ -60,6 +63,7 @@ __all__ = [
     "MinValueValidator",
     "MultipleValidator",
     "PathValidator",
+    "PaymentCardValidator",
     "PatternValidator",
     "ReassignValidator",
     "RequiredValidator",

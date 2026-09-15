@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Typed Door A facades. No Field/Schema twin; no RGB/HSL; no payment/expiry leaves."""
+"""Typed Door A facades. No Field/Schema twin; no RGB/HSL; no HexColor public facade."""
 
 from __future__ import annotations
 
