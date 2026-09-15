@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `PaymentCardValidator`: Visa / Mastercard / Amex / Discover / Rupay, each
+  Luhn and brand via stdlib `re`. A Luhn-valid non-brand number is rejected.
+- `ExpiryValidator`: exclusive `expire_after` / `expire_on` /
+  `expire_before`. A bad `expire_before` string is checked on that bound.
+  `expire_*` stay off the fat `Validator` facade; no `expiry` path unit.
+- Named typed facades call their extra check from `validate()` after the
+  inherited path and do not `add_validator` themselves on each assignment.
 - Opt-in `collect_all=True` continues remaining concerns and surfaces
   `ValidationErrors`. Default stays fail-fast. `debug` is not collect-all.
 - Compose roots (`AllOf` / `AnyOf`) carry `add_*` bags. Hang hooks on the

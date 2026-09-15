@@ -142,8 +142,30 @@ exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
 strings are not parsed), `EmailValidator`, `UUIDValidator` (coerces UUID
 strings), `PathValidator` (annotation `pathlib.Path`; coerces `str` →
 `pathlib.Path`; `path_exists=True` requires the path to exist),
-`IPv4Validator` / `IPv6Validator` / `IPAddressValidator`, and
-`EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`.
+`IPv4Validator` / `IPv6Validator` / `IPAddressValidator`,
+`EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`,
+`PaymentCardValidator` (Visa / Mastercard / Amex / Discover / Rupay, each
+Luhn **and** brand; a Luhn-valid non-brand number is rejected), and
+`ExpiryValidator` (`expire_after` / `expire_on` / `expire_before` are
+exclusive; a bad `expire_before` string is checked on that kwarg, not on
+`expire_after`). `expire_*` are not accepted on `Validator`. There is no
+`expiry` path unit — the check lives on the facade.
+
+Named typed facades (`PathValidator`, IP, `PaymentCardValidator`,
+`ExpiryValidator`) run their extra check from `validate()` after the
+inherited path. They do not register that check with `add_validator` on
+each assignment.
+
+```python
+from dataclasses import dataclass
+from ux_valio import ExpiryValidator, PaymentCardValidator
+
+@dataclass
+class Card:
+    number: str = PaymentCardValidator(debug=True)
+    # expire_before is its own bound; do not also pass expire_after.
+    until: str = ExpiryValidator(expire_before="2020-01-01", debug=True)
+```
 
 Phone, list/dict/set/tuple collection facades are not shipped.
 
@@ -151,8 +173,8 @@ Min/max length and value leaves (`MinLengthValidator`, `MaxLengthValidator`,
 `MinValueValidator`, `MaxValueValidator`) are public building blocks.
 
 `AttributeValidator` is **not** shipped. Check object attributes at the call
-site or with `add_validator`. Payment-card, named-once, and expiry leaves
-are out of scope. RGB/HSL color validators are retired.
+site or with `add_validator`. RGB/HSL color validators are retired.
+`HexColorValidator` is not a public facade.
 
 ## Migration (Door B → Door A)
 

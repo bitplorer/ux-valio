@@ -56,9 +56,34 @@ def test_min_max_leaves_are_exported():
         "FloatValidator",
         "EmailValidator",
         "UUIDValidator",
+        "PaymentCardValidator",
+        "ExpiryValidator",
     ):
         assert name in ux_valio.__all__
         assert hasattr(ux_valio, name)
+
+
+def test_hex_color_is_not_a_public_facade():
+    assert "HexColorValidator" not in ux_valio.__all__
+    assert not hasattr(ux_valio, "HexColorValidator")
+    assert not hasattr(ux_valio.validators, "HexColorValidator")
+
+
+def test_product_does_not_import_pyparsing():
+    import ast
+
+    hits = []
+    for path in ROOT.glob("ux_valio/**/*.py"):
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "pyparsing" or alias.name.startswith("pyparsing."):
+                        hits.append(f"{path.relative_to(ROOT)}: import {alias.name}")
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                if node.module == "pyparsing" or node.module.startswith("pyparsing."):
+                    hits.append(f"{path.relative_to(ROOT)}: from {node.module}")
+    assert hits == []
 
 
 def test_no_process_pack_docs_in_tree():
