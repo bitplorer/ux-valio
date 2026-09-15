@@ -8,6 +8,7 @@ Hang ``add_*`` on the descriptor that is the field default. There is no
 from __future__ import annotations
 
 from collections import defaultdict
+from types import SimpleNamespace
 from typing import Any, Callable
 
 from ux_valio.validators.async_bridge import invoke_callable
@@ -26,16 +27,44 @@ _PROCESSOR_PHASES = (
 )
 
 
-def _namespace(func: Callable[..., Any], namespace: str | None) -> str:
-    """Bag key. valio@3415c03 ``add_pre_validator`` L1861:
-    ``namespace or str(func.__qualname__).split(".")[0]``.
+def _bag_key(cls: Any) -> str:
+    """One bag key for register and lookup: ``module.qualname``."""
+    return f"{cls.__module__}.{cls.__qualname__}"
 
-    A module-level function without ``namespace=`` keys by the function name,
-    which will not match ``instance.__class__.__name__``. A method on a
-    nested class (``test_fn.<locals>.Host.fn``) keys by ``test_fn``. Pass
-    ``namespace=`` or decorate a method on a module-level host class.
+
+def _owning_class_qualname(func: Callable[..., Any]) -> str | None:
+    """Owning-class qualname, or None for a free function."""
+    qualname = str(getattr(func, "__qualname__", "") or "")
+    if "." not in qualname:
+        return None
+    owner = qualname.rsplit(".", 1)[0]
+    if owner.endswith(".<locals>") or owner in {"<locals>", ""}:
+        return None
+    return owner
+
+
+def _namespace(func: Callable[..., Any], namespace: str | None) -> str:
+    """Bag key. Default is ``_bag_key`` of the owning class.
+
+    ``namespace=`` is the key as-is (str). A free function has no owning
+    class and requires ``namespace=``. Class objects are not keys.
     """
-    return namespace or str(func.__qualname__).split(".")[0]
+    if namespace is not None:
+        if not isinstance(namespace, str):
+            raise TypeError(
+                "namespace= must be a str bag key "
+                f"(module.qualname); got {type(namespace).__name__}"
+            )
+        return namespace
+    owner = _owning_class_qualname(func)
+    if owner is None:
+        raise TypeError(
+            "free function requires namespace= "
+            "(bag key is module.qualname of the owning class)"
+        )
+    return _bag_key(
+        SimpleNamespace(__module__=func.__module__, __qualname__=owner)
+    )
 
 
 def hook_bags_used(item: Any) -> bool:
@@ -71,12 +100,12 @@ class HookHost:
         return func
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
-        for func in self._processors[phase][instance.__class__.__name__]:
+        for func in self._processors[phase].get(_bag_key(instance.__class__), ()):
             value = invoke_callable(func, instance, value)
         return value
 
     def _run_tasks(self, phase: str, instance: Any, value: Any) -> Any:
-        for func in self._tasks[phase][instance.__class__.__name__]:
+        for func in self._tasks[phase].get(_bag_key(instance.__class__), ()):
             invoke_callable(func, instance, value)
         return value
 
@@ -112,7 +141,7 @@ class HookHost:
         errors: list[BaseException] = []
         collect_all = getattr(self, "collect_all", False)
         name = getattr(self, "name", None)
-        for func in self._custom_validators[instance.__class__.__name__]:
+        for func in self._custom_validators.get(_bag_key(instance.__class__), ()):
             try:
                 invoke_callable(func, instance, value)
             except Exception as err:

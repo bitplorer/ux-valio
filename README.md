@@ -120,14 +120,17 @@ class Register:
         return value
 ```
 
-Module-level `@username_field.add_pre_validator` without `namespace="Register"`
-does not fire (bag key is the function name). A **module-level** method
-decorator’s `__qualname__` is `Register.fn`, which matches. A method on a
-class defined inside a function (`test_fn.<locals>.Register.fn`) keys as
-`test_fn` and silently does not fire — pass `namespace="Register"`. That
-silent miss is leftover teaching, not a second door. A processor that
-forgets to return the value stores `None`; return the value from
-`add_pre_validator`.
+Processor and task bags use one key on register and lookup: the owning
+class’s `module.qualname` (`f"{cls.__module__}.{cls.__qualname__}"`). Two
+classes named `User` in different modules do not share a bag — the old bare
+`__name__` key was a collision. A method decorator derives that key from the
+method (nested classes included). A free function has no owning class:
+`add_*` without `namespace=` is `TypeError`. `namespace=` is the bag key
+as-is; it fires only when that string equals the instance class’s
+`module.qualname`. Passing a class object as `namespace=` is `TypeError`
+(string keys only). Leftover teaching: `namespace="Register"` (bare
+`__name__`) is not rewritten to match lookup. A processor that forgets to
+return the value stores `None`; return the value from `add_pre_validator`.
 
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
