@@ -20,7 +20,11 @@ Door A only: `field: T = SomeValidator(...)`.
   running loop uses nest-safe worker bridge.
   `enable_async` is not a door (unknown-kwarg TypeError).
   `cache_task` kwarg KEEP, cache behavior RETIRE.
-- Validator objects compose with `&` / `|` or `AllOf` / `AnyOf` / `Chain`.
+  `collect_all` default False (fail-fast). Do not overload `debug` into
+  collect-all. Hang `add_*` on `Validator` or the compose root (`AllOf` /
+  `AnyOf`), not concern leaves. Compose merge fail-closed: conflicting
+  specified `debug` / `default` is TypeError. `Chain` is `AllOf`.
+- Validator objects compose with `&` / `|` or `AllOf` / `AnyOf`.
   That is object composition, not leaf multiple-inheritance.
 - `AttributeValidator` is not shipped. Object-attribute presence checks
   belong at the call site or on `add_validator`.

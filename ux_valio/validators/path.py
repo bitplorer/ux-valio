@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Iterable
 
+from ux_valio.validators.errors import continue_or_raise, raise_collected
+
 Lookup = Callable[[Any, Any, Any], Any]
 
 _PATH_OWNED_LEAVES = {
@@ -52,12 +54,19 @@ class ValidationPath:
         instance: Any,
         value: Any,
         lookup: dict[str, Lookup],
+        collect_all: bool = False,
     ) -> list[Any]:
         ran: set[str] = set()
         results = []
+        errors: list[BaseException] = []
         for name in self.names:
             if name in ran:
                 raise ValueError(f"validation path double-call: {name!r}")
             ran.add(name)
-            results.append(lookup[name](owner, instance, value))
+            try:
+                results.append(lookup[name](owner, instance, value))
+            except Exception as err:
+                continue_or_raise(collect_all, errors, err)
+                results.append(None)
+        raise_collected(errors, name=getattr(owner, "name", None))
         return results

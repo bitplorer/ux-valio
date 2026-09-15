@@ -6,7 +6,9 @@ Falsy assigned values ``0`` / ``False`` / ``""`` are kept.
 
 ``debug`` falsy swallows exceptions, appends them to ``errors``, and does
 not re-raise. ``debug=True`` re-raises. This swallow is KEEP — not a
-silent fail-closed flip.
+silent fail-closed flip. ``collect_all`` (default ``False``) is a separate
+opt-in: fail-fast remains the door. ``collect_all=True`` continues remaining
+concerns and surfaces every failure. Do not overload ``debug`` into collect.
 
 Class access (``obj is None``) returns ``None`` so dataclasses treat the
 descriptor as a missing field default and route ``Cls()`` through
@@ -65,6 +67,7 @@ class Property:
         doc: str | None = None,
         debug: bool | None = None,
         logger: Any = False,
+        collect_all: bool = False,
     ) -> None:
         if name is not None and not isinstance(name, str):
             raise TypeError(
@@ -82,11 +85,16 @@ class Property:
             raise TypeError(
                 f"logger expected bool or logging.Logger, got {type(logger).__name__}"
             )
+        if not isinstance(collect_all, bool):
+            raise TypeError(
+                f"collect_all expected type bool value, got {type(collect_all).__name__} type instead"
+            )
         self.name = name
         self.default = default
         self.doc = doc
         self.debug = debug
         self.logger = False if logger is None else logger
+        self.collect_all = collect_all
         self.errors: list[BaseException] = []
         self.annotation = getattr(self, "annotation", None)
 
@@ -114,7 +122,12 @@ class Property:
             getattr(logger, level)(message)
 
     def _swallow_or_raise(self, err: BaseException) -> None:
-        self.errors.append(err)
+        from ux_valio.validators.errors import ValidationErrors
+
+        if isinstance(err, ValidationErrors):
+            self.errors.extend(err.errors)
+        else:
+            self.errors.append(err)
         self._log("error", str(err))
         if self.debug:
             raise err

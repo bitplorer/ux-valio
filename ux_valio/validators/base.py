@@ -3,7 +3,8 @@
 
 ``ValidateProperty`` is the Door A unit. Concern leaves and facades subclass
 it once — they do not multiple-inherit each other. Validator objects compose
-with ``&`` / ``|`` (AllOf / AnyOf) or explicit ``AllOf`` / ``AnyOf`` / ``Chain``.
+with ``&`` / ``|`` (AllOf / AnyOf) or explicit ``AllOf`` / ``AnyOf``.
+``Chain`` is ``AllOf``. Hang ``add_*`` on ``Validator`` or the compose root.
 """
 
 from __future__ import annotations

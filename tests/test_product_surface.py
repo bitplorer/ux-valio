@@ -64,3 +64,14 @@ def test_min_max_leaves_are_exported():
 def test_no_process_pack_docs_in_tree():
     docs = ROOT / "docs"
     assert not docs.exists() or not any(docs.glob("soft*.md"))
+
+
+def test_validators_package_all_does_not_leak_past_top():
+    leaked = set(ux_valio.validators.__all__) - set(ux_valio.__all__)
+    assert leaked == set()
+
+
+def test_export_floor_and_validation_errors():
+    for name in ("Property", "ValidateProperty", "Validator", "ValidationErrors"):
+        assert name in ux_valio.__all__
+        assert hasattr(ux_valio, name)

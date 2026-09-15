@@ -120,6 +120,7 @@ def test_public_all_is_explicit_and_small():
     assert "Validator" in ux_valio.__all__
     assert "StringValidator" in ux_valio.__all__
     assert "AllOf" in ux_valio.__all__
+    assert "ValidationErrors" in ux_valio.__all__
     assert "MinLengthValidator" in ux_valio.__all__
     assert len(ux_valio.__all__) < 50
 
