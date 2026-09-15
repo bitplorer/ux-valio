@@ -40,6 +40,7 @@ from ux_valio.validators import (
     TypeValidator,
     UUIDValidator,
     ValidateProperty,
+    ValidationErrors,
     Validator,
     ValueValidator,
 )
@@ -81,6 +82,7 @@ __all__ = [
     "TypeValidator",
     "UUIDValidator",
     "ValidateProperty",
+    "ValidationErrors",
     "Validator",
     "ValueValidator",
     "WordBoundary",

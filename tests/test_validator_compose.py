@@ -56,11 +56,13 @@ def test_allof_length_required_explicit():
 
 
 def test_chain_is_ordered_allof():
+    assert Chain is AllOf
     field = Chain(
         LengthValidator(min_length=2, debug=True),
         RequiredValidator(required=True),
     )
     assert isinstance(field, AllOf)
+    assert type(field) is AllOf
 
     @dataclass
     class Token:

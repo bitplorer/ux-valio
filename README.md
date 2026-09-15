@@ -31,8 +31,24 @@ There is no Field twin and no Schema twin. `field: T = SomeValidator(...)` is
 the door.
 
 Concern leaves (`LengthValidator`, `RequiredValidator`, …) and facades compose
-with `&` (AllOf) / `|` (AnyOf), or explicit `AllOf` / `AnyOf` / `Chain`, as
-**one** descriptor. Facades do not multiple-inherit leaves.
+with `&` (AllOf) / `|` (AnyOf), or explicit `AllOf` / `AnyOf`, as **one**
+descriptor. `Chain` is `AllOf`. Facades do not multiple-inherit leaves.
+
+Hang `add_*` on the descriptor that is the field default: a `Validator`
+facade, or the compose **root** after `&` / `AllOf`. Concern leaves do not
+carry `add_*`. Do not invent `add_pre_set`.
+
+```python
+name_field = StringValidator(debug=True, max_length=50) & RequiredValidator(required=True)
+
+@dataclass
+class User:
+    name: str = name_field
+
+    @name_field.add_pre_validator
+    def strip(self, value: str) -> str:
+        return value.strip()
+```
 
 ## KEEP: debug swallow, logger OFF, pre_set hook
 
@@ -40,6 +56,18 @@ with `&` (AllOf) / `|` (AnyOf), or explicit `AllOf` / `AnyOf` / `Chain`, as
 - `debug` falsy (including the default `None`) swallows the exception, appends
   it to `errors`, and leaves the attribute unset so later reads are `None`.
   This swallow is KEEP. The product does not fail-closed-by-default.
+- `collect_all=False` by default (fail-fast). `collect_all=True` continues
+  remaining concerns and surfaces every failure as `ValidationErrors` (when
+  `debug=True`) or as multiple entries on `errors` (when `debug` is falsy).
+  Do not overload `debug` into collect-all.
+
+  ```python
+  n: int = IntegerValidator(
+      min_value=0, max_value=10, multiple_of=2, collect_all=True, debug=True
+  )
+  ```
+- Composing members that specify different `debug` or `default` values raises
+  `TypeError`. A right-hand `debug=True` is not discarded into swallow.
 - `logger` defaults **OFF** (`False`). Valio's `logger=None` enabled file
   logging; ux-valio does not.
 
@@ -96,7 +124,10 @@ Module-level `@username_field.add_pre_validator` without `namespace="Register"`
 does not fire (bag key is the function name). A **module-level** method
 decorator’s `__qualname__` is `Register.fn`, which matches. A method on a
 class defined inside a function (`test_fn.<locals>.Register.fn`) keys as
-`test_fn` and silently does not fire — pass `namespace="Register"`.
+`test_fn` and silently does not fire — pass `namespace="Register"`. That
+silent miss is leftover teaching, not a second door. A processor that
+forgets to return the value stores `None`; return the value from
+`add_pre_validator`.
 
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
@@ -107,11 +138,14 @@ exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
 ## Typed facades
 
 `IntegerValidator`, `StringValidator`, `BooleanValidator`, `FloatValidator`,
-`DecimalValidator`, `BytesValidator`, `DateValidator` (`datetime.date`),
-`EmailValidator`, `UUIDValidator` (coerces UUID strings), `PathValidator`
-(coerces `str` → `pathlib.Path`; `path_exists=True` requires the path to
-exist), `IPv4Validator` / `IPv6Validator` / `IPAddressValidator`, and
+`DecimalValidator`, `BytesValidator`, `DateValidator` (`datetime.date`;
+strings are not parsed), `EmailValidator`, `UUIDValidator` (coerces UUID
+strings), `PathValidator` (annotation `pathlib.Path`; coerces `str` →
+`pathlib.Path`; `path_exists=True` requires the path to exist),
+`IPv4Validator` / `IPv6Validator` / `IPAddressValidator`, and
 `EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`.
+
+Phone, list/dict/set/tuple collection facades are not shipped.
 
 Min/max length and value leaves (`MinLengthValidator`, `MaxLengthValidator`,
 `MinValueValidator`, `MaxValueValidator`) are public building blocks.
@@ -132,7 +166,9 @@ of valio's 306 names is gone; import the names in `__all__`.
 
 ## Public surface
 
-`Validator`, typed facades, concern leaves, `AllOf` / `AnyOf` / `Chain`, and
-`Pattern` / `PatternType` combinators (`&` / `|`). Concern leaves also compose
-as validator objects (`LengthValidator(...) & RequiredValidator(...)`).
-No multiple inheritance of leaves, no Cap Host, no `rule/`.
+`Validator`, typed facades, concern leaves, `AllOf` / `AnyOf` (`Chain` is
+`AllOf`), `ValidationErrors`, and `Pattern` / `PatternType` combinators
+(`&` / `|`). Concern leaves also compose as validator objects
+(`LengthValidator(...) & RequiredValidator(...)`). Hang hooks on `Validator`
+or the compose root. No multiple inheritance of leaves, no Cap Host, no
+`rule/`. Path helpers and async-bridge names are not in the package `__all__`.
