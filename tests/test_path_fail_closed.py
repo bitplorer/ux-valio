@@ -58,3 +58,17 @@ def test_second_validate_on_validator_is_a_new_pass():
 def test_owned_leaf_without_aggregate_is_allowed():
     path = ValidationPath(("min_value", "max_value"))
     assert path.names == ("min_value", "max_value")
+
+
+def test_path_run_unknown_unit_is_valueerror_not_keyerror():
+    path = ValidationPath(("type",))
+    with pytest.raises(ValueError, match="unknown unit"):
+        path.run(None, None, 1, {})
+
+
+def test_validator_unknown_path_unit_is_valueerror():
+    class Bad(Validator):
+        validation_path = ValidationPath(("nonexistent",))
+
+    with pytest.raises(ValueError, match="unknown unit"):
+        Bad(debug=True).validate(None, 1)

@@ -30,6 +30,19 @@ def test_reassign_true_allows_second_assign():
     assert many.s == "b"
 
 
+def test_delete_drops_reassignment_count():
+    @dataclass
+    class Once:
+        s: str = Validator(reassign=False, debug=True)
+
+    once = Once(s="a")
+    del once.s
+    once.s = "b"
+    assert once.s == "b"
+    with pytest.raises(AttributeError):
+        once.s = "c"
+
+
 def test_delete_then_get_is_none_when_debug_falsy():
     @dataclass
     class Box:

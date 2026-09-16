@@ -19,11 +19,20 @@ Door A only: `field: T = SomeValidator(...)`.
   sync path with no running loop TypeError names the missing loop / helper;
   running loop uses nest-safe worker bridge.
   `enable_async` is not a door (unknown-kwarg TypeError).
-  `cache_task` kwarg KEEP, cache behavior RETIRE.
+  `cache_task` kwarg KEEP, cache behavior RETIRE. Accepted on `Validator`
+  and on compose roots (`AllOf` / `AnyOf`); it does not skip re-checks.
   `collect_all` default False (fail-fast). Do not overload `debug` into
   collect-all. Hang `add_*` on `Validator` or the compose root (`AllOf` /
   `AnyOf`), not concern leaves. Compose merge fail-closed: conflicting
-  specified `debug` / `default` is TypeError. `Chain` is `AllOf`.
+  specified `debug` / `default` / `collect_all` / `logger` is TypeError.
+  Explicit `False` is specified. Omitted `collect_all` / `logger` still
+  collapse to a specified `True`. `Chain` is `AllOf`.
+  Unresolved owner `str` / `ForwardRef` annotations TypeError at bind
+  (not copied, not eval'd). `AnyOf` does not AND-gate root type; `AllOf`
+  keeps annotation-conflict TypeError. Unknown path unit is `ValueError`.
+  TypedDict membership stays fail-closed on the private helper. Callable
+  origin is checked; signature is not. Generic subclass instance params
+  are not inspected.
 - Validator objects compose with `&` / `|` or `AllOf` / `AnyOf`.
   That is object composition, not leaf multiple-inheritance.
 - `AttributeValidator` is not shipped. Object-attribute presence checks

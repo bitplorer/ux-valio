@@ -130,3 +130,13 @@ def test_no_field_schema_cap_on_package():
     assert not hasattr(ux_valio, "Schema")
     assert not hasattr(ux_valio, "Cap")
     assert not hasattr(ux_valio, "StringField")
+
+
+def test_readme_teaches_facade_primary_and_chain_is_allof():
+    from pathlib import Path
+
+    text = Path(__file__).resolve().parents[1].joinpath("README.md").read_text()
+    assert "Do not use bare `Property` as the field default" in text
+    assert "`Chain` is `AllOf`" in text
+    assert "findall substring" in text
+    assert "cache_task=" in text

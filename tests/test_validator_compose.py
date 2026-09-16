@@ -142,3 +142,49 @@ def test_allof_and_requires_validators():
         LengthValidator(min_length=1) & "nope"
     with pytest.raises(TypeError):
         AllOf(LengthValidator(min_length=1))
+
+
+def test_anyof_typed_facades_do_not_conflict_and_alternatives_match():
+    field = IntegerValidator(debug=True) | StringValidator(debug=True)
+    assert isinstance(field, AnyOf)
+    assert field.annotation is None
+
+    class Box:
+        x = field
+
+    box = Box()
+    box.x = 1
+    assert box.x == 1
+    box.x = "a"
+    assert box.x == "a"
+
+
+def test_anyof_integer_or_untyped_accepts_str():
+    field = IntegerValidator(debug=True) | Validator(debug=True)
+
+    class Box:
+        x = field
+
+    box = Box()
+    box.x = "a"
+    assert box.x == "a"
+    box.x = 2
+    assert box.x == 2
+
+
+def test_anyof_union_owner_binds_without_and_gate():
+    field = IntegerValidator(debug=True) | StringValidator(debug=True)
+
+    @dataclass
+    class Either:
+        n: int | str = field
+
+    assert Either(n=1).n == 1
+    assert Either(n="a").n == "a"
+    with pytest.raises(ValueError, match="none of the alternatives"):
+        Either(n=1.5)
+
+
+def test_allof_conflicting_typed_facades_still_typeerror():
+    with pytest.raises(TypeError, match="conflicting annotations"):
+        AllOf(IntegerValidator(debug=True), StringValidator(debug=True))

@@ -309,3 +309,37 @@ def test_is_instance_of_docstring_does_not_teach_permissive_args():
     doc = is_instance_of.__doc__ or ""
     assert "permissive" not in doc.lower()
     assert "TypeError" not in doc or "False" in doc
+
+
+def test_typeddict_stays_fail_closed_private_helper_only():
+    from typing import TypedDict
+
+    class Movie(TypedDict):
+        title: str
+        year: int
+
+    assert is_instance_of({"title": "x", "year": 1}, Movie) is False
+    assert is_instance_of({"title": "x"}, Movie) is False
+    field = _bound(Movie)
+    with pytest.raises(TypeError):
+        field.validate(None, {"title": "x", "year": 1})
+    import ux_valio
+
+    assert not hasattr(ux_valio, "check_typeddict")
+    assert "check_typeddict" not in ux_valio.__all__
+
+
+def test_pep695_typealias_unwraps_value_when_present():
+    import sys
+
+    if sys.version_info < (3, 12):
+        pytest.skip("PEP 695 TypeAliasType needs 3.12+")
+    ns: dict = {}
+    exec("type IntList = list[int]\nresult = IntList\n", ns)
+    alias = ns["result"]
+    assert is_instance_of([1, 2], alias) is True
+    assert is_instance_of(["a"], alias) is False
+    field = _bound(alias)
+    field.validate(None, [1])
+    with pytest.raises(TypeError):
+        field.validate(None, ["a"])

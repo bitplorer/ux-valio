@@ -119,6 +119,22 @@ def test_conflicting_default_fails_closed():
         )
 
 
+def test_compose_root_accepts_cache_task_kwarg():
+    field = AllOf(
+        LengthValidator(min_length=1),
+        RequiredValidator(required=True),
+        cache_task=False,
+        debug=True,
+    )
+    assert field.cache_task is False
+    any_field = AnyOf(
+        LengthValidator(min_length=1),
+        RequiredValidator(required=True),
+        cache_task=False,
+    )
+    assert any_field.cache_task is False
+
+
 def test_chain_is_allof_alias():
     assert Chain is AllOf
     field = Chain(
@@ -141,3 +157,38 @@ def test_anyof_root_also_has_add_star():
     assert isinstance(field, AnyOf)
     assert hasattr(field, "add_post_validator")
     assert not hasattr(Validator, "add_pre_set")
+
+
+def test_explicit_collect_all_false_does_not_lose_to_true():
+    with pytest.raises(TypeError, match="conflicting collect_all"):
+        LengthValidator(min_length=1, collect_all=True) & RequiredValidator(
+            required=True, collect_all=False
+        )
+
+
+def test_unspecified_collect_all_false_keeps_explicit_true():
+    field = LengthValidator(min_length=1, collect_all=True) & RequiredValidator(
+        required=True
+    )
+    assert field.collect_all is True
+
+
+def test_explicit_logger_false_does_not_lose_to_true():
+    with pytest.raises(TypeError, match="conflicting logger"):
+        LengthValidator(min_length=1, logger=True) & RequiredValidator(
+            required=True, logger=False
+        )
+
+
+def test_unspecified_logger_false_keeps_explicit_true():
+    field = LengthValidator(min_length=1, logger=True) & RequiredValidator(
+        required=True
+    )
+    assert field.logger is True
+
+
+def test_debug_conflict_stays_fail_closed():
+    with pytest.raises(TypeError, match="conflicting debug"):
+        LengthValidator(min_length=1, debug=True) & RequiredValidator(
+            required=True, debug=False
+        )

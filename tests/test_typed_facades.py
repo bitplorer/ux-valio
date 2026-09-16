@@ -83,6 +83,15 @@ def test_email_validator_findall():
         Contact(email="not-an-email")
 
 
+def test_email_validator_findall_is_substring_not_fullmatch():
+    @dataclass
+    class Contact:
+        email: str = EmailValidator(debug=True)
+
+    wrapped = "prefix user@example.com suffix"
+    assert Contact(email=wrapped).email == wrapped
+
+
 def test_uuid_validator_coerces_string():
     raw = "12345678-1234-5678-1234-567812345678"
 

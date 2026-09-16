@@ -31,11 +31,18 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
     """Door A type honesty: origin+args recurse; unknown TypeError is False.
 
     ``list[int]`` is a list of ints. Parametrized args (element types,
-    Literal membership, Annotated inner type) are checked. ``typing.Any``
-    and an unset ``None`` annotation accept. Not typingx.
+    Literal membership, Annotated inner type) are checked. PEP 695 aliases
+    unwrap ``__value__`` when present. ``typing.Any`` and an unset ``None``
+    annotation accept. Callable origin is checked; signature is not.
+    TypedDict is fail-closed. Not typingx. Not a public ``check_*``.
     """
     if annotation is None or annotation is Any:
         return True
+    if type(annotation).__name__ == "TypeAliasType":
+        inner = getattr(annotation, "__value__", None)
+        if inner is None:
+            return False
+        return is_instance_of(value, inner)
     if isinstance(annotation, str):
         return False
     supertype = getattr(annotation, "__supertype__", None)
@@ -186,6 +193,10 @@ class ReassignValidator(ValidateProperty):
     def notify_post_set(self, obj: Any) -> None:
         self._assignment_counts[id(obj)] = self._assignment_counts.get(id(obj), 0) + 1
         self.number_of_assignment += 1
+
+    def post_delete_processing(self, instance: Any, value: Any) -> Any:
+        self._assignment_counts.pop(id(instance), None)
+        return value
 
     def _validate_reassignment(self, instance: Any, value: Any) -> None:
         if getattr(self, "reassign", None) is not False:

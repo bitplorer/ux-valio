@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ux_valio.descriptor import _UNSET
 from ux_valio.validators.base import ValidateProperty
 from ux_valio.validators.errors import continue_or_raise, raise_collected
 from ux_valio.validators.hooks import HookHost
@@ -52,9 +53,9 @@ class Validator(HookHost, ValidateProperty):
         in_choice: Any = None,
         not_in_choice: Any = None,
         debug: bool | None = None,
-        logger: Any = False,
+        logger: Any = _UNSET,
         cache_task: bool = True,
-        collect_all: bool = False,
+        collect_all: Any = _UNSET,
     ) -> None:
         if required is not None and not isinstance(required, bool):
             raise TypeError(
@@ -90,6 +91,10 @@ class Validator(HookHost, ValidateProperty):
     def notify_post_set(self, obj: Any) -> None:
         self._assignment_counts[id(obj)] = self._assignment_counts.get(id(obj), 0) + 1
         self.number_of_assignment += 1
+
+    def post_delete_processing(self, instance: Any, value: Any) -> Any:
+        self._assignment_counts.pop(id(instance), None)
+        return super().post_delete_processing(instance, value)
 
     def _unit_lookup(self) -> dict[str, Lookup]:
         return {
