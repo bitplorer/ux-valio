@@ -35,6 +35,7 @@ class Validator(HookHost, ValidateProperty):
     def __init__(
         self,
         default: Any = None,
+        default_factory: Any = None,
         name: str | None = None,
         doc: str | None = None,
         required: bool | None = None,
@@ -78,6 +79,7 @@ class Validator(HookHost, ValidateProperty):
         self._init_hook_bags(cache_task=cache_task)
         super().__init__(
             default=default,
+            default_factory=default_factory,
             name=name,
             doc=doc,
             debug=debug,

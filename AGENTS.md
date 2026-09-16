@@ -9,7 +9,11 @@ Door A only: `field: T = SomeValidator(...)`.
   bridge only.
 - No `add_pre_set` / `_processors["pre_set"]` (that would be a second door).
 - KEEP: falsy assigned `0` / `False` / `""` are not replaced by `default`;
+  `default=[]` is shared; `default_factory=` is per-instance; both set is
+  TypeError; callable `default=` still invoked (valio leftover);
   bound honesty (`None` ≠ `0`); debug-swallow; logger default OFF;
+  never-set `__get__` / `__delete__` with `debug=True` is named
+  `AttributeError`, not bare `KeyError`;
   Pattern `findall`; facades do not multiple-inherit concern leaves;
   path fail-closed; processors then tasks once;
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
@@ -24,7 +28,8 @@ Door A only: `field: T = SomeValidator(...)`.
   `collect_all` default False (fail-fast). Do not overload `debug` into
   collect-all. Hang `add_*` on `Validator` or the compose root (`AllOf` /
   `AnyOf`), not concern leaves. Compose merge fail-closed: conflicting
-  specified `debug` / `default` / `collect_all` / `logger` is TypeError.
+  specified `debug` / `default` / `default_factory` / `collect_all` /
+  `logger` is TypeError.
   Explicit `False` is specified. Omitted `collect_all` / `logger` still
   collapse to a specified `True`. `Chain` is `AllOf`.
   Unresolved owner `str` / `ForwardRef` annotations TypeError at bind

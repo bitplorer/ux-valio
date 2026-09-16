@@ -63,6 +63,7 @@ def _keep_nested_compose(item: Any) -> bool:
     for attr, unspecified in (
         ("debug", None),
         ("default", None),
+        ("default_factory", None),
         ("doc", None),
         ("logger", False),
         ("collect_all", False),
@@ -97,6 +98,9 @@ def _bind_compose_kwargs(
 ) -> dict[str, Any]:
     kwargs.setdefault("debug", _merged_attr(validators, "debug", None))
     kwargs.setdefault("default", _merged_attr(validators, "default", None))
+    kwargs.setdefault(
+        "default_factory", _merged_attr(validators, "default_factory", None)
+    )
     kwargs.setdefault("doc", _merged_attr(validators, "doc", None))
     if "logger" not in kwargs and any(
         getattr(item, "_logger_specified", False) for item in validators

@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Descriptor lifecycle.
 
-``__set__`` applies ``default`` only when the assigned value ``is None``.
-Falsy assigned values ``0`` / ``False`` / ``""`` are kept.
+``__set__`` applies ``default`` / ``default_factory`` only when the assigned
+value ``is None``. Falsy assigned values ``0`` / ``False`` / ``""`` are kept.
+``default=[]`` is the same object on every instance. ``default_factory=`` is
+a zero-arg callable invoked per None assignment. Both set is ``TypeError``.
+Leftover: a callable ``default=`` is still invoked (valio).
 
 ``debug`` falsy swallows exceptions, appends them to ``errors``, and does
 not re-raise. ``debug=True`` re-raises. This swallow is KEEP — not a
@@ -19,6 +22,9 @@ validate pipeline, not a ``_processors["pre_set"]`` bag. Hang before-store
 work on ``add_pre_validator`` / ``add_validator`` / ``add_pre_validator_task``.
 ``post_set`` / get / delete return values are ignored. ``__get__`` /
 ``__delete__`` pass ``self.name`` into hooks, not the stored value.
+Never-set ``__get__`` / ``__delete__`` with ``debug=True`` raise a named
+``AttributeError`` (``Cls.field is not set``), not a bare ``KeyError``.
+Debug-falsy still swallows and ``__get__`` reads back ``None``.
 ``add_*`` may be async. No ``asyncio.run`` in ``__set__``.
 
 Logger default is OFF.
@@ -85,6 +91,7 @@ class Property:
         self,
         name: str | None = None,
         default: Any = None,
+        default_factory: Any = None,
         doc: str | None = None,
         debug: bool | None = None,
         logger: Any = _UNSET,
@@ -122,8 +129,15 @@ class Property:
                 )
             self.collect_all = collect_all
             self._collect_all_specified = True
+        if default_factory is not None and not callable(default_factory):
+            raise TypeError(
+                f"default_factory expected a callable, got {type(default_factory).__name__}"
+            )
+        if default is not None and default_factory is not None:
+            raise TypeError("default and default_factory cannot both be set")
         self.name = name
         self.default = default
+        self.default_factory = default_factory
         self.doc = doc
         self.debug = debug
         self.errors: list[BaseException] = []
@@ -203,20 +217,29 @@ class Property:
 
     def __set__(self, obj: Any, value: Any) -> None:
         try:
-            if value is None and self.default is not None:
-                value = self.default() if callable(self.default) else self.default
+            if value is None:
+                if self.default_factory is not None:
+                    value = self.default_factory()
+                elif self.default is not None:
+                    value = self.default() if callable(self.default) else self.default
             value = self.pre_set(obj, value)
             obj.__dict__[self.name] = value
             self.post_set(obj, value)
         except Exception as err:
             self._swallow_or_raise(err)
 
+    def _missing_attribute(self, obj: Any) -> AttributeError:
+        return AttributeError(f"{type(obj).__name__}.{self.name} is not set")
+
     def __get__(self, obj: Any, obj_type: type | None = None) -> Any:
         if obj is None:
             return None
         try:
             self.pre_get(obj, self.name)
-            return obj.__dict__[self.name]
+            try:
+                return obj.__dict__[self.name]
+            except KeyError:
+                raise self._missing_attribute(obj) from None
         except Exception as err:
             self._swallow_or_raise(err)
             return None
@@ -229,7 +252,10 @@ class Property:
     def __delete__(self, obj: Any) -> None:
         try:
             self.pre_delete(obj, self.name)
-            del obj.__dict__[self.name]
+            try:
+                del obj.__dict__[self.name]
+            except KeyError:
+                raise self._missing_attribute(obj) from None
             self.post_delete(obj, self.name)
         except Exception as err:
             self._swallow_or_raise(err)
