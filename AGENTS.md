@@ -38,10 +38,12 @@ Door A only: `field: T = SomeValidator(...)`.
 - `AttributeValidator` is not shipped. Object-attribute presence checks
   belong at the call site or on `add_validator`.
 - `PaymentCardValidator` is brand ∩ Luhn (stdlib `re`; a Luhn-valid
-  generator is not enough). `ExpiryValidator` is a Door A facade with
-  exclusive `expire_after` / `expire_on` / `expire_before`. `expire_before`
-  is its own bound. `expire_*` are not kwargs on `Validator`. No `expiry`
-  path unit.
+  generator is not enough). `AadhaarCardValidator` is 12-digit identity ∩
+  Verhoeff. `PANCardValidator` is identity `fullmatch` ∩ Luhn mod 26
+  (complete A–Z; a format-only generator is not enough). `ExpiryValidator`
+  is a Door A facade with exclusive `expire_after` / `expire_on` /
+  `expire_before`. `expire_before` is its own bound. `expire_*` are not
+  kwargs on `Validator`. No `expiry` path unit.
 - Named typed facades call their extra check from `validate()` after the
   inherited path; they do not `add_validator` themselves on each assignment.
   No NamedOnce Cap. `HexColorValidator` is not a public facade.

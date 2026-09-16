@@ -5,7 +5,16 @@ from dataclasses import dataclass
 
 import pytest
 
-from ux_valio import Pattern, PatternValidator, PatternType, WordBoundary
+from ux_valio import (
+    Digit,
+    NonDigit,
+    NonWord,
+    Pattern,
+    PatternType,
+    PatternValidator,
+    Word,
+    WordBoundary,
+)
 
 
 WORD_1_OR_MORE = r"\w+"
@@ -97,3 +106,48 @@ def test_and_or_require_pattern_type():
         Pattern(r"a") & "b"
     with pytest.raises(TypeError):
         Pattern(r"a") | "b"
+
+
+def test_digit_word_nondigit_nonword_are_pattern_types():
+    assert Digit().pattern == r"\d"
+    assert Word().pattern == r"\w"
+    assert NonDigit().pattern == r"\D"
+    assert NonWord().pattern == r"\W"
+    assert isinstance(Digit(), PatternType)
+    assert isinstance(Word(), PatternType)
+    assert isinstance(NonDigit(), PatternType)
+    assert isinstance(NonWord(), PatternType)
+
+
+def test_digit_count_composes_on_existing_algebra():
+    token = Pattern(r"A") & Digit(count=2)
+    assert token.pattern == r"A\d{2}"
+
+    @dataclass
+    class Code:
+        value: str = PatternValidator(pattern=token, debug=True)
+
+    assert Code(value="A12").value == "A12"
+    with pytest.raises(ValueError):
+        Code(value="AB")
+
+
+def test_word_findall_substring_keep():
+    @dataclass
+    class Token:
+        value: str = PatternValidator(pattern=Word(count_min=1), debug=True)
+
+    assert Token(value="a string").value == "a string"
+
+
+def test_nondigit_nonword_compose_with_or():
+    mixed = NonDigit() | NonWord()
+    assert isinstance(mixed, PatternType)
+
+    @dataclass
+    class Punct:
+        value: str = PatternValidator(pattern=mixed, debug=True)
+
+    assert Punct(value="hello!").value == "hello!"
+    with pytest.raises(ValueError):
+        Punct(value="123")

@@ -3,7 +3,12 @@
 
 from dataclasses import dataclass
 
-from ux_valio import ExpiryValidator, PaymentCardValidator
+from ux_valio import (
+    AadhaarCardValidator,
+    ExpiryValidator,
+    PANCardValidator,
+    PaymentCardValidator,
+)
 
 
 def _bags_did_not_grow(validator) -> bool:
@@ -36,3 +41,31 @@ def test_expiry_validator_list_does_not_grow():
     License(key="c")
     assert _bags_did_not_grow(v), v._custom_validators
     assert License(key="d").key == "d"
+
+
+def test_aadhaar_card_validator_list_does_not_grow():
+    v = AadhaarCardValidator(debug=True, logger=False)
+
+    @dataclass
+    class Card:
+        a: str = v
+
+    Card(a="234567890124")
+    Card(a="234567890124")
+    Card(a="234567890124")
+    assert _bags_did_not_grow(v), v._custom_validators
+    assert Card(a="234567890124").a == "234567890124"
+
+
+def test_pan_card_validator_list_does_not_grow():
+    v = PANCardValidator(debug=True, logger=False)
+
+    @dataclass
+    class Card:
+        p: str = v
+
+    Card(p="AAAPA1111F")
+    Card(p="AAAPA1111F")
+    Card(p="AAAPA1111F")
+    assert _bags_did_not_grow(v), v._custom_validators
+    assert Card(p="AAAPA1111F").p == "AAAPA1111F"

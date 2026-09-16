@@ -47,6 +47,11 @@ def test_check_functions_are_not_owned_public_api():
     assert not hasattr(ux_valio.validators, "check_instance")
     assert "ListValidator" not in ux_valio.__all__
     assert not hasattr(ux_valio, "ListValidator")
+    assert "PhoneNumberValidator" not in ux_valio.__all__
+    assert not hasattr(ux_valio, "PhoneNumberValidator")
+    assert "DictionaryValidator" not in ux_valio.__all__
+    assert not hasattr(ux_valio, "DictionaryValidator")
+    assert not hasattr(ux_valio, "regexer")
 
 
 def test_min_max_leaves_are_exported():
@@ -63,6 +68,12 @@ def test_min_max_leaves_are_exported():
         "UUIDValidator",
         "PaymentCardValidator",
         "ExpiryValidator",
+        "AadhaarCardValidator",
+        "PANCardValidator",
+        "Digit",
+        "Word",
+        "NonDigit",
+        "NonWord",
     ):
         assert name in ux_valio.__all__
         assert hasattr(ux_valio, name)

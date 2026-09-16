@@ -6,6 +6,7 @@ the public API. ``AttributeValidator`` is not shipped — object-attribute
 presence checks belong at the call site or on ``add_validator``.
 """
 
+from ux_valio.validators.aadhaar import AadhaarCardValidator
 from ux_valio.validators.base import ValidateProperty
 from ux_valio.validators.compose import AllOf, AnyOf, Chain
 from ux_valio.validators.errors import ValidationErrors
@@ -21,6 +22,7 @@ from ux_valio.validators.leaves import (
 )
 from ux_valio.validators.length import LengthValidator, MaxLengthValidator, MinLengthValidator
 from ux_valio.validators.payment import PaymentCardValidator
+from ux_valio.validators.pan import PANCardValidator
 from ux_valio.validators.typed import (
     BytesValidator,
     DateValidator,
@@ -39,6 +41,7 @@ from ux_valio.validators.typed import (
 from ux_valio.validators.value import MaxValueValidator, MinValueValidator, ValueValidator
 
 __all__ = [
+    "AadhaarCardValidator",
     "AllOf",
     "AnyOf",
     "BooleanValidator",
@@ -62,6 +65,7 @@ __all__ = [
     "MinLengthValidator",
     "MinValueValidator",
     "MultipleValidator",
+    "PANCardValidator",
     "PathValidator",
     "PaymentCardValidator",
     "PatternValidator",

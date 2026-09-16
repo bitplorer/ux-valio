@@ -3,6 +3,8 @@
 
 ``PatternType`` supports ``&`` (concatenate) and ``|`` (alternation).
 ``PatternValidator`` matches with ``re.findall`` (substring), not fullmatch.
+``Digit`` / ``Word`` / ``NonDigit`` / ``NonWord`` are stdlib ``re`` atoms
+on this algebra. ``WordBoundary`` stays an atom ``\\b``.
 """
 
 from __future__ import annotations
@@ -124,3 +126,44 @@ class Pattern(PatternType):
 class WordBoundary(PatternType):
     def __init__(self, alias: str | None = None) -> None:
         super().__init__(r"\b", alias=alias or r"\b")
+
+
+class _StdlibAtom(PatternType):
+    """Quantified stdlib ``re`` atom on the existing Pattern algebra."""
+
+    token: str
+
+    def __init__(
+        self,
+        count: int | None = None,
+        count_min: int | None = None,
+        count_max: int | None = None,
+        greedy: bool = True,
+        alias: str | None = None,
+    ) -> None:
+        super().__init__(
+            Pattern(
+                self.token,
+                count=count,
+                count_min=count_min,
+                count_max=count_max,
+                greedy=greedy,
+                alias=alias,
+            )
+        )
+
+
+class Digit(_StdlibAtom):
+    token = r"\d"
+
+
+class Word(_StdlibAtom):
+    token = r"\w"
+
+
+class NonDigit(_StdlibAtom):
+    token = r"\D"
+
+
+class NonWord(_StdlibAtom):
+    token = r"\W"

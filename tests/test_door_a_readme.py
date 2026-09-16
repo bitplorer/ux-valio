@@ -140,3 +140,5 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "`Chain` is `AllOf`" in text
     assert "findall substring" in text
     assert "cache_task=" in text
+    assert "`PhoneNumberValidator` is not shipped" in text
+    assert "List / dictionary / set / tuple collection facades are not" in text
