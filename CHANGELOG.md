@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Never-set `__get__` / `__delete__` with `debug=True` raise a named
+  `AttributeError` (`Cls.field is not set`), not a bare `KeyError`.
+  Debug-falsy still swallows and reads back `None`.
+- `default_factory=` is a zero-arg callable invoked per None assignment.
+  `default=[]` stays shared. Setting both `default` and `default_factory`
+  is `TypeError`. Callable `default=` is still invoked (valio leftover).
+
 - `AadhaarCardValidator`: 12-digit identity ∩ Verhoeff checksum (stdlib
   tables; no network). A substring or wrong-length value is rejected.
 - `PANCardValidator`: 10-character identity `fullmatch` ∩ Luhn mod 26
@@ -51,8 +58,8 @@
   `ValidationErrors`. Default stays fail-fast. `debug` is not collect-all.
 - Compose roots (`AllOf` / `AnyOf`) carry `add_*` bags. Hang hooks on the
   root after `&`, or on a `Validator` facade. Concern leaves stay bag-free.
-- Compose merge fail-closed: conflicting specified `debug` / `default`
-  is `TypeError`. A right-hand `debug=True` is kept.
+- Compose merge fail-closed: conflicting specified `debug` / `default` /
+  `default_factory` is `TypeError`. A right-hand `debug=True` is kept.
 - `Chain` is `AllOf`. Package `__all__` no longer advertises path/async
   internals.
 

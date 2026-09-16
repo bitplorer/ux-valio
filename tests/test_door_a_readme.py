@@ -142,3 +142,6 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "cache_task=" in text
     assert "`PhoneNumberValidator` is not shipped" in text
     assert "List / dictionary / set / tuple collection facades are not" in text
+    assert "`Cls.field is not set`" in text
+    assert "`default_factory=`" in text
+    assert "not a Field twin" in text

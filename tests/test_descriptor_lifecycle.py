@@ -53,6 +53,51 @@ def test_delete_then_get_is_none_when_debug_falsy():
     assert box.s is None
 
 
+def test_never_set_get_is_named_attributeerror_when_debug():
+    """Missing instance value is AttributeError, not bare KeyError."""
+
+    @dataclass
+    class Box:
+        s: str = Validator(debug=True)
+
+    box = Box.__new__(Box)
+    with pytest.raises(AttributeError, match=r"Box\.s is not set") as exc:
+        _ = box.s
+    assert type(exc.value) is AttributeError
+
+
+def test_delete_then_get_is_named_attributeerror_when_debug():
+    @dataclass
+    class Box:
+        s: str = Validator(debug=True)
+
+    box = Box(s="x")
+    del box.s
+    with pytest.raises(AttributeError, match=r"Box\.s is not set"):
+        _ = box.s
+
+
+def test_never_set_get_is_none_when_debug_falsy():
+    """leftover: debug-falsy swallow still reads back None, not fail-closed."""
+
+    @dataclass
+    class Box:
+        s: str = Validator(debug=False)
+
+    box = Box.__new__(Box)
+    assert box.s is None
+
+
+def test_delete_never_set_is_named_attributeerror_when_debug():
+    @dataclass
+    class Box:
+        s: str = Validator(debug=True)
+
+    box = Box.__new__(Box)
+    with pytest.raises(AttributeError, match=r"Box\.s is not set"):
+        del box.s
+
+
 def test_required_false_allows_none():
     @dataclass
     class Opt:

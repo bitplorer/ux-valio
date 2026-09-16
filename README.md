@@ -59,6 +59,8 @@ class User:
 ## KEEP: debug swallow, logger OFF, pre_set hook
 
 - `debug=True` re-raises on a failed set/get/delete.
+- Never-set `__get__` or `__delete__` with `debug=True` raises a named
+  `AttributeError` (`Cls.field is not set`), not a bare `KeyError`.
 - `debug` falsy (including the default `None`) swallows the exception, appends
   it to `errors`, and leaves the attribute unset so later reads are `None`.
   This swallow is KEEP. The product does not fail-closed-by-default.
@@ -72,8 +74,9 @@ class User:
       min_value=0, max_value=10, multiple_of=2, collect_all=True, debug=True
   )
   ```
-- Composing members that specify different `debug` or `default` values raises
-  `TypeError`. A right-hand `debug=True` is not discarded into swallow.
+- Composing members that specify different `debug`, `default`, or
+  `default_factory` values raises `TypeError`. A right-hand `debug=True`
+  is not discarded into swallow.
   Explicit `collect_all=False` / `logger=False` is specified: it TypeErrors
   against explicit `True`. An omitted `collect_all` / `logger` (runtime
   default False / OFF) still collapses to a specified `True`. `debug` stays
@@ -148,6 +151,12 @@ as-is; it fires only when that string equals the instance class’s
 return the value stores `None`; return the value from `add_pre_validator`.
 
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
+`default=[]` is the same list on every instance. `default_factory=` is a
+zero-arg callable invoked on each None assignment (dataclass-shaped, still
+the descriptor door — not a Field twin). Setting both is `TypeError`.
+Leftover: a callable `default=` is still invoked, so `default=list` already
+built a new list; prefer `default_factory=list` when the intent is
+per-instance.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
 exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
 

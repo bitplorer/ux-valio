@@ -3,7 +3,16 @@
 
 from dataclasses import dataclass
 
-from ux_valio import BooleanValidator, IntegerValidator, StringValidator, Validator
+import pytest
+
+from ux_valio import (
+    BooleanValidator,
+    IntegerValidator,
+    LengthValidator,
+    RequiredValidator,
+    StringValidator,
+    Validator,
+)
 
 
 def test_zero_is_not_replaced_by_integer_default():
@@ -54,3 +63,76 @@ def test_property_class_get_returns_none_so_dataclass_default_is_none():
 
     assert N.n is None
     assert N().n == 5
+
+
+def test_mutable_list_default_is_shared_across_instances():
+    field = Validator(default=[], debug=True)
+
+    @dataclass
+    class Box:
+        items: list = field
+
+    first = Box()
+    second = Box()
+    first.items.append(1)
+    assert second.items == [1]
+    assert first.items is second.items
+
+
+def test_default_factory_list_is_per_instance():
+    field = Validator(default_factory=list, debug=True)
+
+    @dataclass
+    class Box:
+        items: list = field
+
+    first = Box()
+    second = Box()
+    first.items.append(1)
+    assert first.items == [1]
+    assert second.items == []
+    assert first.items is not second.items
+
+
+def test_default_and_default_factory_together_are_type_error():
+    with pytest.raises(TypeError, match="cannot both be set"):
+        Validator(default=[], default_factory=list)
+
+
+def test_non_callable_default_factory_is_type_error():
+    with pytest.raises(TypeError, match="callable"):
+        Validator(default_factory=[])
+
+
+def test_callable_default_list_type_still_invokes():
+    """leftover: valio callable default= is still invoked; prefer default_factory."""
+
+    @dataclass
+    class Box:
+        items: list = Validator(default=list, debug=True)
+
+    first = Box()
+    second = Box()
+    first.items.append(1)
+    assert second.items == []
+
+
+def test_right_default_factory_is_not_discarded():
+    field = LengthValidator(min_length=0) & RequiredValidator(
+        required=False, default_factory=list
+    )
+    assert field.default_factory is list
+
+
+def test_conflicting_default_factory_fails_closed():
+    with pytest.raises(TypeError, match="conflicting default_factory"):
+        LengthValidator(min_length=0, default_factory=list) & RequiredValidator(
+            required=False, default_factory=dict
+        )
+
+
+def test_default_and_default_factory_on_compose_members_fail_closed():
+    with pytest.raises(TypeError, match="cannot both be set"):
+        LengthValidator(min_length=0, default=[]) & RequiredValidator(
+            required=False, default_factory=list
+        )
