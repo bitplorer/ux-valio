@@ -177,29 +177,36 @@ the path to exist),
 `IPv4Validator` / `IPv6Validator` / `IPAddressValidator`,
 `EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`,
 `PaymentCardValidator` (Visa / Mastercard / Amex / Discover / Rupay, each
-Luhn **and** brand; a Luhn-valid non-brand number is rejected), and
+Luhn **and** brand; a Luhn-valid non-brand number is rejected),
+`AadhaarCardValidator` (12 digits ∩ Verhoeff checksum; a substring or
+wrong-length value is rejected), `PANCardValidator` (10-character identity
+`fullmatch` ∩ Luhn mod 26; a format-only generator is rejected), and
 `ExpiryValidator` (`expire_after` / `expire_on` / `expire_before` are
 exclusive; a bad `expire_before` string is checked on that kwarg, not on
 `expire_after`). `expire_*` are not accepted on `Validator`. There is no
 `expiry` path unit — the check lives on the facade.
 
 Named typed facades (`PathValidator`, IP, `PaymentCardValidator`,
-`ExpiryValidator`) run their extra check from `validate()` after the
-inherited path. They do not register that check with `add_validator` on
-each assignment.
+`AadhaarCardValidator`, `PANCardValidator`, `ExpiryValidator`) run their
+extra check from `validate()` after the inherited path. They do not
+register that check with `add_validator` on each assignment.
 
 ```python
 from dataclasses import dataclass
-from ux_valio import ExpiryValidator, PaymentCardValidator
+from ux_valio import AadhaarCardValidator, ExpiryValidator, PANCardValidator, PaymentCardValidator
 
 @dataclass
 class Card:
     number: str = PaymentCardValidator(debug=True)
+    aadhaar: str = AadhaarCardValidator(debug=True)
+    pan: str = PANCardValidator(debug=True)
     # expire_before is its own bound; do not also pass expire_after.
     until: str = ExpiryValidator(expire_before="2020-01-01", debug=True)
 ```
 
-Phone, list/dict/set/tuple collection facades are not shipped.
+`PhoneNumberValidator` is not shipped: it needs a `phonenumbers` engine and a
+region door. List / dictionary / set / tuple collection facades are not
+shipped; `list[T]` / `dict[K, V]` membership is the type door.
 
 Min/max length and value leaves (`MinLengthValidator`, `MaxLengthValidator`,
 `MinValueValidator`, `MaxValueValidator`) are public building blocks.
@@ -222,8 +229,10 @@ of valio's 306 names is gone; import the names in `__all__`.
 
 `Validator`, typed facades, concern leaves, `AllOf` / `AnyOf` (`Chain` is
 `AllOf`, not a third AND), `ValidationErrors`, and `Pattern` / `PatternType`
-combinators (`&` / `|`). The taught field default is a facade or `Validator`,
-not bare `Property`. Concern leaves also compose as validator objects
-(`LengthValidator(...) & RequiredValidator(...)`). Hang hooks on `Validator`
-or the compose root. No multiple inheritance of leaves, no Cap Host, no
-`rule/`. Path helpers and async-bridge names are not in the package `__all__`.
+combinators (`&` / `|`) plus stdlib atoms `Digit` / `Word` / `NonDigit` /
+`NonWord` / `WordBoundary`. The taught field default is a facade or
+`Validator`, not bare `Property`. Concern leaves also compose as validator
+objects (`LengthValidator(...) & RequiredValidator(...)`). Hang hooks on
+`Validator` or the compose root. No multiple inheritance of leaves, no Cap
+Host, no `rule/`. Path helpers and async-bridge names are not in the
+package `__all__`.

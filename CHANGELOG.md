@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- `AadhaarCardValidator`: 12-digit identity ∩ Verhoeff checksum (stdlib
+  tables; no network). A substring or wrong-length value is rejected.
+- `PANCardValidator`: 10-character identity `fullmatch` ∩ Luhn mod 26
+  (complete A–Z map). A format-only generator is rejected.
+- Pattern atoms `Digit` / `Word` / `NonDigit` / `NonWord` on the existing
+  Pattern algebra (`findall` and `WordBoundary` unchanged).
+- `PhoneNumberValidator` and list/dict/set/tuple collection facades stay
+  unshipped (`list[T]` / `dict` membership remains the type door).
+
 - Unresolved owner annotations (`str` / `ForwardRef`, including postponed
   `from __future__ import annotations`) raise `TypeError` at bind and are
   not copied into the type door. They are not evaluated.
