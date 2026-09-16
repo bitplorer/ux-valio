@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from ux_valio import (
     AadhaarCardValidator,
+    DateValidator,
     ExpiryValidator,
     PANCardValidator,
     PaymentCardValidator,
@@ -69,3 +70,20 @@ def test_pan_card_validator_list_does_not_grow():
     Card(p="AAAPA1111F")
     assert _bags_did_not_grow(v), v._custom_validators
     assert Card(p="AAAPA1111F").p == "AAAPA1111F"
+
+
+def test_date_validator_list_does_not_grow():
+    import datetime
+
+    v = DateValidator(debug=True, logger=False)
+
+    @dataclass
+    class When:
+        d: datetime.date = v
+
+    day = datetime.date(2020, 1, 1)
+    When(d=day)
+    When(d=day)
+    When(d=day)
+    assert _bags_did_not_grow(v), v._custom_validators
+    assert When(d=day).d == day

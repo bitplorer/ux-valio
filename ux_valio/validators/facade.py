@@ -110,6 +110,9 @@ class Validator(HookHost, ValidateProperty):
             "choice": ChoiceValidator._validate_choice,
         }
 
+    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+        """Named-facade extra check after the inherited path. Default is none."""
+
     def validate(self, instance: Any = None, value: Any = None) -> None:
         errors: list[BaseException] = []
         try:
@@ -120,6 +123,10 @@ class Validator(HookHost, ValidateProperty):
             continue_or_raise(self.collect_all, errors, err)
         try:
             self._run_custom_validators(instance, value)
+        except Exception as err:
+            continue_or_raise(self.collect_all, errors, err)
+        try:
+            self._named_extra(instance, value)
         except Exception as err:
             continue_or_raise(self.collect_all, errors, err)
         raise_collected(errors, name=self.name)

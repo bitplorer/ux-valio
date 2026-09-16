@@ -55,8 +55,7 @@ def _is_valid_aadhaar(value: Any) -> bool:
 class AadhaarCardValidator(StringValidator):
     """Door A string facade: 12 digits ∩ Verhoeff checksum."""
 
-    def validate(self, instance: Any = None, value: Any = None) -> None:
-        super().validate(instance=instance, value=value)
+    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
         self._validate_aadhaar(instance, value)
 
     def _validate_aadhaar(self, instance: Any = None, value: Any = None) -> None:
