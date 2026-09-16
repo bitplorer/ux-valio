@@ -215,3 +215,39 @@ def test_descriptor_property_owner_none_keeps_unset_annotation():
 
     assert field.annotation is None
     assert isinstance(field, Property)
+
+
+def test_postponed_validator_does_not_copy_string_into_type_door():
+    ns: dict = {}
+    exec(
+        """
+from __future__ import annotations
+from dataclasses import dataclass
+from ux_valio import Validator
+import pytest
+
+field = Validator(debug=True)
+with pytest.raises(TypeError, match=r"N.n: 'int'"):
+    @dataclass
+    class N:
+        n: int = field
+assert field.annotation is None
+assert not isinstance(field.annotation, str)
+""",
+        ns,
+    )
+
+
+def test_forwardref_owner_annotation_is_not_copied_or_evaled():
+    from typing import ForwardRef
+
+    field = Validator(debug=True)
+
+    class Holder:
+        pass
+
+    Holder.__annotations__ = {"n": ForwardRef("int")}
+    with pytest.raises(TypeError, match="unresolved"):
+        field.__set_name__(Holder, "n")
+    assert field.annotation is None
+    assert field.annotation is not int

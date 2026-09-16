@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Unresolved owner annotations (`str` / `ForwardRef`, including postponed
+  `from __future__ import annotations`) raise `TypeError` at bind and are
+  not copied into the type door. They are not evaluated.
+- `AnyOf` / `|` is OR: the compose root does not AND-run a type check
+  before alternatives, and conflicting member annotations do not TypeError.
+  `AllOf` / `&` still TypeErrors on conflicting member annotations.
+- Compose merge treats explicit `collect_all=False` / `logger=False` as
+  specified (conflict with `True` is `TypeError`). Omitted False still
+  collapses to a specified True. `debug` stays fail-closed.
+- Unknown `ValidationPath` units raise `ValueError`, not `KeyError`.
+- PEP 695 aliases unwrap `__value__` on the private type helper (3.10
+  `getattr`; no typing_extensions). TypedDict stays fail-closed. Callable
+  origin is checked; signature is not.
+- `cache_task=` is accepted on compose roots; cache behavior stays retired.
+- Reassignment counts drop on delete so `reassign=False` can assign again.
+- Taught Door A path is a facade or `Validator` (not bare `Property`);
+  leaf `&` is advanced; `Chain` is `AllOf`. `EmailValidator` findall is
+  substring (not fullmatch).
+
 - Type membership walks parametrized args with stdlib `get_origin` /
   `get_args`: `list[T]` / `dict[K, V]` / `set[T]` / `tuple` arity and
   `tuple[T, ...]`, including nested forms. `typing.List[T]` agrees with

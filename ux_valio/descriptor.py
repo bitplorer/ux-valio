@@ -27,15 +27,20 @@ Logger default is OFF.
 ``validator.annotation`` and the owner class annotation are set and they
 disagree, raise ``TypeError``. Owner wins only when the validator annotation
 was ``None``. The validator annotation is kept when the owner has none.
-Union forms and list/dict/tuple/set/frozenset aliases are compared with
-stdlib ``get_origin`` / ``get_args`` (``typing.Union`` and ``X | Y``;
+Unresolved owner annotations (``str`` / ``ForwardRef``, including
+``from __future__ import annotations``) raise ``TypeError`` at bind and are
+not copied into the type door. They are not ``eval``'d. Union forms and
+list/dict/tuple/set/frozenset aliases are compared with stdlib
+``get_origin`` / ``get_args`` (``typing.Union`` and ``X | Y``;
 ``list[T]`` and ``typing.List[T]``), not typingx / typing_extensions.
 """
 
 from __future__ import annotations
 
 import types
-from typing import Any, Union, get_args, get_origin
+from typing import Any, ForwardRef, Union, get_args, get_origin
+
+_UNSET = object()
 
 
 _CONTAINER_ORIGINS = (list, dict, tuple, set, frozenset)
@@ -69,6 +74,10 @@ def _annotation_label(annotation: Any) -> str:
     return annotation.__name__ if hasattr(annotation, "__name__") else str(annotation)
 
 
+def _is_unresolved_annotation(annotation: Any) -> bool:
+    return isinstance(annotation, (str, ForwardRef))
+
+
 class Property:
     """Data descriptor used as a dataclass field default (Door A)."""
 
@@ -78,8 +87,8 @@ class Property:
         default: Any = None,
         doc: str | None = None,
         debug: bool | None = None,
-        logger: Any = False,
-        collect_all: bool = False,
+        logger: Any = _UNSET,
+        collect_all: Any = _UNSET,
     ) -> None:
         if name is not None and not isinstance(name, str):
             raise TypeError(
@@ -93,20 +102,30 @@ class Property:
             raise TypeError(
                 f"debug expected type bool value, got {type(debug).__name__} type instead"
             )
-        if logger not in (False, None, True) and not hasattr(logger, "info"):
-            raise TypeError(
-                f"logger expected bool or logging.Logger, got {type(logger).__name__}"
-            )
-        if not isinstance(collect_all, bool):
-            raise TypeError(
-                f"collect_all expected type bool value, got {type(collect_all).__name__} type instead"
-            )
+        if logger is _UNSET:
+            self.logger = False
+            self._logger_specified = False
+        else:
+            if logger not in (False, None, True) and not hasattr(logger, "info"):
+                raise TypeError(
+                    f"logger expected bool or logging.Logger, got {type(logger).__name__}"
+                )
+            self.logger = False if logger is None else logger
+            self._logger_specified = True
+        if collect_all is _UNSET:
+            self.collect_all = False
+            self._collect_all_specified = False
+        else:
+            if not isinstance(collect_all, bool):
+                raise TypeError(
+                    f"collect_all expected type bool value, got {type(collect_all).__name__} type instead"
+                )
+            self.collect_all = collect_all
+            self._collect_all_specified = True
         self.name = name
         self.default = default
         self.doc = doc
         self.debug = debug
-        self.logger = False if logger is None else logger
-        self.collect_all = collect_all
         self.errors: list[BaseException] = []
         self.annotation = getattr(self, "annotation", None)
 
@@ -163,6 +182,12 @@ class Property:
     def _bind_owner_annotation(self, owner: type, name: str) -> None:
         annotations = getattr(owner, "__annotations__", None) or {}
         owner_annotation = annotations.get(name)
+        if owner_annotation is not None and _is_unresolved_annotation(owner_annotation):
+            raise TypeError(
+                f"{owner.__name__}.{self.name}: {_annotation_label(owner_annotation)}"
+                " annotation is unresolved (string / ForwardRef); "
+                "not copied into the type door"
+            )
         if self.annotation is None:
             if owner_annotation is not None:
                 self.annotation = owner_annotation

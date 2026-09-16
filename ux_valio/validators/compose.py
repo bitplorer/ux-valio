@@ -29,11 +29,19 @@ def _as_validators(parts: Iterable[Any]) -> tuple[ValidateProperty, ...]:
     return validators
 
 
+def _attr_is_specified(item: Any, attr: str, unspecified: Any) -> bool:
+    if attr == "collect_all":
+        return bool(getattr(item, "_collect_all_specified", False))
+    if attr == "logger":
+        return bool(getattr(item, "_logger_specified", False))
+    return getattr(item, attr, unspecified) is not unspecified
+
+
 def _merged_attr(validators: tuple[Any, ...], attr: str, unspecified: Any) -> Any:
     present = [
         getattr(item, attr, unspecified)
         for item in validators
-        if getattr(item, attr, unspecified) is not unspecified
+        if _attr_is_specified(item, attr, unspecified)
     ]
     if not present:
         return unspecified
@@ -60,6 +68,15 @@ def _keep_nested_compose(item: Any) -> bool:
         ("collect_all", False),
     ):
         merged = _merged_attr(members, attr, unspecified)
+        if attr in ("collect_all", "logger"):
+            flag = "_collect_all_specified" if attr == "collect_all" else "_logger_specified"
+            item_specified = getattr(item, flag, False)
+            members_specified = any(getattr(member, flag, False) for member in members)
+            if item_specified and not members_specified:
+                return True
+            if item_specified and getattr(item, attr, unspecified) != merged:
+                return True
+            continue
         if getattr(item, attr, unspecified) != merged:
             return True
     return False
@@ -79,10 +96,16 @@ def _bind_compose_kwargs(
     validators: tuple[ValidateProperty, ...], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
     kwargs.setdefault("debug", _merged_attr(validators, "debug", None))
-    kwargs.setdefault("logger", _merged_attr(validators, "logger", False))
     kwargs.setdefault("default", _merged_attr(validators, "default", None))
     kwargs.setdefault("doc", _merged_attr(validators, "doc", None))
-    kwargs.setdefault("collect_all", _merged_attr(validators, "collect_all", False))
+    if "logger" not in kwargs and any(
+        getattr(item, "_logger_specified", False) for item in validators
+    ):
+        kwargs["logger"] = _merged_attr(validators, "logger", False)
+    if "collect_all" not in kwargs and any(
+        getattr(item, "_collect_all_specified", False) for item in validators
+    ):
+        kwargs["collect_all"] = _merged_attr(validators, "collect_all", False)
     return kwargs
 
 
@@ -107,21 +130,34 @@ class _Compose(HookHost, ValidateProperty):
     """Shared Door A descriptor for stacked validators. Owns root ``add_*`` bags."""
 
     validators: tuple[ValidateProperty, ...]
+    _merge_member_annotations = True
+    _propagate_annotation = True
 
-    def __init__(self, *validators: ValidateProperty, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *validators: ValidateProperty,
+        cache_task: bool = True,
+        **kwargs: Any,
+    ) -> None:
         self.validators = _flatten(type(self), _as_validators(validators))
-        annotation = _compose_annotation(self.validators)
-        if annotation is not None:
-            self.annotation = annotation
-        self._init_hook_bags()
+        if type(self)._merge_member_annotations:
+            annotation = _compose_annotation(self.validators)
+            if annotation is not None:
+                self.annotation = annotation
+        self._init_hook_bags(cache_task=cache_task)
         super().__init__(**_bind_compose_kwargs(self.validators, kwargs))
 
     def __set_name__(self, owner: type, name: str) -> None:
         super().__set_name__(owner, name)
+        propagate = type(self)._propagate_annotation
         for item in self.validators:
             if item.name is None:
                 item.name = self.name
-            if item.annotation is None and self.annotation is not None:
+            if (
+                propagate
+                and item.annotation is None
+                and self.annotation is not None
+            ):
                 item.annotation = self.annotation
 
     def notify_pre_set(self, obj: Any) -> None:
@@ -201,13 +237,11 @@ Chain = AllOf
 class AnyOf(_Compose):
     """OR composition: the first member that validates wins."""
 
+    _merge_member_annotations = False
+    _propagate_annotation = False
+
     def validate(self, instance: Any = None, value: Any = None) -> None:
         errors: list[BaseException] = []
-        try:
-            TypeValidator._validate_type(self, instance, value)
-        except Exception as err:
-            continue_or_raise(self.collect_all, errors, err)
-        raise_collected(errors, name=self.name)
         alt_errors: list[BaseException] = []
         for item in self.validators:
             try:

@@ -64,7 +64,11 @@ class ValidationPath:
                 raise ValueError(f"validation path double-call: {name!r}")
             ran.add(name)
             try:
-                results.append(lookup[name](owner, instance, value))
+                unit = lookup[name]
+            except KeyError:
+                raise ValueError(f"validation path unknown unit: {name!r}") from None
+            try:
+                results.append(unit(owner, instance, value))
             except Exception as err:
                 continue_or_raise(collect_all, errors, err)
                 results.append(None)

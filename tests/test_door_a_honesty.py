@@ -160,10 +160,11 @@ from ux_valio import IntegerValidator
 import pytest
 
 field = IntegerValidator(debug=True)
-with pytest.raises(TypeError, match=r"N.n: 'int' annotation did not match"):
+with pytest.raises(TypeError, match=r"N.n: 'int'"):
     @dataclass
     class N:
         n: int = field
+assert field.annotation is int
 """,
         ns,
     )

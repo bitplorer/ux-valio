@@ -13,26 +13,32 @@ pip install -e .
 
 ## Door A
 
-The public caller shape is a validator as the dataclass field default:
+The taught caller shape is a **typed facade or `Validator`** as the dataclass
+field default. `field: T = SomeValidator(...)` is the door. There is no Field
+twin and no Schema twin. Do not use bare `Property` as the field default —
+it is the descriptor base, not the product door.
 
 ```python
 from dataclasses import dataclass
-from ux_valio import IntegerValidator, LengthValidator, RequiredValidator, StringValidator, Validator
+from ux_valio import IntegerValidator, StringValidator, Validator
 
 @dataclass
 class User:
     name: str = StringValidator(debug=True, max_length=50, required=True)
     rank: str = Validator(in_choice=["Male", "Female", "Trans"], default="Female")
     n: int = IntegerValidator(min_value=0, max_value=10, multiple_of=2, debug=True)
-    tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(required=True)
 ```
 
-There is no Field twin and no Schema twin. `field: T = SomeValidator(...)` is
-the door.
+Concern leaves (`LengthValidator`, `RequiredValidator`, …) are the **advanced**
+path: compose validator objects with `&` (AllOf) / `|` (AnyOf), or explicit
+`AllOf` / `AnyOf`, as **one** descriptor. `Chain` is `AllOf` — an alias, not a
+third AND. Facades do not multiple-inherit leaves.
 
-Concern leaves (`LengthValidator`, `RequiredValidator`, …) and facades compose
-with `&` (AllOf) / `|` (AnyOf), or explicit `AllOf` / `AnyOf`, as **one**
-descriptor. `Chain` is `AllOf`. Facades do not multiple-inherit leaves.
+```python
+from ux_valio import LengthValidator, RequiredValidator
+
+tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(required=True)
+```
 
 Hang `add_*` on the descriptor that is the field default: a `Validator`
 facade, or the compose **root** after `&` / `AllOf`. Concern leaves do not
@@ -68,8 +74,16 @@ class User:
   ```
 - Composing members that specify different `debug` or `default` values raises
   `TypeError`. A right-hand `debug=True` is not discarded into swallow.
+  Explicit `collect_all=False` / `logger=False` is specified: it TypeErrors
+  against explicit `True`. An omitted `collect_all` / `logger` (runtime
+  default False / OFF) still collapses to a specified `True`. `debug` stays
+  fail-closed (`None` is unspecified).
 - `logger` defaults **OFF** (`False`). Valio's `logger=None` enabled file
   logging; ux-valio does not.
+- `|` is OR: `IntegerValidator | StringValidator` is AnyOf. Conflicting
+  member annotations do not TypeError. The compose root does not AND-run a
+  type check before alternatives. `&` / `AllOf` still TypeErrors on
+  conflicting member annotations.
 
 **Only the descriptor `pre_set` hook return is stored.** That hook *is*
 `pre_validate → validate → post_validate`. There is no `_processors["pre_set"]`
@@ -97,7 +111,8 @@ run rules as `async def`.
 valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
 for `add_pre_validator`). Door A hangs the same processor on the descriptor.
 Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong bag
-(valio `cache_task=True` skipped re-checks).
+(`cache_task=` is accepted on `Validator` and on compose roots; it does
+**not** skip re-checks — the kwarg is kept, cache behavior is retired).
 
 Class-body `username: str = username` is `NameError` (the assignment makes
 `username` local). Match valio Field’s `user_field` / `user` split:
@@ -137,14 +152,28 @@ Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
 exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
 
 `PatternValidator` matches with `re.findall` (substring), not `fullmatch`.
+`EmailValidator` uses that same findall door: `"prefix user@example.com suffix"`
+is accepted. It is not a full-string email check.
+
+Owner annotations that are still strings or `ForwardRef` (including
+`from __future__ import annotations`) fail at class body with `TypeError`.
+They are not copied into the type door and are not `eval`'d. Drop postponed
+annotations on Door A fields, or the bind stays closed.
+
+Typed facades (`IntegerValidator`, …) conflict with `int | None` / `int | str`
+at class body. Use `Validator()` for optional/union fields, or `|` AnyOf of
+matching facades.
+
+An unknown validation-path unit raises `ValueError`, not `KeyError`.
 
 ## Typed facades
 
 `IntegerValidator`, `StringValidator`, `BooleanValidator`, `FloatValidator`,
 `DecimalValidator`, `BytesValidator`, `DateValidator` (`datetime.date`;
-strings are not parsed), `EmailValidator`, `UUIDValidator` (coerces UUID
-strings), `PathValidator` (annotation `pathlib.Path`; coerces `str` →
-`pathlib.Path`; `path_exists=True` requires the path to exist),
+strings are not parsed), `EmailValidator` (findall substring; not fullmatch),
+`UUIDValidator` (coerces UUID strings), `PathValidator` (annotation
+`pathlib.Path`; coerces `str` → `pathlib.Path`; `path_exists=True` requires
+the path to exist),
 `IPv4Validator` / `IPv6Validator` / `IPAddressValidator`,
 `EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`,
 `PaymentCardValidator` (Visa / Mastercard / Amex / Discover / Rupay, each
@@ -192,8 +221,9 @@ of valio's 306 names is gone; import the names in `__all__`.
 ## Public surface
 
 `Validator`, typed facades, concern leaves, `AllOf` / `AnyOf` (`Chain` is
-`AllOf`), `ValidationErrors`, and `Pattern` / `PatternType` combinators
-(`&` / `|`). Concern leaves also compose as validator objects
+`AllOf`, not a third AND), `ValidationErrors`, and `Pattern` / `PatternType`
+combinators (`&` / `|`). The taught field default is a facade or `Validator`,
+not bare `Property`. Concern leaves also compose as validator objects
 (`LengthValidator(...) & RequiredValidator(...)`). Hang hooks on `Validator`
 or the compose root. No multiple inheritance of leaves, no Cap Host, no
 `rule/`. Path helpers and async-bridge names are not in the package `__all__`.
