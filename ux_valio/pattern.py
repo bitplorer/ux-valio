@@ -56,9 +56,38 @@ class PatternType:
         return str(self.pattern)
 
 
+def _join_fragments(left: object, right: object, joiner: str = "") -> str | bytes:
+    """Concatenate same-kind str or bytes fragments. Missing or mixed is TypeError."""
+    if left is None or right is None:
+        raise TypeError("pattern fragment is missing")
+    if isinstance(left, bytes) and isinstance(right, bytes):
+        mid = joiner.encode("ascii") if joiner else b""
+        return left + mid + right
+    if isinstance(left, str) and isinstance(right, str):
+        return f"{left}{joiner}{right}"
+    raise TypeError(
+        "pattern fragments must be the same str or bytes kind, "
+        f"got {type(left).__name__} and {type(right).__name__}"
+    )
+
+
+def _wrap_alternation(combined: str | bytes) -> str | bytes:
+    if isinstance(combined, bytes):
+        return b"(?:" + combined + b")"
+    return f"(?:{combined})"
+
+
+def _attach_quantifier(pattern: str | bytes, quantifier: str) -> str | bytes:
+    if not quantifier:
+        return pattern
+    if isinstance(pattern, bytes):
+        return pattern + quantifier.encode("ascii")
+    return f"{pattern}{quantifier}"
+
+
 class AndPattern(PatternType):
     def __init__(self, first: PatternType, second: PatternType) -> None:
-        self.pattern = f"{first.pattern}{second.pattern}"
+        self.pattern = _join_fragments(first.pattern, second.pattern)
         self.raw_pattern = self.pattern
         self.quantifier = ""
         self.alias = "".join(filter(None, [first.alias, second.alias]))
@@ -66,8 +95,8 @@ class AndPattern(PatternType):
 
 class OrPattern(PatternType):
     def __init__(self, first: PatternType, second: PatternType) -> None:
-        combined = f"{first.pattern}|{second.pattern}"
-        self.pattern = f"(?:{combined})"
+        combined = _join_fragments(first.pattern, second.pattern, "|")
+        self.pattern = _wrap_alternation(combined)
         self.raw_pattern = combined
         self.quantifier = ""
         self.alias = " or ".join(filter(None, [first.alias, second.alias]))
@@ -91,6 +120,8 @@ def _quantifier(
         raise ValueError(
             f"expect count_min to be equal to or greater than 0, got {count_min} instead"
         )
+    if count_min is not None and count_max is not None and count_max < count_min:
+        raise ValueError("count_max can not be less than count_min")
     lo = 0 if count_min is None else count_min
     if count_min is not None and count_max is not None and count_min == count_max:
         token = f"{{{count_min}}}"
@@ -119,7 +150,7 @@ class Pattern(PatternType):
     ) -> None:
         self.quantifier = quantifier or _quantifier(count, count_min, count_max, greedy)
         self.raw_pattern = raw_pattern if raw_pattern is not None else pattern
-        self.pattern = f"{pattern}{self.quantifier}"
+        self.pattern = _attach_quantifier(pattern, self.quantifier)
         self.alias = alias or ""
 
 

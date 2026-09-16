@@ -51,4 +51,8 @@ Door A only: `field: T = SomeValidator(...)`.
   kwargs on `Validator`. No `expiry` path unit.
 - Named typed facades call their extra check from `validate()` after the
   inherited path; they do not `add_validator` themselves on each assignment.
-  No NamedOnce Cap. `HexColorValidator` is not a public facade.
+  `collect_all=True` continues into that extra check. No NamedOnce Cap.
+  `HexColorValidator` is not a public facade. `DateValidator` rejects
+  `datetime.datetime`. Pattern `&` / `|` is fail-closed on missing or mixed
+  `str`/`bytes` fragments; inverted `count_min` / `count_max` is
+  constructor `ValueError`; bytes patterns keep bytes identity.

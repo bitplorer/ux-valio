@@ -167,7 +167,25 @@ class PatternValidator(ValidateProperty):
         source = pattern.pattern if isinstance(pattern, PatternType) else pattern
         if value is None:
             return
-        text = value if isinstance(value, str) else str(value)
+        if isinstance(source, bytes):
+            if not isinstance(value, bytes):
+                raise TypeError(
+                    f"{self.name} expects bytes to match a bytes pattern, "
+                    f"got {type(value).__name__} type instead"
+                )
+            text = value
+        elif isinstance(source, str):
+            if not isinstance(value, str):
+                raise TypeError(
+                    f"{self.name} expects str to match a str pattern, "
+                    f"got {type(value).__name__} type instead"
+                )
+            text = value
+        else:
+            raise TypeError(
+                f"{self.name} pattern must be str or bytes, "
+                f"got {type(source).__name__} type instead"
+            )
         if not re.compile(source).findall(text):
             label = pattern.alias if isinstance(pattern, PatternType) and pattern.alias else pattern
             raise ValueError(f"{self.name} must have the pattern {label}")

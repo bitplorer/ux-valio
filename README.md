@@ -162,7 +162,10 @@ exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
 
 `PatternValidator` matches with `re.findall` (substring), not `fullmatch`.
 `EmailValidator` uses that same findall door: `"prefix user@example.com suffix"`
-is accepted. It is not a full-string email check.
+is accepted. It is not a full-string email check. Pattern `&` / `|` is
+fail-closed on a missing fragment or mixed `str`/`bytes`; same-kind bytes
+fragments concatenate as bytes. `count_min > count_max` is constructor
+`ValueError`. A bytes pattern matches bytes (it is not `str()`-coerced).
 
 Owner annotations that are still strings or `ForwardRef` (including
 `from __future__ import annotations`) fail at class body with `TypeError`.
@@ -179,7 +182,8 @@ An unknown validation-path unit raises `ValueError`, not `KeyError`.
 
 `IntegerValidator`, `StringValidator`, `BooleanValidator`, `FloatValidator`,
 `DecimalValidator`, `BytesValidator`, `DateValidator` (`datetime.date`;
-strings are not parsed), `EmailValidator` (findall substring; not fullmatch),
+strings are not parsed; `datetime.datetime` is rejected), `EmailValidator`
+(findall substring; not fullmatch),
 `UUIDValidator` (coerces UUID strings), `PathValidator` (annotation
 `pathlib.Path`; coerces `str` → `pathlib.Path`; `path_exists=True` requires
 the path to exist),
@@ -195,10 +199,12 @@ exclusive; a bad `expire_before` string is checked on that kwarg, not on
 `expire_after`). `expire_*` are not accepted on `Validator`. There is no
 `expiry` path unit — the check lives on the facade.
 
-Named typed facades (`PathValidator`, IP, `PaymentCardValidator`,
+Named typed facades (`DateValidator`, `PathValidator`, IP, `PaymentCardValidator`,
 `AadhaarCardValidator`, `PANCardValidator`, `ExpiryValidator`) run their
 extra check from `validate()` after the inherited path. They do not
-register that check with `add_validator` on each assignment.
+register that check with `add_validator` on each assignment. With
+`collect_all=True`, that extra check joins the collected bag instead of
+being skipped after an inherited failure.
 
 ```python
 from dataclasses import dataclass

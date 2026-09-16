@@ -73,6 +73,32 @@ def test_date_validator_accepts_date_not_string():
         When(d="2020-01-01")
 
 
+def test_date_validator_rejects_datetime_subclass():
+    """datetime.datetime is a date subclass; DateValidator must not store it."""
+
+    @dataclass
+    class When:
+        d: datetime.date = DateValidator(debug=True)
+
+    moment = datetime.datetime(2020, 1, 1, 12, 0)
+    with pytest.raises(TypeError, match="datetime") as caught:
+        When(d=moment)
+    assert "datetime.date" in str(caught.value)
+    assert When(d=datetime.date(2020, 1, 1)).d == datetime.date(2020, 1, 1)
+
+
+def test_date_validator_still_accepts_plain_date_subclass():
+    class Holiday(datetime.date):
+        pass
+
+    @dataclass
+    class When:
+        d: datetime.date = DateValidator(debug=True)
+
+    day = Holiday(2020, 1, 1)
+    assert When(d=day).d == day
+
+
 def test_email_validator_findall():
     @dataclass
     class Contact:

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import pytest
 
 from ux_valio import (
+    BytesValidator,
     Digit,
     NonDigit,
     NonWord,
@@ -151,3 +152,68 @@ def test_nondigit_nonword_compose_with_or():
     assert Punct(value="hello!").value == "hello!"
     with pytest.raises(ValueError):
         Punct(value="123")
+
+
+def test_pattern_compose_none_fragment_is_type_error():
+    with pytest.raises(TypeError):
+        PatternType() & Digit()
+    with pytest.raises(TypeError):
+        Digit() | PatternType()
+    with pytest.raises(TypeError):
+        PatternType() & PatternType()
+
+
+def test_pattern_compose_mixed_str_bytes_is_type_error():
+    with pytest.raises(TypeError):
+        Pattern(b"a") & Pattern("b")
+    with pytest.raises(TypeError):
+        Pattern("a") | Pattern(b"b")
+
+
+def test_pattern_compose_same_kind_bytes_concatenates_as_bytes():
+    combined = Pattern(b"a") & Pattern(b"b")
+    assert combined.pattern == b"ab"
+    alternated = Pattern(b"a") | Pattern(b"b")
+    assert isinstance(alternated.pattern, bytes)
+    assert b"a|b" in alternated.pattern
+
+
+def test_inverted_count_min_max_is_value_error_at_construction():
+    with pytest.raises(ValueError, match="count_max"):
+        Pattern(r"a", count_min=5, count_max=2)
+    with pytest.raises(ValueError, match="count_max"):
+        Digit(count_min=5, count_max=2)
+
+
+def test_pattern_bytes_keeps_bytes_identity():
+    token = Pattern(b"ab")
+    assert token.pattern == b"ab"
+    counted = Pattern(b"a", count=2)
+    assert counted.pattern == b"a{2}"
+
+
+def test_pattern_validator_matches_bytes_against_bytes():
+    @dataclass
+    class Blob:
+        b: bytes = BytesValidator(pattern=b"ab", debug=True)
+
+    assert Blob(b=b"ab").b == b"ab"
+    assert Blob(b=b"xxabxx").b == b"xxabxx"
+    with pytest.raises(ValueError):
+        Blob(b=b"cd")
+
+
+def test_pattern_validator_mixed_str_bytes_is_type_error():
+    @dataclass
+    class Blob:
+        b: bytes = BytesValidator(pattern="ab", debug=True)
+
+    with pytest.raises(TypeError):
+        Blob(b=b"ab")
+
+    @dataclass
+    class Text:
+        s: str = PatternValidator(pattern=b"ab", debug=True)
+
+    with pytest.raises(TypeError):
+        Text(s="ab")

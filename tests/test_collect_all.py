@@ -4,6 +4,8 @@
 collect_all is not debug-swallow: debug still chooses raise vs append.
 """
 
+import datetime
+import pathlib
 from dataclasses import dataclass
 
 import pytest
@@ -11,9 +13,16 @@ import pytest
 from ux_valio import (
     AllOf,
     AnyOf,
+    AadhaarCardValidator,
+    DateValidator,
+    ExpiryValidator,
     IntegerValidator,
+    IPv4Validator,
     MinLengthValidator,
+    PANCardValidator,
+    PathValidator,
     PatternValidator,
+    PaymentCardValidator,
     RequiredValidator,
     ValidationErrors,
     Validator,
@@ -141,3 +150,83 @@ def test_collect_all_unknown_is_not_a_debug_alias():
     field = Validator(debug=True)
     assert field.collect_all is False
     assert field.debug is True
+
+
+def test_named_facade_collect_all_keeps_inherited_and_extra_errors():
+    """Extra checks after the inherited path must join the collect_all bag."""
+    card = PaymentCardValidator(min_length=20, collect_all=True, debug=True)
+    with pytest.raises(ValidationErrors) as caught:
+        card.validate(None, "4111")
+    messages = " ".join(str(err) for err in caught.value.errors)
+    assert "minimum length" in messages
+    assert "payment card" in messages
+    assert len(caught.value.errors) >= 2
+
+    ip = IPv4Validator(max_length=3, collect_all=True, debug=True)
+    with pytest.raises(ValidationErrors) as caught_ip:
+        ip.validate(None, "999.0.0.1")
+    ip_messages = " ".join(str(err) for err in caught_ip.value.errors)
+    assert "maximum length" in ip_messages
+    assert "IPv4" in ip_messages
+    assert len(caught_ip.value.errors) >= 2
+
+
+def test_named_identity_facades_collect_all_keeps_extra_errors():
+    aadhaar = AadhaarCardValidator(min_length=20, collect_all=True, debug=True)
+    with pytest.raises(ValidationErrors) as caught_a:
+        aadhaar.validate(None, "1234")
+    a_messages = " ".join(str(err) for err in caught_a.value.errors)
+    assert "minimum length" in a_messages
+    assert "Aadhaar" in a_messages
+
+    pan = PANCardValidator(min_length=20, collect_all=True, debug=True)
+    with pytest.raises(ValidationErrors) as caught_p:
+        pan.validate(None, "AA")
+    p_messages = " ".join(str(err) for err in caught_p.value.errors)
+    assert "minimum length" in p_messages
+    assert "PAN" in p_messages
+
+    expiry = ExpiryValidator(
+        expire_after="2020-01-01", min_length=20, collect_all=True, debug=True
+    )
+    with pytest.raises(ValidationErrors) as caught_e:
+        expiry.validate(None, "short")
+    e_messages = " ".join(str(err) for err in caught_e.value.errors)
+    assert "minimum length" in e_messages
+    assert "expired" in e_messages
+
+
+def test_named_facade_fail_fast_still_stops_before_extra():
+    card = PaymentCardValidator(min_length=20, debug=True)
+    with pytest.raises(ValueError, match="minimum length") as caught:
+        card.validate(None, "4111")
+    assert not isinstance(caught.value, ValidationErrors)
+    assert "payment card" not in str(caught.value)
+
+
+def test_named_extra_only_collect_all_is_validation_errors():
+    card = PaymentCardValidator(collect_all=True, debug=True)
+    with pytest.raises(ValidationErrors) as caught:
+        card.validate(None, "0000000000000000")
+    assert any("payment card" in str(err) for err in caught.value.errors)
+
+
+def test_date_and_path_named_extras_join_collect_all():
+    field = DateValidator(
+        in_choice=[datetime.date(2020, 1, 1)], collect_all=True, debug=True
+    )
+    with pytest.raises(ValidationErrors) as caught:
+        field.validate(None, datetime.datetime(2020, 1, 1))
+    messages = " ".join(str(err) for err in caught.value.errors)
+    assert "datetime.date" in messages
+    assert "expect values in" in messages
+    assert len(caught.value.errors) >= 2
+
+    allowed = pathlib.Path("allowed-ux-valio-path")
+    path = PathValidator(path_exists=True, in_choice=[allowed], collect_all=True, debug=True)
+    missing = pathlib.Path("no-such-ux-valio-path")
+    with pytest.raises(ValidationErrors) as caught_p:
+        path.validate(None, missing)
+    p_messages = " ".join(str(err) for err in caught_p.value.errors)
+    assert "expect values in" in p_messages
+    assert "existing path" in p_messages

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- `DateValidator` rejects `datetime.datetime` after the inherited path
+  (`datetime.datetime` is a `date` subclass). Plain `datetime.date`
+  subclasses that are not datetimes still assign.
+- Pattern `&` / `|` is TypeError on a missing fragment or mixed
+  `str`/`bytes`. Same-kind bytes fragments concatenate as bytes.
+- Inverted Pattern `count_min > count_max` is constructor `ValueError`.
+- `PatternValidator` matches `str` against `str` and `bytes` against
+  `bytes`. Mixed kinds are TypeError; bytes are not `str()`-coerced.
+- Named-facade extra checks participate in `collect_all` after the
+  inherited path. They still do not `add_validator` themselves.
+
 - Never-set `__get__` / `__delete__` with `debug=True` raise a named
   `AttributeError` (`Cls.field is not set`), not a bare `KeyError`.
   Debug-falsy still swallows and reads back `None`.
