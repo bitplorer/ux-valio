@@ -29,12 +29,12 @@ class PhoneNumberValidator(StringValidator):
     """
 
     def __init__(self, *, region: str, **kwargs: Any) -> None:
-        phonenumbers = _require_phonenumbers()
         if not isinstance(region, str):
             raise TypeError(
                 f"region expected type str value, got {type(region).__name__} type instead"
             )
-        if region not in phonenumbers.SUPPORTED_REGIONS:
+        self._phonenumbers = _require_phonenumbers()
+        if region not in self._phonenumbers.SUPPORTED_REGIONS:
             raise ValueError(
                 f"region {region!r} is not a supported phonenumbers region"
             )
@@ -49,7 +49,7 @@ class PhoneNumberValidator(StringValidator):
             return
         if not isinstance(value, str):
             raise ValueError(f"{self.name} is not a valid {self.region} phone number")
-        phonenumbers = _require_phonenumbers()
+        phonenumbers = self._phonenumbers
         try:
             parsed = phonenumbers.parse(value, self.region)
         except phonenumbers.NumberParseException as err:

@@ -76,7 +76,7 @@ def test_instance_region_is_not_a_second_door():
     field.validate(Host(), IN_E164)
 
 
-def test_missing_engine_teaches_phonenumbers_extra(monkeypatch):
+def test_missing_engine_fails_once_at_construct(monkeypatch):
     import builtins
     import sys
 
@@ -90,7 +90,24 @@ def test_missing_engine_teaches_phonenumbers_extra(monkeypatch):
 
     monkeypatch.setattr(builtins, "__import__", guarded)
     with pytest.raises(ImportError, match=r"ux-valio\[phonenumbers\]"):
-        phone_mod._require_phonenumbers()
+        PhoneNumberValidator(region="IN", debug=True)
+
+
+def test_validate_reuses_cached_phonenumbers_module(monkeypatch):
+    calls = {"n": 0}
+    real = phone_mod._require_phonenumbers
+
+    def counting():
+        calls["n"] += 1
+        return real()
+
+    monkeypatch.setattr(phone_mod, "_require_phonenumbers", counting)
+    field = PhoneNumberValidator(region="IN", debug=True, logger=False)
+    assert calls["n"] == 1
+    assert field._phonenumbers is phonenumbers
+    field.validate(None, IN_E164)
+    field.validate(None, IN_NATIONAL)
+    assert calls["n"] == 1
 
 
 def test_phone_module_has_no_network_or_matcher():
