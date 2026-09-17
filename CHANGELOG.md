@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- `examples/` are production scenarios: domain models, constructors callers
+  copy, and fail-closed handling (`debug=True` raises; forms use
+  `collect_all=True` → `ValidationErrors`). `ExpiryValidator` in checkout is
+  an offer timeline on *now*, not card `MM/YY` (card expiry is Pattern
+  identity). Examples do not import pytest.
+- Pattern atom names KEEP the valio@3415c03 PatternType surface: `Digit` /
+  `Word` / `NonDigit` / `NonWord` / `WhiteSpace` / `NonWhiteSpace` /
+  `WordBoundary`, `StartsWith` / `EndsWith`, lookarounds `IfPrecededBy` /
+  `IfNotPrecededBy` / `IfFollowedBy` / `IfNotFollowedBy`, `SetOf`. Fashion
+  names (`DigitAtom`, `CharacterClass`, `Lookbehind`) are not shipped.
+  Leftover: those short nouns *are* the taught Door A atoms.
+- Private helpers renamed only where the name misled; previous names
+  remain leftover aliases: `_named_extra` → `_validate_named_facade`,
+  `bound` → `bound_value`, `_namespace` → `_resolve_bag_key`. Public Door A
+  methods (`add_*`, `bind_bounds`, `notify_pre_set`,
+  `pre_validation_processing`) KEEP. `_unit_lookup`, `hook_bags_used`,
+  `_configure_expiry`, and `_luhn_correctness` KEEP.
+
 - Pattern combinators live in the `ux_valio.pattern` package. Taught
   imports stay on the package root (`from ux_valio import Pattern`);
   `ux_valio.pattern.Pattern` is the same object.

@@ -212,3 +212,12 @@ def test_integer_validator_zero_bounds_on_assign():
         Count(n=-2)
     with pytest.raises(ValueError):
         Count(n=3)
+
+
+def test_bound_value_leftover_alias():
+    from ux_valio.validators.bounds import bound, bound_value
+
+    assert bound is bound_value
+    owner = type("O", (), {"min_value": 0, "missing": None})()
+    assert bound_value(owner, "min_value") == 0
+    assert bound_value(owner, "missing") is None

@@ -91,7 +91,7 @@ class DateValidator(Validator):
             value = parsed
         return super().pre_validation_processing(instance, value)
 
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
         if isinstance(value, datetime.datetime):
@@ -133,7 +133,7 @@ class PathValidator(Validator):
             value = pathlib.Path(value)
         return super().pre_validation_processing(instance, value)
 
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
         path = value if isinstance(value, pathlib.Path) else pathlib.Path(value)
@@ -142,7 +142,7 @@ class PathValidator(Validator):
 
 
 class IPv4Validator(StringValidator):
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
         try:
@@ -154,7 +154,7 @@ class IPv4Validator(StringValidator):
 
 
 class IPv6Validator(StringValidator):
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
         try:
@@ -166,7 +166,7 @@ class IPv6Validator(StringValidator):
 
 
 class IPAddressValidator(StringValidator):
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
         try:
@@ -180,7 +180,7 @@ class IPAddressValidator(StringValidator):
 class EnumValidator(Validator):
     """Member of ``enum.Enum``. Class annotation is unset so a concrete enum may own the field."""
 
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
         if not isinstance(value, enum.Enum):
@@ -190,7 +190,7 @@ class EnumValidator(Validator):
 
 
 class IntegerEnumValidator(Validator):
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
         if not isinstance(value, enum.IntEnum):
@@ -200,7 +200,7 @@ class IntegerEnumValidator(Validator):
 
 
 class StringEnumValidator(Validator):
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
         if not isinstance(value, enum.Enum) or not isinstance(value.value, str):

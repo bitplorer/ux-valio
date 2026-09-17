@@ -37,7 +37,7 @@ def _is_valid_pan(value: Any) -> bool:
 class PANCardValidator(StringValidator):
     """Door A string facade: 10-char PAN identity ∩ Luhn mod 26."""
 
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._validate_pan(instance, value)
 
     def _validate_pan(self, instance: Any = None, value: Any = None) -> None:

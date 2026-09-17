@@ -174,7 +174,9 @@ the package root (`from ux_valio import Pattern, Digit, StartsWith, SetOf`).
 `from ux_valio.pattern import Pattern` is the same objects — a package
 re-home, not a second door. `WordBoundary` stays an atom `\b`.
 
-Thin PatternTypes evidenced in valio@3415c03 `valio/regexer/regexps.py`:
+Thin PatternTypes evidenced in valio@3415c03 `valio/regexer/regexps.py`.
+Those names are the taught Door A atoms (KEEP; not `DigitAtom` /
+`CharacterClass` / `Lookbehind`):
 
 - `StartsWith` / `EndsWith` (`^` / `$`) at L414 / L421
 - lookarounds `IfPrecededBy` / `IfNotPrecededBy` / `IfFollowedBy` /
@@ -198,7 +200,9 @@ class Part:
     tint: str = PatternValidator(pattern=hex_pair, debug=True)
 ```
 
-Runnable Door A cases live under `examples/`.
+Runnable production scenarios live under `examples/` (`python examples/<file>.py`).
+Each file is a domain model plus a constructor callers can copy. `debug=True`
+is fail-closed; signup uses `collect_all=True` and `ValidationErrors`.
 
 Owner annotations that are still strings or `ForwardRef` (including
 `from __future__ import annotations`) fail at class body with `TypeError`.

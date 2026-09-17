@@ -54,7 +54,7 @@ def _is_valid_payment_card(card_number: str) -> bool:
 class PaymentCardValidator(StringValidator):
     """Door A string facade: Visa / Mastercard / Amex / Discover / Rupay ∩ Luhn."""
 
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._validate_payment_card(instance, value)
 
     def _validate_payment_card(self, instance: Any = None, value: Any = None) -> None:

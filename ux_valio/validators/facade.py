@@ -99,6 +99,7 @@ class Validator(HookHost, ValidateProperty):
         return super().post_delete_processing(instance, value)
 
     def _unit_lookup(self) -> dict[str, Lookup]:
+        """Map each validation-path unit name to the leaf method that runs it."""
         return {
             "reassignment": ReassignValidator._validate_reassignment,
             "type": TypeValidator._validate_type,
@@ -110,14 +111,22 @@ class Validator(HookHost, ValidateProperty):
             "choice": ChoiceValidator._validate_choice,
         }
 
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         """Named-facade extra check after the inherited path. Default is none."""
+
+    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+        """Leftover private name. Prefer ``_validate_named_facade``."""
+        return self._validate_named_facade(instance, value)
 
     def validate(self, instance: Any = None, value: Any = None) -> None:
         errors: list[BaseException] = []
         try:
             self.validation_path.run(
-                self, instance, value, self._unit_lookup(), collect_all=self.collect_all
+                self,
+                instance,
+                value,
+                self._unit_lookup(),
+                collect_all=self.collect_all,
             )
         except Exception as err:
             continue_or_raise(self.collect_all, errors, err)
@@ -126,7 +135,7 @@ class Validator(HookHost, ValidateProperty):
         except Exception as err:
             continue_or_raise(self.collect_all, errors, err)
         try:
-            self._named_extra(instance, value)
+            self._validate_named_facade(instance, value)
         except Exception as err:
             continue_or_raise(self.collect_all, errors, err)
         raise_collected(errors, name=self.name)

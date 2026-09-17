@@ -72,7 +72,7 @@ class ExpiryValidator(Validator):
         _configure_expiry(self, expire_after, expire_on, expire_before)
         super().__init__(**kwargs)
 
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._validate_expiry(instance, value)
 
     def _validate_expiry(self, instance: Any, value: Any) -> None:

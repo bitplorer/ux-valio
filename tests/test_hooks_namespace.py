@@ -10,7 +10,12 @@ import sys
 import pytest
 
 from ux_valio.descriptor import Property
-from ux_valio.validators.hooks import HookHost, _bag_key, _namespace
+from ux_valio.validators.hooks import (
+    HookHost,
+    _bag_key,
+    _namespace,
+    _resolve_bag_key,
+)
 from ux_valio import StringValidator, Validator
 from ux_valio.validators import Validator as Facade
 from ux_valio.validators.async_bridge import resolve_coroutine
@@ -443,3 +448,7 @@ def test_class_object_namespace_is_type_error():
     keys = list(field._processors["pre_validate"])
     assert Host not in keys
     assert all(isinstance(key, str) for key in keys)
+
+
+def test_resolve_bag_key_leftover_alias_is_namespace():
+    assert _resolve_bag_key is _namespace

@@ -21,6 +21,14 @@ def reject_inverted(lo: Any, hi: Any, message: str) -> None:
         raise ValueError(message)
 
 
-def bound(owner: Any, name: str) -> Any:
+def bound_value(owner: Any, name: str) -> Any:
+    """Return ``owner.name`` when it is not ``None``; else ``None``.
+
+    ``0`` / ``False`` / ``""`` are specified bounds and are returned.
+    """
     value = getattr(owner, name, None)
     return value if value is not None else None
+
+
+# leftover: previous helper name. Prefer ``bound_value``.
+bound = bound_value
