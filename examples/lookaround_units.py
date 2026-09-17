@@ -3,7 +3,7 @@
 
 from dataclasses import dataclass
 
-from ux_valio import Digit, IfFollowedBy, IfPrecededBy, Pattern, PatternValidator
+from ux_valio import Digit, IfFollowedBy, IfPrecededBy, Pattern, StringValidator
 
 mass = Digit(count_min=1) & IfFollowedBy(Pattern(r"kg"))
 amount = IfPrecededBy(Pattern(r"USD")) & Digit(count_min=1)
@@ -11,8 +11,8 @@ amount = IfPrecededBy(Pattern(r"USD")) & Digit(count_min=1)
 
 @dataclass
 class Shipment:
-    mass: str = PatternValidator(pattern=mass, debug=True, required=True)
-    price: str = PatternValidator(pattern=amount, debug=True, required=True)
+    mass: str = StringValidator(pattern=mass, debug=True, required=True)
+    price: str = StringValidator(pattern=amount, debug=True, required=True)
 
 
 def main() -> Shipment:

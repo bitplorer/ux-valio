@@ -3,7 +3,7 @@
 
 from dataclasses import dataclass
 
-from ux_valio import Digit, Pattern, PatternValidator, SetOf, StartsWith, EndsWith, Word
+from ux_valio import Digit, Pattern, SetOf, StartsWith, EndsWith, StringValidator, Word
 
 
 sku = StartsWith(Pattern(r"INV-")) & Digit(count=4) & EndsWith(Pattern(r"Z"))
@@ -13,9 +13,9 @@ token = Word(count_min=3)
 
 @dataclass
 class CatalogPart:
-    sku: str = PatternValidator(pattern=sku, debug=True, required=True)
-    tint: str = PatternValidator(pattern=hex_pair, debug=True, required=True)
-    slug: str = PatternValidator(pattern=token, debug=True, required=True)
+    sku: str = StringValidator(pattern=sku, debug=True, required=True)
+    tint: str = StringValidator(pattern=hex_pair, debug=True, required=True)
+    slug: str = StringValidator(pattern=token, debug=True, required=True)
 
 
 def main() -> CatalogPart:
