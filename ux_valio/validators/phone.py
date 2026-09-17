@@ -41,7 +41,7 @@ class PhoneNumberValidator(StringValidator):
         self.region = region
         super().__init__(**kwargs)
 
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._validate_phone_number(instance, value)
 
     def _validate_phone_number(self, instance: Any = None, value: Any = None) -> None:

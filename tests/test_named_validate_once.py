@@ -3,6 +3,8 @@
 
 from dataclasses import dataclass
 
+import pytest
+
 from ux_valio import (
     AadhaarCardValidator,
     DateValidator,
@@ -107,3 +109,13 @@ def test_phone_number_validator_list_does_not_grow():
     assert _bags_did_not_grow(v), v._custom_validators
     assert Phone(n=number).n == number
     assert phonenumbers.__name__ == "phonenumbers"
+
+
+def test_named_facade_leftover_named_extra_forwards():
+    from ux_valio import PaymentCardValidator, Validator
+
+    assert Validator._named_extra is not Validator._validate_named_facade
+    v = PaymentCardValidator(debug=True, logger=False)
+    with pytest.raises(ValueError):
+        v._named_extra(None, "4111111111111112")
+    v._validate_named_facade(None, "4111111111111111")

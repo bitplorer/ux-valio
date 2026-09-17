@@ -43,8 +43,8 @@ def _owning_class_qualname(func: Callable[..., Any]) -> str | None:
     return owner
 
 
-def _namespace(func: Callable[..., Any], namespace: str | None) -> str:
-    """Bag key. Default is ``_bag_key`` of the owning class.
+def _resolve_bag_key(func: Callable[..., Any], namespace: str | None) -> str:
+    """Bag key for register. Default is ``_bag_key`` of the owning class.
 
     ``namespace=`` is the key as-is (str). A free function has no owning
     class and requires ``namespace=``. Class objects are not keys.
@@ -67,7 +67,11 @@ def _namespace(func: Callable[..., Any], namespace: str | None) -> str:
     )
 
 
-def hook_bags_used(item: Any) -> bool:
+# leftover: previous helper name. Prefer ``_resolve_bag_key``.
+_namespace = _resolve_bag_key
+
+
+def has_registered_hooks(item: Any) -> bool:
     customs = getattr(item, "_custom_validators", None)
     if customs and any(customs.values()):
         return True
@@ -79,6 +83,10 @@ def hook_bags_used(item: Any) -> bool:
             if any(phase.values()):
                 return True
     return False
+
+
+# leftover: previous helper name. Prefer ``has_registered_hooks``.
+hook_bags_used = has_registered_hooks
 
 
 class HookHost:
@@ -97,7 +105,7 @@ class HookHost:
         self._tasks = {phase: defaultdict(list) for phase in _PROCESSOR_PHASES}
 
     def add_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._custom_validators[_namespace(func, namespace)].append(func)
+        self._custom_validators[_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
@@ -150,57 +158,57 @@ class HookHost:
         raise_collected(errors, name=name)
 
     def add_pre_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["pre_validate"][_namespace(func, namespace)].append(func)
+        self._processors["pre_validate"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_post_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["post_validate"][_namespace(func, namespace)].append(func)
+        self._processors["post_validate"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_post_set(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["post_set"][_namespace(func, namespace)].append(func)
+        self._processors["post_set"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_pre_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["pre_get"][_namespace(func, namespace)].append(func)
+        self._processors["pre_get"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_post_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["post_get"][_namespace(func, namespace)].append(func)
+        self._processors["post_get"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_pre_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["pre_delete"][_namespace(func, namespace)].append(func)
+        self._processors["pre_delete"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_post_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["post_delete"][_namespace(func, namespace)].append(func)
+        self._processors["post_delete"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_pre_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["pre_validate"][_namespace(func, namespace)].append(func)
+        self._tasks["pre_validate"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_post_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["post_validate"][_namespace(func, namespace)].append(func)
+        self._tasks["post_validate"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_post_set_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["post_set"][_namespace(func, namespace)].append(func)
+        self._tasks["post_set"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_pre_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["pre_get"][_namespace(func, namespace)].append(func)
+        self._tasks["pre_get"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_post_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["post_get"][_namespace(func, namespace)].append(func)
+        self._tasks["post_get"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_pre_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["pre_delete"][_namespace(func, namespace)].append(func)
+        self._tasks["pre_delete"][_resolve_bag_key(func, namespace)].append(func)
         return func
 
     def add_post_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["post_delete"][_namespace(func, namespace)].append(func)
+        self._tasks["post_delete"][_resolve_bag_key(func, namespace)].append(func)
         return func

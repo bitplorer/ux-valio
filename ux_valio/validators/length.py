@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ux_valio.validators.base import ValidateProperty
-from ux_valio.validators.bounds import bound, reject_inverted, specified
+from ux_valio.validators.bounds import bound_value, reject_inverted, specified
 
 
 class MinLengthValidator(ValidateProperty):
@@ -15,7 +15,7 @@ class MinLengthValidator(ValidateProperty):
         super().__init__(**kwargs)
 
     def _validate_min_length(self, instance: Any, value: Any) -> None:
-        min_length = bound(self, "min_length")
+        min_length = bound_value(self, "min_length")
         if min_length is None or value is None:
             return
         value_length = len(value)
@@ -35,7 +35,7 @@ class MaxLengthValidator(ValidateProperty):
         super().__init__(**kwargs)
 
     def _validate_max_length(self, instance: Any, value: Any) -> None:
-        max_length = bound(self, "max_length")
+        max_length = bound_value(self, "max_length")
         if max_length is None or value is None:
             return
         value_length = len(value)
@@ -82,7 +82,7 @@ class LengthValidator(ValidateProperty):
         MaxLengthValidator._validate_max_length(self, instance, value)
 
     def _validate_exact_length(self, instance: Any, value: Any) -> None:
-        length = bound(self, "length")
+        length = bound_value(self, "length")
         if length is None or value is None:
             return
         value_length = len(value)

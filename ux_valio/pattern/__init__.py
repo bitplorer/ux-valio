@@ -13,7 +13,9 @@ and ``SetOf`` character-class shape (L261).
 
 Taught import is the package root: ``from ux_valio import Pattern, SetOf``.
 ``from ux_valio.pattern import Pattern`` is the same objects (package re-home,
-not a second door). ``Contained`` / ``IfContained`` are KEEP-absent — they
+not a second door). Atom names match valio@3415c03 PatternTypes and are
+KEEP — short nouns and ``IfPrecededBy`` / ``SetOf`` *are* the public
+surface. ``Contained`` / ``IfContained`` are KEEP-absent — they
 do not exist in valio@3415c03. CapturingGroup / WordGroups / scanString /
 pyparsing / ``ux_valio.regexer`` stay KEEP-absent.
 """

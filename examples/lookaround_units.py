@@ -1,25 +1,70 @@
 # SPDX-License-Identifier: MIT
-"""Lookaround PatternTypes on Door A fields (findall substring KEEP)."""
+"""Warehouse line: digits only when followed by ``kg`` or preceded by ``USD``.
+
+Lookarounds are valio@3415c03 PatternTypes: ``IfPrecededBy`` /
+``IfNotPrecededBy`` / ``IfFollowedBy`` / ``IfNotFollowedBy``. Matching is
+``findall`` substring (KEEP). Pair with ``StartsWith`` / ``EndsWith`` when
+the assignment must be the whole string.
+"""
 
 from dataclasses import dataclass
 
-from ux_valio import Digit, IfFollowedBy, IfPrecededBy, Pattern, StringValidator
+from ux_valio import (
+    Digit,
+    EndsWith,
+    IfFollowedBy,
+    IfNotFollowedBy,
+    IfPrecededBy,
+    Pattern,
+    StartsWith,
+    StringValidator,
+)
 
-mass = Digit(count_min=1) & IfFollowedBy(Pattern(r"kg"))
-amount = IfPrecededBy(Pattern(r"USD")) & Digit(count_min=1)
+# Identity mass: digits at start, ``kg`` at end, ``kg`` as zero-width lookahead.
+mass_kg = (
+    StartsWith(Digit(count_min=1))
+    & IfFollowedBy(Pattern(r"kg"))
+    & EndsWith(Pattern(r"kg"))
+)
+# Lookbehind cannot sit after ``^``. ``(?<=USD)\d+`` is findall substring (KEEP).
+usd_amount = IfPrecededBy(Pattern(r"USD")) & Digit(count_min=1)
+not_pounds = Digit(count_min=1) & IfNotFollowedBy(Pattern(r"lb"))
 
 
 @dataclass
 class Shipment:
-    mass: str = StringValidator(pattern=mass, debug=True, required=True)
-    price: str = StringValidator(pattern=amount, debug=True, required=True)
+    mass: str = StringValidator(pattern=mass_kg, debug=True, required=True)
+    price: str = StringValidator(pattern=usd_amount, debug=True, required=True)
+    quantity: str = StringValidator(pattern=not_pounds, debug=True, required=True)
+
+
+def book_shipment(mass: str, price: str, quantity: str) -> Shipment:
+    """Book a shipment line. Unit or currency mismatches raise."""
+    return Shipment(mass=mass, price=price, quantity=quantity)
 
 
 def main() -> Shipment:
-    row = Shipment(mass="12kg", price="USD40")
+    row = book_shipment(mass="12kg", price="USD40", quantity="8")
     assert row.mass == "12kg"
+    assert row.price == "USD40"
+
+    try:
+        book_shipment(mass="12lb", price="USD40", quantity="8")
+    except ValueError:
+        pass
+    else:
+        raise RuntimeError("mass not followed by kg must raise")
+
+    try:
+        book_shipment(mass="12kg", price="EUR40", quantity="8")
+    except ValueError:
+        pass
+    else:
+        raise RuntimeError("price not preceded by USD must raise")
+
     return row
 
 
 if __name__ == "__main__":
-    print(main())
+    booked = main()
+    print(f"{booked.mass} at {booked.price}")

@@ -182,3 +182,45 @@ def test_word_boundary_stays_an_atom():
     assert WordBoundary().pattern == r"\b"
     bounded = WordBoundary() & Pattern(r"hi") & WordBoundary()
     assert isinstance(bounded, PatternType)
+
+
+def test_pattern_atom_names_match_valio_and_stay_the_public_surface():
+    """KEEP: valio@3415c03 PatternType names are the Door A atoms.
+
+    Short nouns and ``IfPrecededBy`` / ``SetOf`` match the frozen reference.
+    Fashion names (``DigitAtom``, ``CharacterClass``, ``Lookbehind``) are
+    not a second public surface.
+    """
+    taught = (
+        "Digit",
+        "Word",
+        "NonDigit",
+        "NonWord",
+        "WhiteSpace",
+        "NonWhiteSpace",
+        "WordBoundary",
+        "StartsWith",
+        "EndsWith",
+        "IfPrecededBy",
+        "IfNotPrecededBy",
+        "IfFollowedBy",
+        "IfNotFollowedBy",
+        "SetOf",
+        "Pattern",
+        "PatternType",
+    )
+    for name in taught:
+        assert name in ux_valio.__all__
+        assert getattr(ux_valio, name).__name__ == name
+    for name in (
+        "DigitAtom",
+        "WordAtom",
+        "CharacterClass",
+        "Lookbehind",
+        "Lookahead",
+        "NegativeLookbehind",
+        "Whitespace",
+        "NonWhitespace",
+    ):
+        assert name not in ux_valio.__all__
+        assert not hasattr(ux_valio, name)
