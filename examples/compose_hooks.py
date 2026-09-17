@@ -6,9 +6,10 @@ facade or the compose **root** after ``&`` / ``AllOf``. Concern leaves do not
 carry ``add_*``. ``|`` is OR (``AnyOf``); the root does not AND-run a type
 check before alternatives. ``Chain`` is ``AllOf``.
 
-``StaffDirectory`` is the injectable uniqueness port hung on the compose-root
-``name_field``. ``InMemoryStaffDirectory`` is the runnable fake; production
-plugs HRIS/LDAP. This file does not ship a DB driver.
+Inject ``StaffDirectory`` on ``StaffService``; uniqueness hangs on the
+compose-root ``name_field`` via ``add_pre_validator``. ``main()`` only runs
+the demo. ``InMemoryStaffDirectory`` is the runnable fake; production plugs
+HRIS/LDAP. This file does not ship a DB driver.
 """
 
 from dataclasses import dataclass
@@ -49,8 +50,6 @@ class InMemoryStaffDirectory:
         self._taken[name.casefold()] = name
 
 
-DIRECTORY: StaffDirectory = InMemoryStaffDirectory()
-
 name_field = StringValidator(debug=True, max_length=50) & RequiredValidator(
     required=True
 )
@@ -62,6 +61,7 @@ age_or_label = AnyOf(
 
 @dataclass
 class StaffProfile:
+    directory: StaffDirectory
     name: str = name_field
     tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(
         required=True
@@ -76,54 +76,46 @@ class StaffProfile:
     def strip_name(self, value: str) -> str:
         return value.strip()
 
-    @name_field.add_validator
-    def name_available(self, value: str) -> None:
-        if DIRECTORY.name_taken(value):
+    @name_field.add_pre_validator
+    def name_available(self, value: str) -> str:
+        if self.directory.name_taken(value):
             raise ValueError(f"staff name {value!r} is already in the directory")
+        return value
 
     @name_field.add_post_set
     def commit_name(self, value: str) -> None:
-        DIRECTORY.commit(value)
+        self.directory.commit(value)
 
 
-def bind_staff_directory(directory: StaffDirectory) -> None:
-    """Process composition root. Production: ``bind_staff_directory(LdapDirectory(url))``."""
-    global DIRECTORY
-    DIRECTORY = directory
+class StaffService:
+    """Composition root. Production: ``StaffService(LdapDirectory(url))``."""
 
+    def __init__(self, directory: StaffDirectory) -> None:
+        self.directory = directory
 
-def create_profile(
-    name: str,
-    tag: str,
-    note: int | str,
-    title: str,
-    *,
-    directory: StaffDirectory | None = None,
-) -> StaffProfile:
-    """Create a staff profile. Compose, hook, and directory failures raise."""
-    if directory is not None:
-        bind_staff_directory(directory)
-    return StaffProfile(name=name, tag=tag, note=note, title=title)
+    def create(
+        self, name: str, tag: str, note: int | str, title: str
+    ) -> StaffProfile:
+        """Create a staff profile. Compose, hook, and directory failures raise."""
+        return StaffProfile(
+            directory=self.directory, name=name, tag=tag, note=note, title=title
+        )
 
 
 def main() -> StaffProfile:
-    directory = InMemoryStaffDirectory(taken={"Ada"})
-    row = create_profile(
-        name="  Grace  ", tag="ops", note=7, title="Engineer", directory=directory
-    )
-    create_profile(
-        name="Ada", tag="ops", note="n/a", title="Lead", directory=InMemoryStaffDirectory()
+    service = StaffService(InMemoryStaffDirectory(taken={"Ada"}))
+    row = service.create(name="  Grace  ", tag="ops", note=7, title="Engineer")
+    StaffService(InMemoryStaffDirectory()).create(
+        name="Ada", tag="ops", note="n/a", title="Lead"
     )
     try:
-        create_profile(
-            name="Neo", tag="op", note=7, title="Engineer", directory=InMemoryStaffDirectory()
+        StaffService(InMemoryStaffDirectory()).create(
+            name="Neo", tag="op", note=7, title="Engineer"
         )
     except ValueError:
         pass
     try:
-        create_profile(
-            name="  Ada  ", tag="ops", note=7, title="Engineer", directory=directory
-        )
+        service.create(name="  Ada  ", tag="ops", note=7, title="Engineer")
     except ValueError:
         pass
     return row

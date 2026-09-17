@@ -5,10 +5,11 @@ Default Door A is fail-fast. ``collect_all=True`` with ``debug=True`` surfaces
 ``ValidationErrors`` for every concern on that descriptor. It is per-field, not
 per-dataclass: the first field that fails still stops later fields.
 
-Uniqueness hangs on ``add_validator`` so it joins the collected bag (a short
-taken name fails length *and* the store). ``add_post_set`` commits only after
-store. Swap ``InMemoryUserStore`` for a SQL unique-index adapter; this file
-does not ship a DB driver.
+Uniqueness hangs on ``add_pre_validator`` (return the value) so a taken name
+is a validation error. ``add_post_set`` commits only after store. Inject
+``UserStore`` on ``SignupService``; ``main()`` only runs the demo. Swap
+``InMemoryUserStore`` for a SQL unique-index adapter; this file does not ship
+a DB driver.
 """
 
 from dataclasses import dataclass
@@ -47,8 +48,6 @@ class InMemoryUserStore:
         self._taken[username.casefold()] = username
 
 
-USERS: UserStore = InMemoryUserStore()
-
 username_field = StringValidator(
     debug=True,
     required=True,
@@ -60,6 +59,7 @@ username_field = StringValidator(
 
 @dataclass
 class SignupForm:
+    users: UserStore
     username: str = username_field
     email: str = EmailValidator(debug=True, required=True, collect_all=True)
     seats: int = IntegerValidator(
@@ -71,33 +71,28 @@ class SignupForm:
         required=True,
     )
 
-    @username_field.add_validator
-    def username_available(self, value: str) -> None:
-        if USERS.username_taken(value):
+    @username_field.add_pre_validator
+    def username_available(self, value: str) -> str:
+        if self.users.username_taken(value):
             raise ValueError(f"username {value!r} is already registered")
+        return value
 
     @username_field.add_post_set
     def commit_username(self, value: str) -> None:
-        USERS.commit(value)
+        self.users.commit(value)
 
 
-def bind_user_store(store: UserStore) -> None:
-    """Process composition root. Production: ``bind_user_store(SqlUserStore(dsn))``."""
-    global USERS
-    USERS = store
+class SignupService:
+    """Composition root. Production: ``SignupService(SqlUserStore(dsn))``."""
 
+    def __init__(self, users: UserStore) -> None:
+        self.users = users
 
-def submit_signup(
-    username: str,
-    email: str,
-    seats: int,
-    *,
-    users: UserStore | None = None,
-) -> SignupForm:
-    """Submit the form. Multi-concern failures raise ``ValidationErrors``."""
-    if users is not None:
-        bind_user_store(users)
-    return SignupForm(username=username, email=email, seats=seats)
+    def submit(self, username: str, email: str, seats: int) -> SignupForm:
+        """Submit the form. Multi-concern failures raise ``ValidationErrors``."""
+        return SignupForm(
+            users=self.users, username=username, email=email, seats=seats
+        )
 
 
 def form_messages(err: ValidationErrors) -> list[str]:
@@ -106,22 +101,23 @@ def form_messages(err: ValidationErrors) -> list[str]:
 
 
 def main() -> SignupForm:
-    users = InMemoryUserStore(taken={"taken", "ab"})
-    ok = submit_signup(username="ada", email="ada@example.com", seats=8, users=users)
+    service = SignupService(InMemoryUserStore(taken={"taken", "ab"}))
+    ok = service.submit(username="ada", email="ada@example.com", seats=8)
     try:
-        submit_signup(username="taken", email="ada@example.com", seats=8, users=users)
+        service.submit(username="taken", email="ada@example.com", seats=8)
     except (ValueError, ValidationErrors):
         pass
     try:
-        submit_signup(username="ab", email="ada@example.com", seats=8, users=users)
+        service.submit(username="ab", email="ada@example.com", seats=8)
+    except (ValueError, ValidationErrors) as err:
+        if isinstance(err, ValidationErrors):
+            form_messages(err)
+    try:
+        service.submit(username="eve", email="ada@example.com", seats=7)
     except ValidationErrors as err:
         form_messages(err)
     try:
-        submit_signup(username="eve", email="ada@example.com", seats=7, users=users)
-    except ValidationErrors as err:
-        form_messages(err)
-    try:
-        submit_signup(username="neo", email="ada@example.com", seats=-3, users=users)
+        service.submit(username="neo", email="ada@example.com", seats=-3)
     except ValidationErrors as err:
         form_messages(err)
     return ok

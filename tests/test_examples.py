@@ -43,6 +43,7 @@ def test_examples_readme_is_a_port_index():
     assert "StaffDirectory" in text
     assert "InMemoryUserStore" in text
     assert "do not ship a DB driver" in text
+    assert "constructor" in text
     for needle in (
         "unique index",
         "Stripe",
@@ -86,82 +87,90 @@ def test_examples_are_not_a_second_product_door():
     assert not hasattr(ux_valio, "ListValidator")
 
 
+def test_service_examples_inject_ports_in_the_constructor():
+    """Ports are constructor deps, not process-global bind_* holders."""
+    for name in (
+        "collect_all_form",
+        "registration",
+        "checkout",
+        "indian_kyc",
+        "compose_hooks",
+    ):
+        src = (EXAMPLE_DIR / f"{name}.py").read_text()
+        assert "bind_" not in src
+        assert "global USERS" not in src
+        assert "global PROMOS" not in src
+        assert "global INVENTORY" not in src
+        assert "global GATEWAY" not in src
+        assert "global REGISTRY" not in src
+        assert "global DIRECTORY" not in src
+
+
 def test_signup_username_conflict_is_a_validation_failure():
-    from examples.collect_all_form import InMemoryUserStore, submit_signup
+    from examples.collect_all_form import InMemoryUserStore, SignupService
 
-    users = InMemoryUserStore(taken={"ada"})
+    service = SignupService(InMemoryUserStore(taken={"ada"}))
     with pytest.raises((ValueError, ValidationErrors), match="already"):
-        submit_signup(
-            username="ada",
-            email="ada@example.com",
-            seats=8,
-            users=users,
-        )
+        service.submit(username="ada", email="ada@example.com", seats=8)
 
 
-def test_signup_collect_all_joins_length_and_uniqueness():
-    from examples.collect_all_form import InMemoryUserStore, form_messages, submit_signup
+def test_signup_short_name_collects_length_without_the_store():
+    from examples.collect_all_form import InMemoryUserStore, SignupService, form_messages
 
-    users = InMemoryUserStore(taken={"ab"})
+    service = SignupService(InMemoryUserStore())
     with pytest.raises(ValidationErrors) as err:
-        submit_signup(
-            username="ab",
-            email="ada@example.com",
-            seats=8,
-            users=users,
-        )
-    messages = " ".join(form_messages(err.value))
-    assert "already" in messages
-    assert "ab" in messages
+        service.submit(username="ab", email="ada@example.com", seats=8)
+    assert form_messages(err.value)
 
 
 def test_signup_collect_all_surfaces_multiple_seat_concerns():
-    from examples.collect_all_form import InMemoryUserStore, form_messages, submit_signup
+    from examples.collect_all_form import InMemoryUserStore, SignupService, form_messages
 
-    users = InMemoryUserStore()
+    service = SignupService(InMemoryUserStore())
     with pytest.raises(ValidationErrors) as err:
-        submit_signup(
-            username="ada",
-            email="ada@example.com",
-            seats=-3,
-            users=users,
-        )
+        service.submit(username="ada", email="ada@example.com", seats=-3)
     messages = form_messages(err.value)
     assert len(messages) >= 2
 
 
 def test_registration_conflict_does_not_consume_the_name():
-    from examples.registration import InMemoryUserStore, register_username
+    from examples.registration import InMemoryUserStore, RegistrationService
 
     store = InMemoryUserStore(taken={"taken"})
+    service = RegistrationService(store)
     with pytest.raises(ValueError, match="already"):
-        register_username("taken", users=store)
+        service.register("taken")
     assert store.username_taken("taken")
     assert not store.username_taken("fresh")
-    row = register_username("fresh", users=store)
+    row = service.register("fresh")
     assert row.username == "fresh"
     assert store.username_taken("fresh")
 
 
 def test_registration_invalid_name_does_not_commit():
-    from examples.registration import InMemoryUserStore, register_username
+    from examples.registration import InMemoryUserStore, RegistrationService
 
     store = InMemoryUserStore()
     with pytest.raises(ValueError):
-        register_username("ab", users=store)
+        RegistrationService(store).register("ab")
     assert not store.username_taken("ab")
 
 
 def test_checkout_unknown_promo_is_a_validation_failure():
     from examples.checkout import (
+        CheckoutService,
         InMemoryInventory,
         InMemoryPromoCatalog,
         StubPaymentGateway,
-        place_order,
     )
 
+    service = CheckoutService(
+        promos=InMemoryPromoCatalog(codes={"SPRING30"}),
+        inventory=InMemoryInventory(stock={"WIDGET": 10}),
+        gateway=StubPaymentGateway(),
+    )
     with pytest.raises(ValueError, match="promo"):
-        place_order(
+        service.place(
             holder="Ada Lovelace",
             number="4111111111111111",
             card_expiry="12/28",
@@ -169,23 +178,24 @@ def test_checkout_unknown_promo_is_a_validation_failure():
             promo_code="NOPE",
             sku="WIDGET",
             quantity=1,
-            promos=InMemoryPromoCatalog(codes={"SPRING30"}),
-            inventory=InMemoryInventory(stock={"WIDGET": 10}),
-            gateway=StubPaymentGateway(),
         )
 
 
 def test_checkout_stock_and_gateway_failures_are_validation_errors():
     from examples.checkout import (
+        CheckoutService,
         InMemoryInventory,
         InMemoryPromoCatalog,
         StubPaymentGateway,
-        place_order,
     )
 
     promos = InMemoryPromoCatalog(codes={"SPRING30"})
     with pytest.raises(ValueError, match="stock|inventory|available"):
-        place_order(
+        CheckoutService(
+            promos=promos,
+            inventory=InMemoryInventory(stock={"WIDGET": 1}),
+            gateway=StubPaymentGateway(),
+        ).place(
             holder="Ada Lovelace",
             number="4111111111111111",
             card_expiry="12/28",
@@ -193,12 +203,13 @@ def test_checkout_stock_and_gateway_failures_are_validation_errors():
             promo_code="SPRING30",
             sku="WIDGET",
             quantity=99,
-            promos=promos,
-            inventory=InMemoryInventory(stock={"WIDGET": 1}),
-            gateway=StubPaymentGateway(),
         )
     with pytest.raises(ValueError, match="declin"):
-        place_order(
+        CheckoutService(
+            promos=promos,
+            inventory=InMemoryInventory(stock={"WIDGET": 10}),
+            gateway=StubPaymentGateway(declines={"4111111111111111"}),
+        ).place(
             holder="Ada Lovelace",
             number="4111111111111111",
             card_expiry="12/28",
@@ -206,9 +217,6 @@ def test_checkout_stock_and_gateway_failures_are_validation_errors():
             promo_code="SPRING30",
             sku="WIDGET",
             quantity=1,
-            promos=promos,
-            inventory=InMemoryInventory(stock={"WIDGET": 10}),
-            gateway=StubPaymentGateway(declines={"4111111111111111"}),
         )
 
 
@@ -217,25 +225,17 @@ def test_kyc_already_registered_identity_is_a_validation_failure():
         VALID_AADHAAR,
         VALID_PAN,
         InMemoryIdentityRegistry,
-        submit_kyc,
+        KycService,
     )
 
-    registry = InMemoryIdentityRegistry(aadhaars={VALID_AADHAAR}, pans=set())
     with pytest.raises((ValueError, ValidationErrors), match="aadhaar|already"):
-        submit_kyc(
-            VALID_AADHAAR,
-            VALID_PAN,
-            registry=registry,
-            phone=None,
-        )
-    registry = InMemoryIdentityRegistry(aadhaars=set(), pans={VALID_PAN})
+        KycService(
+            InMemoryIdentityRegistry(aadhaars={VALID_AADHAAR}, pans=set())
+        ).submit(VALID_AADHAAR, VALID_PAN, phone=None)
     with pytest.raises((ValueError, ValidationErrors), match="PAN|pan|already"):
-        submit_kyc(
-            VALID_AADHAAR,
-            VALID_PAN,
-            registry=registry,
-            phone=None,
-        )
+        KycService(
+            InMemoryIdentityRegistry(aadhaars=set(), pans={VALID_PAN})
+        ).submit(VALID_AADHAAR, VALID_PAN, phone=None)
 
 
 def test_indian_kyc_imports_without_phonenumbers(monkeypatch):
@@ -260,23 +260,12 @@ def test_indian_kyc_imports_without_phonenumbers(monkeypatch):
 
 
 def test_staff_directory_conflict_hangs_on_compose_root():
-    from examples.compose_hooks import InMemoryStaffDirectory, create_profile
+    from examples.compose_hooks import InMemoryStaffDirectory, StaffService
 
     directory = InMemoryStaffDirectory(taken={"Ada"})
+    service = StaffService(directory)
     with pytest.raises(ValueError, match="already|taken|directory"):
-        create_profile(
-            name="  Ada  ",
-            tag="ops",
-            note=7,
-            title="Engineer",
-            directory=directory,
-        )
-    row = create_profile(
-        name="  Grace  ",
-        tag="ops",
-        note=7,
-        title="Engineer",
-        directory=directory,
-    )
+        service.create(name="  Ada  ", tag="ops", note=7, title="Engineer")
+    row = service.create(name="  Grace  ", tag="ops", note=7, title="Engineer")
     assert row.name == "Grace"
     assert directory.name_taken("Grace")

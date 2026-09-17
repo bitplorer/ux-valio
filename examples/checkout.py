@@ -5,14 +5,15 @@
 ``MM/YY``. Card expiry uses ``StartsWith`` / ``EndsWith`` so findall is an
 identity match. ``PaymentCardValidator`` rejects a Luhn-valid non-brand number.
 
-Ports fail closed into validation errors:
+Ports fail closed into validation errors via ``add_pre_validator``:
 
 * ``PromoCatalog.lookup`` — unknown code
 * ``Inventory.ensure_available`` / ``reserve`` — stock
 * ``PaymentGateway.authorize`` — decline
 
-In-memory fakes run the demo. Production plugs an offers table, a stock row
-(or Redis), and Stripe/Razorpay. This file does not ship a DB driver.
+Inject the ports on ``CheckoutService``; ``main()`` only runs the demo.
+In-memory fakes keep it offline. Production plugs an offers table, a stock
+row (or Redis), and Stripe/Razorpay. This file does not ship a DB driver.
 """
 
 from dataclasses import dataclass
@@ -106,10 +107,6 @@ class StubPaymentGateway:
         return f"auth-{number[-4:]}"
 
 
-PROMOS: PromoCatalog = InMemoryPromoCatalog(codes={"SPRING30"})
-INVENTORY: Inventory = InMemoryInventory(stock={"WIDGET": 10})
-GATEWAY: PaymentGateway = StubPaymentGateway()
-
 sku_field = StringValidator(debug=True, required=True, min_length=1, max_length=32)
 amount_field = DecimalValidator(min_value=Decimal("0.01"), debug=True, required=True)
 promo_field = ExpiryValidator(expire_after=_PROMO_UNTIL, debug=True, required=True)
@@ -118,6 +115,9 @@ quantity_field = IntegerValidator(min_value=1, debug=True, required=True)
 
 @dataclass
 class Checkout:
+    promos: PromoCatalog
+    inventory: Inventory
+    gateway: PaymentGateway
     holder: str = StringValidator(
         debug=True, required=True, min_length=2, max_length=80
     )
@@ -132,20 +132,21 @@ class Checkout:
 
     @promo_field.add_pre_validator
     def promo_known(self, value: str) -> str:
-        return PROMOS.lookup(value)
+        return self.promos.lookup(value)
 
     @quantity_field.add_pre_validator
     def stock_available(self, value: int) -> int:
-        INVENTORY.ensure_available(self.sku, value)
+        self.inventory.ensure_available(self.sku, value)
         return value
 
-    @quantity_field.add_validator
-    def card_authorized(self, value: int) -> None:
-        GATEWAY.authorize(self.number, self.amount)
+    @quantity_field.add_pre_validator
+    def card_authorized(self, value: int) -> int:
+        self.gateway.authorize(self.number, self.amount)
+        return value
 
     @quantity_field.add_post_set
     def reserve_stock(self, value: int) -> None:
-        INVENTORY.reserve(self.sku, value)
+        self.inventory.reserve(self.sku, value)
 
 
 @dataclass
@@ -157,53 +158,52 @@ class ExpiredHold:
     )
 
 
-def bind_checkout(
-    *,
-    promos: PromoCatalog | None = None,
-    inventory: Inventory | None = None,
-    gateway: PaymentGateway | None = None,
-) -> None:
-    """Process composition root. Production: SQL offers, stock row, Stripe."""
-    global PROMOS, INVENTORY, GATEWAY
-    if promos is not None:
-        PROMOS = promos
-    if inventory is not None:
-        INVENTORY = inventory
-    if gateway is not None:
-        GATEWAY = gateway
+class CheckoutService:
+    """Composition root. Production: SQL offers, stock row, Stripe."""
 
+    def __init__(
+        self,
+        *,
+        promos: PromoCatalog,
+        inventory: Inventory,
+        gateway: PaymentGateway,
+    ) -> None:
+        self.promos = promos
+        self.inventory = inventory
+        self.gateway = gateway
 
-def place_order(
-    holder: str,
-    number: str,
-    card_expiry: str,
-    amount: Decimal,
-    promo_code: str,
-    sku: str = "WIDGET",
-    quantity: int = 1,
-    *,
-    promos: PromoCatalog | None = None,
-    inventory: Inventory | None = None,
-    gateway: PaymentGateway | None = None,
-) -> Checkout:
-    """Place a validated order. Invalid card, promo, stock, or gateway raise."""
-    bind_checkout(promos=promos, inventory=inventory, gateway=gateway)
-    return Checkout(
-        holder=holder,
-        number=number,
-        card_expiry=card_expiry,
-        sku=sku,
-        amount=amount,
-        promo_code=promo_code,
-        quantity=quantity,
-    )
+    def place(
+        self,
+        holder: str,
+        number: str,
+        card_expiry: str,
+        amount: Decimal,
+        promo_code: str,
+        sku: str = "WIDGET",
+        quantity: int = 1,
+    ) -> Checkout:
+        """Place a validated order. Invalid card, promo, stock, or gateway raise."""
+        return Checkout(
+            promos=self.promos,
+            inventory=self.inventory,
+            gateway=self.gateway,
+            holder=holder,
+            number=number,
+            card_expiry=card_expiry,
+            sku=sku,
+            amount=amount,
+            promo_code=promo_code,
+            quantity=quantity,
+        )
 
 
 def main() -> Checkout:
-    promos = InMemoryPromoCatalog(codes={"SPRING30"})
-    inventory = InMemoryInventory(stock={"WIDGET": 10})
-    gateway = StubPaymentGateway()
-    order = place_order(
+    service = CheckoutService(
+        promos=InMemoryPromoCatalog(codes={"SPRING30"}),
+        inventory=InMemoryInventory(stock={"WIDGET": 10}),
+        gateway=StubPaymentGateway(),
+    )
+    order = service.place(
         holder="Ada Lovelace",
         number="4111111111111111",
         card_expiry="12/28",
@@ -211,33 +211,24 @@ def main() -> Checkout:
         promo_code="SPRING30",
         sku="WIDGET",
         quantity=1,
-        promos=promos,
-        inventory=inventory,
-        gateway=gateway,
     )
     try:
-        place_order(
+        service.place(
             holder="Ada Lovelace",
             number="4111111111111112",
             card_expiry="12/28",
             amount=Decimal("19.99"),
             promo_code="SPRING30",
-            promos=promos,
-            inventory=InMemoryInventory(stock={"WIDGET": 10}),
-            gateway=gateway,
         )
     except ValueError:
         pass
     try:
-        place_order(
+        service.place(
             holder="Ada Lovelace",
             number="4111111111111111",
             card_expiry="12/28",
             amount=Decimal("19.99"),
             promo_code="NOPE",
-            promos=promos,
-            inventory=InMemoryInventory(stock={"WIDGET": 10}),
-            gateway=gateway,
         )
     except ValueError:
         pass

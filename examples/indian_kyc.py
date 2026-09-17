@@ -7,9 +7,9 @@ inherited path into the named facade check. The engine is optional extra
 ``phonenumbers``; there is no network lookup. This module still imports and
 runs identity checks when the extra is missing.
 
-``IdentityRegistry`` is the already-registered port. ``InMemoryIdentityRegistry``
-is the runnable fake; production plugs a KYC warehouse unique Aadhaar/PAN.
-This file does not ship a DB driver.
+Inject ``IdentityRegistry`` on ``KycService``; ``main()`` only runs the demo.
+``InMemoryIdentityRegistry`` is the runnable fake; production plugs a KYC
+warehouse unique Aadhaar/PAN. This file does not ship a DB driver.
 """
 
 from dataclasses import dataclass
@@ -79,8 +79,6 @@ class InMemoryIdentityRegistry:
         self.pans.add(pan)
 
 
-REGISTRY: IdentityRegistry = InMemoryIdentityRegistry()
-
 aadhaar_field = AadhaarCardValidator(debug=True, required=True, collect_all=True)
 pan_field = PANCardValidator(debug=True, required=True, collect_all=True)
 
@@ -89,22 +87,25 @@ pan_field = PANCardValidator(debug=True, required=True, collect_all=True)
 class KycIdentity:
     """Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26. Always importable."""
 
+    registry: IdentityRegistry
     aadhaar: str = aadhaar_field
     pan: str = pan_field
 
-    @aadhaar_field.add_validator
-    def aadhaar_free(self, value: str) -> None:
-        if REGISTRY.aadhaar_registered(value):
+    @aadhaar_field.add_pre_validator
+    def aadhaar_free(self, value: str) -> str:
+        if self.registry.aadhaar_registered(value):
             raise ValueError(f"aadhaar {value!r} is already registered")
+        return value
 
-    @pan_field.add_validator
-    def pan_free(self, value: str) -> None:
-        if REGISTRY.pan_registered(value):
+    @pan_field.add_pre_validator
+    def pan_free(self, value: str) -> str:
+        if self.registry.pan_registered(value):
             raise ValueError(f"PAN {value!r} is already registered")
+        return value
 
     @pan_field.add_post_set
     def commit_identity(self, value: str) -> None:
-        REGISTRY.commit(self.aadhaar, value)
+        self.registry.commit(self.aadhaar, value)
 
 
 if HAS_PHONENUMBERS and _PHONE is not None:
@@ -113,70 +114,66 @@ if HAS_PHONENUMBERS and _PHONE is not None:
     class KycRecord:
         """Production shape: identity plus ``PhoneNumberValidator(region='IN')``."""
 
+        registry: IdentityRegistry
         aadhaar: str = aadhaar_field
         pan: str = pan_field
         phone: str = _PHONE
 
-        @aadhaar_field.add_validator
-        def aadhaar_free(self, value: str) -> None:
-            if REGISTRY.aadhaar_registered(value):
+        @aadhaar_field.add_pre_validator
+        def aadhaar_free(self, value: str) -> str:
+            if self.registry.aadhaar_registered(value):
                 raise ValueError(f"aadhaar {value!r} is already registered")
+            return value
 
-        @pan_field.add_validator
-        def pan_free(self, value: str) -> None:
-            if REGISTRY.pan_registered(value):
+        @pan_field.add_pre_validator
+        def pan_free(self, value: str) -> str:
+            if self.registry.pan_registered(value):
                 raise ValueError(f"PAN {value!r} is already registered")
+            return value
 
         @pan_field.add_post_set
         def commit_identity(self, value: str) -> None:
-            REGISTRY.commit(self.aadhaar, value)
+            self.registry.commit(self.aadhaar, value)
 
 else:
     KycRecord = KycIdentity
 
 
-def bind_identity_registry(registry: IdentityRegistry) -> None:
-    """Process composition root. Production: ``bind_identity_registry(SqlKycStore(dsn))``."""
-    global REGISTRY
-    REGISTRY = registry
+class KycService:
+    """Composition root. Production: ``KycService(SqlKycStore(dsn))``."""
 
+    def __init__(self, registry: IdentityRegistry) -> None:
+        self.registry = registry
 
-def submit_kyc(
-    aadhaar: str,
-    pan: str,
-    phone: str | None = None,
-    *,
-    registry: IdentityRegistry | None = None,
-) -> KycIdentity:
-    """Accept a KYC row. Identity, registry, or phone failures raise."""
-    if registry is not None:
-        bind_identity_registry(registry)
-    if (
-        phone is not None
-        and HAS_PHONENUMBERS
-        and KycRecord is not KycIdentity
-    ):
-        return KycRecord(aadhaar=aadhaar, pan=pan, phone=phone)
-    return KycIdentity(aadhaar=aadhaar, pan=pan)
+    def submit(
+        self, aadhaar: str, pan: str, phone: str | None = None
+    ) -> KycIdentity:
+        """Accept a KYC row. Identity, registry, or phone failures raise."""
+        if phone is not None and HAS_PHONENUMBERS and KycRecord is not KycIdentity:
+            return KycRecord(
+                registry=self.registry, aadhaar=aadhaar, pan=pan, phone=phone
+            )
+        return KycIdentity(registry=self.registry, aadhaar=aadhaar, pan=pan)
 
 
 def main() -> KycIdentity:
-    registry = InMemoryIdentityRegistry()
+    service = KycService(InMemoryIdentityRegistry())
     if HAS_PHONENUMBERS and IN_NATIONAL:
-        row = submit_kyc(VALID_AADHAAR, VALID_PAN, IN_NATIONAL, registry=registry)
+        row = service.submit(VALID_AADHAAR, VALID_PAN, IN_NATIONAL)
     else:
-        row = submit_kyc(VALID_AADHAAR, VALID_PAN, registry=registry)
-    taken = InMemoryIdentityRegistry(aadhaars={VALID_AADHAAR}, pans=set())
+        row = service.submit(VALID_AADHAAR, VALID_PAN)
     try:
-        submit_kyc(VALID_AADHAAR, VALID_PAN, registry=taken, phone=None)
+        KycService(
+            InMemoryIdentityRegistry(aadhaars={VALID_AADHAAR}, pans=set())
+        ).submit(VALID_AADHAAR, VALID_PAN, phone=None)
     except (ValueError, ValidationErrors):
         pass
     try:
-        submit_kyc("123456789012", VALID_PAN, registry=InMemoryIdentityRegistry())
+        KycService(InMemoryIdentityRegistry()).submit("123456789012", VALID_PAN)
     except (ValueError, ValidationErrors):
         pass
     try:
-        submit_kyc(VALID_AADHAAR, "AAAPA1111G", registry=InMemoryIdentityRegistry())
+        KycService(InMemoryIdentityRegistry()).submit(VALID_AADHAAR, "AAAPA1111G")
     except (ValueError, ValidationErrors):
         pass
     return row

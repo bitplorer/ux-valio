@@ -5,14 +5,12 @@ Import names from `ux_valio`. There is no Field twin, Schema twin, Cap Host,
 or list/dict/set/tuple collection facade.
 
 Each file is a service-shaped module callers copy: a Protocol port, an
-in-memory fake, a Door A dataclass, and hooks that fail closed into
-`ValueError` / `ValidationErrors`. `debug=True` is fail-closed. `main()`
-wires the fake and shows the conflict path. Replace the fake with a
-SQL/Redis/HTTP adapter that satisfies the Protocol. Examples do not ship a DB driver.
-
-Hooks (`add_pre_validator` / `add_validator` / `add_post_set`) plus
-injectable ports are the production pattern — the way a service would
-wire a uniqueness check, payment gateway stub, or KYC store.
+in-memory fake, a Door A dataclass, and a service that injects ports in the
+constructor. Hooks (`add_pre_validator` / `add_post_set`) fail closed into
+`ValueError` / `ValidationErrors`. `debug=True` is fail-closed. `main()` is
+only the runnable runner (wire the fake, show the conflict path). Replace
+the fake with a SQL/Redis/HTTP adapter that satisfies the Protocol. Examples
+do not ship a DB driver.
 
 | Scenario | File | Port to replace | Fake | Production plug |
 | --- | --- | --- | --- | --- |

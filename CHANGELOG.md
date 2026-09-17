@@ -3,14 +3,15 @@
 ## Unreleased
 
 - `examples/` are copyable production skeletons: Protocol ports, in-memory
-  fakes, Door A dataclasses, and hooks that fail closed into `ValueError` /
-  `ValidationErrors`. Signup (`collect_all_form.py` + `registration.py`)
-  injects `UserStore`; checkout injects `PromoCatalog` / `Inventory` /
+  fakes, Door A dataclasses, and a service that injects ports in the
+  constructor. Signup (`collect_all_form.py` + `registration.py`) injects
+  `UserStore`; checkout injects `PromoCatalog` / `Inventory` /
   `PaymentGateway`; KYC injects `IdentityRegistry`; staff profile hangs
-  `StaffDirectory` on the compose-root `add_*`. Hooks + injectable ports
-  are the production pattern; examples do not ship a DB driver.
-  `ExpiryValidator` in checkout is an offer timeline on *now*, not card
-  `MM/YY` (card expiry is Pattern identity). Examples do not import pytest.
+  `StaffDirectory` on the compose-root `add_pre_validator`. `main()` is
+  only the runnable runner. Hooks + injectable ports are the production
+  pattern; examples do not ship a DB driver. `ExpiryValidator` in checkout
+  is an offer timeline on *now*, not card `MM/YY` (card expiry is Pattern
+  identity). Examples do not import pytest.
 - Pattern atom names KEEP the valio@3415c03 PatternType surface: `Digit` /
   `Word` / `NonDigit` / `NonWord` / `WhiteSpace` / `NonWhiteSpace` /
   `WordBoundary`, `StartsWith` / `EndsWith`, lookarounds `IfPrecededBy` /
