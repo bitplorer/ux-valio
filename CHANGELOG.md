@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Pattern combinators live in the `ux_valio.pattern` package. Taught
+  imports stay on the package root (`from ux_valio import Pattern`);
+  `ux_valio.pattern.Pattern` is the same object.
+- Thin PatternTypes from valio@3415c03 `regexer/regexps.py`: `StartsWith`
+  / `EndsWith` (L414 / L421), lookarounds `IfPrecededBy` /
+  `IfNotPrecededBy` / `IfFollowedBy` / `IfNotFollowedBy` (L449–L470),
+  `SetOf` character class (L261). `Contained` / `IfContained` are
+  KEEP-absent (not in valio). CapturingGroup / WordGroups / scanString /
+  pyparsing / `ux_valio.regexer` stay unported.
+- `examples/` Door A cases for public facades, Pattern, hooks, compose,
+  and `collect_all`.
+
 - Nest-safe async bridge reuses a process-held worker pool (private; no
   public dial). It does not build a `ThreadPoolExecutor` per invoke.
 - CI: pytest on push/PR (Python 3.12).

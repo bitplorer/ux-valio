@@ -66,3 +66,12 @@ Door A only: `field: T = SomeValidator(...)`.
   kwarg on `Validator`.
 - Pattern atoms `Digit` / `Word` / `NonDigit` / `NonWord` / `WhiteSpace`
   / `NonWhiteSpace` share the count-kwargs door on the existing algebra.
+  `WordBoundary` stays an atom `\b`. Pattern lives in `ux_valio.pattern`;
+  re-export from the package root (`from ux_valio import Pattern`). That is
+  not a second door. Thin PatternTypes evidenced in valio@3415c03
+  `regexer/regexps.py`: `StartsWith` / `EndsWith` (L414 / L421),
+  lookarounds `IfPrecededBy` / `IfNotPrecededBy` / `IfFollowedBy` /
+  `IfNotFollowedBy` (L449–L470), `SetOf` char-class (L261). `Contained` /
+  `IfContained` are KEEP-absent (they do not exist in valio@3415c03).
+  CapturingGroup / WordGroups / scanString / pyparsing / `regexer` package
+  stay KEEP-absent.

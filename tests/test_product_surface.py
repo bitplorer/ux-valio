@@ -54,6 +54,9 @@ def test_check_functions_are_not_owned_public_api():
     assert not hasattr(ux_valio, "OrPattern")
     assert "AndPattern" not in ux_valio.__all__
     assert "OrPattern" not in ux_valio.__all__
+    assert "Contained" not in ux_valio.__all__
+    assert not hasattr(ux_valio, "Contained")
+    assert not hasattr(ux_valio, "IfContained")
 
 
 def test_min_max_leaves_are_exported():
@@ -79,6 +82,13 @@ def test_min_max_leaves_are_exported():
         "WhiteSpace",
         "NonWhiteSpace",
         "PhoneNumberValidator",
+        "StartsWith",
+        "EndsWith",
+        "IfPrecededBy",
+        "IfFollowedBy",
+        "IfNotPrecededBy",
+        "IfNotFollowedBy",
+        "SetOf",
     ):
         assert name in ux_valio.__all__
         assert hasattr(ux_valio, name)
@@ -92,10 +102,10 @@ def test_hex_color_is_not_a_public_facade():
 
 def test_regexer_package_is_not_ported():
     assert not (ROOT / "ux_valio" / "regexer").exists()
-    assert not hasattr(ux_valio, "SetOf")
     assert not hasattr(ux_valio, "CapturingGroup")
     assert not hasattr(ux_valio, "scanString")
     assert "Groups" not in ux_valio.__all__
+    assert "WordGroups" not in ux_valio.__all__
 
 
 def test_product_does_not_import_pyparsing():

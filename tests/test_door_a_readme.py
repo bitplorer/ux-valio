@@ -122,7 +122,7 @@ def test_public_all_is_explicit_and_small():
     assert "AllOf" in ux_valio.__all__
     assert "ValidationErrors" in ux_valio.__all__
     assert "MinLengthValidator" in ux_valio.__all__
-    assert len(ux_valio.__all__) < 55
+    assert len(ux_valio.__all__) < 70
 
 
 def test_no_field_schema_cap_on_package():
@@ -149,3 +149,7 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "`Cls.field is not set`" in text
     assert "`default_factory=`" in text
     assert "not a Field twin" in text
+    assert "from ux_valio import Pattern" in text
+    assert "`Contained` / `IfContained` are KEEP-absent" in text
+    assert "`SetOf` character-class" in text or "`SetOf` character class" in text
+    assert "examples/" in text
