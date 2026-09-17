@@ -84,12 +84,13 @@ def hook_bags_used(item: Any) -> bool:
 class HookHost:
     """Processor/task/custom-validator bags. Mixin for facade and compose roots."""
 
-    cache_task: bool
+    cache_task: bool  # leftover: stored, never consulted (cache retired)
     _custom_validators: dict[str, list[Callable[..., Any]]]
     _processors: dict[str, dict[str, list[Callable[..., Any]]]]
     _tasks: dict[str, dict[str, list[Callable[..., Any]]]]
 
     def _init_hook_bags(self, cache_task: bool = True) -> None:
+        # valio leftover: keep the kwarg. Do not skip tasks from this flag.
         self.cache_task = cache_task
         self._custom_validators = defaultdict(list)
         self._processors = {phase: defaultdict(list) for phase in _PROCESSOR_PHASES}

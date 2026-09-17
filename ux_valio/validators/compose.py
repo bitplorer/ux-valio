@@ -140,7 +140,7 @@ class _Compose(HookHost, ValidateProperty):
     def __init__(
         self,
         *validators: ValidateProperty,
-        cache_task: bool = True,
+        cache_task: bool = True,  # leftover: stored, never consulted
         **kwargs: Any,
     ) -> None:
         self.validators = _flatten(type(self), _as_validators(validators))

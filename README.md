@@ -102,7 +102,8 @@ run rules as `async def`.
 **Run rules:** on the sync descriptor path,
 - no running loop → `TypeError` (`async callable needs a running event loop / helper`).
   Not silent `None`, not `asyncio.run`.
-- running loop → nest-safe sync-bridge (private loop in a worker thread).
+- running loop → nest-safe sync-bridge (process-held worker pool, private
+  loop in a worker thread; not a public dial).
   Assign from an async context (`asyncio.run` of a small harness or
   pytest-asyncio). Same-thread `run_until_complete` on the caller's loop
   is a nested-loop hazard.
@@ -114,8 +115,9 @@ run rules as `async def`.
 valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
 for `add_pre_validator`). Door A hangs the same processor on the descriptor.
 Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong bag
-(`cache_task=` is accepted on `Validator` and on compose roots; it does
-**not** skip re-checks — the kwarg is kept, cache behavior is retired).
+(`cache_task=` is accepted on `Validator` and on compose roots; it is
+stored and never consulted. The kwarg is kept; cache behavior is retired.
+It does **not** skip re-checks.)
 
 Class-body `username: str = username` is `NameError` (the assignment makes
 `username` local). Match valio Field’s `user_field` / `user` split:

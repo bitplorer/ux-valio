@@ -6,6 +6,7 @@ No add_pre_set. asyncio.run in __set__ stays retired.
 
 from dataclasses import dataclass
 import asyncio
+import concurrent.futures
 import inspect
 
 import pytest
@@ -13,8 +14,10 @@ import pytest
 from ux_valio.descriptor import Property
 from ux_valio import Validator
 from ux_valio.validators import Validator as Facade
+from ux_valio.validators.async_bridge import nest_safe_bridge
 from ux_valio.validators.hooks import _bag_key
 import ux_valio.validators as vmod
+import ux_valio.validators.async_bridge as async_bridge
 
 
 def test_no_add_pre_set_still_absent():
@@ -258,3 +261,71 @@ def test_sync_wrap_returning_coroutine_no_loop_needs_helper_not_class_reject():
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
+
+
+def test_nest_safe_bridge_does_not_construct_executor_per_call(monkeypatch):
+    """Process-held pool: nest-safe calls must not rebuild ThreadPoolExecutor."""
+    constructed = []
+    real = concurrent.futures.ThreadPoolExecutor
+
+    def tracking(*args, **kwargs):
+        constructed.append((args, kwargs))
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(concurrent.futures, "ThreadPoolExecutor", tracking)
+
+    v = Validator(debug=True)
+
+    async def upper(instance, value):
+        await asyncio.sleep(0)
+        return value.upper()
+
+    @dataclass
+    class Host:
+        x: str = v
+
+    v.add_pre_validator(upper, namespace=_bag_key(Host))
+    host = _assign_on_running_loop(lambda: Host(x="ada"))
+    host = _assign_on_running_loop(lambda: setattr(host, "x", "bob") or host)
+    assert host.x == "BOB"
+    assert constructed == []
+
+
+def test_nest_safe_bridge_reuses_module_held_executor(monkeypatch):
+    pool = async_bridge._NEST_SAFE_EXECUTOR
+    assert isinstance(pool, concurrent.futures.ThreadPoolExecutor)
+    assert pool._max_workers == 1
+    seen = []
+    real_submit = pool.submit
+
+    def wrap(*args, **kwargs):
+        seen.append(pool)
+        return real_submit(*args, **kwargs)
+
+    monkeypatch.setattr(pool, "submit", wrap)
+
+    v = Validator(debug=True)
+
+    async def tag(instance, value):
+        await asyncio.sleep(0)
+        return f"{value}-ok"
+
+    @dataclass
+    class Host:
+        x: str = v
+
+    v.add_pre_validator(tag, namespace=_bag_key(Host))
+    host = _assign_on_running_loop(lambda: Host(x="a"))
+    host = _assign_on_running_loop(lambda: setattr(host, "x", "b") or host)
+    assert host.x == "b-ok"
+    assert len(seen) >= 2
+    assert all(item is pool for item in seen)
+
+
+def test_nest_safe_executor_is_not_a_public_dial():
+    import ux_valio
+
+    assert not hasattr(ux_valio, "_NEST_SAFE_EXECUTOR")
+    assert not hasattr(vmod, "_NEST_SAFE_EXECUTOR")
+    assert "_NEST_SAFE_EXECUTOR" not in ux_valio.__all__
+    assert nest_safe_bridge is async_bridge.nest_safe_bridge

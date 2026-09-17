@@ -21,10 +21,11 @@ Door A only: `field: T = SomeValidator(...)`.
   `add_pre_validator_task`; `add_*` accepts async def and coroutine
   results (no `_reject_coroutine_result`);
   sync path with no running loop TypeError names the missing loop / helper;
-  running loop uses nest-safe worker bridge.
+  running loop uses the process-held nest-safe worker bridge.
   `enable_async` is not a door (unknown-kwarg TypeError).
   `cache_task` kwarg KEEP, cache behavior RETIRE. Accepted on `Validator`
-  and on compose roots (`AllOf` / `AnyOf`); it does not skip re-checks.
+  and on compose roots (`AllOf` / `AnyOf`); stored, never consulted;
+  it does not skip re-checks.
   `collect_all` default False (fail-fast). Do not overload `debug` into
   collect-all. Hang `add_*` on `Validator` or the compose root (`AllOf` /
   `AnyOf`), not concern leaves. Compose merge fail-closed: conflicting

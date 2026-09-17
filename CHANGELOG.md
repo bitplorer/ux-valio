@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Nest-safe async bridge reuses a process-held worker pool (private; no
+  public dial). It does not build a `ThreadPoolExecutor` per invoke.
+- CI: pytest on push/PR (Python 3.12).
+- `cache_task=` leftover teaching: kwarg kept, stored, never consulted
+  (cache retired). Does not skip re-checks.
+- Optional extra `phonenumbers>=9.0.0` (lower bound only; also on `dev`).
+
 - `PhoneNumberValidator`: Door A string facade with required `region=`
   (ISO 3166-1 alpha-2 via `phonenumbers`). Leftover: valio defaulted to
   `instance.region` or `"IN"`. Optional extra `phonenumbers`; no network.
@@ -54,7 +61,8 @@
 - PEP 695 aliases unwrap `__value__` on the private type helper (3.10
   `getattr`; no typing_extensions). TypedDict stays fail-closed. Callable
   origin is checked; signature is not.
-- `cache_task=` is accepted on compose roots; cache behavior stays retired.
+- `cache_task=` is accepted on compose roots and `Validator`; stored,
+  never consulted (cache retired).
 - Reassignment counts drop on delete so `reassign=False` can assign again.
 - Taught Door A path is a facade or `Validator` (not bare `Property`);
   leaf `&` is advanced; `Chain` is `AllOf`. `EmailValidator` findall is

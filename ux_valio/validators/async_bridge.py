@@ -10,10 +10,14 @@ in the setter.
 
 from __future__ import annotations
 
+import atexit
 import asyncio
 import concurrent.futures
 import inspect
 from typing import Any, Callable
+
+_NEST_SAFE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+atexit.register(_NEST_SAFE_EXECUTOR.shutdown, wait=False)
 
 ASYNC_NEEDS_LOOP = (
     "async callable needs a running event loop / helper "
@@ -26,6 +30,7 @@ def nest_safe_bridge(coro: Any) -> Any:
 
     Same-thread ``run_until_complete`` on the *running* loop is a
     nested-loop hazard. This helper never touches the caller's loop.
+    The worker pool is process-held and reused; it is not a public dial.
     """
 
     def worker() -> Any:
@@ -37,8 +42,7 @@ def nest_safe_bridge(coro: Any) -> Any:
             asyncio.set_event_loop(None)
             loop.close()
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        return pool.submit(worker).result()
+    return _NEST_SAFE_EXECUTOR.submit(worker).result()
 
 
 def resolve_coroutine(result: Any) -> Any:
