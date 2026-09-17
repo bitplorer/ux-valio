@@ -200,9 +200,15 @@ class Part:
     tint: str = PatternValidator(pattern=hex_pair, debug=True)
 ```
 
-Runnable production scenarios live under `examples/` (`python examples/<file>.py`).
-Each file is a domain model plus a constructor callers can copy. `debug=True`
-is fail-closed; signup uses `collect_all=True` and `ValidationErrors`.
+Runnable production skeletons live under `examples/` (`python examples/<file>.py`).
+Each file is a service that injects Protocol ports in the constructor, plus a
+Door A dataclass callers can copy. `main()` is only the runnable runner.
+Hooks (`add_pre_validator` / `add_post_set`) fail closed into validation
+errors (uniqueness, password confirm, promo/inventory, payment gateway, KYC
+registry). Password hashing is an example `PasswordHasher` port (stdlib
+PBKDF2 demo); production replaces it with bcrypt/argon2id. In-memory fakes
+keep the demos offline; examples do not ship a DB driver. `debug=True` is
+fail-closed; signup uses `collect_all=True` and `ValidationErrors`.
 
 Owner annotations that are still strings or `ForwardRef` (including
 `from __future__ import annotations`) fail at class body with `TypeError`.

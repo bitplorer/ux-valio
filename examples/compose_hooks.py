@@ -1,13 +1,19 @@
 # SPDX-License-Identifier: MIT
-"""Staff profile: ``&`` / ``|`` composition and a before-store strip hook.
+"""Staff profile: ``&`` / ``|`` composition, compose-root hooks, directory port.
 
 Hang ``add_*`` on the descriptor that is the field default: a ``Validator``
 facade or the compose **root** after ``&`` / ``AllOf``. Concern leaves do not
 carry ``add_*``. ``|`` is OR (``AnyOf``); the root does not AND-run a type
 check before alternatives. ``Chain`` is ``AllOf``.
+
+Inject ``StaffDirectory`` on ``StaffService``; uniqueness hangs on the
+compose-root ``name_field`` via ``add_pre_validator``. ``main()`` only runs
+the demo. ``InMemoryStaffDirectory`` is the runnable fake; production plugs
+HRIS/LDAP. This file does not ship a DB driver.
 """
 
 from dataclasses import dataclass
+from typing import Protocol
 
 from ux_valio import (
     AllOf,
@@ -17,6 +23,32 @@ from ux_valio import (
     RequiredValidator,
     StringValidator,
 )
+
+
+class StaffDirectory(Protocol):
+    """Display-name uniqueness. Production: HRIS/LDAP unique CN / email local-part."""
+
+    def name_taken(self, name: str) -> bool:
+        """True when ``name`` is already in the directory."""
+        ...
+
+    def commit(self, name: str) -> None:
+        """Persist after a successful set."""
+        ...
+
+
+class InMemoryStaffDirectory:
+    """Runnable fake. Plug in HRIS/LDAP that satisfies ``StaffDirectory``."""
+
+    def __init__(self, taken: set[str] | None = None) -> None:
+        self._taken = {name.casefold(): name for name in (taken or set())}
+
+    def name_taken(self, name: str) -> bool:
+        return name.casefold() in self._taken
+
+    def commit(self, name: str) -> None:
+        self._taken[name.casefold()] = name
+
 
 name_field = StringValidator(debug=True, max_length=50) & RequiredValidator(
     required=True
@@ -29,6 +61,7 @@ age_or_label = AnyOf(
 
 @dataclass
 class StaffProfile:
+    directory: StaffDirectory
     name: str = name_field
     tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(
         required=True
@@ -43,22 +76,46 @@ class StaffProfile:
     def strip_name(self, value: str) -> str:
         return value.strip()
 
+    @name_field.add_pre_validator
+    def name_available(self, value: str) -> str:
+        if self.directory.name_taken(value):
+            raise ValueError(f"staff name {value!r} is already in the directory")
+        return value
 
-def create_profile(
-    name: str,
-    tag: str,
-    note: int | str,
-    title: str,
-) -> StaffProfile:
-    """Create a staff profile. Compose and hook failures raise."""
-    return StaffProfile(name=name, tag=tag, note=note, title=title)
+    @name_field.add_post_set
+    def commit_name(self, value: str) -> None:
+        self.directory.commit(value)
+
+
+class StaffService:
+    """Composition root. Production: ``StaffService(LdapDirectory(url))``."""
+
+    def __init__(self, directory: StaffDirectory) -> None:
+        self.directory = directory
+
+    def create(
+        self, name: str, tag: str, note: int | str, title: str
+    ) -> StaffProfile:
+        """Create a staff profile. Compose, hook, and directory failures raise."""
+        return StaffProfile(
+            directory=self.directory, name=name, tag=tag, note=note, title=title
+        )
 
 
 def main() -> StaffProfile:
-    row = create_profile(name="  Ada  ", tag="ops", note=7, title="Engineer")
-    create_profile(name="Ada", tag="ops", note="n/a", title="Lead")
+    service = StaffService(InMemoryStaffDirectory(taken={"Ada"}))
+    row = service.create(name="  Grace  ", tag="ops", note=7, title="Engineer")
+    StaffService(InMemoryStaffDirectory()).create(
+        name="Ada", tag="ops", note="n/a", title="Lead"
+    )
     try:
-        create_profile(name="Ada", tag="op", note=7, title="Engineer")
+        StaffService(InMemoryStaffDirectory()).create(
+            name="Neo", tag="op", note=7, title="Engineer"
+        )
+    except ValueError:
+        pass
+    try:
+        service.create(name="  Ada  ", tag="ops", note=7, title="Engineer")
     except ValueError:
         pass
     return row
