@@ -26,6 +26,24 @@ _PROCESSOR_PHASES = (
     "post_delete",
 )
 
+# Taught names stay. Body is one _add. (bag, phase)
+_HOOK_ADDERS = (
+    ("add_pre_validator", "_processors", "pre_validate"),
+    ("add_post_validator", "_processors", "post_validate"),
+    ("add_post_set", "_processors", "post_set"),
+    ("add_pre_get", "_processors", "pre_get"),
+    ("add_post_get", "_processors", "post_get"),
+    ("add_pre_delete", "_processors", "pre_delete"),
+    ("add_post_delete", "_processors", "post_delete"),
+    ("add_pre_validator_task", "_tasks", "pre_validate"),
+    ("add_post_validator_task", "_tasks", "post_validate"),
+    ("add_post_set_task", "_tasks", "post_set"),
+    ("add_pre_get_task", "_tasks", "pre_get"),
+    ("add_post_get_task", "_tasks", "post_get"),
+    ("add_pre_delete_task", "_tasks", "pre_delete"),
+    ("add_post_delete_task", "_tasks", "post_delete"),
+)
+
 
 def _bag_key(cls: Any) -> str:
     """One bag key for register and lookup: ``module.qualname``."""
@@ -100,6 +118,16 @@ class HookHost:
         self._processors = {phase: defaultdict(list) for phase in _PROCESSOR_PHASES}
         self._tasks = {phase: defaultdict(list) for phase in _PROCESSOR_PHASES}
 
+    def _add(
+        self,
+        bag: str,
+        phase: str,
+        func: Callable[..., Any],
+        namespace: str | None = None,
+    ) -> Callable[..., Any]:
+        getattr(self, bag)[phase][_resolve_bag_key(func, namespace)].append(func)
+        return func
+
     def add_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
         self._custom_validators[_resolve_bag_key(func, namespace)].append(func)
         return func
@@ -153,58 +181,25 @@ class HookHost:
                 continue_or_raise(collect_all, errors, err)
         raise_collected(errors, name=name)
 
-    def add_pre_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["pre_validate"][_resolve_bag_key(func, namespace)].append(func)
-        return func
 
-    def add_post_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["post_validate"][_resolve_bag_key(func, namespace)].append(func)
-        return func
+def _install_hook_adders() -> None:
+    """Taught add_* names. One encoding. No pre_set adder."""
 
-    def add_post_set(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["post_set"][_resolve_bag_key(func, namespace)].append(func)
-        return func
+    def _make(bag: str, phase: str):
+        def adder(
+            self: HookHost,
+            func: Callable[..., Any],
+            namespace: str | None = None,
+        ) -> Callable[..., Any]:
+            return self._add(bag, phase, func, namespace)
 
-    def add_pre_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["pre_get"][_resolve_bag_key(func, namespace)].append(func)
-        return func
+        return adder
 
-    def add_post_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["post_get"][_resolve_bag_key(func, namespace)].append(func)
-        return func
+    for name, bag, phase in _HOOK_ADDERS:
+        adder = _make(bag, phase)
+        adder.__name__ = name
+        adder.__qualname__ = f"HookHost.{name}"
+        setattr(HookHost, name, adder)
 
-    def add_pre_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["pre_delete"][_resolve_bag_key(func, namespace)].append(func)
-        return func
 
-    def add_post_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._processors["post_delete"][_resolve_bag_key(func, namespace)].append(func)
-        return func
-
-    def add_pre_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["pre_validate"][_resolve_bag_key(func, namespace)].append(func)
-        return func
-
-    def add_post_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["post_validate"][_resolve_bag_key(func, namespace)].append(func)
-        return func
-
-    def add_post_set_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["post_set"][_resolve_bag_key(func, namespace)].append(func)
-        return func
-
-    def add_pre_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["pre_get"][_resolve_bag_key(func, namespace)].append(func)
-        return func
-
-    def add_post_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["post_get"][_resolve_bag_key(func, namespace)].append(func)
-        return func
-
-    def add_pre_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["pre_delete"][_resolve_bag_key(func, namespace)].append(func)
-        return func
-
-    def add_post_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._tasks["post_delete"][_resolve_bag_key(func, namespace)].append(func)
-        return func
+_install_hook_adders()
