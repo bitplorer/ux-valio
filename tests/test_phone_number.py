@@ -120,3 +120,11 @@ def test_phone_module_has_no_network_or_matcher():
     assert "from phonenumbers import geocoder" not in source
     assert "PhoneNumberMatcher" not in source
     assert phonenumbers.__name__ == "phonenumbers"
+
+
+def test_phonenumbers_extra_is_lower_bound_only():
+    text = (ROOT / "pyproject.toml").read_text()
+    assert 'phonenumbers>=9.0.0' in text
+    assert "phonenumbers==" not in text
+    assert "phonenumbers<" not in text
+    assert 'dev = ["pytest>=7", "phonenumbers>=9.0.0"]' in text

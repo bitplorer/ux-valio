@@ -55,7 +55,7 @@ class Validator(HookHost, ValidateProperty):
         not_in_choice: Any = None,
         debug: bool | None = None,
         logger: Any = _UNSET,
-        cache_task: bool = True,
+        cache_task: bool = True,  # leftover: stored, never consulted
         collect_all: Any = _UNSET,
     ) -> None:
         if required is not None and not isinstance(required, bool):

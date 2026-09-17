@@ -26,7 +26,7 @@ def _bind_phase(validator, namespace, log, add_name, task_add_name, label):
     getattr(validator, task_add_name)(task, namespace=namespace)
 
 
-def test_validator_default_cache_runs_processing_then_task_once():
+def test_validator_runs_processing_then_task_once():
     log = []
     v = Validator(debug=True)
 

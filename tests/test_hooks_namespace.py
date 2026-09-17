@@ -10,7 +10,7 @@ import sys
 import pytest
 
 from ux_valio.descriptor import Property
-from ux_valio.validators.hooks import _bag_key, _namespace
+from ux_valio.validators.hooks import HookHost, _bag_key, _namespace
 from ux_valio import StringValidator, Validator
 from ux_valio.validators import Validator as Facade
 from ux_valio.validators.async_bridge import resolve_coroutine
@@ -324,9 +324,10 @@ def test_enable_async_kwarg_is_type_error_not_a_new_door():
 
 
 def test_cache_task_true_does_not_cache_tasks():
-    """valio cache_task=True keyed by id(tasks).
+    """valio leftover: cache_task=True used to key a task cache by id(tasks).
 
-    ux-valio keeps the kwarg; tasks still run every phase (cache retired).
+    ux-valio keeps the kwarg (stored) and never consults it; tasks still
+    run every phase. Do not invent cache behavior.
     """
     log = []
     v = Validator(debug=True, cache_task=True)
@@ -344,6 +345,15 @@ def test_cache_task_true_does_not_cache_tasks():
     host.x = "b"
     assert log == ["a", "b"]
     assert v.cache_task is True
+
+
+def test_cache_task_is_stored_never_consulted():
+    """Honesty: cache_task is kept as an attribute; run path does not read it."""
+    init = inspect.getsource(HookHost._init_hook_bags)
+    assert "self.cache_task = cache_task" in init
+    assert "cache_task" not in inspect.getsource(HookHost._run_tasks)
+    assert "cache_task" not in inspect.getsource(HookHost._process_then_tasks)
+    assert "cache_task" not in inspect.getsource(HookHost._run_processors)
 
 
 def test_same_class_name_different_modules_get_distinct_bags():
