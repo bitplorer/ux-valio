@@ -15,8 +15,6 @@ from ux_valio.validators.hooks import (
     _bag_key,
     _namespace,
     _resolve_bag_key,
-    has_registered_hooks,
-    hook_bags_used,
 )
 from ux_valio import StringValidator, Validator
 from ux_valio.validators import Validator as Facade
@@ -454,4 +452,3 @@ def test_class_object_namespace_is_type_error():
 
 def test_resolve_bag_key_leftover_alias_is_namespace():
     assert _resolve_bag_key is _namespace
-    assert hook_bags_used is has_registered_hooks

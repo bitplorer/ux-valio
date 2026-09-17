@@ -4,9 +4,10 @@ Copy-pasteable dataclasses that use the taught door: `field: T = SomeValidator(.
 Import names from `ux_valio`. There is no Field twin, Schema twin, Cap Host,
 or list/dict/set/tuple collection facade.
 
-Each file is a production scenario: a domain model, a constructor callers would
-call, and fail-closed handling (`debug=True` raises; `collect_all=True` on forms
-surfaces `ValidationErrors`). Run any file with `python examples/<file>.py`.
+Each file is a production scenario: a domain model and a constructor callers
+copy into a service. `debug=True` is fail-closed (`ValueError` /
+`ValidationErrors`). `main()` is the runnable entry and shows catching those
+errors the way a caller would. Run any file with `python examples/<file>.py`.
 
 | Scenario | File |
 | --- | --- |

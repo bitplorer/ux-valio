@@ -31,7 +31,7 @@ def _parse_expiry_datetime(value: Any) -> datetime.datetime:
     raise ValueError("expiry must have the pattern 'YYYY-MM-DD'")
 
 
-def _bind_expiry_timeline(
+def _configure_expiry(
     obj: Any,
     expire_after: Any = None,
     expire_on: Any = None,
@@ -59,10 +59,6 @@ def _bind_expiry_timeline(
     obj.timeline = timeline
 
 
-# leftover: previous helper name. Prefer ``_bind_expiry_timeline``.
-_configure_expiry = _bind_expiry_timeline
-
-
 class ExpiryValidator(Validator):
     """Door A facade: reject assignment when *now* matches the exclusive timeline."""
 
@@ -73,7 +69,7 @@ class ExpiryValidator(Validator):
         expire_before: Any = None,
         **kwargs: Any,
     ) -> None:
-        _bind_expiry_timeline(self, expire_after, expire_on, expire_before)
+        _configure_expiry(self, expire_after, expire_on, expire_before)
         super().__init__(**kwargs)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:

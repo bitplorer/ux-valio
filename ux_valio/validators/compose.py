@@ -13,7 +13,7 @@ from typing import Any, Iterable
 from ux_valio.descriptor import _annotations_agree
 from ux_valio.validators.base import ValidateProperty
 from ux_valio.validators.errors import ValidationErrors, continue_or_raise, raise_collected
-from ux_valio.validators.hooks import HookHost, has_registered_hooks
+from ux_valio.validators.hooks import HookHost, hook_bags_used
 from ux_valio.validators.leaves import TypeValidator
 
 
@@ -58,7 +58,7 @@ def _keep_nested_compose(item: Any) -> bool:
     members = getattr(item, "validators", None)
     if not members:
         return False
-    if has_registered_hooks(item):
+    if hook_bags_used(item):
         return True
     for attr, unspecified in (
         ("debug", None),

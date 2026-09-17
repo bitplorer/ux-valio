@@ -71,7 +71,7 @@ def _resolve_bag_key(func: Callable[..., Any], namespace: str | None) -> str:
 _namespace = _resolve_bag_key
 
 
-def has_registered_hooks(item: Any) -> bool:
+def hook_bags_used(item: Any) -> bool:
     customs = getattr(item, "_custom_validators", None)
     if customs and any(customs.values()):
         return True
@@ -83,10 +83,6 @@ def has_registered_hooks(item: Any) -> bool:
             if any(phase.values()):
                 return True
     return False
-
-
-# leftover: previous helper name. Prefer ``has_registered_hooks``.
-hook_bags_used = has_registered_hooks
 
 
 class HookHost:

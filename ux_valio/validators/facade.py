@@ -98,7 +98,7 @@ class Validator(HookHost, ValidateProperty):
         self._assignment_counts.pop(id(instance), None)
         return super().post_delete_processing(instance, value)
 
-    def _path_unit_methods(self) -> dict[str, Lookup]:
+    def _unit_lookup(self) -> dict[str, Lookup]:
         """Map each validation-path unit name to the leaf method that runs it."""
         return {
             "reassignment": ReassignValidator._validate_reassignment,
@@ -110,10 +110,6 @@ class Validator(HookHost, ValidateProperty):
             "value": ValueValidator._validate_value,
             "choice": ChoiceValidator._validate_choice,
         }
-
-    def _unit_lookup(self) -> dict[str, Lookup]:
-        """Leftover private name. Prefer ``_path_unit_methods``."""
-        return self._path_unit_methods()
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         """Named-facade extra check after the inherited path. Default is none."""
@@ -129,7 +125,7 @@ class Validator(HookHost, ValidateProperty):
                 self,
                 instance,
                 value,
-                self._path_unit_methods(),
+                self._unit_lookup(),
                 collect_all=self.collect_all,
             )
         except Exception as err:

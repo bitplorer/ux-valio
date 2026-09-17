@@ -13,13 +13,12 @@
   `IfNotPrecededBy` / `IfFollowedBy` / `IfNotFollowedBy`, `SetOf`. Fashion
   names (`DigitAtom`, `CharacterClass`, `Lookbehind`) are not shipped.
   Leftover: those short nouns *are* the taught Door A atoms.
-- Private helper names that obscured behavior were renamed; previous names
+- Private helpers renamed only where the name misled; previous names
   remain leftover aliases: `_named_extra` → `_validate_named_facade`,
-  `_unit_lookup` → `_path_unit_methods`, `bound` → `bound_value`,
-  `_namespace` → `_resolve_bag_key`, `hook_bags_used` →
-  `has_registered_hooks`, `_configure_expiry` → `_bind_expiry_timeline`,
-  `_luhn_correctness` → `_luhn_valid`. Public Door A methods (`add_*`,
-  `bind_bounds`, `notify_pre_set`, `pre_validation_processing`) KEEP.
+  `bound` → `bound_value`, `_namespace` → `_resolve_bag_key`. Public Door A
+  methods (`add_*`, `bind_bounds`, `notify_pre_set`,
+  `pre_validation_processing`) KEEP. `_unit_lookup`, `hook_bags_used`,
+  `_configure_expiry`, and `_luhn_correctness` KEEP.
 
 - Pattern combinators live in the `ux_valio.pattern` package. Taught
   imports stay on the package root (`from ux_valio import Pattern`);
