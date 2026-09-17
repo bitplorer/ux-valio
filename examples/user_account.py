@@ -3,7 +3,9 @@
 
 Callers copy the dataclass and ``open_account``. ``debug=True`` is fail-closed:
 invalid assignment raises. Assigned ``0`` / ``""`` are kept (not replaced by
-``default``). ``default_factory`` builds a per-instance UUID.
+``default``). ``default_factory`` builds a per-instance UUID. Username
+uniqueness via an injectable ``UserStore`` lives in ``collect_all_form.py``
+and ``registration.py``.
 """
 
 from dataclasses import dataclass
