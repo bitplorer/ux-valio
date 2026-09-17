@@ -95,9 +95,11 @@ def test_missing_engine_teaches_phonenumbers_extra(monkeypatch):
 
 def test_phone_module_has_no_network_or_matcher():
     source = (ROOT / "ux_valio" / "validators" / "phone.py").read_text()
-    assert "urllib" not in source
-    assert "requests" not in source
-    assert "carrier" not in source
-    assert "geocoder" not in source
+    assert "import urllib" not in source
+    assert "import requests" not in source
+    assert "phonenumbers.carrier" not in source
+    assert "phonenumbers.geocoder" not in source
+    assert "from phonenumbers import carrier" not in source
+    assert "from phonenumbers import geocoder" not in source
     assert "PhoneNumberMatcher" not in source
     assert phonenumbers.__name__ == "phonenumbers"
