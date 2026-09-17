@@ -62,15 +62,34 @@ def test_bytes_validator():
         Blob(b=b"")
 
 
-def test_date_validator_accepts_date_not_string():
+def test_date_validator_parses_eu_and_ind_strings():
     @dataclass
     class When:
         d: datetime.date = DateValidator(debug=True)
 
-    day = datetime.date(2020, 1, 1)
-    assert When(d=day).d == day
-    with pytest.raises(TypeError):
-        When(d="2020-01-01")
+    assert When(d="2020-01-02").d == datetime.date(2020, 1, 2)
+    assert When(d="2020/01/02").d == datetime.date(2020, 1, 2)
+    assert When(d="2020:1:2").d == datetime.date(2020, 1, 2)
+    assert When(d="02-01-2020").d == datetime.date(2020, 1, 2)
+    assert When(d="2/1/2020").d == datetime.date(2020, 1, 2)
+    assert When(d="02:01:2020").d == datetime.date(2020, 1, 2)
+    # Slash dates are IND day-month-year, not US month-day-year.
+    assert When(d="02/01/2020").d == datetime.date(2020, 1, 2)
+    with pytest.raises(ValueError):
+        When(d="not-a-date")
+    with pytest.raises(ValueError):
+        When(d="2020-01/02")
+    with pytest.raises(ValueError):
+        When(d="2020-13-01")
+    with pytest.raises(ValueError):
+        When(d="29-02-2021")
+    with pytest.raises(ValueError):
+        When(d="prefix 2020-01-02 suffix")
+    with pytest.raises(ValueError):
+        When(d="2020-01-02T00:00:00")
+    assert When(d=datetime.date(2020, 1, 2)).d == datetime.date(2020, 1, 2)
+    assert When(d="29-02-2020").d == datetime.date(2020, 2, 29)
+    assert DateValidator().pattern is None
 
 
 def test_date_validator_rejects_datetime_subclass():
@@ -84,7 +103,8 @@ def test_date_validator_rejects_datetime_subclass():
     with pytest.raises(TypeError, match="datetime") as caught:
         When(d=moment)
     assert "datetime.date" in str(caught.value)
-    assert When(d=datetime.date(2020, 1, 1)).d == datetime.date(2020, 1, 1)
+    day = datetime.date(2020, 1, 1)
+    assert When(d=day).d == day
 
 
 def test_date_validator_still_accepts_plain_date_subclass():

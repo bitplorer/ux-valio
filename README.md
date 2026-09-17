@@ -178,11 +178,19 @@ matching facades.
 
 An unknown validation-path unit raises `ValueError`, not `KeyError`.
 
+`DateValidator` stores `datetime.date`. Numeric EU (`YYYY-MM-DD`, also
+`/` and `:`) and IND (`DD-MM-YYYY`, also `/` and `:`) strings parse on
+assignment; the same delimiter must appear on both sides. `02/01/2020`
+is 2 January 2020 (IND), not 1 February (US). Month names, ordinals,
+dots, and pyparsing `scanString` from valio `relib/dates.py` are not
+ported. `datetime.datetime` is still rejected after the inherited path.
+
 ## Typed facades
 
 `IntegerValidator`, `StringValidator`, `BooleanValidator`, `FloatValidator`,
 `DecimalValidator`, `BytesValidator`, `DateValidator` (`datetime.date`;
-strings are not parsed; `datetime.datetime` is rejected), `EmailValidator`
+EU `YYYY-MM-DD` / IND `DD-MM-YYYY` numeric strings with `-` `/` `:` parse
+to `date` and are stored as `date`; `datetime.datetime` is rejected), `EmailValidator`
 (findall substring; not fullmatch),
 `UUIDValidator` (coerces UUID strings), `PathValidator` (annotation
 `pathlib.Path`; coerces `str` → `pathlib.Path`; `path_exists=True` requires
@@ -200,7 +208,8 @@ exclusive; a bad `expire_before` string is checked on that kwarg, not on
 `expiry` path unit — the check lives on the facade.
 
 Named typed facades (`DateValidator`, `PathValidator`, IP, `PaymentCardValidator`,
-`AadhaarCardValidator`, `PANCardValidator`, `ExpiryValidator`) run their
+`AadhaarCardValidator`, `PANCardValidator`, `ExpiryValidator`,
+`PhoneNumberValidator`) run their
 extra check from `validate()` after the inherited path. They do not
 register that check with `add_validator` on each assignment. With
 `collect_all=True`, that extra check joins the collected bag instead of
@@ -208,7 +217,13 @@ being skipped after an inherited failure.
 
 ```python
 from dataclasses import dataclass
-from ux_valio import AadhaarCardValidator, ExpiryValidator, PANCardValidator, PaymentCardValidator
+from ux_valio import (
+    AadhaarCardValidator,
+    ExpiryValidator,
+    PANCardValidator,
+    PaymentCardValidator,
+    PhoneNumberValidator,
+)
 
 @dataclass
 class Card:
@@ -217,10 +232,17 @@ class Card:
     pan: str = PANCardValidator(debug=True)
     # expire_before is its own bound; do not also pass expire_after.
     until: str = ExpiryValidator(expire_before="2020-01-01", debug=True)
+    # leftover: valio defaulted to instance.region or "IN"; pass region=.
+    phone: str = PhoneNumberValidator(region="IN", debug=True)
 ```
 
-`PhoneNumberValidator` is not shipped: it needs a `phonenumbers` engine and a
-region door. List / dictionary / set / tuple collection facades are not
+`PhoneNumberValidator` is a Door A string facade. `region=` is the taught
+region door (ISO 3166-1 alpha-2 as understood by `phonenumbers`). It is
+required: there is no silent `"IN"` default and no `instance.region`
+lookup. The engine is the optional extra `phonenumbers`
+(`pip install ux-valio[phonenumbers]`); there is no network lookup
+(no carrier / geocoder). `region` is not a kwarg on `Validator`.
+List / dictionary / set / tuple collection facades are not
 shipped; `list[T]` / `dict[K, V]` membership is the type door.
 
 Min/max length and value leaves (`MinLengthValidator`, `MaxLengthValidator`,
@@ -245,7 +267,7 @@ of valio's 306 names is gone; import the names in `__all__`.
 `Validator`, typed facades, concern leaves, `AllOf` / `AnyOf` (`Chain` is
 `AllOf`, not a third AND), `ValidationErrors`, and `Pattern` / `PatternType`
 combinators (`&` / `|`) plus stdlib atoms `Digit` / `Word` / `NonDigit` /
-`NonWord` / `WordBoundary`. The taught field default is a facade or
+`NonWord` / `WhiteSpace` / `NonWhiteSpace` / `WordBoundary`. The taught field default is a facade or
 `Validator`, not bare `Property`. Concern leaves also compose as validator
 objects (`LengthValidator(...) & RequiredValidator(...)`). Hang hooks on
 `Validator` or the compose root. No multiple inheritance of leaves, no Cap

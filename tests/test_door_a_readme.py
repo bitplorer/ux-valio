@@ -122,7 +122,7 @@ def test_public_all_is_explicit_and_small():
     assert "AllOf" in ux_valio.__all__
     assert "ValidationErrors" in ux_valio.__all__
     assert "MinLengthValidator" in ux_valio.__all__
-    assert len(ux_valio.__all__) < 50
+    assert len(ux_valio.__all__) < 55
 
 
 def test_no_field_schema_cap_on_package():
@@ -140,8 +140,10 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "`Chain` is `AllOf`" in text
     assert "findall substring" in text
     assert "cache_task=" in text
-    assert "`PhoneNumberValidator` is not shipped" in text
+    assert "`PhoneNumberValidator` is a Door A string facade" in text
     assert "List / dictionary / set / tuple collection facades are not" in text
+    assert 'region="IN"' in text
+    assert "2 January 2020" in text
     assert "`Cls.field is not set`" in text
     assert "`default_factory=`" in text
     assert "not a Field twin" in text

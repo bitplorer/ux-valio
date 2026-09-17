@@ -7,7 +7,17 @@ belong at the call site or on ``add_validator``.
 """
 
 from ux_valio.descriptor import Property
-from ux_valio.pattern import Digit, NonDigit, NonWord, Pattern, PatternType, Word, WordBoundary
+from ux_valio.pattern import (
+    Digit,
+    NonDigit,
+    NonWhiteSpace,
+    NonWord,
+    Pattern,
+    PatternType,
+    WhiteSpace,
+    Word,
+    WordBoundary,
+)
 from ux_valio.validators import (
     AadhaarCardValidator,
     AllOf,
@@ -36,6 +46,7 @@ from ux_valio.validators import (
     PathValidator,
     PaymentCardValidator,
     PANCardValidator,
+    PhoneNumberValidator,
     PatternValidator,
     ReassignValidator,
     RequiredValidator,
@@ -78,10 +89,12 @@ __all__ = [
     "MinValueValidator",
     "MultipleValidator",
     "NonDigit",
+    "NonWhiteSpace",
     "NonWord",
     "PathValidator",
     "PANCardValidator",
     "PaymentCardValidator",
+    "PhoneNumberValidator",
     "Pattern",
     "PatternType",
     "PatternValidator",
@@ -96,6 +109,7 @@ __all__ = [
     "ValidationErrors",
     "Validator",
     "ValueValidator",
+    "WhiteSpace",
     "Word",
     "WordBoundary",
     "__version__",

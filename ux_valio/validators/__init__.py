@@ -21,8 +21,9 @@ from ux_valio.validators.leaves import (
     TypeValidator,
 )
 from ux_valio.validators.length import LengthValidator, MaxLengthValidator, MinLengthValidator
-from ux_valio.validators.payment import PaymentCardValidator
 from ux_valio.validators.pan import PANCardValidator
+from ux_valio.validators.payment import PaymentCardValidator
+from ux_valio.validators.phone import PhoneNumberValidator
 from ux_valio.validators.typed import (
     BytesValidator,
     DateValidator,
@@ -68,6 +69,7 @@ __all__ = [
     "PANCardValidator",
     "PathValidator",
     "PaymentCardValidator",
+    "PhoneNumberValidator",
     "PatternValidator",
     "ReassignValidator",
     "RequiredValidator",

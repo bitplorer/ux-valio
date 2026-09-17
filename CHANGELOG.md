@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- `PhoneNumberValidator`: Door A string facade with required `region=`
+  (ISO 3166-1 alpha-2 via `phonenumbers`). Leftover: valio defaulted to
+  `instance.region` or `"IN"`. Optional extra `phonenumbers`; no network.
+  `region` is not a kwarg on `Validator`.
+- Pattern atoms `WhiteSpace` / `NonWhiteSpace` (`\s` / `\S`) on the
+  existing Pattern algebra, same count kwargs as `Digit` / `Word`.
+- `DateValidator` parses numeric EU (`YYYY-MM-DD`) and IND (`DD-MM-YYYY`)
+  strings (`-` `/` `:`, same delimiter both sides) and stores
+  `datetime.date`. Slash dates are IND day-month-year, not US. Month names
+  / ordinals / pyparsing `scanString` are not ported. `datetime.datetime`
+  is still rejected after the inherited path.
+
 - `DateValidator` rejects `datetime.datetime` after the inherited path
   (`datetime.datetime` is a `date` subclass). Plain `datetime.date`
   subclasses that are not datetimes still assign.
@@ -26,7 +38,7 @@
   (complete A–Z map). A format-only generator is rejected.
 - Pattern atoms `Digit` / `Word` / `NonDigit` / `NonWord` on the existing
   Pattern algebra (`findall` and `WordBoundary` unchanged).
-- `PhoneNumberValidator` and list/dict/set/tuple collection facades stay
+- List / dict / set / tuple collection facades stay
   unshipped (`list[T]` / `dict` membership remains the type door).
 
 - Unresolved owner annotations (`str` / `ForwardRef`, including postponed
