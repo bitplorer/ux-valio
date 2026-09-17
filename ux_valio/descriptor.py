@@ -2,43 +2,13 @@
 """Descriptor lifecycle.
 
 ``__set__`` applies ``default`` / ``default_factory`` only when the assigned
-value ``is None``. Falsy assigned values ``0`` / ``False`` / ``""`` are kept.
+value ``is None``. Falsy assigned values ``0`` / ``False`` / ``\"\"`` are kept.
 ``default=[]`` is the same object on every instance. ``default_factory=`` is
 a zero-arg callable invoked per None assignment. Both set is ``TypeError``.
 Leftover: a callable ``default=`` is still invoked (valio).
 
 ``debug`` falsy swallows exceptions, appends them to ``errors``, and does
-not re-raise. ``debug=True`` re-raises. This swallow is KEEP — not a
-silent fail-closed flip. ``collect_all`` (default ``False``) is a separate
-opt-in: fail-fast remains the door. ``collect_all=True`` continues remaining
-concerns and surfaces every failure. Do not overload ``debug`` into collect.
-
-Class access (``obj is None``) returns ``None`` so dataclasses treat the
-descriptor as a missing field default and route ``Cls()`` through
-``__set__(instance, None)``, which then applies ``default``.
-
-Only the descriptor ``pre_set`` hook return is stored. That hook is the
-validate pipeline, not a ``_processors["pre_set"]`` bag. Hang before-store
-work on ``add_pre_validator`` / ``add_validator`` / ``add_pre_validator_task``.
-``post_set`` / get / delete return values are ignored. ``__get__`` /
-``__delete__`` pass ``self.name`` into hooks, not the stored value.
-Never-set ``__get__`` / ``__delete__`` with ``debug=True`` raise a named
-``AttributeError`` (``Cls.field is not set``), not a bare ``KeyError``.
-Debug-falsy still swallows and ``__get__`` reads back ``None``.
-``add_*`` may be async. No ``asyncio.run`` in ``__set__``.
-
-Logger default is OFF.
-
-``__set_name__`` is fail-closed on annotation conflict. If both
-``validator.annotation`` and the owner class annotation are set and they
-disagree, raise ``TypeError``. Owner wins only when the validator annotation
-was ``None``. The validator annotation is kept when the owner has none.
-Unresolved owner annotations (``str`` / ``ForwardRef``, including
-``from __future__ import annotations``) raise ``TypeError`` at bind and are
-not copied into the type door. They are not ``eval``'d. Union forms and
-list/dict/tuple/set/frozenset aliases are compared with stdlib
-``get_origin`` / ``get_args`` (``typing.Union`` and ``X | Y``;
-``list[T]`` and ``typing.List[T]``), not typingx / typing_extensions.
+not re-raise. ``debug=True`` re-raises. This swallow is KEEP.
 """
 
 from __future__ import annotations
@@ -49,15 +19,48 @@ from typing import Any, ForwardRef, Union, get_args, get_origin
 _UNSET = object()
 
 
+class _Opt:
+    __slots__ = ("value", "specified")
+
+    def __init__(self, value: Any, specified: bool) -> None:
+        self.value = value
+        self.specified = specified
+
+    @classmethod
+    def omitted(cls, default: Any) -> "_Opt":
+        return cls(default, False)
+
+    @classmethod
+    def set(cls, value: Any) -> "_Opt":
+        return cls(value, True)
+
+
+def merge_opt(attr: str, *opts: _Opt) -> _Opt:
+    present = [opt for opt in opts if opt.specified]
+    if not present:
+        return opts[0] if opts else _Opt.omitted(None)
+    first = present[0]
+    for opt in present[1:]:
+        if opt.value != first.value:
+            raise TypeError(
+                f"composed validators have conflicting {attr}: "
+                f"{first.value!r} vs {opt.value!r}"
+            )
+    return first
+
+
+def opt_of(item: Any, attr: str, omitted_default: Any = None) -> _Opt:
+    opts = getattr(item, "_opts", None)
+    if isinstance(opts, dict) and attr in opts:
+        return opts[attr]
+    value = getattr(item, attr, omitted_default)
+    return _Opt(value, value is not omitted_default)
+
+
 _CONTAINER_ORIGINS = (list, dict, tuple, set, frozenset)
 
 
 def _annotation_identity(annotation: Any) -> Any:
-    """Hashable identity for stdlib union and container alias forms.
-
-    ``Union[X, Y]`` and ``X | Y`` agree. ``list[T]`` and ``typing.List[T]``
-    agree. Bare ``list`` is not ``list[int]``.
-    """
     origin = get_origin(annotation)
     if origin is Union or origin is types.UnionType:
         return (Union, frozenset(_annotation_identity(arg) for arg in get_args(annotation)))
@@ -85,8 +88,6 @@ def _is_unresolved_annotation(annotation: Any) -> bool:
 
 
 class Property:
-    """Data descriptor used as a dataclass field default (Door A)."""
-
     def __init__(
         self,
         name: str | None = None,
@@ -110,25 +111,21 @@ class Property:
                 f"debug expected type bool value, got {type(debug).__name__} type instead"
             )
         if logger is _UNSET:
-            self.logger = False
-            self._logger_specified = False
+            logger_opt = _Opt.omitted(False)
         else:
             if logger not in (False, None, True) and not hasattr(logger, "info"):
                 raise TypeError(
                     f"logger expected bool or logging.Logger, got {type(logger).__name__}"
                 )
-            self.logger = False if logger is None else logger
-            self._logger_specified = True
+            logger_opt = _Opt.set(False if logger is None else logger)
         if collect_all is _UNSET:
-            self.collect_all = False
-            self._collect_all_specified = False
+            collect_opt = _Opt.omitted(False)
         else:
             if not isinstance(collect_all, bool):
                 raise TypeError(
                     f"collect_all expected type bool value, got {type(collect_all).__name__} type instead"
                 )
-            self.collect_all = collect_all
-            self._collect_all_specified = True
+            collect_opt = _Opt.set(collect_all)
         if default_factory is not None and not callable(default_factory):
             raise TypeError(
                 f"default_factory expected a callable, got {type(default_factory).__name__}"
@@ -140,6 +137,18 @@ class Property:
         self.default_factory = default_factory
         self.doc = doc
         self.debug = debug
+        self.logger = logger_opt.value
+        self.collect_all = collect_opt.value
+        self._opts = {
+            "debug": _Opt.set(debug) if debug is not None else _Opt.omitted(None),
+            "default": _Opt.set(default) if default is not None else _Opt.omitted(None),
+            "default_factory": (
+                _Opt.set(default_factory) if default_factory is not None else _Opt.omitted(None)
+            ),
+            "doc": _Opt.set(doc) if doc is not None else _Opt.omitted(None),
+            "logger": logger_opt,
+            "collect_all": collect_opt,
+        }
         self.errors: list[BaseException] = []
         self.annotation = getattr(self, "annotation", None)
 
@@ -178,9 +187,6 @@ class Property:
             raise err
 
     def __set_name__(self, owner: type, name: str) -> None:
-        # valio@3415c03 valio/descriptor/descriptors.py L134–202:
-        # _set_name + _may_set_or_ensure_annotation_match. Fail closed; not debug-swallow.
-        # Name mismatch is always AttributeError. A stuck name is a lie.
         try:
             if self.name is None:
                 self.name = name
@@ -224,6 +230,7 @@ class Property:
                     value = self.default() if callable(self.default) else self.default
             value = self.pre_set(obj, value)
             obj.__dict__[self.name] = value
+            self.errors.clear()
             self.post_set(obj, value)
         except Exception as err:
             self._swallow_or_raise(err)
