@@ -18,6 +18,7 @@ import pytest
 
 from ux_valio import BooleanValidator, IntegerValidator, Property, StringValidator, Validator
 from ux_valio.descriptor import Property as DescriptorProperty
+from ux_valio.descriptor import _annotations_agree
 
 
 def test_integer_validator_on_str_field_raises_at_class_body():
@@ -115,7 +116,7 @@ def test_stdlib_union_forms_agree_when_validator_annotation_was_none():
     class Maybe:
         n: int | None = field
 
-    assert field.annotation is Optional[int]
+    assert _annotations_agree(field.annotation, Optional[int])
     assert Maybe(n=1).n == 1
     assert Maybe(n=None).n is None
     with pytest.raises(TypeError):
@@ -130,7 +131,8 @@ def test_typing_union_and_pep604_union_agree_without_typing_extensions():
     class Either:
         n: int | str = field
 
-    assert field.annotation is Union[int, str]
+    # 3.14: Union[int, str] is types.UnionType; `is` is not interned.
+    assert _annotations_agree(field.annotation, Union[int, str])
     assert Either(n=1).n == 1
     assert Either(n="a").n == "a"
     with pytest.raises(TypeError):
@@ -227,7 +229,7 @@ from ux_valio import Validator
 import pytest
 
 field = Validator(debug=True)
-with pytest.raises(TypeError, match=r"N.n: 'int'"):
+with pytest.raises(TypeError, match=r\"N.n: 'int'\"):
     @dataclass
     class N:
         n: int = field
