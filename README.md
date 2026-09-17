@@ -169,6 +169,37 @@ fail-closed on a missing fragment or mixed `str`/`bytes`; same-kind bytes
 fragments concatenate as bytes. `count_min > count_max` is constructor
 `ValueError`. A bytes pattern matches bytes (it is not `str()`-coerced).
 
+Pattern lives in the `ux_valio.pattern` package. The taught import is still
+the package root (`from ux_valio import Pattern, Digit, StartsWith, SetOf`).
+`from ux_valio.pattern import Pattern` is the same objects — a package
+re-home, not a second door. `WordBoundary` stays an atom `\b`.
+
+Thin PatternTypes evidenced in valio@3415c03 `valio/regexer/regexps.py`:
+
+- `StartsWith` / `EndsWith` (`^` / `$`) at L414 / L421
+- lookarounds `IfPrecededBy` / `IfNotPrecededBy` / `IfFollowedBy` /
+  `IfNotFollowedBy` at L449–L470
+- `SetOf` character-class `[raw]` / `[^raw]` at L261 (`~SetOf(...)` negates)
+
+`Contained` / `IfContained` are KEEP-absent: they do not exist in
+valio@3415c03. Capturing groups, `WordGroups`, `scanString`, pyparsing,
+and a second `regexer` package are not ported.
+
+```python
+from dataclasses import dataclass
+from ux_valio import Digit, Pattern, PatternValidator, SetOf, StartsWith
+
+sku = StartsWith(Pattern(r"INV-")) & Digit(count=4)
+hex_pair = SetOf(Pattern(r"0-9a-f"), count=2)
+
+@dataclass
+class Part:
+    sku: str = PatternValidator(pattern=sku, debug=True)
+    tint: str = PatternValidator(pattern=hex_pair, debug=True)
+```
+
+Runnable Door A cases live under `examples/`.
+
 Owner annotations that are still strings or `ForwardRef` (including
 `from __future__ import annotations`) fail at class body with `TypeError`.
 They are not copied into the type door and are not `eval`'d. Drop postponed
@@ -269,9 +300,12 @@ of valio's 306 names is gone; import the names in `__all__`.
 `Validator`, typed facades, concern leaves, `AllOf` / `AnyOf` (`Chain` is
 `AllOf`, not a third AND), `ValidationErrors`, and `Pattern` / `PatternType`
 combinators (`&` / `|`) plus stdlib atoms `Digit` / `Word` / `NonDigit` /
-`NonWord` / `WhiteSpace` / `NonWhiteSpace` / `WordBoundary`. The taught field default is a facade or
-`Validator`, not bare `Property`. Concern leaves also compose as validator
-objects (`LengthValidator(...) & RequiredValidator(...)`). Hang hooks on
-`Validator` or the compose root. No multiple inheritance of leaves, no Cap
-Host, no `rule/`. Path helpers and async-bridge names are not in the
-package `__all__`.
+`NonWord` / `WhiteSpace` / `NonWhiteSpace` / `WordBoundary`, anchors
+`StartsWith` / `EndsWith`, lookarounds `IfPrecededBy` / `IfFollowedBy` (and
+the `IfNot*` pair), and `SetOf` character classes. The taught field default
+is a facade or `Validator`, not bare `Property`. Concern leaves also compose
+as validator objects (`LengthValidator(...) & RequiredValidator(...)`). Hang
+hooks on `Validator` or the compose root. No multiple inheritance of leaves,
+no Cap Host, no `rule/`. Path helpers and async-bridge names are not in the
+package `__all__`. Import Pattern names from `ux_valio` (or `ux_valio.pattern`
+for the same objects). There is no `ux_valio.regexer`.

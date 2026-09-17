@@ -1,11 +1,7 @@
 # SPDX-License-Identifier: MIT
-"""Pattern combinators.
+"""Pattern algebra: fragments, ``&`` / ``|``, quantifiers.
 
-``PatternType`` supports ``&`` (concatenate) and ``|`` (alternation).
-``PatternValidator`` matches with ``re.findall`` (substring), not fullmatch.
-``Digit`` / ``Word`` / ``NonDigit`` / ``NonWord`` / ``WhiteSpace`` /
-``NonWhiteSpace`` are stdlib ``re`` atoms on this algebra.
-``WordBoundary`` stays an atom ``\\b``.
+Internal module. Taught import is ``ux_valio`` / ``ux_valio.pattern``.
 """
 
 from __future__ import annotations
@@ -57,6 +53,17 @@ class PatternType:
         return str(self.pattern)
 
 
+def require_pattern_type(value: object) -> PatternType:
+    """Fail-closed PatternType with a present fragment."""
+    if not isinstance(value, PatternType):
+        raise TypeError(
+            f"expected PatternType type, got {type(value).__name__} instead"
+        )
+    if value.pattern is None:
+        raise TypeError("pattern fragment is missing")
+    return value
+
+
 def _join_fragments(left: object, right: object, joiner: str = "") -> str | bytes:
     """Concatenate same-kind str or bytes fragments. Missing or mixed is TypeError."""
     if left is None or right is None:
@@ -86,6 +93,39 @@ def _attach_quantifier(pattern: str | bytes, quantifier: str) -> str | bytes:
     return f"{pattern}{quantifier}"
 
 
+def prefix_fragment(token: str, fragment: str | bytes) -> str | bytes:
+    """Prefix an ascii regex token onto a same-kind fragment."""
+    if fragment is None:
+        raise TypeError("pattern fragment is missing")
+    if isinstance(fragment, bytes):
+        return token.encode("ascii") + fragment
+    if isinstance(fragment, str):
+        return f"{token}{fragment}"
+    raise TypeError(
+        "pattern fragment must be str or bytes, "
+        f"got {type(fragment).__name__}"
+    )
+
+
+def suffix_fragment(fragment: str | bytes, token: str) -> str | bytes:
+    """Suffix an ascii regex token onto a same-kind fragment."""
+    if fragment is None:
+        raise TypeError("pattern fragment is missing")
+    if isinstance(fragment, bytes):
+        return fragment + token.encode("ascii")
+    if isinstance(fragment, str):
+        return f"{fragment}{token}"
+    raise TypeError(
+        "pattern fragment must be str or bytes, "
+        f"got {type(fragment).__name__}"
+    )
+
+
+def wrap_fragment(open_token: str, fragment: str | bytes, close_token: str) -> str | bytes:
+    """Wrap a fragment with ascii open/close tokens. Bytes stay bytes."""
+    return suffix_fragment(prefix_fragment(open_token, fragment), close_token)
+
+
 class AndPattern(PatternType):
     def __init__(self, first: PatternType, second: PatternType) -> None:
         self.pattern = _join_fragments(first.pattern, second.pattern)
@@ -103,7 +143,7 @@ class OrPattern(PatternType):
         self.alias = " or ".join(filter(None, [first.alias, second.alias]))
 
 
-def _quantifier(
+def quantifier_token(
     count: int | None,
     count_min: int | None,
     count_max: int | None,
@@ -149,61 +189,9 @@ class Pattern(PatternType):
         greedy: bool = True,
         alias: str | None = None,
     ) -> None:
-        self.quantifier = quantifier or _quantifier(count, count_min, count_max, greedy)
+        self.quantifier = quantifier or quantifier_token(
+            count, count_min, count_max, greedy
+        )
         self.raw_pattern = raw_pattern if raw_pattern is not None else pattern
         self.pattern = _attach_quantifier(pattern, self.quantifier)
         self.alias = alias or ""
-
-
-class WordBoundary(PatternType):
-    def __init__(self, alias: str | None = None) -> None:
-        super().__init__(r"\b", alias=alias or r"\b")
-
-
-class _StdlibAtom(PatternType):
-    """Quantified stdlib ``re`` atom on the existing Pattern algebra."""
-
-    token: str
-
-    def __init__(
-        self,
-        count: int | None = None,
-        count_min: int | None = None,
-        count_max: int | None = None,
-        greedy: bool = True,
-        alias: str | None = None,
-    ) -> None:
-        super().__init__(
-            Pattern(
-                self.token,
-                count=count,
-                count_min=count_min,
-                count_max=count_max,
-                greedy=greedy,
-                alias=alias,
-            )
-        )
-
-
-class Digit(_StdlibAtom):
-    token = r"\d"
-
-
-class Word(_StdlibAtom):
-    token = r"\w"
-
-
-class NonDigit(_StdlibAtom):
-    token = r"\D"
-
-
-class NonWord(_StdlibAtom):
-    token = r"\W"
-
-
-class WhiteSpace(_StdlibAtom):
-    token = r"\s"
-
-
-class NonWhiteSpace(_StdlibAtom):
-    token = r"\S"
