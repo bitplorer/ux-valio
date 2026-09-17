@@ -12,10 +12,15 @@ only the runnable runner (wire the fake, show the conflict path). Replace
 the fake with a SQL/Redis/HTTP adapter that satisfies the Protocol. Examples
 do not ship a DB driver.
 
+Password hashing stays in the example `PasswordHasher` port (`Pbkdf2PasswordHasher`
+uses stdlib PBKDF2 with a **fixed demo salt**). Production replaces that fake
+with bcrypt or argon2id and a unique salt per row. The store keeps only the
+hash — never plaintext. Do not add a hasher to `ux_valio`.
+
 | Scenario | File | Port to replace | Fake | Production plug |
 | --- | --- | --- | --- | --- |
-| Signup form (`collect_all=True` → `ValidationErrors`) | `collect_all_form.py` | `UserStore` | `InMemoryUserStore` | SQL unique index / `SELECT` username |
-| Username reservation (`add_pre_validator` + `add_post_set`) | `registration.py` | `UserStore` | `InMemoryUserStore` | same unique index; commit after store |
+| Signup + login (password strength, confirm, hash-on-create, `collect_all`) | `collect_all_form.py` | `UserStore`, `PasswordHasher` | `InMemoryUserStore`, `Pbkdf2PasswordHasher` | SQL unique index; bcrypt/argon2id (unique per-row salt) |
+| Username reservation (`add_pre_validator` + hashed persist) | `registration.py` | `UserStore`, `PasswordHasher` | `InMemoryUserStore`, `Pbkdf2PasswordHasher` | same unique index + hasher as signup |
 | Paid checkout (card ∩ Luhn, card `MM/YY` Pattern, promo window) | `checkout.py` | `PromoCatalog`, `Inventory`, `PaymentGateway` | `InMemoryPromoCatalog`, `InMemoryInventory`, `StubPaymentGateway` | offers table, stock row or Redis, Stripe/Razorpay (decline → `ValueError`) |
 | India KYC (Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26, `region="IN"`) | `indian_kyc.py` | `IdentityRegistry` | `InMemoryIdentityRegistry` | KYC warehouse unique Aadhaar/PAN |
 | Staff profile (`&` / `\|`, `AllOf` / `AnyOf`, compose-root `add_*`) | `compose_hooks.py` | `StaffDirectory` | `InMemoryStaffDirectory` | HRIS/LDAP unique display name |

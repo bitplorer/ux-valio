@@ -4,14 +4,17 @@
 
 - `examples/` are copyable production skeletons: Protocol ports, in-memory
   fakes, Door A dataclasses, and a service that injects ports in the
-  constructor. Signup (`collect_all_form.py` + `registration.py`) injects
-  `UserStore`; checkout injects `PromoCatalog` / `Inventory` /
-  `PaymentGateway`; KYC injects `IdentityRegistry`; staff profile hangs
-  `StaffDirectory` on the compose-root `add_pre_validator`. `main()` is
-  only the runnable runner. Hooks + injectable ports are the production
-  pattern; examples do not ship a DB driver. `ExpiryValidator` in checkout
-  is an offer timeline on *now*, not card `MM/YY` (card expiry is Pattern
-  identity). Examples do not import pytest.
+  constructor. Signup (`collect_all_form.py`) is complete auth: uniqueness,
+  email, password strength (Pattern atoms via `AllOf`), confirm match,
+  `PasswordHasher` hash-on-create, login verify. `registration.py` is the
+  fail-fast reservation extract of the same ports. Hasher stays in the
+  example (`Pbkdf2PasswordHasher`); production plugs bcrypt/argon2id.
+  Checkout injects `PromoCatalog` / `Inventory` / `PaymentGateway`; KYC
+  injects `IdentityRegistry`; staff profile hangs `StaffDirectory` on the
+  compose-root `add_pre_validator`. `main()` is only the runnable runner.
+  Examples do not ship a DB driver or a crypto library in `ux_valio`.
+  `ExpiryValidator` in checkout is an offer timeline on *now*, not card
+  `MM/YY` (card expiry is Pattern identity). Examples do not import pytest.
 - Pattern atom names KEEP the valio@3415c03 PatternType surface: `Digit` /
   `Word` / `NonDigit` / `NonWord` / `WhiteSpace` / `NonWhiteSpace` /
   `WordBoundary`, `StartsWith` / `EndsWith`, lookarounds `IfPrecededBy` /
