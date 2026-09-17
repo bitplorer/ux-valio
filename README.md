@@ -7,6 +7,8 @@ Valio itself is not edited.
 
 ## Install
 
+Python ≥ 3.14 (same floor as `ux-compose`).
+
 ```console
 pip install -e .
 ```
@@ -162,9 +164,10 @@ per-instance.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
 exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
 
-`PatternValidator` matches with `re.findall` (substring), not `fullmatch`.
-`EmailValidator` uses that same findall door: `"prefix user@example.com suffix"`
-is accepted. It is not a full-string email check. Pattern `&` / `|` is
+`PatternValidator` matches with `re.findall` (findall substring), not `fullmatch`.
+`EmailValidator` keeps that engine for its `pattern=` path and then requires
+the whole string to be an addr-spec: `"prefix user@example.com suffix"`
+is rejected. Pattern `&` / `|` is
 fail-closed on a missing fragment or mixed `str`/`bytes`; same-kind bytes
 fragments concatenate as bytes. `count_min > count_max` is constructor
 `ValueError`. A bytes pattern matches bytes (it is not `str()`-coerced).
@@ -234,7 +237,7 @@ ported. `datetime.datetime` is still rejected after the inherited path.
 `DecimalValidator`, `BytesValidator`, `DateValidator` (`datetime.date`;
 EU `YYYY-MM-DD` / IND `DD-MM-YYYY` numeric strings with `-` `/` `:` parse
 to `date` and are stored as `date`; `datetime.datetime` is rejected), `EmailValidator`
-(findall substring; not fullmatch),
+(identity fullmatch extra; PatternValidator stays findall),
 `UUIDValidator` (coerces UUID strings), `PathValidator` (annotation
 `pathlib.Path`; coerces `str` → `pathlib.Path`; `path_exists=True` requires
 the path to exist),
