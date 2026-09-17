@@ -47,11 +47,13 @@ def test_check_functions_are_not_owned_public_api():
     assert not hasattr(ux_valio.validators, "check_instance")
     assert "ListValidator" not in ux_valio.__all__
     assert not hasattr(ux_valio, "ListValidator")
-    assert "PhoneNumberValidator" not in ux_valio.__all__
-    assert not hasattr(ux_valio, "PhoneNumberValidator")
     assert "DictionaryValidator" not in ux_valio.__all__
     assert not hasattr(ux_valio, "DictionaryValidator")
     assert not hasattr(ux_valio, "regexer")
+    assert not hasattr(ux_valio, "AndPattern")
+    assert not hasattr(ux_valio, "OrPattern")
+    assert "AndPattern" not in ux_valio.__all__
+    assert "OrPattern" not in ux_valio.__all__
 
 
 def test_min_max_leaves_are_exported():
@@ -74,6 +76,9 @@ def test_min_max_leaves_are_exported():
         "Word",
         "NonDigit",
         "NonWord",
+        "WhiteSpace",
+        "NonWhiteSpace",
+        "PhoneNumberValidator",
     ):
         assert name in ux_valio.__all__
         assert hasattr(ux_valio, name)
@@ -83,6 +88,14 @@ def test_hex_color_is_not_a_public_facade():
     assert "HexColorValidator" not in ux_valio.__all__
     assert not hasattr(ux_valio, "HexColorValidator")
     assert not hasattr(ux_valio.validators, "HexColorValidator")
+
+
+def test_regexer_package_is_not_ported():
+    assert not (ROOT / "ux_valio" / "regexer").exists()
+    assert not hasattr(ux_valio, "SetOf")
+    assert not hasattr(ux_valio, "CapturingGroup")
+    assert not hasattr(ux_valio, "scanString")
+    assert "Groups" not in ux_valio.__all__
 
 
 def test_product_does_not_import_pyparsing():

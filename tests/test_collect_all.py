@@ -23,6 +23,7 @@ from ux_valio import (
     PathValidator,
     PatternValidator,
     PaymentCardValidator,
+    PhoneNumberValidator,
     RequiredValidator,
     ValidationErrors,
     Validator,
@@ -230,3 +231,15 @@ def test_date_and_path_named_extras_join_collect_all():
     p_messages = " ".join(str(err) for err in caught_p.value.errors)
     assert "expect values in" in p_messages
     assert "existing path" in p_messages
+
+
+def test_phone_named_extra_joins_collect_all():
+    field = PhoneNumberValidator(
+        region="IN", min_length=20, collect_all=True, debug=True
+    )
+    with pytest.raises(ValidationErrors) as caught:
+        field.validate(None, "123")
+    messages = " ".join(str(err) for err in caught.value.errors)
+    assert "minimum length" in messages
+    assert "phone number" in messages
+    assert len(caught.value.errors) >= 2

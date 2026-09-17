@@ -8,6 +8,7 @@ import decimal
 import enum
 import ipaddress
 import pathlib
+import re
 import uuid
 from typing import Any
 
@@ -41,14 +42,54 @@ class BytesValidator(Validator):
     annotation = bytes
 
 
-class DateValidator(Validator):
-    """Typed ``datetime.date`` facade. Strings are not parsed.
+# EU: YYYY-MM-DD / YYYY/MM/DD / YYYY:MM:DD. IND: DD-MM-YYYY / DD/MM/YYYY / DD:MM:YYYY.
+# Same delimiter on both sides. 4-digit year. Day-month-year is IND, not US.
+# Month names, ordinals, dots, and valio relib/dates.py pyparsing are not ported.
+_EU_DATE = re.compile(r"(\d{4})([-:/])(\d{1,2})\2(\d{1,2})")
+_IND_DATE = re.compile(r"(\d{1,2})([-:/])(\d{1,2})\2(\d{4})")
 
-    ``datetime.datetime`` is a ``date`` subclass; the extra check rejects it
-    after the inherited path so the type door is not silently widened.
+
+def _parse_eu_ind_date(text: str) -> datetime.date | None:
+    """Identity parse of a numeric EU or IND date string. Not findall substring."""
+    eu = _EU_DATE.fullmatch(text)
+    if eu is not None:
+        year, _, month, day = eu.groups()
+        try:
+            return datetime.date(int(year), int(month), int(day))
+        except ValueError:
+            return None
+    ind = _IND_DATE.fullmatch(text)
+    if ind is not None:
+        day, _, month, year = ind.groups()
+        try:
+            return datetime.date(int(year), int(month), int(day))
+        except ValueError:
+            return None
+    return None
+
+
+class DateValidator(Validator):
+    """Typed ``datetime.date`` facade. EU / IND numeric strings parse to ``date``.
+
+    Locales: EU is year-month-day; IND is day-month-year. Delimiters ``-``,
+    ``/``, and ``:`` (the same delimiter on both sides). ``02/01/2020`` is
+    2 January 2020 (IND), not 1 February (US). ``datetime.datetime`` is a
+    ``date`` subclass; the extra check rejects it after the inherited path
+    so the type door is not silently widened.
     """
 
     annotation = datetime.date
+
+    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+        if isinstance(value, str):
+            parsed = _parse_eu_ind_date(value)
+            if parsed is None:
+                raise ValueError(
+                    f"{self.name} expects a calendar date in EU YYYY-MM-DD "
+                    f"or IND DD-MM-YYYY (delimiters -, /, :), got {value!r}"
+                )
+            value = parsed
+        return super().pre_validation_processing(instance, value)
 
     def _named_extra(self, instance: Any = None, value: Any = None) -> None:
         if value is None:

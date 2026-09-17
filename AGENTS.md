@@ -52,7 +52,16 @@ Door A only: `field: T = SomeValidator(...)`.
 - Named typed facades call their extra check from `validate()` after the
   inherited path; they do not `add_validator` themselves on each assignment.
   `collect_all=True` continues into that extra check. No NamedOnce Cap.
-  `HexColorValidator` is not a public facade. `DateValidator` rejects
-  `datetime.datetime`. Pattern `&` / `|` is fail-closed on missing or mixed
+  `HexColorValidator` is not a public facade. `DateValidator` stores
+  `datetime.date`; numeric EU `YYYY-MM-DD` / IND `DD-MM-YYYY` strings parse
+  on assignment (`-` `/` `:`, same delimiter both sides). Slash dates are
+  IND day-month-year, not US. `DateValidator` rejects `datetime.datetime`.
+  Pattern `&` / `|` is fail-closed on missing or mixed
   `str`/`bytes` fragments; inverted `count_min` / `count_max` is
   constructor `ValueError`; bytes patterns keep bytes identity.
+- `PhoneNumberValidator` is a Door A facade. Taught kwarg is `region=`
+  (required; leftover: valio defaulted to `instance.region` or `"IN"`).
+  Engine is optional extra `phonenumbers`; no network. `region` is not a
+  kwarg on `Validator`.
+- Pattern atoms `Digit` / `Word` / `NonDigit` / `NonWord` / `WhiteSpace`
+  / `NonWhiteSpace` share the count-kwargs door on the existing algebra.

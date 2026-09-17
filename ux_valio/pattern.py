@@ -3,8 +3,9 @@
 
 ``PatternType`` supports ``&`` (concatenate) and ``|`` (alternation).
 ``PatternValidator`` matches with ``re.findall`` (substring), not fullmatch.
-``Digit`` / ``Word`` / ``NonDigit`` / ``NonWord`` are stdlib ``re`` atoms
-on this algebra. ``WordBoundary`` stays an atom ``\\b``.
+``Digit`` / ``Word`` / ``NonDigit`` / ``NonWord`` / ``WhiteSpace`` /
+``NonWhiteSpace`` are stdlib ``re`` atoms on this algebra.
+``WordBoundary`` stays an atom ``\\b``.
 """
 
 from __future__ import annotations
@@ -198,3 +199,11 @@ class NonDigit(_StdlibAtom):
 
 class NonWord(_StdlibAtom):
     token = r"\W"
+
+
+class WhiteSpace(_StdlibAtom):
+    token = r"\s"
+
+
+class NonWhiteSpace(_StdlibAtom):
+    token = r"\S"

@@ -21,7 +21,8 @@ classifiers = [
 keywords = ["validation", "dataclass", "descriptor"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "phonenumbers"]
+phonenumbers = ["phonenumbers"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["ux_valio"]

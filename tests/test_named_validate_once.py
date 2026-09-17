@@ -9,6 +9,7 @@ from ux_valio import (
     ExpiryValidator,
     PANCardValidator,
     PaymentCardValidator,
+    PhoneNumberValidator,
 )
 
 
@@ -87,3 +88,22 @@ def test_date_validator_list_does_not_grow():
     When(d=day)
     assert _bags_did_not_grow(v), v._custom_validators
     assert When(d=day).d == day
+
+
+def test_phone_number_validator_list_does_not_grow():
+    import phonenumbers
+    from phonenumbers import PhoneNumberFormat, example_number, format_number
+
+    number = format_number(example_number("IN"), PhoneNumberFormat.E164)
+    v = PhoneNumberValidator(region="IN", debug=True, logger=False)
+
+    @dataclass
+    class Phone:
+        n: str = v
+
+    Phone(n=number)
+    Phone(n=number)
+    Phone(n=number)
+    assert _bags_did_not_grow(v), v._custom_validators
+    assert Phone(n=number).n == number
+    assert phonenumbers.__name__ == "phonenumbers"

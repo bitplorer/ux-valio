@@ -9,10 +9,12 @@ from ux_valio import (
     BytesValidator,
     Digit,
     NonDigit,
+    NonWhiteSpace,
     NonWord,
     Pattern,
     PatternType,
     PatternValidator,
+    WhiteSpace,
     Word,
     WordBoundary,
 )
@@ -114,10 +116,27 @@ def test_digit_word_nondigit_nonword_are_pattern_types():
     assert Word().pattern == r"\w"
     assert NonDigit().pattern == r"\D"
     assert NonWord().pattern == r"\W"
+    assert WhiteSpace().pattern == r"\s"
+    assert NonWhiteSpace().pattern == r"\S"
     assert isinstance(Digit(), PatternType)
     assert isinstance(Word(), PatternType)
     assert isinstance(NonDigit(), PatternType)
     assert isinstance(NonWord(), PatternType)
+    assert isinstance(WhiteSpace(), PatternType)
+    assert isinstance(NonWhiteSpace(), PatternType)
+
+
+def test_whitespace_count_composes_on_existing_algebra():
+    token = Pattern(r"A") & WhiteSpace(count=2) & NonWhiteSpace(count_min=1)
+    assert token.pattern == r"A\s{2}\S+"
+
+    @dataclass
+    class Spaced:
+        value: str = PatternValidator(pattern=token, debug=True)
+
+    assert Spaced(value="A  x").value == "A  x"
+    with pytest.raises(ValueError):
+        Spaced(value="Axx")
 
 
 def test_digit_count_composes_on_existing_algebra():
@@ -183,6 +202,8 @@ def test_inverted_count_min_max_is_value_error_at_construction():
         Pattern(r"a", count_min=5, count_max=2)
     with pytest.raises(ValueError, match="count_max"):
         Digit(count_min=5, count_max=2)
+    with pytest.raises(ValueError, match="count_max"):
+        WhiteSpace(count_min=5, count_max=2)
 
 
 def test_pattern_bytes_keeps_bytes_identity():
