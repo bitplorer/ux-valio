@@ -12,7 +12,7 @@ from typing import Any
 
 from ux_valio.descriptor import _UNSET
 from ux_valio.validators.base import ValidateProperty
-from ux_valio.validators.errors import continue_or_raise, raise_collected
+from ux_valio.validators.errors import run_steps
 from ux_valio.validators.hooks import HookHost
 from ux_valio.validators.leaves import (
     ChoiceValidator,
@@ -55,7 +55,7 @@ class Validator(HookHost, ValidateProperty):
         not_in_choice: Any = None,
         debug: bool | None = None,
         logger: Any = _UNSET,
-        cache_task: bool = True,  # leftover: stored, never consulted
+        cache_task: bool = True,
         collect_all: Any = _UNSET,
     ) -> None:
         if required is not None and not isinstance(required, bool):
@@ -68,9 +68,12 @@ class Validator(HookHost, ValidateProperty):
             )
         self.required = required
         self.pattern = pattern
+        self._compiled = None
+        self._compiled_source = object()
         self.reassign = reassign
         self.number_of_assignment = 0
         self._assignment_counts: dict[int, int] = {}
+        self._assignment_alive: dict[int, Any] = {}
         self.multiple_of = multiple_of
         ValueValidator.bind_bounds(self, min_value, gt, value, eq, max_value, lt)
         LengthValidator.bind_bounds(self, min_length, length, max_length)
@@ -87,15 +90,16 @@ class Validator(HookHost, ValidateProperty):
             collect_all=collect_all,
         )
 
+    _watch_assignment = ReassignValidator._watch_assignment
+
     def notify_pre_set(self, obj: Any) -> None:
-        self._assignment_counts.setdefault(id(obj), 0)
+        ReassignValidator.notify_pre_set(self, obj)
 
     def notify_post_set(self, obj: Any) -> None:
-        self._assignment_counts[id(obj)] = self._assignment_counts.get(id(obj), 0) + 1
-        self.number_of_assignment += 1
+        ReassignValidator.notify_post_set(self, obj)
 
     def post_delete_processing(self, instance: Any, value: Any) -> Any:
-        self._assignment_counts.pop(id(instance), None)
+        ReassignValidator.post_delete_processing(self, instance, value)
         return super().post_delete_processing(instance, value)
 
     def _unit_lookup(self) -> dict[str, Lookup]:
@@ -119,26 +123,21 @@ class Validator(HookHost, ValidateProperty):
         return self._validate_named_facade(instance, value)
 
     def validate(self, instance: Any = None, value: Any = None) -> None:
-        errors: list[BaseException] = []
-        try:
-            self.validation_path.run(
-                self,
-                instance,
-                value,
-                self._unit_lookup(),
-                collect_all=self.collect_all,
-            )
-        except Exception as err:
-            continue_or_raise(self.collect_all, errors, err)
-        try:
-            self._run_custom_validators(instance, value)
-        except Exception as err:
-            continue_or_raise(self.collect_all, errors, err)
-        try:
-            self._validate_named_facade(instance, value)
-        except Exception as err:
-            continue_or_raise(self.collect_all, errors, err)
-        raise_collected(errors, name=self.name)
+        run_steps(
+            (
+                lambda: self.validation_path.run(
+                    self,
+                    instance,
+                    value,
+                    self._unit_lookup(),
+                    collect_all=self.collect_all,
+                ),
+                lambda: self._run_custom_validators(instance, value),
+                lambda: self._validate_named_facade(instance, value),
+            ),
+            self.collect_all,
+            self.name,
+        )
 
 
 class IntegerValidator(Validator):
