@@ -153,3 +153,4 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "`Contained` / `IfContained` are KEEP-absent" in text
     assert "`SetOf` character-class" in text or "`SetOf` character class" in text
     assert "examples/" in text
+    assert "Python ≥ 3.14" in text

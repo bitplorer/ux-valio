@@ -16,6 +16,7 @@ import concurrent.futures
 import inspect
 from typing import Any, Callable
 
+# One worker is KEEP: one private loop, no nested-run races.
 _NEST_SAFE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 atexit.register(_NEST_SAFE_EXECUTOR.shutdown, wait=False)
 

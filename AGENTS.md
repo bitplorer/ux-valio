@@ -2,6 +2,8 @@
 
 Door A only: `field: T = SomeValidator(...)`.
 
+- Python floor is ≥ 3.14 (same as ux-compose). Do not teach 3.10–3.12.
+
 - Frozen reference: `bitplorer/valio` @ `3415c03`. Do not edit valio.
 - No Cap Host, `mount_channel`, Field twin, Schema twin, `rule/`,
   Result type, RGB/HSL, or star-import barrel.
@@ -14,7 +16,8 @@ Door A only: `field: T = SomeValidator(...)`.
   bound honesty (`None` ≠ `0`); debug-swallow; logger default OFF;
   never-set `__get__` / `__delete__` with `debug=True` is named
   `AttributeError`, not bare `KeyError`;
-  Pattern `findall`; facades do not multiple-inherit concern leaves;
+  Pattern `findall`; EmailValidator is whole-string identity extra;
+  facades do not multiple-inherit concern leaves;
   path fail-closed; processors then tasks once;
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
   before-store hangs on `add_pre_validator` / `add_validator` /

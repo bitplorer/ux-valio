@@ -73,7 +73,6 @@ def test_date_validator_parses_eu_and_ind_strings():
     assert When(d="02-01-2020").d == datetime.date(2020, 1, 2)
     assert When(d="2/1/2020").d == datetime.date(2020, 1, 2)
     assert When(d="02:01:2020").d == datetime.date(2020, 1, 2)
-    # Slash dates are IND day-month-year, not US month-day-year.
     assert When(d="02/01/2020").d == datetime.date(2020, 1, 2)
     with pytest.raises(ValueError):
         When(d="not-a-date")
@@ -93,8 +92,6 @@ def test_date_validator_parses_eu_and_ind_strings():
 
 
 def test_date_validator_rejects_datetime_subclass():
-    """datetime.datetime is a date subclass; DateValidator must not store it."""
-
     @dataclass
     class When:
         d: datetime.date = DateValidator(debug=True)
@@ -119,7 +116,7 @@ def test_date_validator_still_accepts_plain_date_subclass():
     assert When(d=day).d == day
 
 
-def test_email_validator_findall():
+def test_email_validator_accepts_identity_address():
     @dataclass
     class Contact:
         email: str = EmailValidator(debug=True)
@@ -129,13 +126,14 @@ def test_email_validator_findall():
         Contact(email="not-an-email")
 
 
-def test_email_validator_findall_is_substring_not_fullmatch():
+def test_email_validator_rejects_substring():
     @dataclass
     class Contact:
         email: str = EmailValidator(debug=True)
 
     wrapped = "prefix user@example.com suffix"
-    assert Contact(email=wrapped).email == wrapped
+    with pytest.raises(ValueError):
+        Contact(email=wrapped)
 
 
 def test_uuid_validator_coerces_string():

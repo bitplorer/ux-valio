@@ -4,18 +4,16 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ux-valio"
-version = "0.1.0"
+version = "0.2.0"
 description = "Door A descriptor-on-dataclass validation. Greenfield reimplementation of valio."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 authors = [{ name = "bitplorer" }]
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
 keywords = ["validation", "dataclass", "descriptor"]

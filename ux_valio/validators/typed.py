@@ -15,7 +15,7 @@ from typing import Any
 from ux_valio.pattern import Pattern
 from ux_valio.validators.facade import StringValidator, Validator
 
-# Practical RFC 5322-ish addr-spec. findall substring match (product KEEP).
+# Practical RFC 5322-ish addr-spec. EmailValidator fullmatch extra; engine KEEP.
 _EMAIL_PATTERN = Pattern(
     r"(?:[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*|"
     r'"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|'
@@ -42,15 +42,11 @@ class BytesValidator(Validator):
     annotation = bytes
 
 
-# EU: YYYY-MM-DD / YYYY/MM/DD / YYYY:MM:DD. IND: DD-MM-YYYY / DD/MM/YYYY / DD:MM:YYYY.
-# Same delimiter on both sides. 4-digit year. Day-month-year is IND, not US.
-# Month names, ordinals, dots, and valio relib/dates.py pyparsing are not ported.
 _EU_DATE = re.compile(r"(\d{4})([-:/])(\d{1,2})\2(\d{1,2})")
 _IND_DATE = re.compile(r"(\d{1,2})([-:/])(\d{1,2})\2(\d{4})")
 
 
 def _parse_eu_ind_date(text: str) -> datetime.date | None:
-    """Identity parse of a numeric EU or IND date string. Not findall substring."""
     eu = _EU_DATE.fullmatch(text)
     if eu is not None:
         year, _, month, day = eu.groups()
@@ -69,15 +65,6 @@ def _parse_eu_ind_date(text: str) -> datetime.date | None:
 
 
 class DateValidator(Validator):
-    """Typed ``datetime.date`` facade. EU / IND numeric strings parse to ``date``.
-
-    Locales: EU is year-month-day; IND is day-month-year. Delimiters ``-``,
-    ``/``, and ``:`` (the same delimiter on both sides). ``02/01/2020`` is
-    2 January 2020 (IND), not 1 February (US). ``datetime.datetime`` is a
-    ``date`` subclass; the extra check rejects it after the inherited path
-    so the type door is not silently widened.
-    """
-
     annotation = datetime.date
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
@@ -101,8 +88,25 @@ class DateValidator(Validator):
 
 
 class EmailValidator(StringValidator):
+    """Door A email facade. Identity of the whole string, not findall substring.
+
+    PatternValidator still matches with findall. This facade adds a fullmatch
+    extra so the name EmailValidator is true.
+    """
+
     def __init__(self, pattern: Any = _EMAIL_PATTERN, **kwargs: Any) -> None:
         super().__init__(pattern=pattern, **kwargs)
+
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if not isinstance(value, str):
+            raise ValueError(f"{self.name} is not a valid email address")
+        source = self.pattern
+        if hasattr(source, "pattern"):
+            source = source.pattern
+        if not isinstance(source, str) or re.fullmatch(source, value) is None:
+            raise ValueError(f"{self.name} is not a valid email address")
 
 
 class UUIDValidator(Validator):
@@ -178,8 +182,6 @@ class IPAddressValidator(StringValidator):
 
 
 class EnumValidator(Validator):
-    """Member of ``enum.Enum``. Class annotation is unset so a concrete enum may own the field."""
-
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return

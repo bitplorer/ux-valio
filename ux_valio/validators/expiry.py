@@ -85,7 +85,7 @@ class ExpiryValidator(Validator):
         if timeline == "after":
             expired = now > parsed
         elif timeline == "on":
-            expired = now == parsed
+            expired = now.date() != parsed.date()
         elif timeline == "before":
             expired = now < parsed
         else:

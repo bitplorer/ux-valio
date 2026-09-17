@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 import types
+import weakref
 from collections.abc import (
     Callable as AbcCallable,
     Collection,
@@ -27,27 +28,87 @@ _SET_ABC_ORIGINS = (AbstractSet, MutableSet)
 _COLLECTION_ORIGINS = (Collection,)
 
 
-def is_instance_of(value: Any, annotation: Any) -> bool:
-    """Door A type honesty: origin+args recurse; unknown TypeError is False.
-
-    ``list[int]`` is a list of ints. Parametrized args (element types,
-    Literal membership, Annotated inner type) are checked. PEP 695 aliases
-    unwrap ``__value__`` when present. ``typing.Any`` and an unset ``None``
-    annotation accept. Callable origin is checked; signature is not.
-    TypedDict is fail-closed. Not typingx. Not a public ``check_*``.
-    """
-    if annotation is None or annotation is Any:
-        return True
+def _peel_annotation(annotation: Any) -> Any | _PeelFail:
     if type(annotation).__name__ == "TypeAliasType":
         inner = getattr(annotation, "__value__", None)
-        if inner is None:
-            return False
-        return is_instance_of(value, inner)
-    if isinstance(annotation, str):
-        return False
+        return _PeelFail if inner is None else inner
     supertype = getattr(annotation, "__supertype__", None)
     if supertype is not None and get_origin(annotation) is None:
-        return is_instance_of(value, supertype)
+        return supertype
+    return annotation
+
+
+class _PeelFailType:
+    __slots__ = ()
+
+
+_PeelFail = _PeelFailType()
+
+
+def _check_annotated(value: Any, args: tuple[Any, ...]) -> bool:
+    return bool(args) and is_instance_of(value, args[0])
+
+
+def _check_union(value: Any, args: tuple[Any, ...]) -> bool:
+    return True if not args else any(is_instance_of(value, arg) for arg in args)
+
+
+def _check_none(value: Any, args: tuple[Any, ...]) -> bool:
+    return value is None
+
+
+def _check_literal(value: Any, args: tuple[Any, ...]) -> bool:
+    return value in args
+
+
+def _check_list(value: Any, args: tuple[Any, ...]) -> bool:
+    return isinstance(value, list) and _elements_match(value, args)
+
+
+def _check_set(value: Any, args: tuple[Any, ...]) -> bool:
+    return isinstance(value, set) and _elements_match(value, args)
+
+
+def _check_frozenset(value: Any, args: tuple[Any, ...]) -> bool:
+    return isinstance(value, frozenset) and _elements_match(value, args)
+
+
+def _check_dict(value: Any, args: tuple[Any, ...]) -> bool:
+    return isinstance(value, dict) and _mapping_match(value, args)
+
+
+def _check_tuple(value: Any, args: tuple[Any, ...]) -> bool:
+    return isinstance(value, tuple) and _tuple_match(value, args)
+
+
+def _check_callable(value: Any, args: tuple[Any, ...]) -> bool:
+    return _isinstance_closed(value, AbcCallable)
+
+
+_ORIGIN_CHECKERS = {
+    Annotated: _check_annotated,
+    Union: _check_union,
+    types.UnionType: _check_union,
+    type(None): _check_none,
+    Literal: _check_literal,
+    list: _check_list,
+    set: _check_set,
+    frozenset: _check_frozenset,
+    dict: _check_dict,
+    tuple: _check_tuple,
+    AbcCallable: _check_callable,
+}
+
+def is_instance_of(value: Any, annotation: Any) -> bool:
+    if annotation is None or annotation is Any:
+        return True
+    peeled = _peel_annotation(annotation)
+    if peeled is _PeelFail:
+        return False
+    if peeled is not annotation:
+        return is_instance_of(value, peeled)
+    if isinstance(annotation, str):
+        return False
     if isinstance(annotation, TypeVar):
         if annotation.__constraints__:
             return any(is_instance_of(value, arg) for arg in annotation.__constraints__)
@@ -56,38 +117,12 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
         return False
     origin = get_origin(annotation)
     args = get_args(annotation)
-    if origin is Annotated:
-        if not args:
-            return False
-        return is_instance_of(value, args[0])
-    if origin is Union or origin is types.UnionType:
-        if not args:
-            return True
-        return any(is_instance_of(value, arg) for arg in args)
-    if origin is type(None):
-        return value is None
-    if origin is Literal:
-        return value in args
-    if origin is list:
-        return isinstance(value, list) and _elements_match(value, args)
-    if origin is set:
-        return isinstance(value, set) and _elements_match(value, args)
-    if origin is frozenset:
-        return isinstance(value, frozenset) and _elements_match(value, args)
-    if origin is dict:
-        return isinstance(value, dict) and _mapping_match(value, args)
-    if origin is tuple:
-        return isinstance(value, tuple) and _tuple_match(value, args)
-    if origin is AbcCallable:
-        return _isinstance_closed(value, origin)
-    if origin in _MAPPING_ORIGINS:
-        return isinstance(value, origin) and _mapping_match(value, args)
-    if origin in _SET_ABC_ORIGINS:
-        return isinstance(value, origin) and _elements_match(value, args)
-    if origin in _SEQUENCE_ORIGINS:
-        return isinstance(value, origin) and _elements_match(value, args)
-    if origin in _COLLECTION_ORIGINS:
-        return isinstance(value, origin) and _elements_match(value, args)
+    checker = _ORIGIN_CHECKERS.get(origin)
+    if checker is not None:
+        return checker(value, args)
+    for group, matcher in _ORIGIN_GROUPS:
+        if origin in group:
+            return isinstance(value, origin) and matcher(value, args)
     target = origin if origin is not None else annotation
     return _isinstance_closed(value, target)
 
@@ -102,8 +137,7 @@ def _isinstance_closed(value: Any, target: Any) -> bool:
 def _elements_match(value: Any, args: tuple[Any, ...]) -> bool:
     if not args:
         return True
-    item_annotation = args[0]
-    return all(is_instance_of(item, item_annotation) for item in value)
+    return all(is_instance_of(item, args[0]) for item in value)
 
 
 def _mapping_match(value: Any, args: tuple[Any, ...]) -> bool:
@@ -124,6 +158,14 @@ def _tuple_match(value: Any, args: tuple[Any, ...]) -> bool:
     if len(value) != len(args):
         return False
     return all(is_instance_of(item, arg) for item, arg in zip(value, args, strict=True))
+
+
+_ORIGIN_GROUPS = (
+    (_MAPPING_ORIGINS, _mapping_match),
+    (_SET_ABC_ORIGINS, _elements_match),
+    (_SEQUENCE_ORIGINS, _elements_match),
+    (_COLLECTION_ORIGINS, _elements_match),
+)
 
 
 class TypeValidator(ValidateProperty):
@@ -158,7 +200,18 @@ class RequiredValidator(ValidateProperty):
 class PatternValidator(ValidateProperty):
     def __init__(self, pattern: Any = None, **kwargs: Any) -> None:
         self.pattern = pattern
+        self._compiled: re.Pattern[Any] | None = None
+        self._compiled_source: Any = object()
         super().__init__(**kwargs)
+
+    def _compiled_finder(self, source: str | bytes) -> re.Pattern[Any]:
+        compiled = getattr(self, "_compiled", None)
+        if compiled is not None and source == getattr(self, "_compiled_source", object()):
+            return compiled
+        compiled = re.compile(source)
+        self._compiled = compiled
+        self._compiled_source = source
+        return compiled
 
     def _validate_pattern(self, instance: Any, value: Any) -> None:
         pattern = getattr(self, "pattern", None)
@@ -186,7 +239,7 @@ class PatternValidator(ValidateProperty):
                 f"{self.name} pattern must be str or bytes, "
                 f"got {type(source).__name__} type instead"
             )
-        if not re.compile(source).findall(text):
+        if not PatternValidator._compiled_finder(self, source).findall(text):
             label = pattern.alias if isinstance(pattern, PatternType) and pattern.alias else pattern
             raise ValueError(f"{self.name} must have the pattern {label}")
 
@@ -203,17 +256,34 @@ class ReassignValidator(ValidateProperty):
         self.reassign = reassign
         self.number_of_assignment = 0
         self._assignment_counts: dict[int, int] = {}
+        self._assignment_alive: dict[int, weakref.ref[Any]] = {}
         super().__init__(**kwargs)
 
+    def _watch_assignment(self, obj: Any) -> int:
+        oid = id(obj)
+
+        def _drop(_ref: Any, key: int = oid) -> None:
+            self._assignment_counts.pop(key, None)
+            self._assignment_alive.pop(key, None)
+
+        try:
+            self._assignment_alive[oid] = weakref.ref(obj, _drop)
+        except TypeError:
+            pass
+        return oid
+
     def notify_pre_set(self, obj: Any) -> None:
-        self._assignment_counts.setdefault(id(obj), 0)
+        self._assignment_counts.setdefault(self._watch_assignment(obj), 0)
 
     def notify_post_set(self, obj: Any) -> None:
-        self._assignment_counts[id(obj)] = self._assignment_counts.get(id(obj), 0) + 1
+        oid = self._watch_assignment(obj)
+        self._assignment_counts[oid] = self._assignment_counts.get(oid, 0) + 1
         self.number_of_assignment += 1
 
     def post_delete_processing(self, instance: Any, value: Any) -> Any:
-        self._assignment_counts.pop(id(instance), None)
+        oid = id(instance)
+        self._assignment_counts.pop(oid, None)
+        self._assignment_alive.pop(oid, None)
         return value
 
     def _validate_reassignment(self, instance: Any, value: Any) -> None:

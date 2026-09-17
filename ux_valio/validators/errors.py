@@ -38,3 +38,14 @@ def continue_or_raise(
 def raise_collected(errors: list[BaseException], name: Any = None) -> None:
     if errors:
         raise ValidationErrors(errors, name=name)
+
+
+def run_steps(steps: Any, collect_all: bool, name: Any = None) -> None:
+    """One collect-or-raise loop. Facade / AllOf / extras share this."""
+    errors: list[BaseException] = []
+    for step in steps:
+        try:
+            step()
+        except Exception as err:
+            continue_or_raise(collect_all, errors, err)
+    raise_collected(errors, name=name)
