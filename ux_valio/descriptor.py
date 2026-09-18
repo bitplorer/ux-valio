@@ -116,14 +116,67 @@ class _Opt:
                 )
         return first
 
+    def keeps_nesting(self, members: "_Opt") -> bool:
+        """True when this descriptor's spec should not flatten into members."""
+        if self.specified and not members.specified:
+            return True
+        if self.specified and self.value != members.value:
+            return True
+        if not self.specified and members.specified:
+            return False
+        return self.value != members.value
+
+
+class _Opts:
+    """Specified-theory for one descriptor. Named fields, not string keys."""
+
+    __slots__ = (
+        "debug",
+        "default",
+        "default_factory",
+        "doc",
+        "logger",
+        "collect_all",
+    )
+
+    def __init__(
+        self,
+        debug: _Opt,
+        default: _Opt,
+        default_factory: _Opt,
+        doc: _Opt,
+        logger: _Opt,
+        collect_all: _Opt,
+    ) -> None:
+        self.debug = debug
+        self.default = default
+        self.default_factory = default_factory
+        self.doc = doc
+        self.logger = logger
+        self.collect_all = collect_all
+
     @classmethod
-    def read(cls, item: Any, attr: str, omitted_default: Any = None) -> "_Opt":
-        """Read specified-theory for ``attr`` off a descriptor."""
-        opts = getattr(item, "_opts", None)
-        if isinstance(opts, dict) and attr in opts:
-            return opts[attr]
-        value = getattr(item, attr, omitted_default)
-        return cls(value, value is not omitted_default)
+    def merge(cls, *rows: "_Opts") -> "_Opts":
+        return cls(
+            debug=_Opt.merge("debug", *(row.debug for row in rows)),
+            default=_Opt.merge("default", *(row.default for row in rows)),
+            default_factory=_Opt.merge(
+                "default_factory", *(row.default_factory for row in rows)
+            ),
+            doc=_Opt.merge("doc", *(row.doc for row in rows)),
+            logger=_Opt.merge("logger", *(row.logger for row in rows)),
+            collect_all=_Opt.merge("collect_all", *(row.collect_all for row in rows)),
+        )
+
+    def keeps_nesting(self, members: "_Opts") -> bool:
+        return (
+            self.debug.keeps_nesting(members.debug)
+            or self.default.keeps_nesting(members.default)
+            or self.default_factory.keeps_nesting(members.default_factory)
+            or self.doc.keeps_nesting(members.doc)
+            or self.logger.keeps_nesting(members.logger)
+            or self.collect_all.keeps_nesting(members.collect_all)
+        )
 
 
 _CONTAINER_ORIGINS = (list, dict, tuple, set, frozenset)
@@ -247,16 +300,16 @@ class Property(Generic[_StoreT]):
         self.debug = debug
         self.logger = logger_opt.value
         self.collect_all = collect_opt.value
-        self._opts = {
-            "debug": _Opt.set(debug) if debug is not None else _Opt.omitted(None),
-            "default": _Opt.set(default) if default is not None else _Opt.omitted(None),
-            "default_factory": (
+        self._opts = _Opts(
+            debug=_Opt.set(debug) if debug is not None else _Opt.omitted(None),
+            default=_Opt.set(default) if default is not None else _Opt.omitted(None),
+            default_factory=(
                 _Opt.set(default_factory) if default_factory is not None else _Opt.omitted(None)
             ),
-            "doc": _Opt.set(doc) if doc is not None else _Opt.omitted(None),
-            "logger": logger_opt,
-            "collect_all": collect_opt,
-        }
+            doc=_Opt.set(doc) if doc is not None else _Opt.omitted(None),
+            logger=logger_opt,
+            collect_all=collect_opt,
+        )
         self.errors: list[BaseException] = []
         self.annotation = getattr(self, "annotation", None)
         self._owner: type | None = None
@@ -282,7 +335,7 @@ class Property(Generic[_StoreT]):
     def _bind_field_logger(self, owner: type, name: str) -> None:
         """``logger=True`` becomes a stdlib logger named for this field.
 
-        Specified-theory ``_opts["logger"]`` stays ``True``. No FileHandler.
+        Specified-theory ``_opts.logger`` stays ``True``. No FileHandler.
         """
         if self.logger is True:
             self.logger = logging.getLogger(

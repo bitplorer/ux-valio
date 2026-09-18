@@ -307,8 +307,8 @@ def test_logger_true_binds_stdlib_logger_and_logs(caplog):
     desc = User.__dict__["name"]
     assert desc.logger is not True
     assert desc.logger.name.endswith(".User.name")
-    assert desc._opts["logger"].value is True
-    assert desc._opts["logger"].specified is True
+    assert desc._opts.logger.value is True
+    assert desc._opts.logger.specified is True
 
     with caplog.at_level(logging.INFO, logger=desc.logger.name):
         user = User(name="Ada")

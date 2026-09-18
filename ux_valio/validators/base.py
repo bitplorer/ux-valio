@@ -15,7 +15,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, TypeVar
 
-from ux_valio.descriptor import Property, _Opt, _annotations_agree
+from ux_valio.descriptor import Property, _Opts, _UNSET, _annotations_agree
 from ux_valio.errors import ValidationErrors, raise_collected, run_steps
 from ux_valio.validators.hooks import HookHost
 
@@ -146,7 +146,33 @@ class _Of(ValidateProperty):
             annotation = type(self)._merged_annotation(self.validators)
             if annotation is not None:
                 self.annotation = annotation
-        super().__init__(**type(self)._bind_kwargs(self.validators, kwargs))
+        merged = _Opts.merge(*(item._opts for item in self.validators))
+        super().__init__(
+            debug=kwargs.pop(
+                "debug", merged.debug.value if merged.debug.specified else None
+            ),
+            default=kwargs.pop(
+                "default", merged.default.value if merged.default.specified else None
+            ),
+            default_factory=kwargs.pop(
+                "default_factory",
+                merged.default_factory.value if merged.default_factory.specified else None,
+            ),
+            doc=kwargs.pop("doc", merged.doc.value if merged.doc.specified else None),
+            logger=(
+                kwargs.pop("logger")
+                if "logger" in kwargs
+                else (merged.logger.value if merged.logger.specified else _UNSET)
+            ),
+            collect_all=(
+                kwargs.pop("collect_all")
+                if "collect_all" in kwargs
+                else (
+                    merged.collect_all.value if merged.collect_all.specified else _UNSET
+                )
+            ),
+            **kwargs,
+        )
 
     @staticmethod
     def _as_validators(parts: Iterable[Any]) -> tuple[ValidateProperty, ...]:
@@ -161,38 +187,13 @@ class _Of(ValidateProperty):
         return validators
 
     @staticmethod
-    def _merged_attr(validators: tuple[Any, ...], attr: str, unspecified: Any) -> Any:
-        merged = _Opt.merge(attr, *(_Opt.read(item, attr, unspecified) for item in validators))
-        return merged.value if merged.specified else unspecified
-
-    @staticmethod
     def _keep_nested(item: Any) -> bool:
         if not isinstance(item, _Of):
             return False
         if HookHost.has_hooks(item):
             return True
-        members = item.validators
-        for attr, unspecified in (
-            ("debug", None),
-            ("default", None),
-            ("default_factory", None),
-            ("doc", None),
-            ("logger", False),
-            ("collect_all", False),
-        ):
-            item_opt = _Opt.read(item, attr, unspecified)
-            members_opt = _Opt.merge(
-                attr, *(_Opt.read(member, attr, unspecified) for member in members)
-            )
-            if item_opt.specified and not members_opt.specified:
-                return True
-            if item_opt.specified and item_opt.value != members_opt.value:
-                return True
-            if not item_opt.specified and members_opt.specified:
-                continue
-            if item_opt.value != members_opt.value:
-                return True
-        return False
+        members = _Opts.merge(*(member._opts for member in item.validators))
+        return item._opts.keeps_nesting(members)
 
     @classmethod
     def _flatten(cls, parts: Iterable[ValidateProperty]) -> tuple[ValidateProperty, ...]:
@@ -203,28 +204,6 @@ class _Of(ValidateProperty):
             else:
                 out.append(item)
         return tuple(out)
-
-    @staticmethod
-    def _bind_kwargs(
-        validators: tuple[ValidateProperty, ...], kwargs: dict[str, Any]
-    ) -> dict[str, Any]:
-        kwargs.setdefault("debug", _Of._merged_attr(validators, "debug", None))
-        kwargs.setdefault("default", _Of._merged_attr(validators, "default", None))
-        kwargs.setdefault(
-            "default_factory", _Of._merged_attr(validators, "default_factory", None)
-        )
-        kwargs.setdefault("doc", _Of._merged_attr(validators, "doc", None))
-        logger_opt = _Opt.merge(
-            "logger", *(_Opt.read(item, "logger", False) for item in validators)
-        )
-        if "logger" not in kwargs and logger_opt.specified:
-            kwargs["logger"] = logger_opt.value
-        collect_opt = _Opt.merge(
-            "collect_all", *(_Opt.read(item, "collect_all", False) for item in validators)
-        )
-        if "collect_all" not in kwargs and collect_opt.specified:
-            kwargs["collect_all"] = collect_opt.value
-        return kwargs
 
     @staticmethod
     def _merged_annotation(validators: tuple[ValidateProperty, ...]) -> Any:
