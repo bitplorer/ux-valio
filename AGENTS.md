@@ -180,7 +180,7 @@ New private helpers are verbs that name the action:
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
 `_Compose._bind_kwargs`, `_Compose._flatten`, `_Opt.merge`, `_Opt.read`,
-`HookHost.has_hooks`, `HookHost._collect_owner_keys`,
+`HookHost.has_hooks`, `HookHost._collect_owner_keys`, `HookHost._register`,
 `_bind_field_logger`, `_take_subscript_annotation`,
 `_is_unconstrained_typevar`,
 `HookHost._owner_key`, `HookHost._resolve_owner_key`,
@@ -194,7 +194,8 @@ New private helpers are verbs that name the action:
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
-`cache_task`, `_HOOK_ADDERS`, `_install_adders`, `_hook_adder`).
+`cache_task`, `_HOOK_ADDERS`, `_install_adders`, `_hook_adder`,
+`_init_hooks`).
 Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app
 nickname, not a slogan.

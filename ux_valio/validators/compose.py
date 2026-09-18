@@ -31,7 +31,6 @@ class _Compose(HookHost, ValidateProperty):
             annotation = type(self)._merged_annotation(self.validators)
             if annotation is not None:
                 self.annotation = annotation
-        self._init_hooks()
         super().__init__(**type(self)._bind_kwargs(self.validators, kwargs))
 
     @staticmethod

@@ -18,14 +18,10 @@ from ux_valio.errors import continue_or_raise, raise_collected
 class HookHost:
     """Processor, task, and custom-validator registries on the facade / compose root.
 
-    Public ``add_*`` methods live here; bodies call ``_add``. There is no
-    ``add_pre_set`` registry. Register and lookup share one owner key:
-    ``module.qualname`` of the class that owns the hook.
+    Public ``add_*`` methods live here. There is no ``add_pre_set`` registry.
+    Register and lookup share one owner key: ``module.qualname`` of the
+    class that owns the hook. Instance registries are created in ``__init__``.
     """
-
-    _custom_validators: dict[str, list[Callable[..., Any]]]
-    _processors: dict[str, dict[str, list[Callable[..., Any]]]]
-    _tasks: dict[str, dict[str, list[Callable[..., Any]]]]
 
     @staticmethod
     def _owner_key(cls: Any) -> str:
@@ -91,11 +87,11 @@ class HookHost:
         keys.reverse()
         return tuple(keys)
 
-    def _init_hooks(self) -> None:
-        # Phases are the dict keys. No add_pre_set — ValidateProperty.pre_set
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Phases are these dict keys. No add_pre_set — ValidateProperty.pre_set
         # *is* pre_validate → validate → post_validate.
-        self._custom_validators = defaultdict(list)
-        self._processors = {
+        self._custom_validators: dict[str, list[Callable[..., Any]]] = defaultdict(list)
+        self._processors: dict[str, dict[str, list[Callable[..., Any]]]] = {
             "pre_validate": defaultdict(list),
             "post_validate": defaultdict(list),
             "post_set": defaultdict(list),
@@ -104,67 +100,67 @@ class HookHost:
             "pre_delete": defaultdict(list),
             "post_delete": defaultdict(list),
         }
-        self._tasks = {phase: defaultdict(list) for phase in self._processors}
+        self._tasks: dict[str, dict[str, list[Callable[..., Any]]]] = {
+            phase: defaultdict(list) for phase in self._processors
+        }
+        super().__init__(*args, **kwargs)
 
-    def _add(
+    def _register(
         self,
-        registry: str,
-        phase: str,
+        bucket: dict[str, list[Callable[..., Any]]],
         func: Callable[..., Any],
         namespace: str | None = None,
     ) -> Callable[..., Any]:
-        getattr(self, registry)[phase][
-            HookHost._resolve_owner_key(func, namespace, getattr(self, "_owner", None))
-        ].append(func)
+        key = HookHost._resolve_owner_key(
+            func, namespace, getattr(self, "_owner", None)
+        )
+        bucket[key].append(func)
         return func
 
     def add_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._custom_validators[
-            HookHost._resolve_owner_key(func, namespace, getattr(self, "_owner", None))
-        ].append(func)
-        return func
+        return self._register(self._custom_validators, func, namespace)
 
     def add_pre_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_processors", "pre_validate", func, namespace)
+        return self._register(self._processors["pre_validate"], func, namespace)
 
     def add_post_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_processors", "post_validate", func, namespace)
+        return self._register(self._processors["post_validate"], func, namespace)
 
     def add_post_set(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_processors", "post_set", func, namespace)
+        return self._register(self._processors["post_set"], func, namespace)
 
     def add_pre_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_processors", "pre_get", func, namespace)
+        return self._register(self._processors["pre_get"], func, namespace)
 
     def add_post_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_processors", "post_get", func, namespace)
+        return self._register(self._processors["post_get"], func, namespace)
 
     def add_pre_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_processors", "pre_delete", func, namespace)
+        return self._register(self._processors["pre_delete"], func, namespace)
 
     def add_post_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_processors", "post_delete", func, namespace)
+        return self._register(self._processors["post_delete"], func, namespace)
 
     def add_pre_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_tasks", "pre_validate", func, namespace)
+        return self._register(self._tasks["pre_validate"], func, namespace)
 
     def add_post_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_tasks", "post_validate", func, namespace)
+        return self._register(self._tasks["post_validate"], func, namespace)
 
     def add_post_set_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_tasks", "post_set", func, namespace)
+        return self._register(self._tasks["post_set"], func, namespace)
 
     def add_pre_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_tasks", "pre_get", func, namespace)
+        return self._register(self._tasks["pre_get"], func, namespace)
 
     def add_post_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_tasks", "post_get", func, namespace)
+        return self._register(self._tasks["post_get"], func, namespace)
 
     def add_pre_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_tasks", "pre_delete", func, namespace)
+        return self._register(self._tasks["pre_delete"], func, namespace)
 
     def add_post_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        return self._add("_tasks", "post_delete", func, namespace)
+        return self._register(self._tasks["post_delete"], func, namespace)
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
         hooks = self._processors[phase]

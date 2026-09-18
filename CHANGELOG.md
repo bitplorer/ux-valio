@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Hook registries initialize in `HookHost.__init__` (cooperative
+  `super()`). `_register` takes the phase dict, not a string `getattr`.
 - `add_*` hooks are declared methods on `HookHost` (valio did the same).
   No `_HOOK_ADDERS` table / `_install_adders` setattr. Phases are the
   `_processors` dict keys.
