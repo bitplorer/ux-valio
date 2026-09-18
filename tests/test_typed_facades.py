@@ -296,7 +296,7 @@ def test_datetime_validator_parses_iso_and_rejects_plain_date():
 
 
 def test_datetime_post_validate_cannot_store_a_plain_date():
-    from ux_valio.validators.hooks import _bag_key
+    from ux_valio.validators.hooks import HookHost
 
     field = DateTimeValidator(debug=True)
 
@@ -307,13 +307,13 @@ def test_datetime_post_validate_cannot_store_a_plain_date():
     class When:
         t: datetime.datetime = field
 
-    field.add_post_validator(to_date, namespace=_bag_key(When))
+    field.add_post_validator(to_date, namespace=HookHost._bag_key(When))
     with pytest.raises(TypeError):
         When(t="2020-01-02T12:00:00")
 
 
 def test_uuid_post_validate_cannot_store_a_str():
-    from ux_valio.validators.hooks import _bag_key
+    from ux_valio.validators.hooks import HookHost
 
     field = UUIDValidator(debug=True)
     raw = "12345678-1234-5678-1234-567812345678"
@@ -325,7 +325,7 @@ def test_uuid_post_validate_cannot_store_a_str():
     class Row:
         u: uuid.UUID = field
 
-    field.add_post_validator(smash, namespace=_bag_key(Row))
+    field.add_post_validator(smash, namespace=HookHost._bag_key(Row))
     with pytest.raises(TypeError):
         Row(u=raw)
 
@@ -347,7 +347,7 @@ def test_url_validator_requires_scheme_and_netloc():
 
 
 def test_url_post_validate_cannot_store_a_lie():
-    from ux_valio.validators.hooks import _bag_key
+    from ux_valio.validators.hooks import HookHost
 
     field = URLValidator(debug=True)
 
@@ -358,6 +358,6 @@ def test_url_post_validate_cannot_store_a_lie():
     class Link:
         href: str = field
 
-    field.add_post_validator(smash, namespace=_bag_key(Link))
+    field.add_post_validator(smash, namespace=HookHost._bag_key(Link))
     with pytest.raises(ValueError, match="URL"):
         Link(href="https://example.com")

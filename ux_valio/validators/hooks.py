@@ -15,72 +15,13 @@ from ux_valio.validators.async_bridge import invoke_callable
 from ux_valio.errors import continue_or_raise, raise_collected
 
 
-
-def _bag_key(cls: Any) -> str:
-    """One bag key for register and lookup: ``module.qualname``."""
-    return f"{cls.__module__}.{cls.__qualname__}"
-
-
-def _owning_class_qualname(func: Callable[..., Any]) -> str | None:
-    """Owning-class qualname, or None for a free function."""
-    qualname = str(getattr(func, "__qualname__", "") or "")
-    if "." not in qualname:
-        return None
-    owner = qualname.rsplit(".", 1)[0]
-    if owner.endswith(".<locals>") or owner in {"<locals>", ""}:
-        return None
-    return owner
-
-
-def _resolve_bag_key(
-    func: Callable[..., Any],
-    namespace: str | None,
-    bound_owner: type | None = None,
-) -> str:
-    """Bag key for register. Default is ``_bag_key`` of the owning class.
-
-    ``namespace=`` is the key as-is (str). A free function has no owning
-    class: if the descriptor is already bound, use that owner; otherwise
-    ``namespace=`` is required. Class objects are not keys.
-    """
-    if namespace is not None:
-        if not isinstance(namespace, str):
-            raise TypeError(
-                "namespace= must be a str bag key "
-                f"(module.qualname); got {type(namespace).__name__}"
-            )
-        return namespace
-    owner = _owning_class_qualname(func)
-    if owner is not None:
-        return _bag_key(
-            SimpleNamespace(__module__=func.__module__, __qualname__=owner)
-        )
-    if bound_owner is not None:
-        return _bag_key(bound_owner)
-    raise TypeError(
-        "free function requires namespace= "
-        "(bag key is module.qualname of the owning class)"
-    )
-
-
-def _hook_adder(bag: str, phase: str):
-    """One body for every taught ``add_*``. Bound onto ``HookHost`` from its table."""
-
-    def adder(
-        self: "HookHost",
-        func: Callable[..., Any],
-        namespace: str | None = None,
-    ) -> Callable[..., Any]:
-        return self._add(bag, phase, func, namespace)
-
-    return adder
-
-
 class HookHost:
     """Processor/task/custom-validator bags. Mixin for facade and compose roots.
 
     Taught ``add_*`` names live on this class. Bodies are ``_add``. There is
-    no ``add_pre_set`` / ``_processors["pre_set"]`` bag.
+    no ``add_pre_set`` / ``_processors["pre_set"]`` bag. Bag-key helpers
+    live here — they are this host's register/lookup encoding, not a
+    free-floating key module.
     """
 
     cache_task: bool  # leftover: stored, never consulted (cache retired)
@@ -119,6 +60,66 @@ class HookHost:
     )
 
     @staticmethod
+    def _bag_key(cls: Any) -> str:
+        """One bag key for register and lookup: ``module.qualname``."""
+        return f"{cls.__module__}.{cls.__qualname__}"
+
+    @staticmethod
+    def _owning_class_qualname(func: Callable[..., Any]) -> str | None:
+        """Owning-class qualname, or None for a free function."""
+        qualname = str(getattr(func, "__qualname__", "") or "")
+        if "." not in qualname:
+            return None
+        owner = qualname.rsplit(".", 1)[0]
+        if owner.endswith(".<locals>") or owner in {"<locals>", ""}:
+            return None
+        return owner
+
+    @staticmethod
+    def _resolve_bag_key(
+        func: Callable[..., Any],
+        namespace: str | None,
+        bound_owner: type | None = None,
+    ) -> str:
+        """Bag key for register. Default is ``_bag_key`` of the owning class.
+
+        ``namespace=`` is the key as-is (str). A free function has no owning
+        class: if the descriptor is already bound, use that owner; otherwise
+        ``namespace=`` is required. Class objects are not keys.
+        """
+        if namespace is not None:
+            if not isinstance(namespace, str):
+                raise TypeError(
+                    "namespace= must be a str bag key "
+                    f"(module.qualname); got {type(namespace).__name__}"
+                )
+            return namespace
+        owner = HookHost._owning_class_qualname(func)
+        if owner is not None:
+            return HookHost._bag_key(
+                SimpleNamespace(__module__=func.__module__, __qualname__=owner)
+            )
+        if bound_owner is not None:
+            return HookHost._bag_key(bound_owner)
+        raise TypeError(
+            "free function requires namespace= "
+            "(bag key is module.qualname of the owning class)"
+        )
+
+    @staticmethod
+    def _hook_adder(bag: str, phase: str):
+        """One body for every taught ``add_*``. Bound onto ``HookHost`` from its table."""
+
+        def adder(
+            self: "HookHost",
+            func: Callable[..., Any],
+            namespace: str | None = None,
+        ) -> Callable[..., Any]:
+            return self._add(bag, phase, func, namespace)
+
+        return adder
+
+    @staticmethod
     def _collect_bag_keys(instance: Any) -> tuple[str, ...]:
         """Owner keys from base to derived. Inherited hooks fire on a child."""
         keys: list[str] = []
@@ -126,7 +127,7 @@ class HookHost:
         for cls in instance.__class__.__mro__:
             if cls is object:
                 continue
-            key = _bag_key(cls)
+            key = HookHost._bag_key(cls)
             if key in seen:
                 continue
             seen.add(key)
@@ -151,13 +152,13 @@ class HookHost:
         namespace: str | None = None,
     ) -> Callable[..., Any]:
         getattr(self, bag)[phase][
-            _resolve_bag_key(func, namespace, getattr(self, "_owner", None))
+            HookHost._resolve_bag_key(func, namespace, getattr(self, "_owner", None))
         ].append(func)
         return func
 
     def add_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
         self._custom_validators[
-            _resolve_bag_key(func, namespace, getattr(self, "_owner", None))
+            HookHost._resolve_bag_key(func, namespace, getattr(self, "_owner", None))
         ].append(func)
         return func
 
@@ -234,7 +235,7 @@ class HookHost:
     def _install_adders(cls) -> None:
         """Taught add_* names. One encoding. No pre_set adder."""
         for name, bag, phase in cls._HOOK_ADDERS:
-            adder = _hook_adder(bag, phase)
+            adder = cls._hook_adder(bag, phase)
             adder.__name__ = name
             adder.__qualname__ = f"{cls.__name__}.{name}"
             setattr(cls, name, adder)

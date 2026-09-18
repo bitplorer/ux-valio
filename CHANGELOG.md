@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `Validator[T]` is the stored-type subscript. `Validator[int]()` fills
+  `annotation` (plain class, unbound `.validate`). Owner `n: int` must
+  agree. Unconstrained TypeVars are typing-only; bound TypeVars still
+  check. Named facades specialize (`IntegerValidator` is `Validator[int]`).
+- Hook bag-key helpers (`_bag_key`, `_resolve_bag_key`, …) live on
+  `HookHost`. Date parse lives on `DateValidator._parse_eu_ind_date`.
 - `ValidationErrors` lives at `ux_valio.errors`. Descriptor no longer
   imports the validators package (store door does not depend on validate
   door).

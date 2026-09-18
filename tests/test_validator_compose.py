@@ -216,7 +216,7 @@ def test_compose_types_are_bound_once_on_package_import():
 
 def test_allof_post_validate_cannot_store_member_facade_lie():
     from ux_valio import EmailValidator, LengthValidator
-    from ux_valio.validators.hooks import _bag_key
+    from ux_valio.validators.hooks import HookHost
 
     field = EmailValidator(debug=True) & LengthValidator(min_length=3, debug=True)
 
@@ -227,14 +227,14 @@ def test_allof_post_validate_cannot_store_member_facade_lie():
     class Contact:
         s: str = field
 
-    field.add_post_validator(smash, namespace=_bag_key(Contact))
+    field.add_post_validator(smash, namespace=HookHost._bag_key(Contact))
     with pytest.raises(ValueError, match="email"):
         Contact(s="ada@example.com")
 
 
 def test_allof_post_validate_may_shorten_unnamed_length_member():
     """AllOf path bounds are not re-run. Named extra of a StringValidator is no-op."""
-    from ux_valio.validators.hooks import _bag_key
+    from ux_valio.validators.hooks import HookHost
 
     field = StringValidator(min_length=3, debug=True) & RequiredValidator(required=True)
 
@@ -245,13 +245,13 @@ def test_allof_post_validate_may_shorten_unnamed_length_member():
     class Tag:
         s: str = field
 
-    field.add_post_validator(shorten, namespace=_bag_key(Tag))
+    field.add_post_validator(shorten, namespace=HookHost._bag_key(Tag))
     assert Tag(s="abcd").s == "x"
 
 
 def test_anyof_post_validate_must_still_match_one_alternative():
     from ux_valio import EmailValidator, PaymentCardValidator
-    from ux_valio.validators.hooks import _bag_key
+    from ux_valio.validators.hooks import HookHost
 
     field = EmailValidator(debug=True) | PaymentCardValidator(debug=True)
 
@@ -262,14 +262,14 @@ def test_anyof_post_validate_must_still_match_one_alternative():
     class Either:
         s: str = field
 
-    field.add_post_validator(smash, namespace=_bag_key(Either))
+    field.add_post_validator(smash, namespace=HookHost._bag_key(Either))
     with pytest.raises(ValueError, match="none of the alternatives"):
         Either(s="ada@example.com")
 
 
 def test_anyof_post_validate_may_store_when_string_alternative_holds():
     from ux_valio import EmailValidator
-    from ux_valio.validators.hooks import _bag_key
+    from ux_valio.validators.hooks import HookHost
 
     field = EmailValidator(debug=True) | StringValidator(debug=True)
 
@@ -280,5 +280,5 @@ def test_anyof_post_validate_may_store_when_string_alternative_holds():
     class Either:
         s: str = field
 
-    field.add_post_validator(smash, namespace=_bag_key(Either))
+    field.add_post_validator(smash, namespace=HookHost._bag_key(Either))
     assert Either(s="ada@example.com").s == "not-an-email"

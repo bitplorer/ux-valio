@@ -32,23 +32,23 @@ _EMAIL_PATTERN = Pattern(
 )
 
 
-class IntegerValidator(Validator):
+class IntegerValidator(Validator[int]):
     annotation = int
 
 
-class StringValidator(Validator):
+class StringValidator(Validator[str]):
     annotation = str
 
 
-class BooleanValidator(Validator):
+class BooleanValidator(Validator[bool]):
     annotation = bool
 
 
-class FloatValidator(Validator):
+class FloatValidator(Validator[float]):
     annotation = float
 
 
-class DecimalValidator(Validator):
+class DecimalValidator(Validator[decimal.Decimal]):
     annotation = decimal.Decimal | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
@@ -70,7 +70,7 @@ class DecimalValidator(Validator):
             )
 
 
-class BytesValidator(Validator):
+class BytesValidator(Validator[bytes]):
     annotation = bytes
 
 
@@ -78,30 +78,30 @@ _EU_DATE = re.compile(r"(\d{4})([-:/])(\d{1,2})\2(\d{1,2})")
 _IND_DATE = re.compile(r"(\d{1,2})([-:/])(\d{1,2})\2(\d{4})")
 
 
-def _parse_eu_ind_date(text: str) -> datetime.date | None:
-    eu = _EU_DATE.fullmatch(text)
-    if eu is not None:
-        year, _, month, day = eu.groups()
-        try:
-            return datetime.date(int(year), int(month), int(day))
-        except ValueError:
-            return None
-    ind = _IND_DATE.fullmatch(text)
-    if ind is not None:
-        day, _, month, year = ind.groups()
-        try:
-            return datetime.date(int(year), int(month), int(day))
-        except ValueError:
-            return None
-    return None
-
-
-class DateValidator(Validator):
+class DateValidator(Validator[datetime.date]):
     annotation = datetime.date | str
+
+    @staticmethod
+    def _parse_eu_ind_date(text: str) -> datetime.date | None:
+        eu = _EU_DATE.fullmatch(text)
+        if eu is not None:
+            year, _, month, day = eu.groups()
+            try:
+                return datetime.date(int(year), int(month), int(day))
+            except ValueError:
+                return None
+        ind = _IND_DATE.fullmatch(text)
+        if ind is not None:
+            day, _, month, year = ind.groups()
+            try:
+                return datetime.date(int(year), int(month), int(day))
+            except ValueError:
+                return None
+        return None
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
         if isinstance(value, str):
-            parsed = _parse_eu_ind_date(value)
+            parsed = type(self)._parse_eu_ind_date(value)
             if parsed is None:
                 raise ValueError(
                     f"{self.name} expects a calendar date in EU YYYY-MM-DD "
@@ -120,7 +120,7 @@ class DateValidator(Validator):
         )
 
 
-class DateTimeValidator(Validator):
+class DateTimeValidator(Validator[datetime.datetime]):
     """Door A datetime facade. Stores ``datetime.datetime``. ISO via fromisoformat.
 
     Plain ``datetime.date`` is rejected (that is ``DateValidator``). Date-only
@@ -187,7 +187,7 @@ class URLValidator(StringValidator):
             raise ValueError(f"{self.name} is not a valid URL")
 
 
-class UUIDValidator(Validator):
+class UUIDValidator(Validator[uuid.UUID]):
     annotation = uuid.UUID | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
@@ -207,7 +207,7 @@ class UUIDValidator(Validator):
             )
 
 
-class PathValidator(Validator):
+class PathValidator(Validator[pathlib.Path]):
     annotation = pathlib.Path | str
 
     def __init__(self, path_exists: bool | None = None, **kwargs: Any) -> None:
@@ -270,7 +270,7 @@ class IPAddressValidator(StringValidator):
             ) from err
 
 
-class EnumValidator(Validator):
+class EnumValidator(Validator[enum.Enum]):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
@@ -280,7 +280,7 @@ class EnumValidator(Validator):
             )
 
 
-class IntegerEnumValidator(Validator):
+class IntegerEnumValidator(Validator[enum.IntEnum]):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
@@ -290,7 +290,7 @@ class IntegerEnumValidator(Validator):
             )
 
 
-class StringEnumValidator(Validator):
+class StringEnumValidator(Validator[enum.Enum]):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return

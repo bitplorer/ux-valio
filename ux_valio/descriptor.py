@@ -71,11 +71,12 @@ from __future__ import annotations
 
 import logging
 import types
-from typing import Any, ForwardRef, Union, get_args, get_origin
+from typing import Any, ForwardRef, Generic, TypeVar, Union, get_args, get_origin, overload
 
 from ux_valio.errors import ValidationErrors
 
 _UNSET = object()
+_StoreT = TypeVar("_StoreT")
 
 
 class _Opt:
@@ -177,6 +178,15 @@ def _is_unresolved_annotation(annotation: Any) -> bool:
     return isinstance(annotation, (str, ForwardRef))
 
 
+def _is_unconstrained_typevar(annotation: Any) -> bool:
+    """Unconstrained TypeVar is typing-only. Runtime cannot specialize per T."""
+    return (
+        isinstance(annotation, TypeVar)
+        and not annotation.__constraints__
+        and annotation.__bound__ is None
+    )
+
+
 def _slot_names(slots: Any) -> tuple[str, ...]:
     if isinstance(slots, str):
         return (slots,)
@@ -198,8 +208,13 @@ def _owner_omits_instance_dict(owner: type) -> bool:
 
 
 
-class Property:
-    """Data descriptor used as a dataclass field default (Door A)."""
+class Property(Generic[_StoreT]):
+    """Data descriptor used as a dataclass field default (Door A).
+
+    ``Validator[int]`` is the stored-type subscript (one argument). It
+    fills ``annotation`` when the class did not declare one. Unconstrained
+    TypeVars are typing-only and are not copied into the type door.
+    """
 
     def __init__(
         self,
@@ -324,6 +339,7 @@ class Property:
                 )
             self._owner = owner
             self._reject_slots_without_dict(owner, name)
+            self._take_subscript_annotation()
             self._bind_owner_annotation(owner, name)
             self._bind_field_logger(owner, name)
         except Exception as err:
@@ -350,6 +366,36 @@ class Property:
                 "instance __dict__; __slots__ without '__dict__' drops storage"
             )
 
+    def _take_subscript_annotation(self) -> None:
+        """``Validator[int]()`` fills annotation from ``__orig_class__``.
+
+        ``GenericAlias.__call__`` sets ``__orig_class__`` after ``__init__``.
+        Unconstrained TypeVars stay typing-only. A declared class annotation
+        (``IntegerValidator.annotation = int``) must agree with the subscript.
+        """
+        orig = getattr(self, "__orig_class__", None)
+        if orig is None:
+            return
+        args = get_args(orig)
+        if not args:
+            return
+        if len(args) != 1:
+            raise TypeError(
+                f"{type(self).__qualname__}[...] takes one stored-type argument"
+            )
+        subscript = args[0]
+        if _is_unconstrained_typevar(subscript):
+            return
+        if self.annotation is None:
+            self.annotation = subscript
+            return
+        if not _annotations_agree(self.annotation, subscript):
+            raise TypeError(
+                f"{type(self).__qualname__}[{_annotation_label(subscript)}] "
+                f"did not match {type(self).__qualname__}: "
+                f"{_annotation_label(self.annotation)}"
+            )
+
     def _bind_owner_annotation(self, owner: type, name: str) -> None:
         annotations = getattr(owner, "__annotations__", None) or {}
         owner_annotation = annotations.get(name)
@@ -359,6 +405,8 @@ class Property:
                 " annotation is unresolved (string / ForwardRef); "
                 "not copied into the type door"
             )
+        if owner_annotation is not None and _is_unconstrained_typevar(owner_annotation):
+            owner_annotation = None
         if self.annotation is None:
             if owner_annotation is not None:
                 self.annotation = owner_annotation
@@ -424,6 +472,12 @@ class Property:
 
     def _missing_attribute(self, obj: Any) -> AttributeError:
         return AttributeError(f"{type(obj).__name__}.{self.name} is not set")
+
+    @overload
+    def __get__(self, obj: None, obj_type: type | None = None) -> Property[_StoreT]: ...
+
+    @overload
+    def __get__(self, obj: object, obj_type: type | None = None) -> _StoreT: ...
 
     def __get__(self, obj: Any, obj_type: type | None = None) -> Any:
         if obj is None:

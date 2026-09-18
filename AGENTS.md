@@ -17,6 +17,12 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   `validation_path.py`, not `PathValidator` (`typed.py`, pathlib).
   Primitive typed facades (`IntegerValidator` / `StringValidator` /
   `BooleanValidator`) live in `typed.py` with the rest.
+  `Validator[T]` is the stored-type subscript (one argument). It fills
+  `annotation` when the class did not declare one. Named facades
+  specialize it (`IntegerValidator` is `Validator[int]`). Unconstrained
+  `TypeVar` owner/subscript is typing-only (one descriptor cannot
+  specialize per `Box[int]` / `Box[str]`). Bound/constrained TypeVars
+  still copy into the type door.
 
 - Python floor is ≥ 3.14 (same as ux-compose). Do not teach 3.10–3.12.
 
@@ -167,7 +173,10 @@ New private helpers are verbs that name the action:
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
 `_Compose._bind_kwargs`, `_Compose._flatten`, `_Opt.merge`, `_Opt.read`,
 `HookHost.bags_used`, `HookHost._install_adders`, `HookHost._collect_bag_keys`,
-`_bind_field_logger`,
+`_bind_field_logger`, `_take_subscript_annotation`,
+`_is_unconstrained_typevar`,
+`HookHost._bag_key`, `HookHost._resolve_bag_key`,
+`HookHost._owning_class_qualname`, `HookHost._hook_adder`,
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name).
@@ -180,4 +189,5 @@ and adders live on `HookHost`. Origin tables live next to
 `is_instance_of`. Specified-theory merge lives on `_Opt`. Errors live at
 `ux_valio.errors`. Descriptor does not import `validators`. Do not
 reintroduce leftover aliases, `validators/errors.py`, `validators/path.py`,
+module `_bag_key` / `_resolve_bag_key` / `_parse_eu_ind_date`,
 or hang origin tables on `TypeValidator`.
