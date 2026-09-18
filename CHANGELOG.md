@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `_Of.__init__` takes `debug=`, `default=`, `logger=` (same names as
+  `Property`). No `kwargs.pop("debug")`. `_Opts` is a dataclass: `merge` /
+  `overlay` / `keeps_nesting` follow its fields. `_Opts.from_call` is the
+  constructor. `_Opt.merge` takes `what=` only for the error label.
 - Specified-theory is `_Opts` with named fields (`debug`, `logger`, …),
   not a string-keyed dict. Compose merge / flatten-keep live there.
   `_Of` only walks members.

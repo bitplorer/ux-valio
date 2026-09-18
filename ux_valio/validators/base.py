@@ -140,39 +140,32 @@ class _Of(ValidateProperty):
     _merge_member_annotations = True
     _propagate_annotation = True
 
-    def __init__(self, *validators: ValidateProperty, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *validators: ValidateProperty,
+        name: str | None = None,
+        default: Any = None,
+        default_factory: Any = None,
+        doc: str | None = None,
+        debug: bool | None = None,
+        logger: Any = _UNSET,
+        collect_all: Any = _UNSET,
+        **kwargs: Any,
+    ) -> None:
         self.validators = type(self)._flatten(type(self)._as_validators(validators))
         if type(self)._merge_member_annotations:
             annotation = type(self)._merged_annotation(self.validators)
             if annotation is not None:
                 self.annotation = annotation
-        merged = _Opts.merge(*(item._opts for item in self.validators))
-        super().__init__(
-            debug=kwargs.pop(
-                "debug", merged.debug.value if merged.debug.specified else None
-            ),
-            default=kwargs.pop(
-                "default", merged.default.value if merged.default.specified else None
-            ),
-            default_factory=kwargs.pop(
-                "default_factory",
-                merged.default_factory.value if merged.default_factory.specified else None,
-            ),
-            doc=kwargs.pop("doc", merged.doc.value if merged.doc.specified else None),
-            logger=(
-                kwargs.pop("logger")
-                if "logger" in kwargs
-                else (merged.logger.value if merged.logger.specified else _UNSET)
-            ),
-            collect_all=(
-                kwargs.pop("collect_all")
-                if "collect_all" in kwargs
-                else (
-                    merged.collect_all.value if merged.collect_all.specified else _UNSET
-                )
-            ),
-            **kwargs,
+        merged = _Opts.merge(*(item._opts for item in self.validators)).overlay(
+            debug=debug,
+            default=default,
+            default_factory=default_factory,
+            doc=doc,
+            logger=logger,
+            collect_all=collect_all,
         )
+        super().__init__(name=name, _opts=merged, **kwargs)
 
     @staticmethod
     def _as_validators(parts: Iterable[Any]) -> tuple[ValidateProperty, ...]:

@@ -71,6 +71,7 @@ from __future__ import annotations
 
 import logging
 import types
+from dataclasses import dataclass, fields
 from typing import Any, ForwardRef, Generic, TypeVar, Union, get_args, get_origin, overload
 
 from ux_valio.errors import ValidationErrors
@@ -102,7 +103,7 @@ class _Opt:
         return cls(value, True)
 
     @classmethod
-    def merge(cls, attr: str, *opts: "_Opt") -> "_Opt":
+    def merge(cls, *opts: "_Opt", what: str | None = None) -> "_Opt":
         """One specified value, or TypeError on conflict."""
         present = [opt for opt in opts if opt.specified]
         if not present:
@@ -110,8 +111,9 @@ class _Opt:
         first = present[0]
         for opt in present[1:]:
             if opt.value != first.value:
+                label = what if what is not None else "values"
                 raise TypeError(
-                    f"composed validators have conflicting {attr}: "
+                    f"composed validators have conflicting {label}: "
                     f"{first.value!r} vs {opt.value!r}"
                 )
         return first
@@ -127,55 +129,116 @@ class _Opt:
         return self.value != members.value
 
 
+@dataclass(slots=True)
 class _Opts:
-    """Specified-theory for one descriptor. Named fields, not string keys."""
+    """Specified-theory for one descriptor. Fields are the source of truth.
 
-    __slots__ = (
-        "debug",
-        "default",
-        "default_factory",
-        "doc",
-        "logger",
-        "collect_all",
-    )
+    Add a field here and ``merge`` / ``overlay`` / ``keeps_nesting`` follow.
+    ``from_call`` is the constructor (``debug=``, ``logger=``, …).
+    """
 
-    def __init__(
-        self,
-        debug: _Opt,
-        default: _Opt,
-        default_factory: _Opt,
-        doc: _Opt,
-        logger: _Opt,
-        collect_all: _Opt,
-    ) -> None:
-        self.debug = debug
-        self.default = default
-        self.default_factory = default_factory
-        self.doc = doc
-        self.logger = logger
-        self.collect_all = collect_all
+    debug: _Opt
+    default: _Opt
+    default_factory: _Opt
+    doc: _Opt
+    logger: _Opt
+    collect_all: _Opt
+
+    @classmethod
+    def from_call(
+        cls,
+        *,
+        debug: bool | None = None,
+        default: Any = None,
+        default_factory: Any = None,
+        doc: str | None = None,
+        logger: Any = _UNSET,
+        collect_all: Any = _UNSET,
+    ) -> "_Opts":
+        if doc is not None and not isinstance(doc, str):
+            raise TypeError(
+                f"doc expected type str value, got {type(doc).__name__} type instead"
+            )
+        if debug is not None and not isinstance(debug, bool):
+            raise TypeError(
+                f"debug expected type bool value, got {type(debug).__name__} type instead"
+            )
+        if logger is _UNSET:
+            logger_opt = _Opt.omitted(False)
+        else:
+            if logger not in (False, None, True) and not hasattr(logger, "info"):
+                raise TypeError(
+                    f"logger expected bool or logging.Logger, got {type(logger).__name__}"
+                )
+            logger_opt = _Opt.set(False if logger is None else logger)
+        if collect_all is _UNSET:
+            collect_opt = _Opt.omitted(False)
+        else:
+            if not isinstance(collect_all, bool):
+                raise TypeError(
+                    f"collect_all expected type bool value, got {type(collect_all).__name__} type instead"
+                )
+            collect_opt = _Opt.set(collect_all)
+        if default_factory is not None and not callable(default_factory):
+            raise TypeError(
+                f"default_factory expected a callable, got {type(default_factory).__name__}"
+            )
+        if default is not None and default_factory is not None:
+            raise TypeError("default and default_factory cannot both be set")
+        return cls(
+            debug=_Opt.set(debug) if debug is not None else _Opt.omitted(None),
+            default=_Opt.set(default) if default is not None else _Opt.omitted(None),
+            default_factory=(
+                _Opt.set(default_factory) if default_factory is not None else _Opt.omitted(None)
+            ),
+            doc=_Opt.set(doc) if doc is not None else _Opt.omitted(None),
+            logger=logger_opt,
+            collect_all=collect_opt,
+        )
 
     @classmethod
     def merge(cls, *rows: "_Opts") -> "_Opts":
-        return cls(
-            debug=_Opt.merge("debug", *(row.debug for row in rows)),
-            default=_Opt.merge("default", *(row.default for row in rows)),
-            default_factory=_Opt.merge(
-                "default_factory", *(row.default_factory for row in rows)
-            ),
-            doc=_Opt.merge("doc", *(row.doc for row in rows)),
-            logger=_Opt.merge("logger", *(row.logger for row in rows)),
-            collect_all=_Opt.merge("collect_all", *(row.collect_all for row in rows)),
+        merged: dict[str, _Opt] = {}
+        for field in fields(cls):
+            merged[field.name] = _Opt.merge(
+                *(getattr(row, field.name) for row in rows),
+                what=field.name,
+            )
+        return cls(**merged)
+
+    def overlay(
+        self,
+        *,
+        debug: bool | None = None,
+        default: Any = None,
+        default_factory: Any = None,
+        doc: str | None = None,
+        logger: Any = _UNSET,
+        collect_all: Any = _UNSET,
+    ) -> "_Opts":
+        incoming = type(self).from_call(
+            debug=debug,
+            default=default,
+            default_factory=default_factory,
+            doc=doc,
+            logger=logger,
+            collect_all=collect_all,
         )
+        merged: dict[str, _Opt] = {}
+        for field in fields(self):
+            incoming_opt = getattr(incoming, field.name)
+            merged[field.name] = (
+                incoming_opt if incoming_opt.specified else getattr(self, field.name)
+            )
+        result = type(self)(**merged)
+        if result.default.specified and result.default_factory.specified:
+            raise TypeError("default and default_factory cannot both be set")
+        return result
 
     def keeps_nesting(self, members: "_Opts") -> bool:
-        return (
-            self.debug.keeps_nesting(members.debug)
-            or self.default.keeps_nesting(members.default)
-            or self.default_factory.keeps_nesting(members.default_factory)
-            or self.doc.keeps_nesting(members.doc)
-            or self.logger.keeps_nesting(members.logger)
-            or self.collect_all.keeps_nesting(members.collect_all)
+        return any(
+            getattr(self, field.name).keeps_nesting(getattr(members, field.name))
+            for field in fields(self)
         )
 
 
@@ -258,58 +321,30 @@ class Property(Generic[_StoreT]):
         debug: bool | None = None,
         logger: Any = _UNSET,
         collect_all: Any = _UNSET,
+        *,
+        _opts: _Opts | None = None,
     ) -> None:
         if name is not None and not isinstance(name, str):
             raise TypeError(
                 f"name expected type str value, got {type(name).__name__} type instead"
             )
-        if doc is not None and not isinstance(doc, str):
-            raise TypeError(
-                f"doc expected type str value, got {type(doc).__name__} type instead"
+        if _opts is None:
+            _opts = _Opts.from_call(
+                debug=debug,
+                default=default,
+                default_factory=default_factory,
+                doc=doc,
+                logger=logger,
+                collect_all=collect_all,
             )
-        if debug is not None and not isinstance(debug, bool):
-            raise TypeError(
-                f"debug expected type bool value, got {type(debug).__name__} type instead"
-            )
-        if logger is _UNSET:
-            logger_opt = _Opt.omitted(False)
-        else:
-            if logger not in (False, None, True) and not hasattr(logger, "info"):
-                raise TypeError(
-                    f"logger expected bool or logging.Logger, got {type(logger).__name__}"
-                )
-            logger_opt = _Opt.set(False if logger is None else logger)
-        if collect_all is _UNSET:
-            collect_opt = _Opt.omitted(False)
-        else:
-            if not isinstance(collect_all, bool):
-                raise TypeError(
-                    f"collect_all expected type bool value, got {type(collect_all).__name__} type instead"
-                )
-            collect_opt = _Opt.set(collect_all)
-        if default_factory is not None and not callable(default_factory):
-            raise TypeError(
-                f"default_factory expected a callable, got {type(default_factory).__name__}"
-            )
-        if default is not None and default_factory is not None:
-            raise TypeError("default and default_factory cannot both be set")
         self.name = name
-        self.default = default
-        self.default_factory = default_factory
-        self.doc = doc
-        self.debug = debug
-        self.logger = logger_opt.value
-        self.collect_all = collect_opt.value
-        self._opts = _Opts(
-            debug=_Opt.set(debug) if debug is not None else _Opt.omitted(None),
-            default=_Opt.set(default) if default is not None else _Opt.omitted(None),
-            default_factory=(
-                _Opt.set(default_factory) if default_factory is not None else _Opt.omitted(None)
-            ),
-            doc=_Opt.set(doc) if doc is not None else _Opt.omitted(None),
-            logger=logger_opt,
-            collect_all=collect_opt,
-        )
+        self.default = _opts.default.value
+        self.default_factory = _opts.default_factory.value
+        self.doc = _opts.doc.value
+        self.debug = _opts.debug.value
+        self.logger = _opts.logger.value
+        self.collect_all = _opts.collect_all.value
+        self._opts = _opts
         self.errors: list[BaseException] = []
         self.annotation = getattr(self, "annotation", None)
         self._owner: type | None = None
