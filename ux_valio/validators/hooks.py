@@ -14,36 +14,6 @@ from typing import Any, Callable
 from ux_valio.validators.async_bridge import invoke_callable
 from ux_valio.validators.errors import continue_or_raise, raise_collected
 
-_PROCESSOR_PHASES = (
-    # No "pre_set": ValidateProperty.pre_set *is* pre_validate →
-    # validate → post_validate. add_pre_set would be a second door.
-    "pre_validate",
-    "post_validate",
-    "post_set",
-    "pre_get",
-    "post_get",
-    "pre_delete",
-    "post_delete",
-)
-
-# Taught names stay. Body is one _add. (bag, phase)
-_HOOK_ADDERS = (
-    ("add_pre_validator", "_processors", "pre_validate"),
-    ("add_post_validator", "_processors", "post_validate"),
-    ("add_post_set", "_processors", "post_set"),
-    ("add_pre_get", "_processors", "pre_get"),
-    ("add_post_get", "_processors", "post_get"),
-    ("add_pre_delete", "_processors", "pre_delete"),
-    ("add_post_delete", "_processors", "post_delete"),
-    ("add_pre_validator_task", "_tasks", "pre_validate"),
-    ("add_post_validator_task", "_tasks", "post_validate"),
-    ("add_post_set_task", "_tasks", "post_set"),
-    ("add_pre_get_task", "_tasks", "pre_get"),
-    ("add_post_get_task", "_tasks", "post_get"),
-    ("add_pre_delete_task", "_tasks", "pre_delete"),
-    ("add_post_delete_task", "_tasks", "post_delete"),
-)
-
 
 def _bag_key(cls: Any) -> str:
     """One bag key for register and lookup: ``module.qualname``."""
@@ -89,34 +59,69 @@ def _resolve_bag_key(func: Callable[..., Any], namespace: str | None) -> str:
 _namespace = _resolve_bag_key
 
 
-def hook_bags_used(item: Any) -> bool:
-    customs = getattr(item, "_custom_validators", None)
-    if customs and any(customs.values()):
-        return True
-    for bag_name in ("_processors", "_tasks"):
-        bags = getattr(item, bag_name, None)
-        if not bags:
-            continue
-        for phase in bags.values():
-            if any(phase.values()):
-                return True
-    return False
+def _hook_adder(bag: str, phase: str):
+    """One body for every taught ``add_*``. Bound onto ``HookHost`` from its table."""
+
+    def adder(
+        self: "HookHost",
+        func: Callable[..., Any],
+        namespace: str | None = None,
+    ) -> Callable[..., Any]:
+        return self._add(bag, phase, func, namespace)
+
+    return adder
 
 
 class HookHost:
-    """Processor/task/custom-validator bags. Mixin for facade and compose roots."""
+    """Processor/task/custom-validator bags. Mixin for facade and compose roots.
+
+    Taught ``add_*`` names live on this class. Bodies are ``_add``. There is
+    no ``add_pre_set`` / ``_processors["pre_set"]`` bag.
+    """
 
     cache_task: bool  # leftover: stored, never consulted (cache retired)
     _custom_validators: dict[str, list[Callable[..., Any]]]
     _processors: dict[str, dict[str, list[Callable[..., Any]]]]
     _tasks: dict[str, dict[str, list[Callable[..., Any]]]]
 
+    # No "pre_set": ValidateProperty.pre_set *is* pre_validate →
+    # validate → post_validate. add_pre_set would be a second door.
+    _PROCESSOR_PHASES = (
+        "pre_validate",
+        "post_validate",
+        "post_set",
+        "pre_get",
+        "post_get",
+        "pre_delete",
+        "post_delete",
+    )
+
+    # Taught names. (method, bag, phase). Installed by ``_install_adders``.
+    _HOOK_ADDERS = (
+        ("add_pre_validator", "_processors", "pre_validate"),
+        ("add_post_validator", "_processors", "post_validate"),
+        ("add_post_set", "_processors", "post_set"),
+        ("add_pre_get", "_processors", "pre_get"),
+        ("add_post_get", "_processors", "post_get"),
+        ("add_pre_delete", "_processors", "pre_delete"),
+        ("add_post_delete", "_processors", "post_delete"),
+        ("add_pre_validator_task", "_tasks", "pre_validate"),
+        ("add_post_validator_task", "_tasks", "post_validate"),
+        ("add_post_set_task", "_tasks", "post_set"),
+        ("add_pre_get_task", "_tasks", "pre_get"),
+        ("add_post_get_task", "_tasks", "post_get"),
+        ("add_pre_delete_task", "_tasks", "pre_delete"),
+        ("add_post_delete_task", "_tasks", "post_delete"),
+    )
+
     def _init_hook_bags(self, cache_task: bool = True) -> None:
         # valio leftover: keep the kwarg. Do not skip tasks from this flag.
         self.cache_task = cache_task
         self._custom_validators = defaultdict(list)
-        self._processors = {phase: defaultdict(list) for phase in _PROCESSOR_PHASES}
-        self._tasks = {phase: defaultdict(list) for phase in _PROCESSOR_PHASES}
+        self._processors = {
+            phase: defaultdict(list) for phase in type(self)._PROCESSOR_PHASES
+        }
+        self._tasks = {phase: defaultdict(list) for phase in type(self)._PROCESSOR_PHASES}
 
     def _add(
         self,
@@ -181,25 +186,32 @@ class HookHost:
                 continue_or_raise(collect_all, errors, err)
         raise_collected(errors, name=name)
 
+    @staticmethod
+    def bags_used(item: Any) -> bool:
+        """True when this host has a custom / processor / task bag with callables."""
+        customs = getattr(item, "_custom_validators", None)
+        if customs and any(customs.values()):
+            return True
+        for bag_name in ("_processors", "_tasks"):
+            bags = getattr(item, bag_name, None)
+            if not bags:
+                continue
+            for phase in bags.values():
+                if any(phase.values()):
+                    return True
+        return False
 
-def _install_hook_adders() -> None:
-    """Taught add_* names. One encoding. No pre_set adder."""
-
-    def _make(bag: str, phase: str):
-        def adder(
-            self: HookHost,
-            func: Callable[..., Any],
-            namespace: str | None = None,
-        ) -> Callable[..., Any]:
-            return self._add(bag, phase, func, namespace)
-
-        return adder
-
-    for name, bag, phase in _HOOK_ADDERS:
-        adder = _make(bag, phase)
-        adder.__name__ = name
-        adder.__qualname__ = f"HookHost.{name}"
-        setattr(HookHost, name, adder)
+    @classmethod
+    def _install_adders(cls) -> None:
+        """Taught add_* names. One encoding. No pre_set adder."""
+        for name, bag, phase in cls._HOOK_ADDERS:
+            adder = _hook_adder(bag, phase)
+            adder.__name__ = name
+            adder.__qualname__ = f"{cls.__name__}.{name}"
+            setattr(cls, name, adder)
 
 
-_install_hook_adders()
+HookHost._install_adders()
+
+# leftover: previous helper name. Prefer ``HookHost.bags_used``.
+hook_bags_used = HookHost.bags_used

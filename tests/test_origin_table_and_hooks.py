@@ -4,8 +4,8 @@
 from dataclasses import dataclass
 
 from ux_valio import Validator
-from ux_valio.validators.hooks import HookHost, _HOOK_ADDERS
-from ux_valio.validators.leaves import PatternValidator, _ORIGIN_CHECKERS, is_instance_of
+from ux_valio.validators.hooks import HookHost
+from ux_valio.validators.leaves import PatternValidator, TypeValidator, is_instance_of
 
 
 def test_origin_table_owns_stdlib_generics():
@@ -13,18 +13,36 @@ def test_origin_table_owns_stdlib_generics():
     assert is_instance_of([1, "a"], list[int]) is False
     assert is_instance_of({"a": 1}, dict[str, int]) is True
     assert is_instance_of((1, 2), tuple[int, ...]) is True
-    assert list in _ORIGIN_CHECKERS
-    assert dict in _ORIGIN_CHECKERS
+    assert list in TypeValidator._ORIGIN_CHECKERS
+    assert dict in TypeValidator._ORIGIN_CHECKERS
 
 
 def test_hook_taught_names_come_from_one_table():
-    names = {name for name, _, _ in _HOOK_ADDERS}
+    names = {name for name, _, _ in HookHost._HOOK_ADDERS}
     assert "add_pre_validator" in names
     assert "add_pre_validator_task" in names
     assert "add_pre_set" not in names
     assert not hasattr(HookHost, "add_pre_set")
     assert hasattr(HookHost, "add_pre_validator")
     assert hasattr(HookHost, "_add")
+
+
+def test_hook_and_origin_tables_live_on_owning_types():
+    """Free-floating module tables are not the owner. The class is."""
+    import ux_valio.validators.hooks as hooks_mod
+    import ux_valio.validators.leaves as leaves_mod
+    import ux_valio.validators.compose as compose_mod
+
+    assert not hasattr(hooks_mod, "_HOOK_ADDERS")
+    assert not hasattr(hooks_mod, "_PROCESSOR_PHASES")
+    assert HookHost._HOOK_ADDERS[0][0] == "add_pre_validator"
+    assert not hasattr(leaves_mod, "_ORIGIN_CHECKERS")
+    assert list in TypeValidator._ORIGIN_CHECKERS
+    assert not hasattr(compose_mod, "_bind_compose_kwargs")
+    assert not hasattr(compose_mod, "_flatten")
+    assert hasattr(compose_mod._Compose, "_bind_kwargs")
+    assert hasattr(compose_mod._Compose, "_flatten")
+    assert hasattr(compose_mod._Compose, "_merged_annotation")
 
 
 def test_pattern_compile_is_cached_on_owner():

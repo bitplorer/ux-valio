@@ -10,117 +10,123 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from ux_valio.descriptor import _annotations_agree, merge_opt, opt_of
+from ux_valio.descriptor import _Opt, _annotations_agree
 from ux_valio.validators.base import ValidateProperty, _register_compose_types
 from ux_valio.validators.errors import ValidationErrors, raise_collected, run_steps
-from ux_valio.validators.hooks import HookHost, hook_bags_used
+from ux_valio.validators.hooks import HookHost
 from ux_valio.validators.leaves import TypeValidator
 
 
-def _as_validators(parts: Iterable[Any]) -> tuple[ValidateProperty, ...]:
-    validators = tuple(parts)
-    if len(validators) < 2:
-        raise TypeError("composition requires at least two validators")
-    for item in validators:
-        if not isinstance(item, ValidateProperty):
-            raise TypeError(
-                f"expected ValidateProperty, got {type(item).__name__} instead"
-            )
-    return validators
-
-
-def _merged_attr(validators: tuple[Any, ...], attr: str, unspecified: Any) -> Any:
-    merged = merge_opt(attr, *(opt_of(item, attr, unspecified) for item in validators))
-    return merged.value if merged.specified else unspecified
-
-
-def _keep_nested_compose(item: Any) -> bool:
-    members = getattr(item, "validators", None)
-    if not members:
-        return False
-    if hook_bags_used(item):
-        return True
-    for attr, unspecified in (
-        ("debug", None),
-        ("default", None),
-        ("default_factory", None),
-        ("doc", None),
-        ("logger", False),
-        ("collect_all", False),
-    ):
-        item_opt = opt_of(item, attr, unspecified)
-        members_opt = merge_opt(
-            attr, *(opt_of(member, attr, unspecified) for member in members)
-        )
-        if item_opt.specified and not members_opt.specified:
-            return True
-        if item_opt.specified and item_opt.value != members_opt.value:
-            return True
-        if not item_opt.specified and members_opt.specified:
-            continue
-        if item_opt.value != members_opt.value:
-            return True
-    return False
-
-
-def _flatten(cls: type, parts: Iterable[ValidateProperty]) -> tuple[ValidateProperty, ...]:
-    out: list[ValidateProperty] = []
-    for item in parts:
-        if type(item) is cls and not _keep_nested_compose(item):
-            out.extend(item.validators)
-        else:
-            out.append(item)
-    return tuple(out)
-
-
-def _bind_compose_kwargs(
-    validators: tuple[ValidateProperty, ...], kwargs: dict[str, Any]
-) -> dict[str, Any]:
-    kwargs.setdefault("debug", _merged_attr(validators, "debug", None))
-    kwargs.setdefault("default", _merged_attr(validators, "default", None))
-    kwargs.setdefault("default_factory", _merged_attr(validators, "default_factory", None))
-    kwargs.setdefault("doc", _merged_attr(validators, "doc", None))
-    logger_opt = merge_opt("logger", *(opt_of(item, "logger", False) for item in validators))
-    if "logger" not in kwargs and logger_opt.specified:
-        kwargs["logger"] = logger_opt.value
-    collect_opt = merge_opt(
-        "collect_all", *(opt_of(item, "collect_all", False) for item in validators)
-    )
-    if "collect_all" not in kwargs and collect_opt.specified:
-        kwargs["collect_all"] = collect_opt.value
-    return kwargs
-
-
-def _compose_annotation(validators: tuple[ValidateProperty, ...]) -> Any:
-    chosen: Any = None
-    for item in validators:
-        annotation = getattr(item, "annotation", None)
-        if annotation is None:
-            continue
-        if chosen is None:
-            chosen = annotation
-            continue
-        if not _annotations_agree(chosen, annotation):
-            raise TypeError(
-                "composed validators have conflicting annotations: "
-                f"{chosen!r} vs {annotation!r}"
-            )
-    return chosen
-
-
 class _Compose(HookHost, ValidateProperty):
+    """AllOf / AnyOf share flatten, specified-theory merge, and member process order."""
+
     validators: tuple[ValidateProperty, ...]
     _merge_member_annotations = True
     _propagate_annotation = True
 
     def __init__(self, *validators: ValidateProperty, cache_task: bool = True, **kwargs: Any) -> None:
-        self.validators = _flatten(type(self), _as_validators(validators))
+        self.validators = type(self)._flatten(type(self)._as_validators(validators))
         if type(self)._merge_member_annotations:
-            annotation = _compose_annotation(self.validators)
+            annotation = type(self)._merged_annotation(self.validators)
             if annotation is not None:
                 self.annotation = annotation
         self._init_hook_bags(cache_task=cache_task)
-        super().__init__(**_bind_compose_kwargs(self.validators, kwargs))
+        super().__init__(**type(self)._bind_kwargs(self.validators, kwargs))
+
+    @staticmethod
+    def _as_validators(parts: Iterable[Any]) -> tuple[ValidateProperty, ...]:
+        validators = tuple(parts)
+        if len(validators) < 2:
+            raise TypeError("composition requires at least two validators")
+        for item in validators:
+            if not isinstance(item, ValidateProperty):
+                raise TypeError(
+                    f"expected ValidateProperty, got {type(item).__name__} instead"
+                )
+        return validators
+
+    @staticmethod
+    def _merged_attr(validators: tuple[Any, ...], attr: str, unspecified: Any) -> Any:
+        merged = _Opt.merge(attr, *(_Opt.read(item, attr, unspecified) for item in validators))
+        return merged.value if merged.specified else unspecified
+
+    @staticmethod
+    def _keep_nested(item: Any) -> bool:
+        members = getattr(item, "validators", None)
+        if not members:
+            return False
+        if HookHost.bags_used(item):
+            return True
+        for attr, unspecified in (
+            ("debug", None),
+            ("default", None),
+            ("default_factory", None),
+            ("doc", None),
+            ("logger", False),
+            ("collect_all", False),
+        ):
+            item_opt = _Opt.read(item, attr, unspecified)
+            members_opt = _Opt.merge(
+                attr, *(_Opt.read(member, attr, unspecified) for member in members)
+            )
+            if item_opt.specified and not members_opt.specified:
+                return True
+            if item_opt.specified and item_opt.value != members_opt.value:
+                return True
+            if not item_opt.specified and members_opt.specified:
+                continue
+            if item_opt.value != members_opt.value:
+                return True
+        return False
+
+    @classmethod
+    def _flatten(cls, parts: Iterable[ValidateProperty]) -> tuple[ValidateProperty, ...]:
+        out: list[ValidateProperty] = []
+        for item in parts:
+            if type(item) is cls and not cls._keep_nested(item):
+                out.extend(item.validators)
+            else:
+                out.append(item)
+        return tuple(out)
+
+    @staticmethod
+    def _bind_kwargs(
+        validators: tuple[ValidateProperty, ...], kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
+        kwargs.setdefault("debug", _Compose._merged_attr(validators, "debug", None))
+        kwargs.setdefault("default", _Compose._merged_attr(validators, "default", None))
+        kwargs.setdefault(
+            "default_factory", _Compose._merged_attr(validators, "default_factory", None)
+        )
+        kwargs.setdefault("doc", _Compose._merged_attr(validators, "doc", None))
+        logger_opt = _Opt.merge(
+            "logger", *(_Opt.read(item, "logger", False) for item in validators)
+        )
+        if "logger" not in kwargs and logger_opt.specified:
+            kwargs["logger"] = logger_opt.value
+        collect_opt = _Opt.merge(
+            "collect_all", *(_Opt.read(item, "collect_all", False) for item in validators)
+        )
+        if "collect_all" not in kwargs and collect_opt.specified:
+            kwargs["collect_all"] = collect_opt.value
+        return kwargs
+
+    @staticmethod
+    def _merged_annotation(validators: tuple[ValidateProperty, ...]) -> Any:
+        chosen: Any = None
+        for item in validators:
+            annotation = getattr(item, "annotation", None)
+            if annotation is None:
+                continue
+            if chosen is None:
+                chosen = annotation
+                continue
+            if not _annotations_agree(chosen, annotation):
+                raise TypeError(
+                    "composed validators have conflicting annotations: "
+                    f"{chosen!r} vs {annotation!r}"
+                )
+        return chosen
 
     def __set_name__(self, owner: type, name: str) -> None:
         super().__set_name__(owner, name)

@@ -117,8 +117,16 @@ New private helpers are verbs that name the action:
 `_register_annotation_checker`, `_reject_store_type_mismatch`,
 `_reject_store_identity`, `_reject_slots_without_dict`,
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
-`_record_error`, `_store_on_instance`, `_match_one_alternative`.
+`_record_error`, `_store_on_instance`, `_match_one_alternative`,
+`_Compose._bind_kwargs`, `_Compose._flatten`, `_Opt.merge`, `_Opt.read`,
+`HookHost.bags_used`, `HookHost._install_adders`.
 Leftover aliases when a private name was taught (`_named_extra`,
-`bound`, `_namespace`). Noun-only names that hide the action are not
+`bound`, `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used`).
+Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app
 nickname, not a slogan.
+
+Compose bind / flatten / annotation live on `_Compose`. Hook phase table
+and adders live on `HookHost`. Origin table lives on `TypeValidator`.
+Specified-theory merge lives on `_Opt`. Do not reintroduce free-floating
+bind helpers next to those types.
