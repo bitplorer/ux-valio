@@ -13,7 +13,6 @@ from typing import Any, Callable, Iterable, TypeVar
 from ux_valio.descriptor import _UNSET
 from ux_valio.errors import continue_or_raise, raise_collected, run_steps
 from ux_valio.validators.base import ValidateProperty
-from ux_valio.validators.hooks import HookHost
 from ux_valio.validators.leaves import (
     ChoiceValidator,
     MultipleValidator,
@@ -76,7 +75,7 @@ DEFAULT_PATH_UNITS = (
 )
 
 
-class Validator(HookHost, ValidateProperty[T]):
+class Validator(ValidateProperty[T]):
     """Descriptor field default that composes concern leaves.
 
     ``Validator[int]`` declares the stored type (one argument). Named

@@ -64,9 +64,10 @@ def test_value_validator_does_not_inherit_type_or_required():
     assert not issubclass(LengthValidator, TypeValidator)
 
 
-def test_mro_validator_is_hook_host_and_validate_property():
-    bases = Validator.__bases__
-    assert bases == (HookHost, ValidateProperty)
+def test_mro_validator_is_validate_property():
+    assert Validator.__bases__ == (ValidateProperty,)
     assert ValueValidator.__bases__ == (ValidateProperty,)
     assert LengthValidator.__bases__ == (ValidateProperty,)
+    assert issubclass(Validator, HookHost)
+    assert issubclass(ValidateProperty, HookHost)
     assert not issubclass(HookHost, ValidateProperty)

@@ -17,13 +17,13 @@ from ux_valio import (
 from ux_valio.validators.hooks import HookHost
 
 
-def test_compose_root_has_add_star_leaves_do_not():
+def test_compose_root_and_leaves_have_add_star():
     field = LengthValidator(min_length=1, debug=True) & RequiredValidator(required=True)
     assert hasattr(field, "add_pre_validator")
     assert hasattr(field, "add_validator")
     assert hasattr(field, "add_pre_validator_task")
-    assert not hasattr(LengthValidator(min_length=1), "add_pre_validator")
-    assert not hasattr(RequiredValidator(required=True), "add_validator")
+    assert hasattr(LengthValidator(min_length=1), "add_pre_validator")
+    assert hasattr(RequiredValidator(required=True), "add_validator")
     assert not hasattr(field, "add_pre_set")
     assert "pre_set" not in field._processors
 
@@ -43,13 +43,14 @@ def test_hang_after_compose_on_root():
     assert User(name="  Ada  ").name == "Ada"
 
 
-def test_leaf_members_stay_bag_free_after_compose():
+def test_compose_does_not_copy_root_hooks_onto_members():
     left = LengthValidator(min_length=1)
     right = RequiredValidator(required=True)
     field = left & right
-    assert not hasattr(left, "_processors")
-    assert not hasattr(right, "_processors")
-    assert hasattr(field, "_processors")
+    assert left._processors is not field._processors
+    assert right._processors is not field._processors
+    assert not HookHost.has_hooks(left)
+    assert not HookHost.has_hooks(right)
 
 
 def test_hang_on_facade_before_compose_still_runs():

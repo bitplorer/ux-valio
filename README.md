@@ -62,8 +62,8 @@ tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(require
 ```
 
 Hang `add_*` on the field name. The descriptor *is* the dataclass default —
-no outer `username_field` twin, no Field mixin. Concern leaves do not
-carry `add_*`. Do not invent `add_pre_set`.
+no outer `username_field` twin, no Field mixin. `add_*` lives on
+`ValidateProperty` (leaf or facade). Do not invent `add_pre_set`.
 
 `&` / `|` return `AllOf` / `AnyOf` from `ValidateProperty` — same module
 as the operators, no per-use import.
@@ -392,7 +392,7 @@ combinators (`&` / `|`) plus stdlib atoms `Digit` / `Word` / `NonDigit` /
 the `IfNot*` pair), and `SetOf` character classes. The taught field default
 is a facade or `Validator`, not bare `Property`. Concern leaves also compose
 as validator objects (`LengthValidator(...) & RequiredValidator(...)`). Hang
-hooks on `Validator` or the compose root. No multiple inheritance of leaves,
+hooks on the field default (`ValidateProperty`). No multiple inheritance of leaves,
 no Cap Host, no `rule/`. Path helpers and async-bridge names are not in the
 package `__all__`. Import Pattern names from `ux_valio` (or `ux_valio.pattern`
 for the same objects). There is no `ux_valio.regexer`.

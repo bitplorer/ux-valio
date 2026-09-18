@@ -9,10 +9,10 @@ Layout (core at the root, validate door inherits, named facades are parallel):
 - `ux_valio/errors.py` — `ValidationErrors` (shared collect-all type).
 - `ux_valio/pattern/` — pattern algebra (independent).
 - `ux_valio/validators/` — validate door (`ValidateProperty` : `Property`):
-  `base` → `ValidateProperty`; `hooks` → `HookHost` mixin (parallel);
-  `leaves` / `length` / `value` → concern leaves (parallel, compose with
-  `&` / `|`, no leaf MI); `base` → `ValidateProperty` and `AllOf` /
-  `AnyOf` (the operators); `facade` →
+  `base` → `ValidateProperty` (`HookHost` + `Property`) and `AllOf` /
+  `AnyOf` (the operators); `hooks` → `HookHost` (inherited by
+  `ValidateProperty`); `leaves` / `length` / `value` → concern leaves
+  (parallel, compose with `&` / `|`, no leaf MI); `facade` →
   `Validator`; `typed` + `payment` / `expiry` / `phone` / `aadhaar` /
   `pan` → named facades : `Validator` (parallel). Facade unit list is
   `ValidationPath` on `Validator` in `facade.py`, not `PathValidator`
@@ -49,7 +49,8 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   path fail-closed; processors then tasks once;
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
   Hang `add_*` on the field name (`@username.add_pre_validator` in the
-  class body). Class access returns the descriptor (`Cls.field.add_*`
+  class body). `add_*` lives on `ValidateProperty` (facade, leaf, or
+  AllOf / AnyOf). Class access returns the descriptor (`Cls.field.add_*`
   after bind) and records that class as `_owner`, so a shared
   descriptor's `Person.aadhaar.add_*` uses Person, not the last
   `__set_name__`. Dataclass default is that descriptor; `__set__`
@@ -67,8 +68,7 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   `cache_task` is not a door (unknown-kwarg TypeError). valio's
   id(tasks) cache is retired, not stored.
   `collect_all` default False (fail-fast). Do not overload `debug` into
-  collect-all. Hang `add_*` on `Validator` or the compose root (`AllOf` /
-  `AnyOf`), not concern leaves. Compose merge fail-closed: conflicting
+  collect-all. Hang `add_*` on the field default. Compose merge fail-closed: conflicting
   specified `debug` / `default` / `default_factory` / `collect_all` /
   `logger` is TypeError.
   Explicit `False` is specified. Omitted `collect_all` / `logger` still

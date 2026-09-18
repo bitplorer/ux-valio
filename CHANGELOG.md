@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `ValidateProperty` inherits `HookHost`. `Validator` and `_Of` no longer
+  list it. `add_*` is on every validating descriptor. `_Of` stays — it is
+  the member list, not a second HookHost.
 - `AllOf` / `AnyOf` live next to `&` / `|` on `ValidateProperty`. No
   `compose.py`, no `_register_compose_types` cache. Validator is still
   not AllOf — two kinds of descriptor root, one pair of bases.
