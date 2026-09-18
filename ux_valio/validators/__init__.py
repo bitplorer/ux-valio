@@ -8,11 +8,11 @@ Who depends on whom (top is core, bottom inherits):
 - ``ux_valio.errors`` — ``ValidationErrors`` (shared collect-all type).
 - ``ux_valio.pattern`` — pattern algebra. Independent of the descriptor.
 - this package — validate door (``ValidateProperty`` : ``Property``):
-  - ``base`` — ``ValidateProperty``, ``AllOf`` / ``AnyOf`` (the ``&`` / ``|`` operators)
-  - ``hooks`` — ``HookHost`` mixin (parallel to ``ValidateProperty``)
+  - ``base`` — ``ValidateProperty`` (``HookHost`` + ``Property``), ``AllOf`` / ``AnyOf``
+  - ``hooks`` — ``HookHost`` (inherited by ``ValidateProperty``)
   - ``leaves`` / ``length`` / ``value`` — concern leaves : ``ValidateProperty``
     (parallel to each other; object-compose with ``&`` / ``|``, no leaf MI)
-  - ``facade`` — ``Validator`` : ``HookHost`` + ``ValidateProperty``
+  - ``facade`` — ``Validator`` : ``ValidateProperty``
     (unit list ``ValidationPath`` lives here, not ``PathValidator``)
   - named facades (``typed``, ``payment``, ``expiry``, ``phone``,
     ``aadhaar``, ``pan``) : ``Validator`` (parallel to each other)

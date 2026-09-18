@@ -4,7 +4,8 @@
 ``ValidateProperty`` is the unit. Concern leaves and facades subclass it
 once — they do not multiple-inherit each other. ``&`` / ``|`` (and
 ``AllOf`` / ``AnyOf``) live here: they *are* those operators. ``Chain``
-is ``AllOf``. Hang ``add_*`` on ``Validator`` or the AllOf / AnyOf root.
+is ``AllOf``. ``add_*`` lives on ``ValidateProperty`` — hang it on the
+field default, leaf or facade.
 
 ``leaves.py`` binds ``is_instance_of`` once for the store type door.
 """
@@ -41,11 +42,12 @@ def _annotation_accepts(annotation: Any, value: Any) -> bool:
     return checker(value, annotation)
 
 
-class ValidateProperty(Property[T], ABC):
+class ValidateProperty(HookHost, Property[T], ABC):
     """Descriptor that validates in ``pre_set`` before store.
 
     ``ValidateProperty[int]`` / ``Validator[int]`` is the stored-type
     subscript. It fills ``annotation`` when the class did not declare one.
+    ``add_*`` and the processor registries come from ``HookHost``.
     """
 
     def pre_set(self, obj: Any, value: Any) -> Any:
@@ -110,27 +112,6 @@ class ValidateProperty(Property[T], ABC):
     def post_delete(self, obj: Any, value: Any) -> Any:
         return self.post_delete_processing(obj, value)
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
-        return value
-
-    def post_validation_processing(self, instance: Any, value: Any) -> Any:
-        return value
-
-    def post_set_processing(self, instance: Any, value: Any) -> Any:
-        return value
-
-    def pre_get_processing(self, instance: Any, value: Any) -> Any:
-        return value
-
-    def post_get_processing(self, instance: Any, value: Any) -> Any:
-        return value
-
-    def pre_delete_processing(self, instance: Any, value: Any) -> Any:
-        return value
-
-    def post_delete_processing(self, instance: Any, value: Any) -> Any:
-        return value
-
     def notify_pre_set(self, obj: Any) -> None:
         """Lifecycle hook for composition; default no-op."""
 
@@ -152,7 +133,7 @@ class ValidateProperty(Property[T], ABC):
         raise NotImplementedError
 
 
-class _Of(HookHost, ValidateProperty):
+class _Of(ValidateProperty):
     """AllOf / AnyOf share flatten, specified-theory merge, and member order."""
 
     validators: tuple[ValidateProperty, ...]

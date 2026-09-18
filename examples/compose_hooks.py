@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Staff profile: ``&`` / ``|`` composition, compose-root hooks, directory port.
 
-Hang ``add_*`` on the field name (the compose root after ``&`` / ``AllOf``). Concern leaves do not
-carry ``add_*``. ``|`` is OR (``AnyOf``); the root does not AND-run a type
+Hang ``add_*`` on the field name (the compose root after ``&`` / ``AllOf``).
+``|`` is OR (``AnyOf``); the root does not AND-run a type
 check before alternatives. ``Chain`` is ``AllOf``.
 
 Inject ``StaffDirectory`` on ``StaffService``; uniqueness hangs on the
