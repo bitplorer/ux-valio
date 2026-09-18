@@ -11,7 +11,8 @@ Layout (core at the root, validate door inherits, named facades are parallel):
 - `ux_valio/validators/` — validate door (`ValidateProperty` : `Property`):
   `base` → `ValidateProperty`; `hooks` → `HookHost` mixin (parallel);
   `leaves` / `length` / `value` → concern leaves (parallel, compose with
-  `&` / `|`, no leaf MI); `compose` → `AllOf` / `AnyOf`; `facade` →
+  `&` / `|`, no leaf MI); `base` → `ValidateProperty` and `AllOf` /
+  `AnyOf` (the operators); `facade` →
   `Validator`; `typed` + `payment` / `expiry` / `phone` / `aadhaar` /
   `pan` → named facades : `Validator` (parallel). Facade unit list is
   `ValidationPath` on `Validator` in `facade.py`, not `PathValidator`
@@ -78,9 +79,9 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   TypedDict membership stays fail-closed on the private helper. Callable
   origin is checked; signature is not. Generic subclass instance params
   are not inspected.
-  `&` / `|` use AllOf / AnyOf bound once (`_register_compose_types` at
-  compose import; `_load_compose_types` is the fallback). Do not import
-  compose inside `__and__` / `__or__`. `leaves.py` binds `is_instance_of`
+  `&` / `|` return `AllOf` / `AnyOf` from the same module
+  (`ValidateProperty.__and__` / `__or__`). Do not reintroduce a compose
+  module or `_register_compose_types` lazy cache. `leaves.py` binds `is_instance_of`
   once via `_register_annotation_checker`. Origin tables `_ORIGIN_CHECKERS`
   / `_ORIGIN_GROUPS` live next to `is_instance_of`, not on `TypeValidator`.
   `not_in_choice` skips `None`, same as `in_choice`.
@@ -175,12 +176,11 @@ stored-type param is `Validator[T]`; `Property` uses `_StoreT`.
 on the facade — do not fashion-rename them.
 
 New private helpers are verbs that name the action:
-`_load_compose_types`, `_register_compose_types`,
 `_register_annotation_checker`, `_reject_store_type_mismatch`,
 `_reject_store_identity`, `_reject_slots_without_dict`,
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
-`_Compose._bind_kwargs`, `_Compose._flatten`, `_Opt.merge`, `_Opt.read`,
+`_Of._bind_kwargs`, `_Of._flatten`, `_Opt.merge`, `_Opt.read`,
 `HookHost.has_hooks`, `HookHost._collect_owner_keys`, `HookHost._register`,
 `_bind_field_logger`, `_take_subscript_annotation`,
 `_is_unconstrained_typevar`,
@@ -196,12 +196,12 @@ New private helpers are verbs that name the action:
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
 `cache_task`, `_HOOK_ADDERS`, `_install_adders`, `_hook_adder`,
-`_init_hooks`).
+`_init_hooks`, `_load_compose_types`, `_register_compose_types`).
 Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app
 nickname, not a slogan.
 
-Compose bind / flatten / annotation live on `_Compose`. Hook `add_*`
+AllOf / AnyOf live next to ``&`` / ``|`` on ``ValidateProperty``. Hook ``add_*``
 methods live on `HookHost` (declared, not setattr from a table). Origin
 tables live next to
 `is_instance_of`. Specified-theory merge lives on `_Opt`. Errors live at
@@ -211,4 +211,5 @@ module `_bag_key` / `_owner_key` as a module function / `_resolve_bag_key` /
 `_parse_eu_ind_date` /
 `_parse_expiry_datetime` / `_is_valid_aadhaar` / `_is_valid_payment_card` /
 `_is_valid_pan` / `_require_phonenumbers` / `_slot_names`,
-or hang origin tables on `TypeValidator`, or a `validation_path.py` module.
+or hang origin tables on `TypeValidator`, or a `validation_path.py` /
+`compose.py` module.
