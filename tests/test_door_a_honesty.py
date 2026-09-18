@@ -37,7 +37,7 @@ def test_add_pre_validator_is_the_pre_set_pipeline():
     class Host:
         x: str = v
 
-    v.add_pre_validator(strip, namespace=HookHost._bag_key(Host))
+    v.add_pre_validator(strip, namespace=HookHost._owner_key(Host))
 
     assert Host(x="  Ada  ").x == "Ada"
 

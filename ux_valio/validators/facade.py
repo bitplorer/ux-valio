@@ -86,7 +86,7 @@ class Validator(HookHost, ValidateProperty[T]):
         self.not_in_choice = not_in_choice
         ChoiceValidator._reject_non_container("in_choice", in_choice)
         ChoiceValidator._reject_non_container("not_in_choice", not_in_choice)
-        self._init_hook_bags()
+        self._init_hooks()
         super().__init__(
             default=default,
             default_factory=default_factory,

@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
-"""Processor/task bags for Validator and compose roots — not concern leaves.
+"""Processor and task registries for Validator and compose roots.
 
 Hang ``add_*`` on the descriptor that is the field default. There is no
-``add_pre_set`` / ``_processors["pre_set"]`` bag.
+``add_pre_set`` / ``_processors["pre_set"]`` registry.
 """
 
 from __future__ import annotations
@@ -16,12 +16,11 @@ from ux_valio.errors import continue_or_raise, raise_collected
 
 
 class HookHost:
-    """Processor/task/custom-validator bags. Mixin for facade and compose roots.
+    """Processor, task, and custom-validator registries on the facade / compose root.
 
-    Taught ``add_*`` names live on this class. Bodies are ``_add``. There is
-    no ``add_pre_set`` / ``_processors["pre_set"]`` bag. Bag-key helpers
-    live here — they are this host's register/lookup encoding, not a
-    free-floating key module.
+    Public ``add_*`` methods live here; bodies call ``_add``. There is no
+    ``add_pre_set`` registry. Register and lookup share one owner key:
+    ``module.qualname`` of the class that owns the hook.
     """
 
     _custom_validators: dict[str, list[Callable[..., Any]]]
@@ -29,7 +28,7 @@ class HookHost:
     _tasks: dict[str, dict[str, list[Callable[..., Any]]]]
 
     # No "pre_set": ValidateProperty.pre_set *is* pre_validate →
-    # validate → post_validate. add_pre_set would be a second door.
+    # validate → post_validate. add_pre_set would be a second assignment path.
     _PROCESSOR_PHASES = (
         "pre_validate",
         "post_validate",
@@ -40,7 +39,7 @@ class HookHost:
         "post_delete",
     )
 
-    # Taught names. (method, bag, phase). Installed by ``_install_adders``.
+    # Public add_* methods. (method, registry attribute, phase).
     _HOOK_ADDERS = (
         ("add_pre_validator", "_processors", "pre_validate"),
         ("add_post_validator", "_processors", "post_validate"),
@@ -59,8 +58,8 @@ class HookHost:
     )
 
     @staticmethod
-    def _bag_key(cls: Any) -> str:
-        """One bag key for register and lookup: ``module.qualname``."""
+    def _owner_key(cls: Any) -> str:
+        """Owning class identity for register and lookup: ``module.qualname``."""
         return f"{cls.__module__}.{cls.__qualname__}"
 
     @staticmethod
@@ -75,58 +74,59 @@ class HookHost:
         return owner
 
     @staticmethod
-    def _resolve_bag_key(
+    def _resolve_owner_key(
         func: Callable[..., Any],
         namespace: str | None,
         bound_owner: type | None = None,
     ) -> str:
-        """Bag key for register. Default is ``_bag_key`` of the owning class.
+        """Owner key used when registering a hook.
 
-        ``namespace=`` is the key as-is (str). A free function has no owning
-        class: if the descriptor is already bound, use that owner; otherwise
-        ``namespace=`` is required. Class objects are not keys.
+        Default is ``_owner_key`` of the function's owning class.
+        ``namespace=`` is that key as-is (str). A free function has no
+        owning class: if the descriptor is already bound, use that owner;
+        otherwise ``namespace=`` is required. Class objects are not keys.
         """
         if namespace is not None:
             if not isinstance(namespace, str):
                 raise TypeError(
-                    "namespace= must be a str bag key "
+                    "namespace= must be a str owner key "
                     f"(module.qualname); got {type(namespace).__name__}"
                 )
             return namespace
         owner = HookHost._owning_class_qualname(func)
         if owner is not None:
-            return HookHost._bag_key(
+            return HookHost._owner_key(
                 SimpleNamespace(__module__=func.__module__, __qualname__=owner)
             )
         if bound_owner is not None:
-            return HookHost._bag_key(bound_owner)
+            return HookHost._owner_key(bound_owner)
         raise TypeError(
             "free function requires namespace= "
-            "(bag key is module.qualname of the owning class)"
+            "(owner key is module.qualname of the owning class)"
         )
 
     @staticmethod
-    def _hook_adder(bag: str, phase: str):
-        """One body for every taught ``add_*``. Bound onto ``HookHost`` from its table."""
+    def _hook_adder(registry: str, phase: str):
+        """One body for every public ``add_*``. Bound onto ``HookHost`` from its table."""
 
         def adder(
             self: "HookHost",
             func: Callable[..., Any],
             namespace: str | None = None,
         ) -> Callable[..., Any]:
-            return self._add(bag, phase, func, namespace)
+            return self._add(registry, phase, func, namespace)
 
         return adder
 
     @staticmethod
-    def _collect_bag_keys(instance: Any) -> tuple[str, ...]:
+    def _collect_owner_keys(instance: Any) -> tuple[str, ...]:
         """Owner keys from base to derived. Inherited hooks fire on a child."""
         keys: list[str] = []
         seen: set[str] = set()
         for cls in instance.__class__.__mro__:
             if cls is object:
                 continue
-            key = HookHost._bag_key(cls)
+            key = HookHost._owner_key(cls)
             if key in seen:
                 continue
             seen.add(key)
@@ -134,7 +134,7 @@ class HookHost:
         keys.reverse()
         return tuple(keys)
 
-    def _init_hook_bags(self) -> None:
+    def _init_hooks(self) -> None:
         self._custom_validators = defaultdict(list)
         self._processors = {
             phase: defaultdict(list) for phase in type(self)._PROCESSOR_PHASES
@@ -143,33 +143,33 @@ class HookHost:
 
     def _add(
         self,
-        bag: str,
+        registry: str,
         phase: str,
         func: Callable[..., Any],
         namespace: str | None = None,
     ) -> Callable[..., Any]:
-        getattr(self, bag)[phase][
-            HookHost._resolve_bag_key(func, namespace, getattr(self, "_owner", None))
+        getattr(self, registry)[phase][
+            HookHost._resolve_owner_key(func, namespace, getattr(self, "_owner", None))
         ].append(func)
         return func
 
     def add_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
         self._custom_validators[
-            HookHost._resolve_bag_key(func, namespace, getattr(self, "_owner", None))
+            HookHost._resolve_owner_key(func, namespace, getattr(self, "_owner", None))
         ].append(func)
         return func
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
-        bag = self._processors[phase]
-        for key in type(self)._collect_bag_keys(instance):
-            for func in bag.get(key, ()):
+        hooks = self._processors[phase]
+        for key in type(self)._collect_owner_keys(instance):
+            for func in hooks.get(key, ()):
                 value = invoke_callable(func, instance, value)
         return value
 
     def _run_tasks(self, phase: str, instance: Any, value: Any) -> Any:
-        bag = self._tasks[phase]
-        for key in type(self)._collect_bag_keys(instance):
-            for func in bag.get(key, ()):
+        hooks = self._tasks[phase]
+        for key in type(self)._collect_owner_keys(instance):
+            for func in hooks.get(key, ()):
                 invoke_callable(func, instance, value)
         return value
 
@@ -205,7 +205,7 @@ class HookHost:
         errors: list[BaseException] = []
         collect_all = getattr(self, "collect_all", False)
         name = getattr(self, "name", None)
-        for key in type(self)._collect_bag_keys(instance):
+        for key in type(self)._collect_owner_keys(instance):
             for func in self._custom_validators.get(key, ()):
                 try:
                     invoke_callable(func, instance, value)
@@ -214,25 +214,25 @@ class HookHost:
         raise_collected(errors, name=name)
 
     @staticmethod
-    def bags_used(item: Any) -> bool:
-        """True when this host has a custom / processor / task bag with callables."""
+    def has_hooks(item: Any) -> bool:
+        """True when this host has a custom, processor, or task callable registered."""
         customs = getattr(item, "_custom_validators", None)
         if customs and any(customs.values()):
             return True
-        for bag_name in ("_processors", "_tasks"):
-            bags = getattr(item, bag_name, None)
-            if not bags:
+        for registry_name in ("_processors", "_tasks"):
+            registries = getattr(item, registry_name, None)
+            if not registries:
                 continue
-            for phase in bags.values():
+            for phase in registries.values():
                 if any(phase.values()):
                     return True
         return False
 
     @classmethod
     def _install_adders(cls) -> None:
-        """Taught add_* names. One encoding. No pre_set adder."""
-        for name, bag, phase in cls._HOOK_ADDERS:
-            adder = cls._hook_adder(bag, phase)
+        """Public add_* names. One encoding. No pre_set adder."""
+        for name, registry, phase in cls._HOOK_ADDERS:
+            adder = cls._hook_adder(registry, phase)
             adder.__name__ = name
             adder.__qualname__ = f"{cls.__name__}.{name}"
             setattr(cls, name, adder)

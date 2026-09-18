@@ -34,7 +34,7 @@ def test_validator_runs_processing_then_task_once():
     class Host:
         x: str = v
 
-    _bind_phase(v, HookHost._bag_key(Host), log, "add_pre_validator", "add_pre_validator_task", "pre")
+    _bind_phase(v, HookHost._owner_key(Host), log, "add_pre_validator", "add_pre_validator_task", "pre")
 
     host = Host(x="raw")
     assert host.x == "raw-p"
@@ -49,7 +49,7 @@ def test_validator_all_phases_run_task_once_after_processing():
     class Host:
         x: str = v
 
-    ns = HookHost._bag_key(Host)
+    ns = HookHost._owner_key(Host)
     phases = (
         ("add_pre_validator", "add_pre_validator_task", "pre"),
         ("add_post_validator", "add_post_validator_task", "post"),
@@ -96,7 +96,7 @@ def test_plain_validator_processing_without_tasks():
     class Plain:
         x: str = v
 
-    v.add_pre_validator(proc, namespace=HookHost._bag_key(Plain))
+    v.add_pre_validator(proc, namespace=HookHost._owner_key(Plain))
 
     assert Plain(x="raw").x == "RAW"
     assert log == [("proc", "raw")]
@@ -112,7 +112,7 @@ def test_only_pre_set_processor_return_is_stored():
     class Host:
         x: str = v
 
-    v.add_post_set(post_set_proc, namespace=HookHost._bag_key(Host))
+    v.add_post_set(post_set_proc, namespace=HookHost._owner_key(Host))
 
     assert Host(x="kept").x == "kept"
 
@@ -129,7 +129,7 @@ def test_get_processors_see_attribute_name_not_stored_value():
     class Host:
         x: str = v
 
-    v.add_pre_get(pget, namespace=HookHost._bag_key(Host))
+    v.add_pre_get(pget, namespace=HookHost._owner_key(Host))
 
     host = Host(x="stored")
     assert host.x == "stored"

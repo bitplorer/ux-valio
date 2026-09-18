@@ -39,7 +39,7 @@ Debug-falsy still swallows and ``__get__`` reads back ``None``.
 ``post_get`` in ``__get__`` ``finally`` must not replace an in-flight
 exception: record it, keep the original raise / swallow.
 
-Door A stores on ``instance.__dict__``. Explicit ``__slots__`` that
+Stores on ``instance.__dict__``. Explicit ``__slots__`` that
 include the field TypeError at bind. A slots-only class (no ``__dict__``
 in the MRO) TypeErrors at bind even when the field name is not itself a
 slot — get/delete would otherwise see a bare ``AttributeError``. Look at
@@ -189,11 +189,11 @@ def _is_unconstrained_typevar(annotation: Any) -> bool:
 
 
 class Property(Generic[_StoreT]):
-    """Data descriptor used as a dataclass field default (Door A).
+    """Data descriptor used as a dataclass field default.
 
     ``Validator[int]`` is the stored-type subscript (one argument). It
     fills ``annotation`` when the class did not declare one. Unconstrained
-    TypeVars are typing-only and are not copied into the type door.
+    TypeVars are typing-only and are not copied onto the descriptor.
     """
 
     def __init__(
@@ -327,23 +327,23 @@ class Property(Generic[_StoreT]):
             raise
 
     def _reject_slots_without_dict(self, owner: type, name: str) -> None:
-        """Fail-closed when Door A cannot store on the instance.
+        """Fail-closed when the field cannot store on the instance.
 
         Only this class's ``__slots__`` can name the field (inherited
         ``getattr(owner, "__slots__")`` false-positives a child that still
         has ``__dict__``). A slots-only MRO with no ``__dict__`` member
-        cannot store any Door A field.
+        cannot store any descriptor field.
         """
         own_slots = owner.__dict__.get("__slots__")
         if own_slots is not None and name in type(self)._slot_names(own_slots):
             raise TypeError(
-                f"{owner.__name__}.{name}: Door A descriptors need "
-                "instance __dict__; __slots__ replaces them and drops validation"
+                f"{owner.__name__}.{name}: field stores on instance __dict__; "
+                "__slots__ replaces it and drops validation"
             )
         if type(self)._owner_omits_instance_dict(owner):
             raise TypeError(
-                f"{owner.__name__}.{name}: Door A descriptors need "
-                "instance __dict__; __slots__ without '__dict__' drops storage"
+                f"{owner.__name__}.{name}: field stores on instance __dict__; "
+                "__slots__ without '__dict__' drops storage"
             )
 
     @staticmethod
@@ -403,7 +403,7 @@ class Property(Generic[_StoreT]):
             raise TypeError(
                 f"{owner.__name__}.{self.name}: {_annotation_label(owner_annotation)}"
                 " annotation is unresolved (string / ForwardRef); "
-                "not copied into the type door"
+                "not copied onto the descriptor"
             )
         if owner_annotation is not None and _is_unconstrained_typevar(owner_annotation):
             owner_annotation = None
@@ -421,24 +421,24 @@ class Property(Generic[_StoreT]):
             )
 
     def _require_instance_dict(self, obj: Any) -> dict[str, Any]:
-        namespace = getattr(obj, "__dict__", None)
-        if namespace is None:
+        instance_dict = getattr(obj, "__dict__", None)
+        if instance_dict is None:
             raise TypeError(
                 f"{type(obj).__name__}.{self.name} has no instance __dict__; "
-                "Door A does not support slots"
+                "slots-only classes cannot store this field"
             )
-        return namespace
+        return instance_dict
 
     def _store_on_instance(self, obj: Any, value: Any) -> None:
         name = self.name
         if name is None:
-            raise TypeError("Door A field is not bound")
+            raise TypeError(f"{type(self).__qualname__} is not bound to a class")
         self._require_instance_dict(obj)[name] = value
 
     def _read_from_instance(self, obj: Any) -> Any:
         name = self.name
         if name is None:
-            raise TypeError("Door A field is not bound")
+            raise TypeError(f"{type(self).__qualname__} is not bound to a class")
         try:
             return self._require_instance_dict(obj)[name]
         except KeyError:
@@ -447,7 +447,7 @@ class Property(Generic[_StoreT]):
     def _drop_from_instance(self, obj: Any) -> None:
         name = self.name
         if name is None:
-            raise TypeError("Door A field is not bound")
+            raise TypeError(f"{type(self).__qualname__} is not bound to a class")
         try:
             del self._require_instance_dict(obj)[name]
         except KeyError:

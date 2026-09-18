@@ -35,7 +35,7 @@ ASYNC_NEEDS_LOOP = (
 
 NEST_SAFE_REENTERED = (
     "nest-safe bridge is already running on this worker; "
-    "nested async Door A assignment would deadlock"
+    "nested async assignment would deadlock"
 )
 
 

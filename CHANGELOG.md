@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Owner key is `module.qualname` (`HookHost._owner_key`). Runtime errors
+  name the field / `__dict__` / bind, not "Door A". `has_hooks` replaces
+  `bags_used`.
 - Dropped `cache_task=` (valio leftover: id(tasks) cache, stored never
   consulted). Unknown-kwarg TypeError, same as `enable_async`.
 - Aadhaar / PAN / payment-card print forms canonicalize on assignment:

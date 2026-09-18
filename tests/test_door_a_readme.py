@@ -139,7 +139,7 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "Do not use bare `Property` as the field default" in text
     assert "`Chain` is `AllOf`" in text
     assert "findall substring" in text
-    assert "`PhoneNumberValidator` is a Door A string facade" in text
+    assert "`PhoneNumberValidator` is a string facade" in text
     assert "List / dictionary / set / tuple collection facades are not" in text
     assert 'region="IN"' in text
     assert "2 January 2020" in text

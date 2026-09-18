@@ -31,7 +31,7 @@ class _Compose(HookHost, ValidateProperty):
             annotation = type(self)._merged_annotation(self.validators)
             if annotation is not None:
                 self.annotation = annotation
-        self._init_hook_bags()
+        self._init_hooks()
         super().__init__(**type(self)._bind_kwargs(self.validators, kwargs))
 
     @staticmethod
@@ -56,7 +56,7 @@ class _Compose(HookHost, ValidateProperty):
         members = getattr(item, "validators", None)
         if not members:
             return False
-        if HookHost.bags_used(item):
+        if HookHost.has_hooks(item):
             return True
         for attr, unspecified in (
             ("debug", None),
