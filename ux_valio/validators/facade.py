@@ -61,7 +61,6 @@ class Validator(HookHost, ValidateProperty[T]):
         not_in_choice: Any = None,
         debug: bool | None = None,
         logger: Any = _UNSET,
-        cache_task: bool = True,
         collect_all: Any = _UNSET,
     ) -> None:
         if required is not None and not isinstance(required, bool):
@@ -87,7 +86,7 @@ class Validator(HookHost, ValidateProperty[T]):
         self.not_in_choice = not_in_choice
         ChoiceValidator._reject_non_container("in_choice", in_choice)
         ChoiceValidator._reject_non_container("not_in_choice", not_in_choice)
-        self._init_hook_bags(cache_task=cache_task)
+        self._init_hook_bags()
         super().__init__(
             default=default,
             default_factory=default_factory,

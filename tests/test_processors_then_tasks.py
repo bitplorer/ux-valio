@@ -43,7 +43,7 @@ def test_validator_runs_processing_then_task_once():
 
 def test_validator_all_phases_run_task_once_after_processing():
     log = []
-    v = Validator(debug=True, cache_task=False)
+    v = Validator(debug=True)
 
     @dataclass
     class Host:

@@ -24,7 +24,6 @@ class HookHost:
     free-floating key module.
     """
 
-    cache_task: bool  # leftover: stored, never consulted (cache retired)
     _custom_validators: dict[str, list[Callable[..., Any]]]
     _processors: dict[str, dict[str, list[Callable[..., Any]]]]
     _tasks: dict[str, dict[str, list[Callable[..., Any]]]]
@@ -135,9 +134,7 @@ class HookHost:
         keys.reverse()
         return tuple(keys)
 
-    def _init_hook_bags(self, cache_task: bool = True) -> None:
-        # valio leftover: keep the kwarg. Do not skip tasks from this flag.
-        self.cache_task = cache_task
+    def _init_hook_bags(self) -> None:
         self._custom_validators = defaultdict(list)
         self._processors = {
             phase: defaultdict(list) for phase in type(self)._PROCESSOR_PHASES

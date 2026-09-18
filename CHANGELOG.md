@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Dropped `cache_task=` (valio leftover: id(tasks) cache, stored never
+  consulted). Unknown-kwarg TypeError, same as `enable_async`.
 - Aadhaar / PAN / payment-card print forms canonicalize on assignment:
   grouping spaces/hyphens strip; PAN letters upper-case. Stored value is
   the compact identity; extra checks still Verhoeff / Luhn mod 26 / brand∩Luhn.

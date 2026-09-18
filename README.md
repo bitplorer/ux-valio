@@ -143,10 +143,7 @@ run rules as `async def`.
 
 valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
 for `add_pre_validator`). Door A hangs the same processor on the **field
-name**. Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong bag
-(`cache_task=` is accepted on `Validator` and on compose roots; it is
-stored and never consulted. The kwarg is kept; cache behavior is retired.
-It does **not** skip re-checks.)
+name**. Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong bag.
 
 Class-body `username: str = username` is `NameError` only when an outer
 name collides with the field (the assignment makes `username` local).

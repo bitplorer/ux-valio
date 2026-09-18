@@ -62,9 +62,8 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   running loop uses the process-held nest-safe worker bridge.
   Re-entering that worker is TypeError (would deadlock), not a hang.
   `enable_async` is not a door (unknown-kwarg TypeError).
-  `cache_task` kwarg KEEP, cache behavior RETIRE. Accepted on `Validator`
-  and on compose roots (`AllOf` / `AnyOf`); stored, never consulted;
-  it does not skip re-checks.
+  `cache_task` is not a door (unknown-kwarg TypeError). valio's
+  id(tasks) cache is retired, not stored.
   `collect_all` default False (fail-fast). Do not overload `debug` into
   collect-all. Hang `add_*` on `Validator` or the compose root (`AllOf` /
   `AnyOf`), not concern leaves. Compose merge fail-closed: conflicting
@@ -194,7 +193,8 @@ New private helpers are verbs that name the action:
 `PhoneNumberValidator._require_phonenumbers`,
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
-`_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name).
+`_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
+`cache_task`).
 Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app
 nickname, not a slogan.

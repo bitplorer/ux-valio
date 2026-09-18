@@ -119,20 +119,20 @@ def test_conflicting_default_fails_closed():
         )
 
 
-def test_compose_root_accepts_cache_task_kwarg():
-    field = AllOf(
-        LengthValidator(min_length=1),
-        RequiredValidator(required=True),
-        cache_task=False,
-        debug=True,
-    )
-    assert field.cache_task is False
-    any_field = AnyOf(
-        LengthValidator(min_length=1),
-        RequiredValidator(required=True),
-        cache_task=False,
-    )
-    assert any_field.cache_task is False
+def test_compose_root_rejects_cache_task_kwarg():
+    with pytest.raises(TypeError, match="cache_task"):
+        AllOf(
+            LengthValidator(min_length=1),
+            RequiredValidator(required=True),
+            cache_task=False,
+            debug=True,
+        )
+    with pytest.raises(TypeError, match="cache_task"):
+        AnyOf(
+            LengthValidator(min_length=1),
+            RequiredValidator(required=True),
+            cache_task=False,
+        )
 
 
 def test_chain_is_allof_alias():
