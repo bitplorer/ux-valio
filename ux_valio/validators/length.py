@@ -14,7 +14,7 @@ class MinLengthValidator(ValidateProperty):
         self.min_length = min_length
         super().__init__(**kwargs)
 
-    def _validate_min_length(self, instance: Any, value: Any) -> None:
+    def _validate_min_length(self: Any, instance: Any, value: Any) -> None:
         min_length = bound_value(self, "min_length")
         if min_length is None or value is None:
             return
@@ -34,7 +34,7 @@ class MaxLengthValidator(ValidateProperty):
         self.max_length = max_length
         super().__init__(**kwargs)
 
-    def _validate_max_length(self, instance: Any, value: Any) -> None:
+    def _validate_max_length(self: Any, instance: Any, value: Any) -> None:
         max_length = bound_value(self, "max_length")
         if max_length is None or value is None:
             return
@@ -109,7 +109,3 @@ class LengthValidator(ValidateProperty):
 
     def validate(self, instance: Any = None, value: Any = None) -> None:
         self._validate_length(instance, value)
-
-
-# leftover: previous helper name. Prefer ``LengthValidator._len_or_reject``.
-_len_or_reject = LengthValidator._len_or_reject

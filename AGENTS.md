@@ -59,8 +59,8 @@ Door A only: `field: T = SomeValidator(...)`.
   `&` / `|` use AllOf / AnyOf bound once (`_register_compose_types` at
   compose import; `_load_compose_types` is the fallback). Do not import
   compose inside `__and__` / `__or__`. `leaves.py` binds `is_instance_of`
-  once via `_register_annotation_checker`. Origin groups live on
-  `TypeValidator._ORIGIN_GROUPS` with the origin table.
+  once via `_register_annotation_checker`. Origin tables `_ORIGIN_CHECKERS`
+  / `_ORIGIN_GROUPS` live next to `is_instance_of`, not on `TypeValidator`.
   `not_in_choice` skips `None`, same as `in_choice`.
   `in_choice` / `not_in_choice` that are not a ``Container`` TypeError at
   construct, not at assignment.
@@ -109,6 +109,12 @@ Door A only: `field: T = SomeValidator(...)`.
   `datetime.date`; numeric EU `YYYY-MM-DD` / IND `DD-MM-YYYY` strings parse
   on assignment (`-` `/` `:`, same delimiter both sides). Slash dates are
   IND day-month-year, not US. `DateValidator` rejects `datetime.datetime`.
+  Coercing facades (`DateValidator`, `DateTimeValidator`, `UUIDValidator`,
+  `PathValidator`, `DecimalValidator`) declare `annotation = T | str` so
+  the owner field may be `T`, `str`, or `T | str`. Input `str` is coerced
+  in `pre_validation_processing`; the stored value is `T` (named extra
+  re-checks that). `IntegerValidator` / `FloatValidator` do not coerce
+  `str` — owner `int | str` still TypeErrors at bind.
   `DateTimeValidator` stores `datetime.datetime`; ISO strings parse via
   `datetime.fromisoformat`; plain `datetime.date` is rejected.
   `URLValidator` is a Door A string facade: scheme + netloc
@@ -147,15 +153,13 @@ New private helpers are verbs that name the action:
 `HookHost.bags_used`, `HookHost._install_adders`, `HookHost._collect_bag_keys`,
 `_bind_field_logger`,
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`.
-Leftover aliases when a private name was taught (`_named_extra`,
-`bound`, `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used`,
-`_collect_bag_keys`, `_len_or_reject`).
+Do not reintroduce leftover aliases (`_named_extra`, `bound`,
+`_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name).
 Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app
 nickname, not a slogan.
 
 Compose bind / flatten / annotation live on `_Compose`. Hook phase table
-and adders live on `HookHost`. Origin table lives on `TypeValidator`.
-Origin groups live on `TypeValidator._ORIGIN_GROUPS`. Specified-theory
-merge lives on `_Opt`. Do not reintroduce free-floating
-bind helpers next to those types.
+and adders live on `HookHost`. Origin tables live next to
+`is_instance_of`. Specified-theory merge lives on `_Opt`. Do not
+reintroduce leftover aliases or hang origin tables on `TypeValidator`.

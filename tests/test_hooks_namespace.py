@@ -13,8 +13,6 @@ from ux_valio.descriptor import Property
 from ux_valio.validators.hooks import (
     HookHost,
     _bag_key,
-    _collect_bag_keys,
-    _namespace,
     _resolve_bag_key,
 )
 from ux_valio import StringValidator, Validator
@@ -481,8 +479,8 @@ def test_lookup_uses_same_key_helper_as_register():
         src = inspect.getsource(getattr(Validator, meth))
         assert "instance.__class__.__name__" not in src
         assert "_collect_bag_keys" in src
-    assert "_bag_key" in inspect.getsource(_collect_bag_keys)
-    ns_src = inspect.getsource(_namespace)
+    assert "_bag_key" in inspect.getsource(HookHost._collect_bag_keys)
+    ns_src = inspect.getsource(_resolve_bag_key)
     assert 'split(".")[0]' not in ns_src
     assert "_bag_key" in ns_src
 
@@ -499,7 +497,7 @@ def test_lookup_uses_same_key_helper_as_register():
     key = _bag_key(Host)
     assert key == f"{Host.__module__}.{Host.__qualname__}"
     assert list(field._processors["pre_validate"]) == [key]
-    assert _namespace(Host.strip, None) == key
+    assert _resolve_bag_key(Host.strip, None) == key
     assert Host(x="  Ada  ").x == "Ada"
 
 
@@ -519,7 +517,3 @@ def test_class_object_namespace_is_type_error():
     keys = list(field._processors["pre_validate"])
     assert Host not in keys
     assert all(isinstance(key, str) for key in keys)
-
-
-def test_resolve_bag_key_leftover_alias_is_namespace():
-    assert _resolve_bag_key is _namespace

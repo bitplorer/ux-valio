@@ -37,7 +37,25 @@ class FloatValidator(Validator):
 
 
 class DecimalValidator(Validator):
-    annotation = decimal.Decimal
+    annotation = decimal.Decimal | str
+
+    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+        if isinstance(value, str):
+            try:
+                value = decimal.Decimal(value)
+            except decimal.InvalidOperation as err:
+                raise ValueError(
+                    f"{self.name} expects a Decimal, got {value!r}"
+                ) from err
+        return super().pre_validation_processing(instance, value)
+
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if not isinstance(value, decimal.Decimal):
+            raise TypeError(
+                f"{self.name} expect {decimal.Decimal} type, got {type(value).__name__} type instead"
+            )
 
 
 class BytesValidator(Validator):
@@ -67,7 +85,7 @@ def _parse_eu_ind_date(text: str) -> datetime.date | None:
 
 
 class DateValidator(Validator):
-    annotation = datetime.date
+    annotation = datetime.date | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
         if isinstance(value, str):
@@ -83,10 +101,11 @@ class DateValidator(Validator):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
-        if isinstance(value, datetime.datetime):
-            raise TypeError(
-                f"{self.name} expect {datetime.date} type, got {type(value).__name__} type instead"
-            )
+        if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
+            return
+        raise TypeError(
+            f"{self.name} expect {datetime.date} type, got {type(value).__name__} type instead"
+        )
 
 
 class DateTimeValidator(Validator):
@@ -94,9 +113,10 @@ class DateTimeValidator(Validator):
 
     Plain ``datetime.date`` is rejected (that is ``DateValidator``). Date-only
     ISO strings follow stdlib ``datetime.fromisoformat`` (midnight on 3.11+).
+    Owner annotation may be ``datetime.datetime``, ``str``, or the union.
     """
 
-    annotation = datetime.datetime
+    annotation = datetime.datetime | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
         if isinstance(value, str):
@@ -156,7 +176,7 @@ class URLValidator(StringValidator):
 
 
 class UUIDValidator(Validator):
-    annotation = uuid.UUID
+    annotation = uuid.UUID | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
         if isinstance(value, str):
@@ -166,9 +186,17 @@ class UUIDValidator(Validator):
                 raise ValueError(f"{self.name} expects a UUID, got {value!r}") from err
         return super().pre_validation_processing(instance, value)
 
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if not isinstance(value, uuid.UUID):
+            raise TypeError(
+                f"{self.name} expect {uuid.UUID} type, got {type(value).__name__} type instead"
+            )
+
 
 class PathValidator(Validator):
-    annotation = pathlib.Path
+    annotation = pathlib.Path | str
 
     def __init__(self, path_exists: bool | None = None, **kwargs: Any) -> None:
         if path_exists is not None and not isinstance(path_exists, bool):
@@ -186,9 +214,12 @@ class PathValidator(Validator):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
-        path = value if isinstance(value, pathlib.Path) else pathlib.Path(value)
-        if self.path_exists is True and not path.exists():
-            raise FileNotFoundError(f"{self.name} expects an existing path, got {path}")
+        if not isinstance(value, pathlib.Path):
+            raise TypeError(
+                f"{self.name} expect {pathlib.Path} type, got {type(value).__name__} type instead"
+            )
+        if self.path_exists is True and not value.exists():
+            raise FileNotFoundError(f"{self.name} expects an existing path, got {value}")
 
 
 class IPv4Validator(StringValidator):

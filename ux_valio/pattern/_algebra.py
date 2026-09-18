@@ -14,6 +14,11 @@ PatternSource = Union[str, bytes, "PatternType"]
 class PatternType:
     """Regex fragment with ``&`` / ``|`` composition."""
 
+    pattern: str | bytes | None
+    raw_pattern: str | bytes | None
+    quantifier: str
+    alias: str
+
     def __init__(
         self,
         pattern: PatternSource | None = None,
@@ -93,7 +98,8 @@ def _attach_quantifier(pattern: str | bytes, quantifier: str) -> str | bytes:
     return f"{pattern}{quantifier}"
 
 
-def prefix_fragment(token: str, fragment: str | bytes) -> str | bytes:
+def prefix_fragment(token: str, fragment: str | bytes | None) -> str | bytes:
+
     """Prefix an ascii regex token onto a same-kind fragment."""
     if fragment is None:
         raise TypeError("pattern fragment is missing")
@@ -107,7 +113,8 @@ def prefix_fragment(token: str, fragment: str | bytes) -> str | bytes:
     )
 
 
-def suffix_fragment(fragment: str | bytes, token: str) -> str | bytes:
+def suffix_fragment(fragment: str | bytes | None, token: str) -> str | bytes:
+
     """Suffix an ascii regex token onto a same-kind fragment."""
     if fragment is None:
         raise TypeError("pattern fragment is missing")
@@ -121,7 +128,10 @@ def suffix_fragment(fragment: str | bytes, token: str) -> str | bytes:
     )
 
 
-def wrap_fragment(open_token: str, fragment: str | bytes, close_token: str) -> str | bytes:
+def wrap_fragment(
+    open_token: str, fragment: str | bytes | None, close_token: str
+) -> str | bytes:
+
     """Wrap a fragment with ascii open/close tokens. Bytes stay bytes."""
     return suffix_fragment(prefix_fragment(open_token, fragment), close_token)
 

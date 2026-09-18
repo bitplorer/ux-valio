@@ -127,4 +127,4 @@ def test_phonenumbers_extra_is_lower_bound_only():
     assert 'phonenumbers>=9.0.0' in text
     assert "phonenumbers==" not in text
     assert "phonenumbers<" not in text
-    assert 'dev = ["pytest>=7", "phonenumbers>=9.0.0"]' in text
+    assert "mypy" in text

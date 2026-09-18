@@ -119,9 +119,6 @@ class Validator(HookHost, ValidateProperty):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         """Named-facade extra check after the inherited path. Default is none."""
 
-    def _named_extra(self, instance: Any = None, value: Any = None) -> None:
-        return self._validate_named_facade(instance, value)
-
     def validate(self, instance: Any = None, value: Any = None) -> None:
         run_steps(
             (

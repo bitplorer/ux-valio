@@ -23,7 +23,7 @@ class MinValueValidator(ValidateProperty):
         self.gt = gt
         super().__init__(**kwargs)
 
-    def _validate_min_value(self, instance: Any, value: Any) -> None:
+    def _validate_min_value(self: Any, instance: Any, value: Any) -> None:
         if value is None:
             return
         min_value = bound_value(self, "min_value")
@@ -55,7 +55,7 @@ class MaxValueValidator(ValidateProperty):
         self.lt = lt
         super().__init__(**kwargs)
 
-    def _validate_max_value(self, instance: Any, value: Any) -> None:
+    def _validate_max_value(self: Any, instance: Any, value: Any) -> None:
         if value is None:
             return
         max_value = bound_value(self, "max_value")

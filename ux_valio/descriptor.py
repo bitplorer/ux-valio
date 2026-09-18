@@ -123,11 +123,6 @@ class _Opt:
         return cls(value, value is not omitted_default)
 
 
-# leftover: previous helper names. Prefer ``_Opt.merge`` / ``_Opt.read``.
-merge_opt = _Opt.merge
-opt_of = _Opt.read
-
-
 _CONTAINER_ORIGINS = (list, dict, tuple, set, frozenset)
 
 
@@ -142,10 +137,32 @@ def _annotation_identity(annotation: Any) -> Any:
     return annotation
 
 
+def _union_member_ids(annotation: Any) -> frozenset[Any] | None:
+    ident = _annotation_identity(annotation)
+    if isinstance(ident, tuple) and ident and ident[0] is Union:
+        return ident[1]
+    return None
+
+
 def _annotations_agree(left: Any, right: Any) -> bool:
+    """Owner (right) matches validator (left), or is a member/subset of it.
+
+    Coercing facades declare ``T | str``. Owner ``T``, ``str``, or ``T | str``
+    all bind. Owner wider than validator (``int | str`` vs ``int``) does not.
+    """
     if left is right:
         return True
-    return _annotation_identity(left) == _annotation_identity(right)
+    left_id = _annotation_identity(left)
+    right_id = _annotation_identity(right)
+    if left_id == right_id:
+        return True
+    left_u = _union_member_ids(left)
+    if left_u is None:
+        return False
+    right_u = _union_member_ids(right)
+    if right_u is not None:
+        return right_u <= left_u
+    return right_id in left_u
 
 
 def _annotation_label(annotation: Any) -> str:
@@ -365,17 +382,26 @@ class Property:
         return namespace
 
     def _store_on_instance(self, obj: Any, value: Any) -> None:
-        self._require_instance_dict(obj)[self.name] = value
+        name = self.name
+        if name is None:
+            raise TypeError("Door A field is not bound")
+        self._require_instance_dict(obj)[name] = value
 
     def _read_from_instance(self, obj: Any) -> Any:
+        name = self.name
+        if name is None:
+            raise TypeError("Door A field is not bound")
         try:
-            return self._require_instance_dict(obj)[self.name]
+            return self._require_instance_dict(obj)[name]
         except KeyError:
             raise self._missing_attribute(obj) from None
 
     def _drop_from_instance(self, obj: Any) -> None:
+        name = self.name
+        if name is None:
+            raise TypeError("Door A field is not bound")
         try:
-            del self._require_instance_dict(obj)[self.name]
+            del self._require_instance_dict(obj)[name]
         except KeyError:
             raise self._missing_attribute(obj) from None
 

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Origin tables `_ORIGIN_CHECKERS` / `_ORIGIN_GROUPS` sit next to
+  `is_instance_of`, not on `TypeValidator`.
+- Coercing facades declare `T | str`: owner annotation may be `T`, `str`,
+  or the union. Input `str` is coerced; stored value is `T` (named extra).
+  `DecimalValidator` coerces Decimal strings (float still rejected).
+- Dropped leftover aliases that were not the usage pattern:
+  `_namespace`, `hook_bags_used`, `merge_opt`, `opt_of`, `bound`,
+  `_named_extra`, module `_collect_bag_keys`, module `_len_or_reject`.
 - Class access records `_owner`: a shared descriptor's
   `Person.aadhaar.add_*` bags under Person, not the last `__set_name__`.
 - `@dataclass(frozen=True)` is supported (dataclass intercepts
