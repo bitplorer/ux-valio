@@ -13,6 +13,7 @@ from ux_valio.descriptor import Property
 from ux_valio.validators.hooks import (
     HookHost,
     _bag_key,
+    _collect_bag_keys,
     _namespace,
     _resolve_bag_key,
 )
@@ -65,15 +66,60 @@ def test_no_add_pre_set_still_absent():
 def test_register_db_check_is_add_pre_validator_on_username_field():
     """Before-store uniqueness hangs on add_pre_validator.
 
-    Class-body ``username: str = username`` is NameError (local bind). Door A
-    matches valio Field's ``user_field`` / ``user`` split: hang on
-    ``username_field``. Method decorator keys by owning-class
-    ``module.qualname`` (nested classes included). Free functions need
-    ``namespace=``.
+    Taught Door A: hang on the field name in the class body
+    (``@username.add_pre_validator``). No outer ``username_field`` twin.
+    Method decorator keys by owning-class ``module.qualname``.
+    Free functions on an unbound descriptor need ``namespace=``.
     """
     assert _Register(username="ada").username == "ada"
     with pytest.raises(ValueError, match="already registered"):
         _Register(username="taken")
+
+
+def test_class_body_hangs_add_on_the_field_name():
+    @dataclass
+    class Register:
+        username: str = StringValidator(debug=True, required=True, min_length=3)
+
+        @username.add_pre_validator
+        def username_not_taken(self, value: str) -> str:
+            if value == "taken":
+                raise ValueError("username already registered")
+            return value.strip()
+
+    assert Register.username is Register.__dict__["username"]
+    assert Register(username="  ada  ").username == "ada"
+    with pytest.raises(ValueError, match="already registered"):
+        Register(username="taken")
+
+
+def test_class_access_add_after_bind_uses_owner_for_free_function():
+    @dataclass
+    class Host:
+        x: str = StringValidator(debug=True)
+
+    @Host.x.add_pre_validator
+    def strip(self, value):
+        return value.strip() if isinstance(value, str) else value
+
+    assert Host(x="  Ada  ").x == "Ada"
+
+
+def test_child_instance_runs_parent_field_hooks():
+    @dataclass
+    class Parent:
+        name: str = StringValidator(debug=True)
+
+        @name.add_pre_validator
+        def strip(self, value: str) -> str:
+            return value.strip()
+
+    @dataclass
+    class Child(Parent):
+        pass
+
+    assert Child(name="  ada  ").name == "ada"
+    assert Parent(name="  bob  ").name == "bob"
 
 
 def test_no_asyncio_run_or_enable_async_in_door_a_tree():
@@ -410,7 +456,8 @@ def test_lookup_uses_same_key_helper_as_register():
     for meth in ("_run_tasks", "_run_processors", "_run_custom_validators"):
         src = inspect.getsource(getattr(Validator, meth))
         assert "instance.__class__.__name__" not in src
-        assert "_bag_key" in src
+        assert "_collect_bag_keys" in src
+    assert "_bag_key" in inspect.getsource(_collect_bag_keys)
     ns_src = inspect.getsource(_namespace)
     assert 'split(".")[0]' not in ns_src
     assert "_bag_key" in ns_src

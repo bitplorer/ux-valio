@@ -107,12 +107,6 @@ class StubPaymentGateway:
         return f"auth-{number[-4:]}"
 
 
-sku_field = StringValidator(debug=True, required=True, min_length=1, max_length=32)
-amount_field = DecimalValidator(min_value=Decimal("0.01"), debug=True, required=True)
-promo_field = ExpiryValidator(expire_after=_PROMO_UNTIL, debug=True, required=True)
-quantity_field = IntegerValidator(min_value=1, debug=True, required=True)
-
-
 @dataclass
 class Checkout:
     promos: PromoCatalog
@@ -125,26 +119,28 @@ class Checkout:
     card_expiry: str = StringValidator(
         pattern=_CARD_EXPIRY, debug=True, required=True
     )
-    sku: str = sku_field
-    amount: Decimal = amount_field
-    promo_code: str = promo_field
-    quantity: int = quantity_field
+    sku: str = StringValidator(debug=True, required=True, min_length=1, max_length=32)
+    amount: Decimal = DecimalValidator(
+        min_value=Decimal("0.01"), debug=True, required=True
+    )
+    promo_code: str = ExpiryValidator(expire_after=_PROMO_UNTIL, debug=True, required=True)
+    quantity: int = IntegerValidator(min_value=1, debug=True, required=True)
 
-    @promo_field.add_pre_validator
+    @promo_code.add_pre_validator
     def promo_known(self, value: str) -> str:
         return self.promos.lookup(value)
 
-    @quantity_field.add_pre_validator
+    @quantity.add_pre_validator
     def stock_available(self, value: int) -> int:
         self.inventory.ensure_available(self.sku, value)
         return value
 
-    @quantity_field.add_pre_validator
+    @quantity.add_pre_validator
     def card_authorized(self, value: int) -> int:
         self.gateway.authorize(self.number, self.amount)
         return value
 
-    @quantity_field.add_post_set
+    @quantity.add_post_set
     def reserve_stock(self, value: int) -> None:
         self.inventory.reserve(self.sku, value)
 

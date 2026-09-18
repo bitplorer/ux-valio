@@ -24,8 +24,14 @@ Door A only: `field: T = SomeValidator(...)`.
   facades do not multiple-inherit concern leaves;
   path fail-closed; processors then tasks once;
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
-  before-store hangs on `add_pre_validator` / `add_validator` /
-  `add_pre_validator_task`; `add_*` accepts async def and coroutine
+  Hang `add_*` on the field name (`@username.add_pre_validator` in the
+  class body). Class access returns the descriptor (`Cls.field.add_*`
+  after bind). Dataclass default is that descriptor; `__set__` treats
+  `value is self` as unset. No Field mixin, no outer `username_field`
+  twin unless sharing one descriptor across classes.
+  Lookup walks the instance MRO (base first) so a child runs parent hooks.
+  A free function on an unbound descriptor still needs `namespace=`;
+  on a bound field the bag key is the bound owner.
   results (no `_reject_coroutine_result`);
   sync path with no running loop TypeError names the missing loop / helper;
   running loop uses the process-held nest-safe worker bridge.
@@ -134,7 +140,8 @@ New private helpers are verbs that name the action:
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
 `_Compose._bind_kwargs`, `_Compose._flatten`, `_Opt.merge`, `_Opt.read`,
 `HookHost.bags_used`, `HookHost._install_adders`, `_bind_field_logger`,
-`_len_or_reject`, `ChoiceValidator._reject_non_container`.
+`_len_or_reject`, `ChoiceValidator._reject_non_container`,
+`_collect_bag_keys`.
 Leftover aliases when a private name was taught (`_named_extra`,
 `bound`, `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used`).
 Noun-only names that hide the action are not

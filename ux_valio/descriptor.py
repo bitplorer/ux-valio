@@ -13,9 +13,12 @@ silent fail-closed flip. ``collect_all`` (default ``False``) is a separate
 opt-in: fail-fast remains the door. ``collect_all=True`` continues remaining
 concerns and surfaces every failure. Do not overload ``debug`` into collect.
 
-Class access (``obj is None``) returns ``None`` so dataclasses treat the
-descriptor as a missing field default and route ``Cls()`` through
-``__set__(instance, None)``, which then applies ``default``.
+Class access (``obj is None``) returns the descriptor, so
+``Cls.field.add_pre_validator`` works after the class exists — hang
+hooks on the field name, no outer ``username_field`` twin. Dataclass
+``getattr`` then sees the descriptor as the field default; ``__set__``
+treats ``value is self`` as unset and applies ``default`` /
+``default_factory``. Do not invent a Field mixin.
 
 Only the descriptor ``pre_set`` hook return is stored. That hook is the
 validate pipeline, not a ``_processors[\"pre_set\"]`` bag. Hang before-store
@@ -236,6 +239,7 @@ class Property:
         }
         self.errors: list[BaseException] = []
         self.annotation = getattr(self, "annotation", None)
+        self._owner: type | None = None
 
     def pre_set(self, obj: Any, value: Any) -> Any:
         return value
@@ -295,6 +299,7 @@ class Property:
                 raise AttributeError(
                     f"{self.name} != {name}, attribute names did not match"
                 )
+            self._owner = owner
             self._reject_slots_without_dict(owner, name)
             self._bind_owner_annotation(owner, name)
             self._bind_field_logger(owner, name)
@@ -370,6 +375,8 @@ class Property:
 
     def __set__(self, obj: Any, value: Any) -> None:
         try:
+            if value is self:
+                value = None
             if value is None:
                 if self.default_factory is not None:
                     value = self.default_factory()
@@ -388,7 +395,7 @@ class Property:
 
     def __get__(self, obj: Any, obj_type: type | None = None) -> Any:
         if obj is None:
-            return None
+            return self
         in_flight: BaseException | None = None
         try:
             self.pre_get(obj, self.name)
