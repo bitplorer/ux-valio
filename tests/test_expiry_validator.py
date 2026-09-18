@@ -7,7 +7,6 @@ from datetime import date, timedelta
 import pytest
 
 from ux_valio import ExpiryValidator, Validator
-from ux_valio.validators.validation_path import DEFAULT_PATH_NAMES
 
 
 def test_expire_before_string_sets_timeline():
@@ -49,7 +48,7 @@ def test_generic_validator_still_rejects_expire_before():
 
 
 def test_expiry_is_not_a_path_unit():
-    assert "expiry" not in DEFAULT_PATH_NAMES
+    assert ExpiryValidator._validate_expiry not in Validator.validation_path.units
 
 
 def test_expire_before_past_bound_allows_assignment():

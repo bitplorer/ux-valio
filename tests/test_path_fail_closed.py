@@ -1,30 +1,43 @@
 # SPDX-License-Identifier: MIT
-"""Validation path fail-closed: unique units, aggregate owns leaves, second pass ok."""
+"""Validation path fail-closed: unique units, second pass ok, no string lookup."""
 
 import pytest
 
 from ux_valio import Validator
-from ux_valio.validators.validation_path import DEFAULT_PATH_NAMES, ValidationPath
+from ux_valio.validators.facade import DEFAULT_PATH_UNITS, ValidationPath
+from ux_valio.validators.leaves import TypeValidator
+from ux_valio.validators.value import ValueValidator
 
 
 def test_duplicate_unit_fails_closed():
+    unit = TypeValidator._validate_type
     with pytest.raises(ValueError, match="double-call"):
-        ValidationPath(("value", "value"))
-
-
-def test_aggregate_plus_owned_leaf_fails_closed():
-    with pytest.raises(ValueError, match="conflict"):
-        ValidationPath(("value", "min_value"))
-    with pytest.raises(ValueError):
-        ValidationPath(("length", "max_length"))
-    with pytest.raises(ValueError, match="conflict"):
-        ValidationPath(("value", "eq"))
+        ValidationPath((unit, unit))
 
 
 def test_default_validator_path_is_unique_and_ordered():
-    assert tuple(Validator.validation_path.names) == DEFAULT_PATH_NAMES
-    names = Validator.validation_path.names
-    assert len(names) == len(set(names))
+    assert Validator.validation_path.units == DEFAULT_PATH_UNITS
+    units = Validator.validation_path.units
+    assert len(units) == len(set(units))
+    names = [unit.__name__ for unit in units]
+    assert names == [
+        "_validate_reassignment",
+        "_validate_type",
+        "_validate_required",
+        "_validate_pattern",
+        "_validate_multiple_of",
+        "_validate_length",
+        "_validate_value",
+        "_validate_choice",
+    ]
+    assert "_validate_expiry" not in names
+
+
+def test_value_unit_owns_min_max_eq():
+    """min_value / max_value / eq are not separate path units."""
+    names = {unit.__name__ for unit in Validator.validation_path.units}
+    assert "_validate_value" in names
+    assert names.isdisjoint({"_validate_min_value", "_validate_max_value", "_validate_eq"})
 
 
 def test_path_run_is_per_pass_so_a_second_validate_is_allowed():
@@ -34,17 +47,20 @@ def test_path_run_is_per_pass_so_a_second_validate_is_allowed():
         calls.append(value)
         return value
 
-    path = ValidationPath(("type",))
-    path.run(None, None, 1, {"type": _once})
-    path.run(None, None, 2, {"type": _once})
+    path = ValidationPath((_once,))
+    path.run(None, None, 1)
+    path.run(None, None, 2)
     assert calls == [1, 2]
 
 
-def test_path_run_refuses_duplicate_names_inside_one_pass():
-    path = ValidationPath(("type",))
-    path.names = ("type", "type")
+def test_path_run_refuses_duplicate_units_inside_one_pass():
+    def _once(owner, instance, value):
+        return value
+
+    path = ValidationPath((_once,))
+    path.units = (_once, _once)
     with pytest.raises(ValueError, match="double-call"):
-        path.run(None, None, 1, {"type": lambda *args: None})
+        path.run(None, None, 1)
 
 
 def test_second_validate_on_validator_is_a_new_pass():
@@ -55,20 +71,15 @@ def test_second_validate_on_validator_is_a_new_pass():
         v.validate(None, -1)
 
 
-def test_owned_leaf_without_aggregate_is_allowed():
-    path = ValidationPath(("min_value", "max_value"))
-    assert path.names == ("min_value", "max_value")
+def test_subclass_can_narrow_the_path_to_real_callables():
+    class Typed(Validator):
+        annotation = int
+        validation_path = ValidationPath((TypeValidator._validate_type,))
+
+    Typed(debug=True).validate(None, 1)
+    with pytest.raises(TypeError):
+        Typed(debug=True).validate(None, "x")
 
 
-def test_path_run_unknown_unit_is_valueerror_not_keyerror():
-    path = ValidationPath(("type",))
-    with pytest.raises(ValueError, match="unknown unit"):
-        path.run(None, None, 1, {})
-
-
-def test_validator_unknown_path_unit_is_valueerror():
-    class Bad(Validator):
-        validation_path = ValidationPath(("nonexistent",))
-
-    with pytest.raises(ValueError, match="unknown unit"):
-        Bad(debug=True).validate(None, 1)
+def test_value_unit_still_gates_min_on_the_default_path():
+    assert ValueValidator._validate_value in Validator.validation_path.units

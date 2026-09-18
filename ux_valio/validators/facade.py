@@ -1,17 +1,17 @@
 # SPDX-License-Identifier: MIT
-"""Door A facade: dataclass field default that runs concern leaves on a path.
+"""Descriptor field default that runs concern leaves in a fixed order.
 
 Concern leaves own the validate methods. ``Validator`` does not inherit those
-leaves; it binds the same method implementations onto one ordered path.
+leaves; it calls the same implementations, in order, on one path.
 Hang ``add_*`` here, or on a compose root after ``&`` / ``AllOf``.
 """
 
 from __future__ import annotations
 
-from typing import Any, TypeVar
+from typing import Any, Callable, Iterable, TypeVar
 
 from ux_valio.descriptor import _UNSET
-from ux_valio.errors import run_steps
+from ux_valio.errors import continue_or_raise, raise_collected, run_steps
 from ux_valio.validators.base import ValidateProperty
 from ux_valio.validators.hooks import HookHost
 from ux_valio.validators.leaves import (
@@ -23,10 +23,57 @@ from ux_valio.validators.leaves import (
     TypeValidator,
 )
 from ux_valio.validators.length import LengthValidator
-from ux_valio.validators.validation_path import DEFAULT_PATH_NAMES, Lookup, ValidationPath
 from ux_valio.validators.value import ValueValidator
 
 T = TypeVar("T")
+Lookup = Callable[[Any, Any, Any], Any]
+
+
+class ValidationPath:
+    """Ordered unique concern callables. A second ``validate()`` is a new pass."""
+
+    def __init__(self, units: Iterable[Lookup]) -> None:
+        units = tuple(units)
+        seen: set[Lookup] = set()
+        for unit in units:
+            if unit in seen:
+                raise ValueError(f"validation path double-call: {unit!r}")
+            seen.add(unit)
+        self.units = units
+
+    def run(
+        self,
+        owner: Any,
+        instance: Any,
+        value: Any,
+        collect_all: bool = False,
+    ) -> list[Any]:
+        ran: set[Lookup] = set()
+        results: list[Any] = []
+        errors: list[BaseException] = []
+        for unit in self.units:
+            if unit in ran:
+                raise ValueError(f"validation path double-call: {unit!r}")
+            ran.add(unit)
+            try:
+                results.append(unit(owner, instance, value))
+            except Exception as err:
+                continue_or_raise(collect_all, errors, err)
+                results.append(None)
+        raise_collected(errors, name=getattr(owner, "name", None))
+        return results
+
+
+DEFAULT_PATH_UNITS = (
+    ReassignValidator._validate_reassignment,
+    TypeValidator._validate_type,
+    RequiredValidator._validate_required,
+    PatternValidator._validate_pattern,
+    MultipleValidator._validate_multiple_of,
+    LengthValidator._validate_length,
+    ValueValidator._validate_value,
+    ChoiceValidator._validate_choice,
+)
 
 
 class Validator(HookHost, ValidateProperty[T]):
@@ -36,7 +83,7 @@ class Validator(HookHost, ValidateProperty[T]):
     facades specialize it (``IntegerValidator`` is ``Validator[int]``).
     """
 
-    validation_path = ValidationPath(DEFAULT_PATH_NAMES)
+    validation_path = ValidationPath(DEFAULT_PATH_UNITS)
 
     def __init__(
         self,
@@ -108,18 +155,6 @@ class Validator(HookHost, ValidateProperty[T]):
         ReassignValidator.post_delete_processing(self, instance, value)
         return super().post_delete_processing(instance, value)
 
-    def _unit_lookup(self) -> dict[str, Lookup]:
-        return {
-            "reassignment": ReassignValidator._validate_reassignment,
-            "type": TypeValidator._validate_type,
-            "required": RequiredValidator._validate_required,
-            "pattern": PatternValidator._validate_pattern,
-            "multiple_of": MultipleValidator._validate_multiple_of,
-            "length": LengthValidator._validate_length,
-            "value": ValueValidator._validate_value,
-            "choice": ChoiceValidator._validate_choice,
-        }
-
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         """Named-facade extra check after the inherited path. Default is none."""
 
@@ -127,11 +162,7 @@ class Validator(HookHost, ValidateProperty[T]):
         run_steps(
             (
                 lambda: self.validation_path.run(
-                    self,
-                    instance,
-                    value,
-                    self._unit_lookup(),
-                    collect_all=self.collect_all,
+                    self, instance, value, collect_all=self.collect_all
                 ),
                 lambda: self._run_custom_validators(instance, value),
                 lambda: self._validate_named_facade(instance, value),

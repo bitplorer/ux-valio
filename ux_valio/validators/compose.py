@@ -52,11 +52,11 @@ class _Compose(HookHost, ValidateProperty):
 
     @staticmethod
     def _keep_nested(item: Any) -> bool:
-        members = getattr(item, "validators", None)
-        if not members:
+        if not isinstance(item, _Compose):
             return False
         if HookHost.has_hooks(item):
             return True
+        members = item.validators
         for attr, unspecified in (
             ("debug", None),
             ("default", None),
@@ -145,36 +145,43 @@ class _Compose(HookHost, ValidateProperty):
         for item in self.validators:
             item.notify_post_set(obj)
 
-    def _compose_process(self, phase: str, method: str, instance: Any, value: Any) -> Any:
-        if phase.startswith("pre_"):
-            value = self._process_then_tasks(phase, instance, value)
-            for item in self.validators:
-                value = getattr(item, method)(instance, value)
-            return value
-        for item in self.validators:
-            value = getattr(item, method)(instance, value)
-        return self._process_then_tasks(phase, instance, value)
-
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
-        return self._compose_process("pre_validate", "pre_validation_processing", instance, value)
+        value = self._process_then_tasks("pre_validate", instance, value)
+        for item in self.validators:
+            value = item.pre_validation_processing(instance, value)
+        return value
 
     def post_validation_processing(self, instance: Any, value: Any) -> Any:
-        return self._compose_process("post_validate", "post_validation_processing", instance, value)
+        for item in self.validators:
+            value = item.post_validation_processing(instance, value)
+        return self._process_then_tasks("post_validate", instance, value)
 
     def post_set_processing(self, instance: Any, value: Any) -> Any:
-        return self._compose_process("post_set", "post_set_processing", instance, value)
+        for item in self.validators:
+            value = item.post_set_processing(instance, value)
+        return self._process_then_tasks("post_set", instance, value)
 
     def pre_get_processing(self, instance: Any, value: Any) -> Any:
-        return self._compose_process("pre_get", "pre_get_processing", instance, value)
+        value = self._process_then_tasks("pre_get", instance, value)
+        for item in self.validators:
+            value = item.pre_get_processing(instance, value)
+        return value
 
     def post_get_processing(self, instance: Any, value: Any) -> Any:
-        return self._compose_process("post_get", "post_get_processing", instance, value)
+        for item in self.validators:
+            value = item.post_get_processing(instance, value)
+        return self._process_then_tasks("post_get", instance, value)
 
     def pre_delete_processing(self, instance: Any, value: Any) -> Any:
-        return self._compose_process("pre_delete", "pre_delete_processing", instance, value)
+        value = self._process_then_tasks("pre_delete", instance, value)
+        for item in self.validators:
+            value = item.pre_delete_processing(instance, value)
+        return value
 
     def post_delete_processing(self, instance: Any, value: Any) -> Any:
-        return self._compose_process("post_delete", "post_delete_processing", instance, value)
+        for item in self.validators:
+            value = item.post_delete_processing(instance, value)
+        return self._process_then_tasks("post_delete", instance, value)
 
 
 class AllOf(_Compose):
