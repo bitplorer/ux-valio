@@ -25,13 +25,13 @@ class _Compose(HookHost, ValidateProperty):
     _merge_member_annotations = True
     _propagate_annotation = True
 
-    def __init__(self, *validators: ValidateProperty, cache_task: bool = True, **kwargs: Any) -> None:
+    def __init__(self, *validators: ValidateProperty, **kwargs: Any) -> None:
         self.validators = type(self)._flatten(type(self)._as_validators(validators))
         if type(self)._merge_member_annotations:
             annotation = type(self)._merged_annotation(self.validators)
             if annotation is not None:
                 self.annotation = annotation
-        self._init_hook_bags(cache_task=cache_task)
+        self._init_hook_bags()
         super().__init__(**type(self)._bind_kwargs(self.validators, kwargs))
 
     @staticmethod
