@@ -182,8 +182,10 @@ annotation, the stored value must still match it — a post processor cannot
 smuggle a `str` onto `IntegerValidator`. Named facades (`EmailValidator`,
 `PaymentCardValidator`, `DateValidator`, …) re-check their extra on the
 to-store value: post_validate cannot turn a valid email into `"not-an-email"`.
-Untyped `Validator()` does not gate. Path bounds (`min_length`, …) are not
-re-run. Custom `add_validator` callables are not re-run.
+`AllOf` re-checks member named extras. `AnyOf` still has to match one
+alternative. Untyped `Validator()` does not gate. Path bounds (`min_length`,
+…) on AllOf / unnamed facades are not re-run. Custom `add_validator`
+callables are not re-run.
 
 `__get__` `post_get` runs in `finally`. A failing post_get is recorded; it
 does not replace an in-flight never-set `AttributeError` when `debug=True`.

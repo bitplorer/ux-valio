@@ -54,7 +54,10 @@ Door A only: `field: T = SomeValidator(...)`.
   then `_reject_store_type_mismatch` TypeErrors a value that would not
   pass the type door. Named-facade extra is the same class of invariant
   (`_reject_store_identity` re-runs `_validate_named_facade` on the
-  to-store value). Custom validators and path bounds are not re-run.
+  to-store value). `AllOf` walks member extras (AND). `AnyOf` still
+  matches one alternative (`_match_one_alternative`; member custom
+  skipped). Custom validators on the compose root and AllOf path bounds
+  are not re-run.
   Door A stores on `instance.__dict__`. Explicit `__slots__` that include
   the field TypeError at bind. A slots-only class (no `__dict__` in the
   MRO) TypeErrors at bind even when the field name is not a slot.
@@ -114,7 +117,7 @@ New private helpers are verbs that name the action:
 `_register_annotation_checker`, `_reject_store_type_mismatch`,
 `_reject_store_identity`, `_reject_slots_without_dict`,
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
-`_record_error`, `_store_on_instance`.
+`_record_error`, `_store_on_instance`, `_match_one_alternative`.
 Leftover aliases when a private name was taught (`_named_extra`,
 `bound`, `_namespace`). Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app

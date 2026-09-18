@@ -13,8 +13,9 @@
 - Annotation is a store invariant after `add_post_validator`. Named-facade
   extra is the same class of invariant (`_reject_store_identity`):
   post_validate cannot smuggle `"not-an-email"` onto `EmailValidator` or
-  a `datetime` onto `DateValidator`. Path bounds and custom validators
-  are not re-run.
+  a `datetime` onto `DateValidator`. `AllOf` walks member extras; `AnyOf`
+  still matches one alternative. Path bounds on AllOf / unnamed facades
+  and custom validators are not re-run.
 - Explicit `__slots__` on a Door A field TypeError at bind. A slots-only
   class TypeErrors at bind even when the field name is not a slot.
   Get/delete use `_require_instance_dict`. Inherited `getattr(..., "__slots__")`
