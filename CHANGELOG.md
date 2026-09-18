@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Class access records `_owner`: a shared descriptor's
+  `Person.aadhaar.add_*` bags under Person, not the last `__set_name__`.
+- `@dataclass(frozen=True)` is supported (dataclass intercepts
+  assign/delete). `@dataclass(slots=True)` stays unsupported.
+- `LengthValidator._len_or_reject` and `HookHost._collect_bag_keys` live
+  on the owning type (leftover module aliases kept).
+- Email identity peels `PatternType` the same way as findall (no
+  `hasattr` dance).
 - Hang `add_*` on the field name: `@username.add_pre_validator` in the
   class body, no outer `username_field` twin, no Field mixin. Class
   access returns the descriptor so `Cls.field.add_*` works after bind.

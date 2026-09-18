@@ -18,7 +18,13 @@ Class access (``obj is None``) returns the descriptor, so
 hooks on the field name, no outer ``username_field`` twin. Dataclass
 ``getattr`` then sees the descriptor as the field default; ``__set__``
 treats ``value is self`` as unset and applies ``default`` /
-``default_factory``. Do not invent a Field mixin.
+``default_factory``. Do not invent a Field mixin. Class access also
+records ``obj_type`` as ``_owner``, so a shared descriptor's
+``Person.aadhaar.add_*`` uses Person (not the last ``__set_name__``).
+
+``@dataclass(frozen=True)`` works: dataclass ``__setattr__`` /
+``__delattr__`` raise ``FrozenInstanceError`` before the descriptor
+mutates. ``@dataclass(slots=True)`` stays unsupported.
 
 Only the descriptor ``pre_set`` hook return is stored. That hook is the
 validate pipeline, not a ``_processors[\"pre_set\"]`` bag. Hang before-store
@@ -395,6 +401,8 @@ class Property:
 
     def __get__(self, obj: Any, obj_type: type | None = None) -> Any:
         if obj is None:
+            if obj_type is not None:
+                self._owner = obj_type
             return self
         in_flight: BaseException | None = None
         try:

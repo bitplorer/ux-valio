@@ -13,7 +13,7 @@ import urllib.parse
 import uuid
 from typing import Any
 
-from ux_valio.pattern import Pattern
+from ux_valio.pattern import Pattern, PatternType
 from ux_valio.validators.facade import StringValidator, Validator
 from ux_valio.validators.leaves import PatternValidator
 
@@ -133,9 +133,8 @@ class EmailValidator(StringValidator):
             return
         if not isinstance(value, str):
             raise ValueError(f"{self.name} is not a valid email address")
-        source = self.pattern
-        if hasattr(source, "pattern"):
-            source = source.pattern
+        pattern = self.pattern
+        source = pattern.pattern if isinstance(pattern, PatternType) else pattern
         if not isinstance(source, str):
             raise ValueError(f"{self.name} is not a valid email address")
         compiled = PatternValidator._compiled_finder(self, source)

@@ -159,3 +159,5 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "module.qualname.field" in text
     assert "@username.add_pre_validator" in text
     assert "@name.add_pre_validator" in text
+    assert "FrozenInstanceError" in text
+    assert "Person.aadhaar.add_*" in text
