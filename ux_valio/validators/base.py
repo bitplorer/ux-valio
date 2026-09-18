@@ -15,12 +15,14 @@ at import so the operator hot path does not import. A direct
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, TypeVar
 
 from ux_valio.descriptor import Property
 
 if TYPE_CHECKING:
     from ux_valio.validators.compose import AllOf, AnyOf
+
+T = TypeVar("T")
 
 # Filled once by ``_register_compose_types`` (compose import) or by the
 # first operator use. Not a public dial.
@@ -64,10 +66,15 @@ def _annotation_accepts(annotation: Any, value: Any) -> bool:
     return checker(value, annotation)
 
 
-class ValidateProperty(Property, ABC):
-    """Descriptor that validates in ``pre_set`` before store."""
+class ValidateProperty(Property[T], ABC):
+    """Descriptor that validates in ``pre_set`` before store.
+
+    ``ValidateProperty[int]`` / ``Validator[int]`` is the stored-type
+    subscript. It fills ``annotation`` when the class did not declare one.
+    """
 
     def pre_set(self, obj: Any, value: Any) -> Any:
+        self._take_subscript_annotation()
         self.notify_pre_set(obj)
         value = self.pre_validation_processing(obj, value)
         self.validate(instance=obj, value=value)
@@ -82,6 +89,7 @@ class ValidateProperty(Property, ABC):
         Untyped ``Validator()`` (annotation None) does not gate. ``None`` stays
         skip, same as the type path. Custom validators are not re-run.
         """
+        self._take_subscript_annotation()
         annotation = getattr(self, "annotation", None)
         if annotation is None or value is None:
             return

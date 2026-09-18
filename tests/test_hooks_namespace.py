@@ -10,11 +10,7 @@ import sys
 import pytest
 
 from ux_valio.descriptor import Property
-from ux_valio.validators.hooks import (
-    HookHost,
-    _bag_key,
-    _resolve_bag_key,
-)
+from ux_valio.validators.hooks import HookHost
 from ux_valio import StringValidator, Validator
 from ux_valio.validators import Validator as Facade
 from ux_valio.validators.async_bridge import resolve_coroutine
@@ -244,7 +240,7 @@ def test_sync_processor_returning_coroutine_no_loop_needs_running_loop():
     class Host:
         x: str = v
 
-    v.add_pre_validator(wrap, namespace=_bag_key(Host))
+    v.add_pre_validator(wrap, namespace=HookHost._bag_key(Host))
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
@@ -260,7 +256,7 @@ def test_sync_processor_returning_coroutine_debug_falsy_swallows_unset():
     class Host:
         x: str = field
 
-    field.add_pre_validator(wrap, namespace=_bag_key(Host))
+    field.add_pre_validator(wrap, namespace=HookHost._bag_key(Host))
 
     assert Host(x="ada").x is None
     assert field.errors
@@ -366,7 +362,7 @@ def test_add_pre_validator_implicit_none_is_stored():
     class Register:
         username: str = username_field
 
-    username_field.add_pre_validator(forget_return, namespace=_bag_key(Register))
+    username_field.add_pre_validator(forget_return, namespace=HookHost._bag_key(Register))
 
     assert Register(username="ada").username is None
 
@@ -383,7 +379,7 @@ def test_add_pre_validator_task_does_not_rewrite_stored_value():
     class Register:
         username: str = username_field
 
-    username_field.add_pre_validator_task(note, namespace=_bag_key(Register))
+    username_field.add_pre_validator_task(note, namespace=HookHost._bag_key(Register))
 
     assert Register(username="ada").username == "ada"
     assert seen == ["ada"]
@@ -412,7 +408,7 @@ def test_cache_task_true_does_not_cache_tasks():
     class Host:
         x: str = v
 
-    v.add_pre_validator_task(task, namespace=_bag_key(Host))
+    v.add_pre_validator_task(task, namespace=HookHost._bag_key(Host))
 
     host = Host(x="a")
     host.x = "b"
@@ -480,7 +476,7 @@ def test_lookup_uses_same_key_helper_as_register():
         assert "instance.__class__.__name__" not in src
         assert "_collect_bag_keys" in src
     assert "_bag_key" in inspect.getsource(HookHost._collect_bag_keys)
-    ns_src = inspect.getsource(_resolve_bag_key)
+    ns_src = inspect.getsource(HookHost._resolve_bag_key)
     assert 'split(".")[0]' not in ns_src
     assert "_bag_key" in ns_src
 
@@ -494,10 +490,10 @@ def test_lookup_uses_same_key_helper_as_register():
         def strip(self, value):
             return value.strip()
 
-    key = _bag_key(Host)
+    key = HookHost._bag_key(Host)
     assert key == f"{Host.__module__}.{Host.__qualname__}"
     assert list(field._processors["pre_validate"]) == [key]
-    assert _resolve_bag_key(Host.strip, None) == key
+    assert HookHost._resolve_bag_key(Host.strip, None) == key
     assert Host(x="  Ada  ").x == "Ada"
 
 

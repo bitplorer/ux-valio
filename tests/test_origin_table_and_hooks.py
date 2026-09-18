@@ -57,7 +57,17 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
     assert hasattr(LengthValidator, "_len_or_reject")
     assert not hasattr(length_mod, "_len_or_reject")
     assert hasattr(HookHost, "_collect_bag_keys")
+    assert hasattr(HookHost, "_bag_key")
+    assert hasattr(HookHost, "_resolve_bag_key")
     assert not hasattr(hooks_mod, "_collect_bag_keys")
+    assert not hasattr(hooks_mod, "_bag_key")
+    assert not hasattr(hooks_mod, "_resolve_bag_key")
+    assert not hasattr(hooks_mod, "_hook_adder")
+    from ux_valio.validators.typed import DateValidator
+    import ux_valio.validators.typed as typed_mod
+
+    assert hasattr(DateValidator, "_parse_eu_ind_date")
+    assert not hasattr(typed_mod, "_parse_eu_ind_date")
     assert not hasattr(hooks_mod, "_namespace")
     assert not hasattr(hooks_mod, "hook_bags_used")
 

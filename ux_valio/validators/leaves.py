@@ -160,6 +160,7 @@ class TypeValidator(ValidateProperty):
     """Single-concern type door. ``is_instance_of`` owns the origin tables."""
 
     def _validate_type(self: Any, instance: Any, value: Any) -> None:
+        self._take_subscript_annotation()
         annotation = getattr(self, "annotation", None)
         if annotation is not None and value is not None and not is_instance_of(value, annotation):
             raise TypeError(

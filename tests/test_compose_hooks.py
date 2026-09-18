@@ -14,7 +14,7 @@ from ux_valio import (
     StringValidator,
     Validator,
 )
-from ux_valio.validators.hooks import _bag_key
+from ux_valio.validators.hooks import HookHost
 
 
 def test_compose_root_has_add_star_leaves_do_not():
@@ -37,7 +37,7 @@ def test_hang_after_compose_on_root():
 
     field.add_pre_validator(
         lambda instance, value: value.strip() if isinstance(value, str) else value,
-        namespace=_bag_key(User),
+        namespace=HookHost._bag_key(User),
     )
 
     assert User(name="  Ada  ").name == "Ada"
@@ -62,7 +62,7 @@ def test_hang_on_facade_before_compose_still_runs():
 
     left.add_pre_validator(
         lambda instance, value: value.strip() if isinstance(value, str) else value,
-        namespace=_bag_key(User),
+        namespace=HookHost._bag_key(User),
     )
 
     assert User(name="  Ada  ").name == "Ada"

@@ -31,6 +31,18 @@ class User:
     n: int = IntegerValidator(min_value=0, max_value=10, multiple_of=2, debug=True)
 ```
 
+`Validator[int]` is the same door with the stored type on the descriptor.
+Use it on a plain class (no field annotation) or next to `n: int` — the
+two must agree. `IntegerValidator` is already `Validator[int]`. An
+unconstrained `TypeVar` (`item: T = Validator()` on a generic class) is
+typing-only; runtime cannot specialize one descriptor per `Box[int]` /
+`Box[str]`.
+
+```python
+class Stats:
+    n = Validator[int](min_value=0, debug=True)
+```
+
 Concern leaves (`LengthValidator`, `RequiredValidator`, …) are the **advanced**
 path: compose validator objects with `&` (AllOf) / `|` (AnyOf), or explicit
 `AllOf` / `AnyOf`, as **one** descriptor. `Chain` is `AllOf` — an alias, not a

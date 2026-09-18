@@ -8,7 +8,7 @@ Hang ``add_*`` here, or on a compose root after ``&`` / ``AllOf``.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypeVar
 
 from ux_valio.descriptor import _UNSET
 from ux_valio.errors import run_steps
@@ -26,9 +26,15 @@ from ux_valio.validators.length import LengthValidator
 from ux_valio.validators.validation_path import DEFAULT_PATH_NAMES, Lookup, ValidationPath
 from ux_valio.validators.value import ValueValidator
 
+T = TypeVar("T")
 
-class Validator(HookHost, ValidateProperty):
-    """Door A facade: dataclass field default that composes concern leaves."""
+
+class Validator(HookHost, ValidateProperty[T]):
+    """Door A facade: dataclass field default that composes concern leaves.
+
+    ``Validator[int]`` declares the stored type (one argument). Named
+    facades specialize it (``IntegerValidator`` is ``Validator[int]``).
+    """
 
     validation_path = ValidationPath(DEFAULT_PATH_NAMES)
 
