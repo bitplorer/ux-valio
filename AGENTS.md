@@ -180,11 +180,11 @@ New private helpers are verbs that name the action:
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
 `_Compose._bind_kwargs`, `_Compose._flatten`, `_Opt.merge`, `_Opt.read`,
-`HookHost.has_hooks`, `HookHost._install_adders`, `HookHost._collect_owner_keys`,
+`HookHost.has_hooks`, `HookHost._collect_owner_keys`,
 `_bind_field_logger`, `_take_subscript_annotation`,
 `_is_unconstrained_typevar`,
 `HookHost._owner_key`, `HookHost._resolve_owner_key`,
-`HookHost._owning_class_qualname`, `HookHost._hook_adder`,
+`HookHost._owning_class_qualname`,
 `Property._slot_names`, `Property._owner_omits_instance_dict`,
 `DateValidator._parse_eu_ind_date`, `ExpiryValidator._parse_expiry_datetime`,
 `AadhaarCardValidator._is_valid_aadhaar`,
@@ -194,13 +194,14 @@ New private helpers are verbs that name the action:
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
-`cache_task`).
+`cache_task`, `_HOOK_ADDERS`, `_install_adders`, `_hook_adder`).
 Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app
 nickname, not a slogan.
 
-Compose bind / flatten / annotation live on `_Compose`. Hook phase table
-and adders live on `HookHost`. Origin tables live next to
+Compose bind / flatten / annotation live on `_Compose`. Hook `add_*`
+methods live on `HookHost` (declared, not setattr from a table). Origin
+tables live next to
 `is_instance_of`. Specified-theory merge lives on `_Opt`. Errors live at
 `ux_valio.errors`. Descriptor does not import `validators`. Do not
 reintroduce leftover aliases, `validators/errors.py`, `validators/path.py`,

@@ -24,14 +24,21 @@ def test_origin_table_owns_stdlib_generics():
     assert _ORIGIN_GROUPS
 
 
-def test_hook_taught_names_come_from_one_table():
-    names = {name for name, _, _ in HookHost._HOOK_ADDERS}
-    assert "add_pre_validator" in names
-    assert "add_pre_validator_task" in names
-    assert "add_pre_set" not in names
-    assert not hasattr(HookHost, "add_pre_set")
+def test_add_hooks_are_declared_on_the_class():
+    """Public add_* are real methods, not setattr from a table. No add_pre_set."""
+    import inspect
+
+    src = inspect.getsource(HookHost.add_pre_validator)
+    assert "def add_pre_validator" in src
+    assert "pre_validate" in src
     assert hasattr(HookHost, "add_pre_validator")
+    assert hasattr(HookHost, "add_pre_validator_task")
     assert hasattr(HookHost, "_add")
+    assert not hasattr(HookHost, "add_pre_set")
+    assert not hasattr(HookHost, "_HOOK_ADDERS")
+    assert not hasattr(HookHost, "_PROCESSOR_PHASES")
+    assert not hasattr(HookHost, "_install_adders")
+    assert not hasattr(HookHost, "_hook_adder")
 
 
 def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
@@ -44,7 +51,8 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
 
     assert not hasattr(hooks_mod, "_HOOK_ADDERS")
     assert not hasattr(hooks_mod, "_PROCESSOR_PHASES")
-    assert HookHost._HOOK_ADDERS[0][0] == "add_pre_validator"
+    assert not hasattr(HookHost, "_HOOK_ADDERS")
+    assert not hasattr(HookHost, "_PROCESSOR_PHASES")
     assert list in leaves_mod._ORIGIN_CHECKERS
     assert leaves_mod._ORIGIN_GROUPS
     assert not hasattr(TypeValidator, "_ORIGIN_CHECKERS")
