@@ -47,3 +47,9 @@ def test_wrong_length_is_rejected(Card):
 def test_substring_containing_valid_aadhaar_is_rejected(Card):
     with pytest.raises(ValueError):
         Card(aadhaar=f"prefix {VALID_AADHAAR} suffix")
+
+
+def test_uidai_grouped_aadhaar_is_stored_compact(Card):
+    assert Card(aadhaar="2345 6789 0124").aadhaar == VALID_AADHAAR
+    assert Card(aadhaar="2345-6789-0124").aadhaar == VALID_AADHAAR
+    assert Card(aadhaar=f"  {VALID_AADHAAR}  ").aadhaar == VALID_AADHAAR

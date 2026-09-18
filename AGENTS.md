@@ -118,8 +118,13 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   generator is not enough). Rupay identity is `60` + 14 digits except
   Discover overlap; do not resurrect a dead `6521` alternative.
   `AadhaarCardValidator` is 12-digit identity ∩
-  Verhoeff. `PANCardValidator` is identity `fullmatch` ∩ Luhn mod 26
-  (complete A–Z; a format-only generator is not enough). `ExpiryValidator`
+  Verhoeff. UIDAI 4-4-4 / hyphen print forms strip to 12 digits on
+  assignment (stored value is the compact identity). `PANCardValidator`
+  is identity `fullmatch` ∩ Luhn mod 26
+  (complete A–Z; a format-only generator is not enough). Letters
+  case-fold to A–Z; grouping spaces/hyphens strip. `PaymentCardValidator`
+  is brand ∩ Luhn; printed grouping spaces/hyphens strip to the compact
+  number. `ExpiryValidator`
   is a Door A facade with exclusive `expire_after` / `expire_on` /
   `expire_before`. `expire_on` is valid only on that calendar day.
   `expire_before` is its own bound. `expire_*` are not
@@ -163,7 +168,11 @@ Layout (core at the root, validate door inherits, named facades are parallel):
 
 Public Door A names KEEP (valio PatternTypes, `add_*`, `AllOf`,
 `Validator`, `Property`). Do not fashion-rename `Digit` / `SetOf` /
-`IfPrecededBy`.
+`IfPrecededBy`. Modules are snake_case (`validation_path`, `async_bridge`).
+Classes are CapWords. Methods/helpers are snake_case verbs. The public
+stored-type param is `Validator[T]`; `Property` uses `_StoreT`.
+`in_choice` / `not_in_choice` / `number_of_assignment` are valio names
+on the facade — do not fashion-rename them.
 
 New private helpers are verbs that name the action:
 `_load_compose_types`, `_register_compose_types`,

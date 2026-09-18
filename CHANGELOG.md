@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Aadhaar / PAN / payment-card print forms canonicalize on assignment:
+  grouping spaces/hyphens strip; PAN letters upper-case. Stored value is
+  the compact identity; extra checks still Verhoeff / Luhn mod 26 / brand∩Luhn.
 - Named-facade identity helpers live on the facade (`AadhaarCardValidator`,
   `PaymentCardValidator`, `PANCardValidator`, `ExpiryValidator`,
   `PhoneNumberValidator`). Slot helpers live on `Property`. Brand /
