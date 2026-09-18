@@ -33,7 +33,9 @@ def test_add_hooks_are_declared_on_the_class():
     assert "pre_validate" in src
     assert hasattr(HookHost, "add_pre_validator")
     assert hasattr(HookHost, "add_pre_validator_task")
-    assert hasattr(HookHost, "_add")
+    assert hasattr(HookHost, "_register")
+    assert not hasattr(HookHost, "_add")
+    assert not hasattr(HookHost, "_init_hooks")
     assert not hasattr(HookHost, "add_pre_set")
     assert not hasattr(HookHost, "_HOOK_ADDERS")
     assert not hasattr(HookHost, "_PROCESSOR_PHASES")
