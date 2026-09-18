@@ -31,3 +31,21 @@ def test_luhn_valid_non_brand_is_rejected(Card):
 def test_luhn_invalid_is_rejected(Card):
     with pytest.raises(ValueError):
         Card(c="4111111111111112")
+
+
+def test_mastercard_2_series_is_accepted(Card):
+    assert Card(c="2221000000000009").c == "2221000000000009"
+
+
+def test_amex_discover_rupay_brand_numbers_are_accepted(Card):
+    assert Card(c="378282246310005").c == "378282246310005"
+    assert Card(c="6011111111111117").c == "6011111111111117"
+    assert Card(c="6000000000000007").c == "6000000000000007"
+
+
+def test_rupay_does_not_claim_dead_6521_branch():
+    from ux_valio.validators.payment import _RUPAY
+
+    assert "52[12]" not in _RUPAY.pattern
+    assert _RUPAY.fullmatch("6521000000000000") is None
+    assert _RUPAY.fullmatch("6000000000000000") is not None

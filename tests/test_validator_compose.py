@@ -188,3 +188,98 @@ def test_anyof_union_owner_binds_without_and_gate():
 def test_allof_conflicting_typed_facades_still_typeerror():
     with pytest.raises(TypeError, match="conflicting annotations"):
         AllOf(IntegerValidator(debug=True), StringValidator(debug=True))
+
+
+def test_compose_types_are_bound_once_on_package_import():
+    """``&`` / ``|`` must not import compose on each operator use."""
+    import inspect
+
+    from ux_valio.validators import base as base_mod
+    from ux_valio.validators.compose import AllOf, AnyOf
+
+    assert base_mod._AllOf is AllOf
+    assert base_mod._AnyOf is AnyOf
+    first = base_mod._load_compose_types()
+    second = base_mod._load_compose_types()
+    assert first is second
+    assert first[0] is AllOf
+    assert first[1] is AnyOf
+    and_src = inspect.getsource(ValidateProperty.__and__)
+    or_src = inspect.getsource(ValidateProperty.__or__)
+    assert "from ux_valio.validators.compose import" not in and_src
+    assert "from ux_valio.validators.compose import" not in or_src
+    left = IntegerValidator(debug=True, min_value=0)
+    right = RequiredValidator(required=True)
+    assert type(left & right) is AllOf
+    assert type(left | StringValidator(debug=True)) is AnyOf
+    assert base_mod._AllOf is AllOf
+
+
+def test_allof_post_validate_cannot_store_member_facade_lie():
+    from ux_valio import EmailValidator, LengthValidator
+    from ux_valio.validators.hooks import _bag_key
+
+    field = EmailValidator(debug=True) & LengthValidator(min_length=3, debug=True)
+
+    def smash(instance, value):
+        return "not-an-email"
+
+    @dataclass
+    class Contact:
+        s: str = field
+
+    field.add_post_validator(smash, namespace=_bag_key(Contact))
+    with pytest.raises(ValueError, match="email"):
+        Contact(s="ada@example.com")
+
+
+def test_allof_post_validate_may_shorten_unnamed_length_member():
+    """AllOf path bounds are not re-run. Named extra of a StringValidator is no-op."""
+    from ux_valio.validators.hooks import _bag_key
+
+    field = StringValidator(min_length=3, debug=True) & RequiredValidator(required=True)
+
+    def shorten(instance, value):
+        return "x"
+
+    @dataclass
+    class Tag:
+        s: str = field
+
+    field.add_post_validator(shorten, namespace=_bag_key(Tag))
+    assert Tag(s="abcd").s == "x"
+
+
+def test_anyof_post_validate_must_still_match_one_alternative():
+    from ux_valio import EmailValidator, PaymentCardValidator
+    from ux_valio.validators.hooks import _bag_key
+
+    field = EmailValidator(debug=True) | PaymentCardValidator(debug=True)
+
+    def smash(instance, value):
+        return "not-an-email"
+
+    @dataclass
+    class Either:
+        s: str = field
+
+    field.add_post_validator(smash, namespace=_bag_key(Either))
+    with pytest.raises(ValueError, match="none of the alternatives"):
+        Either(s="ada@example.com")
+
+
+def test_anyof_post_validate_may_store_when_string_alternative_holds():
+    from ux_valio import EmailValidator
+    from ux_valio.validators.hooks import _bag_key
+
+    field = EmailValidator(debug=True) | StringValidator(debug=True)
+
+    def smash(instance, value):
+        return "not-an-email"
+
+    @dataclass
+    class Either:
+        s: str = field
+
+    field.add_post_validator(smash, namespace=_bag_key(Either))
+    assert Either(s="ada@example.com").s == "not-an-email"

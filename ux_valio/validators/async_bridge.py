@@ -6,6 +6,10 @@ functions register. Coroutine objects follow run rules. On the sync
 descriptor path: no running loop → TypeError naming the missing loop /
 helper; running loop → nest-safe worker private loop. No ``asyncio.run``
 in the setter.
+
+The worker pool is one thread (KEEP). Re-entering ``nest_safe_bridge``
+from that worker would deadlock on ``.result()``; that is TypeError, not
+a hang.
 """
 
 from __future__ import annotations
@@ -14,15 +18,24 @@ import atexit
 import asyncio
 import concurrent.futures
 import inspect
+import threading
 from typing import Any, Callable
 
 # One worker is KEEP: one private loop, no nested-run races.
 _NEST_SAFE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 atexit.register(_NEST_SAFE_EXECUTOR.shutdown, wait=False)
 
+_nest_safe_worker_ident: int | None = None
+_NEST_SAFE_IDENT_LOCK = threading.Lock()
+
 ASYNC_NEEDS_LOOP = (
     "async callable needs a running event loop / helper "
     "(await from async context; asyncio.run in the setter is retired)"
+)
+
+NEST_SAFE_REENTERED = (
+    "nest-safe bridge is already running on this worker; "
+    "nested async Door A assignment would deadlock"
 )
 
 
@@ -32,14 +45,25 @@ def nest_safe_bridge(coro: Any) -> Any:
     Same-thread ``run_until_complete`` on the *running* loop is a
     nested-loop hazard. This helper never touches the caller's loop.
     The worker pool is process-held and reused; it is not a public dial.
+    Re-entry from the worker thread is TypeError (would deadlock).
     """
+    with _NEST_SAFE_IDENT_LOCK:
+        already = _nest_safe_worker_ident
+    if already is not None and threading.get_ident() == already:
+        coro.close()
+        raise TypeError(NEST_SAFE_REENTERED)
 
     def worker() -> Any:
+        global _nest_safe_worker_ident
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        with _NEST_SAFE_IDENT_LOCK:
+            _nest_safe_worker_ident = threading.get_ident()
         try:
             return loop.run_until_complete(coro)
         finally:
+            with _NEST_SAFE_IDENT_LOCK:
+                _nest_safe_worker_ident = None
             asyncio.set_event_loop(None)
             loop.close()
 

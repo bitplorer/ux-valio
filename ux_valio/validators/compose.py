@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from ux_valio.descriptor import _annotations_agree, merge_opt, opt_of
-from ux_valio.validators.base import ValidateProperty
+from ux_valio.validators.base import ValidateProperty, _register_compose_types
 from ux_valio.validators.errors import ValidationErrors, raise_collected, run_steps
 from ux_valio.validators.hooks import HookHost, hook_bags_used
 from ux_valio.validators.leaves import TypeValidator
@@ -186,6 +186,14 @@ class AllOf(_Compose):
             self.name,
         )
 
+    def _reject_store_identity(self, value: Any) -> None:
+        """Each member named extra is an AND identity. Path bounds are not re-run."""
+        super()._reject_store_identity(value)
+        for item in self.validators:
+            extra = getattr(item, "_validate_named_facade", None)
+            if extra is not None:
+                extra(None, value)
+
 
 Chain = AllOf
 
@@ -194,26 +202,41 @@ class AnyOf(_Compose):
     _merge_member_annotations = False
     _propagate_annotation = False
 
-    def validate(self, instance: Any = None, value: Any = None) -> None:
+    def _match_one_alternative(self, instance: Any, value: Any) -> None:
+        """Succeed when one member validates. Else none-of-the-alternatives."""
         alt_errors: list[BaseException] = []
         for item in self.validators:
             try:
                 item.validate(instance=instance, value=value)
-                break
+                return
             except Exception as err:
                 if isinstance(err, ValidationErrors):
                     alt_errors.extend(err.errors)
                 else:
                     alt_errors.append(err)
-        else:
-            if self.collect_all and alt_errors:
-                raise_collected(alt_errors, name=self.name)
-            label = self.name if self.name is not None else type(self).__name__
-            raise ValueError(f"{label} matched none of the alternatives") from (
-                alt_errors[-1] if alt_errors else None
-            )
+        if self.collect_all and alt_errors:
+            raise_collected(alt_errors, name=self.name)
+        label = self.name if self.name is not None else type(self).__name__
+        raise ValueError(f"{label} matched none of the alternatives") from (
+            alt_errors[-1] if alt_errors else None
+        )
+
+    def validate(self, instance: Any = None, value: Any = None) -> None:
+        self._match_one_alternative(instance, value)
         run_steps(
             (lambda: self._run_custom_validators(instance, value),),
             self.collect_all,
             self.name,
         )
+
+    def _reject_store_identity(self, value: Any) -> None:
+        """Stored value must still match one alternative.
+
+        ``instance is None`` skips member custom bags. Path bounds on
+        members are the alternatives.
+        """
+        super()._reject_store_identity(value)
+        self._match_one_alternative(None, value)
+
+
+_register_compose_types(AllOf, AnyOf)

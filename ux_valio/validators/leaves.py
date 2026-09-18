@@ -19,7 +19,7 @@ from collections.abc import (
 from typing import Annotated, Any, Literal, TypeVar, Union, get_args, get_origin
 
 from ux_valio.pattern import PatternType
-from ux_valio.validators.base import ValidateProperty
+from ux_valio.validators.base import ValidateProperty, _register_annotation_checker
 from ux_valio.validators.bounds import bound_value
 
 _SEQUENCE_ORIGINS = (Sequence, MutableSequence)
@@ -340,7 +340,7 @@ class ChoiceValidator(ValidateProperty):
             raise ValueError(
                 f"{self.name} expect values in {in_choice}, got {value} as value instead"
             )
-        if not_in_choice is not None and value in not_in_choice:
+        if not_in_choice is not None and value is not None and value in not_in_choice:
             raise ValueError(
                 f"{self.name} does not expect values in {not_in_choice}, "
                 f"got {value} as value instead"
@@ -348,3 +348,6 @@ class ChoiceValidator(ValidateProperty):
 
     def validate(self, instance: Any = None, value: Any = None) -> None:
         self._validate_choice(instance, value)
+
+
+_register_annotation_checker(is_instance_of)

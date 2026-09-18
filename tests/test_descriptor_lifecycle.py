@@ -155,3 +155,144 @@ def test_star_import_does_not_leak_field_or_schema():
     assert "Schema" not in namespace
     assert "Validator" in namespace
     assert "Cap" not in namespace
+
+
+def test_assignment_counts_drop_when_instance_is_collected():
+    field = Validator(reassign=False, debug=True)
+
+    @dataclass
+    class Once:
+        s: str = field
+
+    once = Once(s="a")
+    oid = id(once)
+    assert field._assignment_counts.get(oid) == 1
+    del once
+    import gc
+
+    gc.collect()
+    assert oid not in field._assignment_counts
+    assert oid not in field._assignment_alive
+
+
+def test_post_get_does_not_replace_in_flight_never_set_error():
+    field = Validator(debug=True)
+
+    def boom(instance, value):
+        raise RuntimeError("post_get boom")
+
+    @dataclass
+    class Box:
+        s: str = field
+
+    from ux_valio.validators.hooks import _bag_key
+
+    field.add_post_get(boom, namespace=_bag_key(Box))
+    box = Box.__new__(Box)
+    with pytest.raises(AttributeError, match=r"Box\.s is not set") as exc:
+        _ = box.s
+    assert type(exc.value) is AttributeError
+    assert any(isinstance(err, RuntimeError) for err in field.errors)
+
+
+def test_post_validate_cannot_store_type_mismatch():
+    field = IntegerValidator(debug=True)
+
+    def smash(instance, value):
+        return "not-an-int"
+
+    @dataclass
+    class N:
+        n: int = field
+
+    from ux_valio.validators.hooks import _bag_key
+
+    field.add_post_validator(smash, namespace=_bag_key(N))
+    with pytest.raises(TypeError, match="int"):
+        N(n=2)
+
+
+def test_post_validate_cannot_store_named_facade_lie():
+    """Named-facade extra is a store invariant, same class as the type door."""
+    from datetime import date, datetime
+
+    from ux_valio import DateValidator, EmailValidator, PaymentCardValidator
+    from ux_valio.validators.hooks import _bag_key
+
+    email = EmailValidator(debug=True)
+
+    def not_email(instance, value):
+        return "not-an-email"
+
+    @dataclass
+    class Contact:
+        s: str = email
+
+    email.add_post_validator(not_email, namespace=_bag_key(Contact))
+    with pytest.raises(ValueError, match="email"):
+        Contact(s="ada@example.com")
+
+    card = PaymentCardValidator(debug=True)
+
+    def not_card(instance, value):
+        return "0000"
+
+    @dataclass
+    class Wallet:
+        c: str = card
+
+    card.add_post_validator(not_card, namespace=_bag_key(Wallet))
+    with pytest.raises(ValueError, match="payment card"):
+        Wallet(c="4111111111111111")
+
+    when = DateValidator(debug=True)
+
+    def to_datetime(instance, value):
+        return datetime(2020, 1, 1, 12, 0)
+
+    @dataclass
+    class Day:
+        d: date = when
+
+    when.add_post_validator(to_datetime, namespace=_bag_key(Day))
+    with pytest.raises(TypeError, match="datetime"):
+        Day(d=date(2020, 1, 1))
+
+
+def test_post_validate_may_transform_within_unnamed_str_door():
+    """Path bounds are not re-run. Unnamed StringValidator identity is the type."""
+    from ux_valio import StringValidator
+    from ux_valio.validators.hooks import _bag_key
+
+    field = StringValidator(min_length=3, debug=True)
+
+    def shorten(instance, value):
+        return "x"
+
+    @dataclass
+    class Tag:
+        s: str = field
+
+    field.add_post_validator(shorten, namespace=_bag_key(Tag))
+    assert Tag(s="abcd").s == "x"
+
+
+def test_annotation_checker_is_bound_once_on_leaves_import():
+    from ux_valio.validators import base as base_mod
+    from ux_valio.validators.leaves import is_instance_of
+
+    assert base_mod._matches_annotation is is_instance_of
+    assert base_mod._annotation_accepts(int, 1) is True
+    assert base_mod._matches_annotation is is_instance_of
+
+
+def test_dunder_version_matches_pyproject():
+    import re
+    from pathlib import Path
+
+    import ux_valio
+
+    text = Path(__file__).resolve().parents[1].joinpath("pyproject.toml").read_text()
+    match = re.search(r'^version = "([^"]+)"', text, re.MULTILINE)
+    assert match is not None
+    assert ux_valio.__version__ == match.group(1)
