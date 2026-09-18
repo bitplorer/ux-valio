@@ -83,27 +83,34 @@ class _Opt:
     def set(cls, value: Any) -> "_Opt":
         return cls(value, True)
 
+    @classmethod
+    def merge(cls, attr: str, *opts: "_Opt") -> "_Opt":
+        """One specified value, or TypeError on conflict."""
+        present = [opt for opt in opts if opt.specified]
+        if not present:
+            return opts[0] if opts else cls.omitted(None)
+        first = present[0]
+        for opt in present[1:]:
+            if opt.value != first.value:
+                raise TypeError(
+                    f"composed validators have conflicting {attr}: "
+                    f"{first.value!r} vs {opt.value!r}"
+                )
+        return first
 
-def merge_opt(attr: str, *opts: _Opt) -> _Opt:
-    present = [opt for opt in opts if opt.specified]
-    if not present:
-        return opts[0] if opts else _Opt.omitted(None)
-    first = present[0]
-    for opt in present[1:]:
-        if opt.value != first.value:
-            raise TypeError(
-                f"composed validators have conflicting {attr}: "
-                f"{first.value!r} vs {opt.value!r}"
-            )
-    return first
+    @classmethod
+    def read(cls, item: Any, attr: str, omitted_default: Any = None) -> "_Opt":
+        """Read specified-theory for ``attr`` off a descriptor."""
+        opts = getattr(item, "_opts", None)
+        if isinstance(opts, dict) and attr in opts:
+            return opts[attr]
+        value = getattr(item, attr, omitted_default)
+        return cls(value, value is not omitted_default)
 
 
-def opt_of(item: Any, attr: str, omitted_default: Any = None) -> _Opt:
-    opts = getattr(item, "_opts", None)
-    if isinstance(opts, dict) and attr in opts:
-        return opts[attr]
-    value = getattr(item, attr, omitted_default)
-    return _Opt(value, value is not omitted_default)
+# leftover: previous helper names. Prefer ``_Opt.merge`` / ``_Opt.read``.
+merge_opt = _Opt.merge
+opt_of = _Opt.read
 
 
 _CONTAINER_ORIGINS = (list, dict, tuple, set, frozenset)

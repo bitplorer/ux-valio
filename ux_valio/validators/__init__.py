@@ -1,5 +1,17 @@
 # SPDX-License-Identifier: MIT
-"""Concern leaves, typed facades, and validator↔validator composition.
+"""Door A validators, layered.
+
+``descriptor.Property`` is the store door (package root).
+This package is the validate door, in one stack:
+
+- ``base`` — ``ValidateProperty`` (pre_set validates, then store)
+- ``hooks`` — ``HookHost`` (``add_*`` bags; compose roots and ``Validator``)
+- ``leaves`` — single-concern units + type door (``TypeValidator._ORIGIN_CHECKERS``)
+- ``length`` / ``value`` / ``bounds`` — bound concerns
+- ``path`` — ordered unique units on the facade
+- ``compose`` — ``AllOf`` / ``AnyOf`` (object composition, not leaf MI)
+- ``facade`` — ``Validator`` (path of leaves, hang ``add_*`` here)
+- named facades (``typed``, ``payment``, ``expiry``, ``phone``, ``aadhaar``, ``pan``)
 
 Length/value checks are leaf-owned methods. ``check_*`` free functions are not
 the public API. ``AttributeValidator`` is not shipped — object-attribute

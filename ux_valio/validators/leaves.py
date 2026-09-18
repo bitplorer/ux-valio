@@ -61,70 +61,17 @@ def _check_literal(value: Any, args: tuple[Any, ...]) -> bool:
     return value in args
 
 
-def _check_list(value: Any, args: tuple[Any, ...]) -> bool:
-    return isinstance(value, list) and _elements_match(value, args)
-
-
-def _check_set(value: Any, args: tuple[Any, ...]) -> bool:
-    return isinstance(value, set) and _elements_match(value, args)
-
-
-def _check_frozenset(value: Any, args: tuple[Any, ...]) -> bool:
-    return isinstance(value, frozenset) and _elements_match(value, args)
-
-
-def _check_dict(value: Any, args: tuple[Any, ...]) -> bool:
-    return isinstance(value, dict) and _mapping_match(value, args)
-
-
-def _check_tuple(value: Any, args: tuple[Any, ...]) -> bool:
-    return isinstance(value, tuple) and _tuple_match(value, args)
-
-
 def _check_callable(value: Any, args: tuple[Any, ...]) -> bool:
     return _isinstance_closed(value, AbcCallable)
 
 
-_ORIGIN_CHECKERS = {
-    Annotated: _check_annotated,
-    Union: _check_union,
-    types.UnionType: _check_union,
-    type(None): _check_none,
-    Literal: _check_literal,
-    list: _check_list,
-    set: _check_set,
-    frozenset: _check_frozenset,
-    dict: _check_dict,
-    tuple: _check_tuple,
-    AbcCallable: _check_callable,
-}
+def _exact_type(typ: type, matcher: Any):
+    """``isinstance(value, typ)`` then the same-shape matcher."""
 
-def is_instance_of(value: Any, annotation: Any) -> bool:
-    if annotation is None or annotation is Any:
-        return True
-    peeled = _peel_annotation(annotation)
-    if peeled is _PeelFail:
-        return False
-    if peeled is not annotation:
-        return is_instance_of(value, peeled)
-    if isinstance(annotation, str):
-        return False
-    if isinstance(annotation, TypeVar):
-        if annotation.__constraints__:
-            return any(is_instance_of(value, arg) for arg in annotation.__constraints__)
-        if annotation.__bound__ is not None:
-            return is_instance_of(value, annotation.__bound__)
-        return False
-    origin = get_origin(annotation)
-    args = get_args(annotation)
-    checker = _ORIGIN_CHECKERS.get(origin)
-    if checker is not None:
-        return checker(value, args)
-    for group, matcher in _ORIGIN_GROUPS:
-        if origin in group:
-            return isinstance(value, origin) and matcher(value, args)
-    target = origin if origin is not None else annotation
-    return _isinstance_closed(value, target)
+    def check(value: Any, args: tuple[Any, ...]) -> bool:
+        return isinstance(value, typ) and matcher(value, args)
+
+    return check
 
 
 def _isinstance_closed(value: Any, target: Any) -> bool:
@@ -168,7 +115,52 @@ _ORIGIN_GROUPS = (
 )
 
 
+def is_instance_of(value: Any, annotation: Any) -> bool:
+    """Type-door membership. Origin table lives on ``TypeValidator``."""
+    if annotation is None or annotation is Any:
+        return True
+    peeled = _peel_annotation(annotation)
+    if peeled is _PeelFail:
+        return False
+    if peeled is not annotation:
+        return is_instance_of(value, peeled)
+    if isinstance(annotation, str):
+        return False
+    if isinstance(annotation, TypeVar):
+        if annotation.__constraints__:
+            return any(is_instance_of(value, arg) for arg in annotation.__constraints__)
+        if annotation.__bound__ is not None:
+            return is_instance_of(value, annotation.__bound__)
+        return False
+    origin = get_origin(annotation)
+    args = get_args(annotation)
+    checker = TypeValidator._ORIGIN_CHECKERS.get(origin)
+    if checker is not None:
+        return checker(value, args)
+    for group, matcher in _ORIGIN_GROUPS:
+        if origin in group:
+            return isinstance(value, origin) and matcher(value, args)
+    target = origin if origin is not None else annotation
+    return _isinstance_closed(value, target)
+
+
 class TypeValidator(ValidateProperty):
+    """Single-concern type door. ``_ORIGIN_CHECKERS`` is the origin table."""
+
+    _ORIGIN_CHECKERS = {
+        Annotated: _check_annotated,
+        Union: _check_union,
+        types.UnionType: _check_union,
+        type(None): _check_none,
+        Literal: _check_literal,
+        list: _exact_type(list, _elements_match),
+        set: _exact_type(set, _elements_match),
+        frozenset: _exact_type(frozenset, _elements_match),
+        dict: _exact_type(dict, _mapping_match),
+        tuple: _exact_type(tuple, _tuple_match),
+        AbcCallable: _check_callable,
+    }
+
     def _validate_type(self, instance: Any, value: Any) -> None:
         annotation = getattr(self, "annotation", None)
         if annotation is not None and value is not None and not is_instance_of(value, annotation):

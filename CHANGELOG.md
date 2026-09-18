@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Locality of behavior: compose flatten / specified-theory bind / annotation
+  merge live on `_Compose` (not free-floating helpers). Hook phase table and
+  `add_*` install live on `HookHost`. Origin table lives on
+  `TypeValidator._ORIGIN_CHECKERS`. Specified-theory merge is `_Opt.merge` /
+  `_Opt.read` (leftover aliases `merge_opt` / `opt_of`). Homogeneous
+  container origin checkers share `_exact_type`.
 - `&` / `|` bind `AllOf` / `AnyOf` once at compose import. Operator methods
   do not import compose on each use (`_load_compose_types` is the fallback).
   Type-door `is_instance_of` binds once the same way
