@@ -180,7 +180,7 @@ New private helpers are verbs that name the action:
 `_reject_store_identity`, `_reject_slots_without_dict`,
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
-`_Of._bind_kwargs`, `_Of._flatten`, `_Opt.merge`, `_Opt.read`,
+`_Of._flatten`, `_Opts.merge`, `_Opt.merge`, `_Opt.keeps_nesting`,
 `HookHost.has_hooks`, `HookHost._collect_owner_keys`, `HookHost._register`,
 `_bind_field_logger`, `_take_subscript_annotation`,
 `_is_unconstrained_typevar`,
@@ -196,7 +196,8 @@ New private helpers are verbs that name the action:
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
 `cache_task`, `_HOOK_ADDERS`, `_install_adders`, `_hook_adder`,
-`_init_hooks`, `_load_compose_types`, `_register_compose_types`).
+`_init_hooks`, `_load_compose_types`, `_register_compose_types`,
+`_Opt.read`, `_Of._bind_kwargs`, `_Of._merged_attr`).
 Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app
 nickname, not a slogan.
@@ -204,7 +205,8 @@ nickname, not a slogan.
 AllOf / AnyOf live next to ``&`` / ``|`` on ``ValidateProperty``. Hook ``add_*``
 methods live on `HookHost` (declared, not setattr from a table). Origin
 tables live next to
-`is_instance_of`. Specified-theory merge lives on `_Opt`. Errors live at
+`is_instance_of`. Specified-theory merge lives on `_Opts` (named fields, not string
+keys). Errors live at
 `ux_valio.errors`. Descriptor does not import `validators`. Do not
 reintroduce leftover aliases, `validators/errors.py`, `validators/path.py`,
 module `_bag_key` / `_owner_key` as a module function / `_resolve_bag_key` /

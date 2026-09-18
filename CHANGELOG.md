@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Specified-theory is `_Opts` with named fields (`debug`, `logger`, …),
+  not a string-keyed dict. Compose merge / flatten-keep live there.
+  `_Of` only walks members.
 - `ValidateProperty` inherits `HookHost`. `Validator` and `_Of` no longer
   list it. `add_*` is on every validating descriptor. `_Of` stays — it is
   the member list, not a second HookHost.
