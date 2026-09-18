@@ -2,6 +2,7 @@
 """Locks for origin table, hook adder table, and Pattern compile-at-bind."""
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from ux_valio import Validator
 from ux_valio.validators.hooks import HookHost
@@ -12,6 +13,8 @@ from ux_valio.validators.leaves import (
     _ORIGIN_GROUPS,
     is_instance_of,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_origin_table_owns_stdlib_generics():
@@ -47,8 +50,8 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
     """Hook adders stay on HookHost. Origin tables sit next to is_instance_of."""
     import ux_valio.validators.hooks as hooks_mod
     import ux_valio.validators.leaves as leaves_mod
-    import ux_valio.validators.compose as compose_mod
     import ux_valio.validators.length as length_mod
+    from ux_valio.validators.base import AllOf, _Of
     from ux_valio.validators.length import LengthValidator
 
     assert not hasattr(hooks_mod, "_HOOK_ADDERS")
@@ -59,11 +62,11 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
     assert leaves_mod._ORIGIN_GROUPS
     assert not hasattr(TypeValidator, "_ORIGIN_CHECKERS")
     assert not hasattr(TypeValidator, "_ORIGIN_GROUPS")
-    assert not hasattr(compose_mod, "_bind_compose_kwargs")
-    assert not hasattr(compose_mod, "_flatten")
-    assert hasattr(compose_mod._Compose, "_bind_kwargs")
-    assert hasattr(compose_mod._Compose, "_flatten")
-    assert hasattr(compose_mod._Compose, "_merged_annotation")
+    assert not hasattr(AllOf, "_bind_compose_kwargs")
+    assert hasattr(_Of, "_bind_kwargs")
+    assert hasattr(_Of, "_flatten")
+    assert hasattr(_Of, "_merged_annotation")
+    assert not (ROOT / "ux_valio" / "validators" / "compose.py").exists()
     assert hasattr(LengthValidator, "_len_or_reject")
     assert not hasattr(length_mod, "_len_or_reject")
     assert hasattr(HookHost, "_collect_owner_keys")

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `AllOf` / `AnyOf` live next to `&` / `|` on `ValidateProperty`. No
+  `compose.py`, no `_register_compose_types` cache. Validator is still
+  not AllOf — two kinds of descriptor root, one pair of bases.
 - `ValidationPath` lives on the facade (callables, not string unit names).
   No `validation_path.py`. Compose `pre_*` / `post_*` call member methods
   directly — no `getattr(item, method)`.

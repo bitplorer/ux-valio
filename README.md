@@ -65,8 +65,8 @@ Hang `add_*` on the field name. The descriptor *is* the dataclass default —
 no outer `username_field` twin, no Field mixin. Concern leaves do not
 carry `add_*`. Do not invent `add_pre_set`.
 
-`&` / `|` bind `AllOf` / `AnyOf` once (compose import fills the cache).
-The operator path does not import on each use.
+`&` / `|` return `AllOf` / `AnyOf` from `ValidateProperty` — same module
+as the operators, no per-use import.
 
 ```python
 @dataclass

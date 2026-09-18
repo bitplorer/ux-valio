@@ -8,11 +8,10 @@ Who depends on whom (top is core, bottom inherits):
 - ``ux_valio.errors`` — ``ValidationErrors`` (shared collect-all type).
 - ``ux_valio.pattern`` — pattern algebra. Independent of the descriptor.
 - this package — validate door (``ValidateProperty`` : ``Property``):
-  - ``base`` — ``ValidateProperty``
+  - ``base`` — ``ValidateProperty``, ``AllOf`` / ``AnyOf`` (the ``&`` / ``|`` operators)
   - ``hooks`` — ``HookHost`` mixin (parallel to ``ValidateProperty``)
   - ``leaves`` / ``length`` / ``value`` — concern leaves : ``ValidateProperty``
     (parallel to each other; object-compose with ``&`` / ``|``, no leaf MI)
-  - ``compose`` — ``AllOf`` / ``AnyOf`` : ``HookHost`` + ``ValidateProperty``
   - ``facade`` — ``Validator`` : ``HookHost`` + ``ValidateProperty``
     (unit list ``ValidationPath`` lives here, not ``PathValidator``)
   - named facades (``typed``, ``payment``, ``expiry``, ``phone``,
@@ -25,8 +24,7 @@ presence checks belong at the call site or on ``add_validator``.
 
 from ux_valio.errors import ValidationErrors
 from ux_valio.validators.aadhaar import AadhaarCardValidator
-from ux_valio.validators.base import ValidateProperty
-from ux_valio.validators.compose import AllOf, AnyOf, Chain
+from ux_valio.validators.base import AllOf, AnyOf, Chain, ValidateProperty
 from ux_valio.validators.expiry import ExpiryValidator
 from ux_valio.validators.facade import Validator
 from ux_valio.validators.leaves import (

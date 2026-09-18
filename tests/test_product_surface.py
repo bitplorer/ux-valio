@@ -171,6 +171,7 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert not (ROOT / "ux_valio" / "validators" / "errors.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "validation_path.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "path.py").exists()
+    assert not (ROOT / "ux_valio" / "validators" / "compose.py").exists()
     from ux_valio.validators.facade import ValidationPath, Validator
     from ux_valio.validators.typed import (
         BooleanValidator,
