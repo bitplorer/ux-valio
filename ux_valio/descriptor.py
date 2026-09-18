@@ -30,9 +30,14 @@ Debug-falsy still swallows and ``__get__`` reads back ``None``.
 ``post_get`` in ``__get__`` ``finally`` must not replace an in-flight
 exception: record it, keep the original raise / swallow.
 
-Door A stores on ``instance.__dict__``. Explicit ``__slots__`` that include
-the field TypeError at bind. ``@dataclass(slots=True)`` replaces the
-descriptor after bind — unsupported (validation would not run).
+Door A stores on ``instance.__dict__``. Explicit ``__slots__`` that
+include the field TypeError at bind. A slots-only class (no ``__dict__``
+in the MRO) TypeErrors at bind even when the field name is not itself a
+slot — get/delete would otherwise see a bare ``AttributeError``. Look at
+``owner.__dict__["__slots__"]``, not inherited ``getattr`` (a child that
+does not define slots still has ``__dict__``). ``@dataclass(slots=True)``
+replaces the descriptor after bind — unsupported (validation would not run).
+
 
 Logger default is OFF.
 
@@ -135,6 +140,21 @@ def _slot_names(slots: Any) -> tuple[str, ...]:
     if isinstance(slots, str):
         return (slots,)
     return tuple(slots)
+
+
+def _owner_omits_instance_dict(owner: type) -> bool:
+    """True when instances of ``owner`` have no ``__dict__`` (slots-only MRO)."""
+    saw_slots = False
+    for cls in owner.__mro__:
+        if cls is object:
+            continue
+        if "__slots__" not in cls.__dict__:
+            return False
+        if "__dict__" in _slot_names(cls.__dict__["__slots__"]):
+            return False
+        saw_slots = True
+    return saw_slots
+
 
 
 class Property:
@@ -249,16 +269,31 @@ class Property:
                 raise AttributeError(
                     f"{self.name} != {name}, attribute names did not match"
                 )
-            slots = getattr(owner, "__slots__", None)
-            if slots is not None and name in _slot_names(slots):
-                raise TypeError(
-                    f"{owner.__name__}.{name}: Door A descriptors need "
-                    "instance __dict__; __slots__ replaces them and drops validation"
-                )
+            self._reject_slots_without_dict(owner, name)
             self._bind_owner_annotation(owner, name)
         except Exception as err:
             self.errors.append(err)
             raise
+
+    def _reject_slots_without_dict(self, owner: type, name: str) -> None:
+        """Fail-closed when Door A cannot store on the instance.
+
+        Only this class's ``__slots__`` can name the field (inherited
+        ``getattr(owner, "__slots__")`` false-positives a child that still
+        has ``__dict__``). A slots-only MRO with no ``__dict__`` member
+        cannot store any Door A field.
+        """
+        own_slots = owner.__dict__.get("__slots__")
+        if own_slots is not None and name in _slot_names(own_slots):
+            raise TypeError(
+                f"{owner.__name__}.{name}: Door A descriptors need "
+                "instance __dict__; __slots__ replaces them and drops validation"
+            )
+        if _owner_omits_instance_dict(owner):
+            raise TypeError(
+                f"{owner.__name__}.{name}: Door A descriptors need "
+                "instance __dict__; __slots__ without '__dict__' drops storage"
+            )
 
     def _bind_owner_annotation(self, owner: type, name: str) -> None:
         annotations = getattr(owner, "__annotations__", None) or {}
@@ -282,14 +317,29 @@ class Property:
                 f"{_annotation_label(self.annotation)}"
             )
 
-    def _store_on_instance(self, obj: Any, value: Any) -> None:
+    def _require_instance_dict(self, obj: Any) -> dict[str, Any]:
         namespace = getattr(obj, "__dict__", None)
         if namespace is None:
             raise TypeError(
-                f"{type(obj).__name__}.{self.name} cannot store: "
-                "instance has no __dict__; Door A does not support slots"
+                f"{type(obj).__name__}.{self.name} has no instance __dict__; "
+                "Door A does not support slots"
             )
-        namespace[self.name] = value
+        return namespace
+
+    def _store_on_instance(self, obj: Any, value: Any) -> None:
+        self._require_instance_dict(obj)[self.name] = value
+
+    def _read_from_instance(self, obj: Any) -> Any:
+        try:
+            return self._require_instance_dict(obj)[self.name]
+        except KeyError:
+            raise self._missing_attribute(obj) from None
+
+    def _drop_from_instance(self, obj: Any) -> None:
+        try:
+            del self._require_instance_dict(obj)[self.name]
+        except KeyError:
+            raise self._missing_attribute(obj) from None
 
     def __set__(self, obj: Any, value: Any) -> None:
         try:
@@ -314,10 +364,7 @@ class Property:
         in_flight: BaseException | None = None
         try:
             self.pre_get(obj, self.name)
-            try:
-                return obj.__dict__[self.name]
-            except KeyError:
-                raise self._missing_attribute(obj) from None
+            return self._read_from_instance(obj)
         except Exception as err:
             in_flight = err
             self._swallow_or_raise(err)
@@ -335,10 +382,7 @@ class Property:
     def __delete__(self, obj: Any) -> None:
         try:
             self.pre_delete(obj, self.name)
-            try:
-                del obj.__dict__[self.name]
-            except KeyError:
-                raise self._missing_attribute(obj) from None
+            self._drop_from_instance(obj)
             self.post_delete(obj, self.name)
         except Exception as err:
             self._swallow_or_raise(err)

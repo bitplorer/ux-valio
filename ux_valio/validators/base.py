@@ -9,6 +9,7 @@ with ``&`` / ``|`` (AllOf / AnyOf) or explicit ``AllOf`` / ``AnyOf``.
 ``&`` / ``|`` use compose classes bound once. ``compose.py`` fills the cache
 at import so the operator hot path does not import. A direct
 ``from ux_valio.validators.base`` import still loads on first ``&`` / ``|``.
+``leaves.py`` binds ``is_instance_of`` the same way for the store type door.
 """
 
 from __future__ import annotations
@@ -47,13 +48,18 @@ def _load_compose_types() -> tuple[type, type]:
     return _compose_types
 
 
+def _register_annotation_checker(checker: Any) -> None:
+    """Bind ``is_instance_of`` once. ``leaves.py`` calls this at import."""
+    global _matches_annotation
+    _matches_annotation = checker
+
+
 def _annotation_accepts(annotation: Any, value: Any) -> bool:
     """Type-door membership. Loads ``is_instance_of`` at most once."""
-    global _matches_annotation
     if _matches_annotation is None:
         from ux_valio.validators.leaves import is_instance_of
 
-        _matches_annotation = is_instance_of
+        _register_annotation_checker(is_instance_of)
     return _matches_annotation(value, annotation)
 
 
@@ -66,6 +72,7 @@ class ValidateProperty(Property, ABC):
         self.validate(instance=obj, value=value)
         value = self.post_validation_processing(obj, value)
         self._reject_store_type_mismatch(value)
+        self._reject_store_identity(value)
         return value
 
     def _reject_store_type_mismatch(self, value: Any) -> None:
@@ -81,6 +88,18 @@ class ValidateProperty(Property, ABC):
             raise TypeError(
                 f"{self.name} expect {annotation} type, got {type(value).__name__} type instead"
             )
+
+    def _reject_store_identity(self, value: Any) -> None:
+        """Named-facade extra is a store invariant: post_validate cannot smuggle a lie.
+
+        Type door is ``_reject_store_type_mismatch``. This runs the facade's
+        ``_validate_named_facade`` on the to-store value. Custom validators
+        and path bounds are not re-run. Untyped / unnamed descriptors no-op.
+        """
+        extra = getattr(self, "_validate_named_facade", None)
+        if extra is None:
+            return
+        extra(None, value)
 
     def post_set(self, obj: Any, value: Any) -> Any:
         self.notify_post_set(obj)

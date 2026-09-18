@@ -4,12 +4,21 @@
 
 - `&` / `|` bind `AllOf` / `AnyOf` once at compose import. Operator methods
   do not import compose on each use (`_load_compose_types` is the fallback).
+  Type-door `is_instance_of` binds once the same way
+  (`_register_annotation_checker` at leaves import).
 - `not_in_choice` skips `None`, same as `in_choice` (string bags no longer
   TypeError on optional unset).
 - `__get__` `post_get` records a secondary error and does not replace an
   in-flight never-set `AttributeError`.
-- Annotation is a store invariant after `add_post_validator`.
-- Explicit `__slots__` on a Door A field TypeError at bind.
+- Annotation is a store invariant after `add_post_validator`. Named-facade
+  extra is the same class of invariant (`_reject_store_identity`):
+  post_validate cannot smuggle `"not-an-email"` onto `EmailValidator` or
+  a `datetime` onto `DateValidator`. Path bounds and custom validators
+  are not re-run.
+- Explicit `__slots__` on a Door A field TypeError at bind. A slots-only
+  class TypeErrors at bind even when the field name is not a slot.
+  Get/delete use `_require_instance_dict`. Inherited `getattr(..., "__slots__")`
+  no longer false-positives a child that still has `__dict__`.
   `@dataclass(slots=True)` stays unsupported (descriptor dropped).
 - Nest-safe worker re-entry is TypeError, not a deadlock hang.
 - Rupay identity is `60` + 14 digits except Discover overlap (dead `6521`

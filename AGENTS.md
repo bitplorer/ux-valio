@@ -45,15 +45,22 @@ Door A only: `field: T = SomeValidator(...)`.
   are not inspected.
   `&` / `|` use AllOf / AnyOf bound once (`_register_compose_types` at
   compose import; `_load_compose_types` is the fallback). Do not import
-  compose inside `__and__` / `__or__`.
+  compose inside `__and__` / `__or__`. `leaves.py` binds `is_instance_of`
+  once via `_register_annotation_checker`.
   `not_in_choice` skips `None`, same as `in_choice`.
   `post_get` in `__get__` `finally` records a secondary error and does
   not replace an in-flight exception.
   Annotation is a store invariant: `add_post_validator` may transform,
   then `_reject_store_type_mismatch` TypeErrors a value that would not
-  pass the type door. Custom validators are not re-run.
+  pass the type door. Named-facade extra is the same class of invariant
+  (`_reject_store_identity` re-runs `_validate_named_facade` on the
+  to-store value). Custom validators and path bounds are not re-run.
   Door A stores on `instance.__dict__`. Explicit `__slots__` that include
-  the field TypeError at bind. `@dataclass(slots=True)` is unsupported
+  the field TypeError at bind. A slots-only class (no `__dict__` in the
+  MRO) TypeErrors at bind even when the field name is not a slot.
+  Look at `owner.__dict__["__slots__"]`, not inherited `getattr`.
+  Get/delete use `_require_instance_dict` like store.
+  `@dataclass(slots=True)` is unsupported
   (dataclass replaces the descriptor after bind).
   `__version__` matches `pyproject.toml`.
 - Validator objects compose with `&` / `|` or `AllOf` / `AnyOf`.
@@ -104,7 +111,10 @@ Public Door A names KEEP (valio PatternTypes, `add_*`, `AllOf`,
 
 New private helpers are verbs that name the action:
 `_load_compose_types`, `_register_compose_types`,
-`_reject_store_type_mismatch`, `_record_error`, `_store_on_instance`.
+`_register_annotation_checker`, `_reject_store_type_mismatch`,
+`_reject_store_identity`, `_reject_slots_without_dict`,
+`_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
+`_record_error`, `_store_on_instance`.
 Leftover aliases when a private name was taught (`_named_extra`,
 `bound`, `_namespace`). Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app

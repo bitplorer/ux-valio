@@ -19,7 +19,7 @@ from collections.abc import (
 from typing import Annotated, Any, Literal, TypeVar, Union, get_args, get_origin
 
 from ux_valio.pattern import PatternType
-from ux_valio.validators.base import ValidateProperty
+from ux_valio.validators.base import ValidateProperty, _register_annotation_checker
 from ux_valio.validators.bounds import bound_value
 
 _SEQUENCE_ORIGINS = (Sequence, MutableSequence)
@@ -348,3 +348,6 @@ class ChoiceValidator(ValidateProperty):
 
     def validate(self, instance: Any = None, value: Any = None) -> None:
         self._validate_choice(instance, value)
+
+
+_register_annotation_checker(is_instance_of)

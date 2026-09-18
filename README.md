@@ -171,12 +171,19 @@ exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
 must not TypeError on that skip.
 
 Door A stores on `instance.__dict__`. Explicit `__slots__` that include the
-field TypeError at bind. `@dataclass(slots=True)` is unsupported: dataclass
-replaces the descriptor after bind, and validation would not run.
+field TypeError at bind. A slots-only class (no `__dict__` in the MRO)
+TypeErrors at bind even when the field name is not a slot. A child that
+does not define `__slots__` still has `__dict__`. `@dataclass(slots=True)`
+is unsupported: dataclass replaces the descriptor after bind, and
+validation would not run.
 
 `add_post_validator` may transform after checks. If the field has an
 annotation, the stored value must still match it — a post processor cannot
-smuggle a `str` onto `IntegerValidator`. Untyped `Validator()` does not gate.
+smuggle a `str` onto `IntegerValidator`. Named facades (`EmailValidator`,
+`PaymentCardValidator`, `DateValidator`, …) re-check their extra on the
+to-store value: post_validate cannot turn a valid email into `"not-an-email"`.
+Untyped `Validator()` does not gate. Path bounds (`min_length`, …) are not
+re-run. Custom `add_validator` callables are not re-run.
 
 `__get__` `post_get` runs in `finally`. A failing post_get is recorded; it
 does not replace an in-flight never-set `AttributeError` when `debug=True`.
