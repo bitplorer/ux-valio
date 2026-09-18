@@ -6,7 +6,8 @@ This package is the validate door, in one stack:
 
 - ``base`` — ``ValidateProperty`` (pre_set validates, then store)
 - ``hooks`` — ``HookHost`` (``add_*`` bags; compose roots and ``Validator``)
-- ``leaves`` — single-concern units + type door (``TypeValidator._ORIGIN_CHECKERS``)
+- ``leaves`` — single-concern units + type door (``is_instance_of`` / origin tables)
+
 - ``length`` / ``value`` / ``bounds`` — bound concerns
 - ``path`` — ordered unique units on the facade
 - ``compose`` — ``AllOf`` / ``AnyOf`` (object composition, not leaf MI)

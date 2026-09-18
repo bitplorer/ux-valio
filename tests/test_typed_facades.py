@@ -48,8 +48,48 @@ def test_decimal_validator_rejects_float():
         n: decimal.Decimal = DecimalValidator(debug=True)
 
     assert Price(n=decimal.Decimal("1.50")).n == decimal.Decimal("1.50")
+    assert Price(n="1.50").n == decimal.Decimal("1.50")
     with pytest.raises(TypeError):
         Price(n=1.5)
+    with pytest.raises(ValueError):
+        Price(n="not-a-decimal")
+
+
+def test_coercing_facades_bind_str_or_stored_type():
+    """Owner annotation may be T, str, or T | str. Stored value is T."""
+    raw = "12345678-1234-5678-1234-567812345678"
+
+    @dataclass
+    class AsUuid:
+        u: uuid.UUID = UUIDValidator(debug=True)
+
+    @dataclass
+    class AsStr:
+        u: str = UUIDValidator(debug=True)
+
+    @dataclass
+    class AsEither:
+        u: uuid.UUID | str = UUIDValidator(debug=True)
+
+    stored = uuid.UUID(raw)
+    assert AsUuid(u=raw).u == stored
+    assert AsStr(u=raw).u == stored
+    assert AsEither(u=raw).u == stored
+    assert isinstance(AsStr(u=raw).u, uuid.UUID)
+
+    @dataclass
+    class PathAsStr:
+        p: str = PathValidator(debug=True)
+
+    path = PathAsStr(p="/tmp/ux-valio-path")
+    assert isinstance(path.p, pathlib.Path)
+    assert path.p == pathlib.Path("/tmp/ux-valio-path")
+
+    @dataclass
+    class DayAsStr:
+        d: str = DateValidator(debug=True)
+
+    assert DayAsStr(d="2020-01-02").d == datetime.date(2020, 1, 2)
 
 
 def test_bytes_validator():
@@ -270,6 +310,24 @@ def test_datetime_post_validate_cannot_store_a_plain_date():
     field.add_post_validator(to_date, namespace=_bag_key(When))
     with pytest.raises(TypeError):
         When(t="2020-01-02T12:00:00")
+
+
+def test_uuid_post_validate_cannot_store_a_str():
+    from ux_valio.validators.hooks import _bag_key
+
+    field = UUIDValidator(debug=True)
+    raw = "12345678-1234-5678-1234-567812345678"
+
+    def smash(instance, value):
+        return raw
+
+    @dataclass
+    class Row:
+        u: uuid.UUID = field
+
+    field.add_post_validator(smash, namespace=_bag_key(Row))
+    with pytest.raises(TypeError):
+        Row(u=raw)
 
 
 def test_url_validator_requires_scheme_and_netloc():

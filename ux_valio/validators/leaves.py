@@ -24,7 +24,8 @@ from ux_valio.validators.base import ValidateProperty, _register_annotation_chec
 from ux_valio.validators.bounds import bound_value
 
 
-def _peel_annotation(annotation: Any) -> Any | _PeelFail:
+def _peel_annotation(annotation: Any) -> Any:
+
     if type(annotation).__name__ == "TypeAliasType":
         inner = getattr(annotation, "__value__", None)
         return _PeelFail if inner is None else inner
@@ -103,8 +104,31 @@ def _tuple_match(value: Any, args: tuple[Any, ...]) -> bool:
     return all(is_instance_of(item, arg) for item, arg in zip(value, args, strict=True))
 
 
+# Type-door tables live next to ``is_instance_of``, not on ``TypeValidator``.
+_ORIGIN_CHECKERS = {
+    Annotated: _check_annotated,
+    Union: _check_union,
+    types.UnionType: _check_union,
+    type(None): _check_none,
+    Literal: _check_literal,
+    list: _exact_type(list, _elements_match),
+    set: _exact_type(set, _elements_match),
+    frozenset: _exact_type(frozenset, _elements_match),
+    dict: _exact_type(dict, _mapping_match),
+    tuple: _exact_type(tuple, _tuple_match),
+    AbcCallable: _check_callable,
+}
+
+_ORIGIN_GROUPS = (
+    ((Mapping, MutableMapping), _mapping_match),
+    ((AbstractSet, MutableSet), _elements_match),
+    ((Sequence, MutableSequence), _elements_match),
+    ((Collection,), _elements_match),
+)
+
+
 def is_instance_of(value: Any, annotation: Any) -> bool:
-    """Type-door membership. Origin table lives on ``TypeValidator``."""
+    """Type-door membership. Origin tables sit beside this function."""
     if annotation is None or annotation is Any:
         return True
     peeled = _peel_annotation(annotation)
@@ -122,10 +146,10 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
         return False
     origin = get_origin(annotation)
     args = get_args(annotation)
-    checker = TypeValidator._ORIGIN_CHECKERS.get(origin)
+    checker = _ORIGIN_CHECKERS.get(origin)
     if checker is not None:
         return checker(value, args)
-    for group, matcher in TypeValidator._ORIGIN_GROUPS:
+    for group, matcher in _ORIGIN_GROUPS:
         if origin in group:
             return isinstance(value, origin) and matcher(value, args)
     target = origin if origin is not None else annotation
@@ -133,30 +157,9 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
 
 
 class TypeValidator(ValidateProperty):
-    """Single-concern type door. ``_ORIGIN_CHECKERS`` is the origin table."""
+    """Single-concern type door. ``is_instance_of`` owns the origin tables."""
 
-    _ORIGIN_CHECKERS = {
-        Annotated: _check_annotated,
-        Union: _check_union,
-        types.UnionType: _check_union,
-        type(None): _check_none,
-        Literal: _check_literal,
-        list: _exact_type(list, _elements_match),
-        set: _exact_type(set, _elements_match),
-        frozenset: _exact_type(frozenset, _elements_match),
-        dict: _exact_type(dict, _mapping_match),
-        tuple: _exact_type(tuple, _tuple_match),
-        AbcCallable: _check_callable,
-    }
-
-    _ORIGIN_GROUPS = (
-        ((Mapping, MutableMapping), _mapping_match),
-        ((AbstractSet, MutableSet), _elements_match),
-        ((Sequence, MutableSequence), _elements_match),
-        ((Collection,), _elements_match),
-    )
-
-    def _validate_type(self, instance: Any, value: Any) -> None:
+    def _validate_type(self: Any, instance: Any, value: Any) -> None:
         annotation = getattr(self, "annotation", None)
         if annotation is not None and value is not None and not is_instance_of(value, annotation):
             raise TypeError(
@@ -191,7 +194,8 @@ class PatternValidator(ValidateProperty):
         self._compiled_source: Any = object()
         super().__init__(**kwargs)
 
-    def _compiled_finder(self, source: str | bytes) -> re.Pattern[Any]:
+    def _compiled_finder(self: Any, source: str | bytes) -> re.Pattern[Any]:
+
         compiled = getattr(self, "_compiled", None)
         if compiled is not None and source == getattr(self, "_compiled_source", object()):
             return compiled
@@ -213,20 +217,20 @@ class PatternValidator(ValidateProperty):
                     f"{self.name} expects bytes to match a bytes pattern, "
                     f"got {type(value).__name__} type instead"
                 )
-            text = value
+            matched: str | bytes = value
         elif isinstance(source, str):
             if not isinstance(value, str):
                 raise TypeError(
                     f"{self.name} expects str to match a str pattern, "
                     f"got {type(value).__name__} type instead"
                 )
-            text = value
+            matched = value
         else:
             raise TypeError(
                 f"{self.name} pattern must be str or bytes, "
                 f"got {type(source).__name__} type instead"
             )
-        if not PatternValidator._compiled_finder(self, source).findall(text):
+        if not PatternValidator._compiled_finder(self, source).findall(matched):
             label = pattern.alias if isinstance(pattern, PatternType) and pattern.alias else pattern
             raise ValueError(f"{self.name} must have the pattern {label}")
 
@@ -246,7 +250,8 @@ class ReassignValidator(ValidateProperty):
         self._assignment_alive: dict[int, weakref.ref[Any]] = {}
         super().__init__(**kwargs)
 
-    def _watch_assignment(self, obj: Any) -> int:
+    def _watch_assignment(self: Any, obj: Any) -> int:
+
         oid = id(obj)
 
         def _drop(_ref: Any, key: int = oid) -> None:
@@ -259,15 +264,15 @@ class ReassignValidator(ValidateProperty):
             pass
         return oid
 
-    def notify_pre_set(self, obj: Any) -> None:
+    def notify_pre_set(self: Any, obj: Any) -> None:
         self._assignment_counts.setdefault(self._watch_assignment(obj), 0)
 
-    def notify_post_set(self, obj: Any) -> None:
+    def notify_post_set(self: Any, obj: Any) -> None:
         oid = self._watch_assignment(obj)
         self._assignment_counts[oid] = self._assignment_counts.get(oid, 0) + 1
         self.number_of_assignment += 1
 
-    def post_delete_processing(self, instance: Any, value: Any) -> Any:
+    def post_delete_processing(self: Any, instance: Any, value: Any) -> Any:
         oid = id(instance)
         self._assignment_counts.pop(oid, None)
         self._assignment_alive.pop(oid, None)

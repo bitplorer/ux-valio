@@ -111,11 +111,10 @@ def test_phone_number_validator_list_does_not_grow():
     assert phonenumbers.__name__ == "phonenumbers"
 
 
-def test_named_facade_leftover_named_extra_forwards():
-    from ux_valio import PaymentCardValidator, Validator
+def test_named_facade_extra_is_validate_named_facade():
+    from ux_valio import PaymentCardValidator
 
-    assert Validator._named_extra is not Validator._validate_named_facade
     v = PaymentCardValidator(debug=True, logger=False)
     with pytest.raises(ValueError):
-        v._named_extra(None, "4111111111111112")
+        v._validate_named_facade(None, "4111111111111112")
     v._validate_named_facade(None, "4111111111111111")

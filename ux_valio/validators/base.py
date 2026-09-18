@@ -60,7 +60,10 @@ def _annotation_accepts(annotation: Any, value: Any) -> bool:
         from ux_valio.validators.leaves import is_instance_of
 
         _register_annotation_checker(is_instance_of)
-    return _matches_annotation(value, annotation)
+    checker = _matches_annotation
+    if checker is None:
+        raise TypeError("type-door checker is not bound")
+    return checker(value, annotation)
 
 
 class ValidateProperty(Property, ABC):

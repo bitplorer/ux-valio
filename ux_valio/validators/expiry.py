@@ -62,6 +62,9 @@ def _configure_expiry(
 class ExpiryValidator(Validator):
     """Door A facade: reject assignment when *now* matches the exclusive timeline."""
 
+    expiry: Any
+    timeline: str | None
+
     def __init__(
         self,
         expire_after: Any = None,

@@ -161,3 +161,5 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "@name.add_pre_validator" in text
     assert "FrozenInstanceError" in text
     assert "Person.aadhaar.add_*" in text
+    assert "uuid.UUID | str" in text
+    assert "T | str" in text

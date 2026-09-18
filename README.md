@@ -285,14 +285,19 @@ netloc (`https://example.com`); a scheme-less host is rejected.
 `IntegerValidator`, `StringValidator`, `BooleanValidator`, `FloatValidator`,
 `DecimalValidator`, `BytesValidator`, `DateValidator` (`datetime.date`;
 EU `YYYY-MM-DD` / IND `DD-MM-YYYY` numeric strings with `-` `/` `:` parse
-to `date` and are stored as `date`; `datetime.datetime` is rejected),
+to `date` and are stored as `date`; `datetime.datetime` is rejected;
+owner annotation may be `date`, `str`, or `T | str`),
 `DateTimeValidator` (`datetime.datetime`; ISO via `fromisoformat`;
-plain `date` is rejected), `EmailValidator`
+plain `date` is rejected; owner may be `datetime`, `str`, or the union),
+`EmailValidator`
 (identity fullmatch extra on the compiled pattern; PatternValidator stays findall),
 `URLValidator` (scheme + netloc identity),
-`UUIDValidator` (coerces UUID strings), `PathValidator` (annotation
-`pathlib.Path`; coerces `str` → `pathlib.Path`; `path_exists=True` requires
-the path to exist),
+`UUIDValidator` (coerces UUID strings; stores `uuid.UUID`; owner
+annotation may be `uuid.UUID`, `str`, or `uuid.UUID | str`),
+`PathValidator` (stores `pathlib.Path`; coerces `str` → `Path`;
+owner may be `Path`, `str`, or the union; `path_exists=True` requires
+the path to exist), `DecimalValidator` (coerces Decimal strings; rejects
+float),
 `IPv4Validator` / `IPv6Validator` / `IPAddressValidator`,
 `EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`,
 `PaymentCardValidator` (Visa / Mastercard / Amex / Discover / Rupay, each

@@ -108,6 +108,28 @@ def test_union_owner_conflicts_with_integer_validator():
             n: int | str = IntegerValidator(debug=True)
 
 
+def test_coercing_facade_agrees_with_str_or_stored_owner():
+    from uuid import UUID
+
+    from ux_valio import UUIDValidator
+
+    @dataclass
+    class AsUuid:
+        u: UUID = UUIDValidator(debug=True)
+
+    @dataclass
+    class AsStr:
+        u: str = UUIDValidator(debug=True)
+
+    @dataclass
+    class AsUnion:
+        u: UUID | str = UUIDValidator(debug=True)
+
+    assert AsUuid.__dict__["u"].annotation == UUID | str
+    assert AsStr.__dict__["u"].annotation == UUID | str
+    assert AsUnion.__dict__["u"].annotation == UUID | str
+
+
 def test_stdlib_union_forms_agree_when_validator_annotation_was_none():
     field = Validator(debug=True)
     field.annotation = Optional[int]

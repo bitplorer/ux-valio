@@ -19,7 +19,7 @@ classifiers = [
 keywords = ["validation", "dataclass", "descriptor"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "phonenumbers>=9.0.0"]
+dev = ["pytest>=7", "phonenumbers>=9.0.0", "mypy>=1.8"]
 phonenumbers = ["phonenumbers>=9.0.0"]
 
 [tool.hatch.build.targets.wheel]
@@ -29,3 +29,10 @@ packages = ["ux_valio"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
+
+[tool.mypy]
+python_version = "3.14"
+packages = ["ux_valio"]
+pretty = true
+show_error_codes = true
+warn_unused_ignores = true

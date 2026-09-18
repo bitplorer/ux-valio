@@ -62,10 +62,6 @@ def _resolve_bag_key(
     )
 
 
-# leftover: previous helper name. Prefer ``_resolve_bag_key``.
-_namespace = _resolve_bag_key
-
-
 def _hook_adder(bag: str, phase: str):
     """One body for every taught ``add_*``. Bound onto ``HookHost`` from its table."""
 
@@ -244,8 +240,3 @@ class HookHost:
 
 
 HookHost._install_adders()
-
-# leftover: previous helper names. Prefer ``HookHost.bags_used`` /
-# ``HookHost._collect_bag_keys``.
-hook_bags_used = HookHost.bags_used
-_collect_bag_keys = HookHost._collect_bag_keys

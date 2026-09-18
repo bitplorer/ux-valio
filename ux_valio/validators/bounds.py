@@ -28,7 +28,3 @@ def bound_value(owner: Any, name: str) -> Any:
     """
     value = getattr(owner, name, None)
     return value if value is not None else None
-
-
-# leftover: previous helper name. Prefer ``bound_value``.
-bound = bound_value

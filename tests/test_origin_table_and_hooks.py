@@ -5,7 +5,13 @@ from dataclasses import dataclass
 
 from ux_valio import Validator
 from ux_valio.validators.hooks import HookHost
-from ux_valio.validators.leaves import PatternValidator, TypeValidator, is_instance_of
+from ux_valio.validators.leaves import (
+    PatternValidator,
+    TypeValidator,
+    _ORIGIN_CHECKERS,
+    _ORIGIN_GROUPS,
+    is_instance_of,
+)
 
 
 def test_origin_table_owns_stdlib_generics():
@@ -13,8 +19,9 @@ def test_origin_table_owns_stdlib_generics():
     assert is_instance_of([1, "a"], list[int]) is False
     assert is_instance_of({"a": 1}, dict[str, int]) is True
     assert is_instance_of((1, 2), tuple[int, ...]) is True
-    assert list in TypeValidator._ORIGIN_CHECKERS
-    assert dict in TypeValidator._ORIGIN_CHECKERS
+    assert list in _ORIGIN_CHECKERS
+    assert dict in _ORIGIN_CHECKERS
+    assert _ORIGIN_GROUPS
 
 
 def test_hook_taught_names_come_from_one_table():
@@ -27,30 +34,32 @@ def test_hook_taught_names_come_from_one_table():
     assert hasattr(HookHost, "_add")
 
 
-def test_hook_and_origin_tables_live_on_owning_types():
-    """Free-floating module tables are not the owner. The class is."""
+def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
+    """Hook adders stay on HookHost. Origin tables sit next to is_instance_of."""
     import ux_valio.validators.hooks as hooks_mod
     import ux_valio.validators.leaves as leaves_mod
     import ux_valio.validators.compose as compose_mod
+    import ux_valio.validators.length as length_mod
+    from ux_valio.validators.length import LengthValidator
 
     assert not hasattr(hooks_mod, "_HOOK_ADDERS")
     assert not hasattr(hooks_mod, "_PROCESSOR_PHASES")
     assert HookHost._HOOK_ADDERS[0][0] == "add_pre_validator"
-    assert not hasattr(leaves_mod, "_ORIGIN_CHECKERS")
-    assert not hasattr(leaves_mod, "_ORIGIN_GROUPS")
-    assert list in TypeValidator._ORIGIN_CHECKERS
-    assert TypeValidator._ORIGIN_GROUPS
+    assert list in leaves_mod._ORIGIN_CHECKERS
+    assert leaves_mod._ORIGIN_GROUPS
+    assert not hasattr(TypeValidator, "_ORIGIN_CHECKERS")
+    assert not hasattr(TypeValidator, "_ORIGIN_GROUPS")
     assert not hasattr(compose_mod, "_bind_compose_kwargs")
     assert not hasattr(compose_mod, "_flatten")
     assert hasattr(compose_mod._Compose, "_bind_kwargs")
     assert hasattr(compose_mod._Compose, "_flatten")
     assert hasattr(compose_mod._Compose, "_merged_annotation")
-
-    import ux_valio.validators.length as length_mod
-    from ux_valio.validators.length import LengthValidator
-
-    assert LengthValidator._len_or_reject is length_mod._len_or_reject
-    assert HookHost._collect_bag_keys is hooks_mod._collect_bag_keys
+    assert hasattr(LengthValidator, "_len_or_reject")
+    assert not hasattr(length_mod, "_len_or_reject")
+    assert hasattr(HookHost, "_collect_bag_keys")
+    assert not hasattr(hooks_mod, "_collect_bag_keys")
+    assert not hasattr(hooks_mod, "_namespace")
+    assert not hasattr(hooks_mod, "hook_bags_used")
 
 
 def test_pattern_compile_is_cached_on_owner():
