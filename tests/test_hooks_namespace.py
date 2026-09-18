@@ -105,6 +105,30 @@ def test_class_access_add_after_bind_uses_owner_for_free_function():
     assert Host(x="  Ada  ").x == "Ada"
 
 
+def test_shared_descriptor_class_access_uses_accessed_class():
+    """Sharing one descriptor: Person.aadhaar.add_* must not bag under Vendor."""
+    field = StringValidator(debug=True)
+
+    @dataclass
+    class Person:
+        aadhaar: str = field
+
+    @dataclass
+    class Vendor:
+        aadhaar: str = field
+
+    @Person.aadhaar.add_pre_validator
+    def person_tag(self, value):
+        return f"p:{value.strip()}"
+
+    @Vendor.aadhaar.add_pre_validator
+    def vendor_tag(self, value):
+        return f"v:{value.strip()}"
+
+    assert Person(aadhaar="  ada  ").aadhaar == "p:ada"
+    assert Vendor(aadhaar="  bob  ").aadhaar == "v:bob"
+
+
 def test_child_instance_runs_parent_field_hooks():
     @dataclass
     class Parent:

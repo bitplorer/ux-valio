@@ -279,6 +279,7 @@ def test_url_validator_requires_scheme_and_netloc():
 
     assert Link(href="https://example.com/path?q=1").href == "https://example.com/path?q=1"
     assert Link(href="http://localhost:8080").href == "http://localhost:8080"
+    assert Link(href="http://[::1]/").href == "http://[::1]/"
     with pytest.raises(ValueError, match="URL"):
         Link(href="example.com")
     with pytest.raises(ValueError, match="URL"):

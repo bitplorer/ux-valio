@@ -64,7 +64,9 @@ class User:
 Class access `User.name` is that descriptor, so `User.name.add_post_set`
 also works after the class exists. Dataclass uses the descriptor as the
 field default; assigning it is treated as unset and applies `default` /
-`default_factory`.
+`default_factory`. A shared descriptor (`aadhaar` on Person and Vendor)
+uses the class you accessed: `Person.aadhaar.add_*` bags under Person,
+not the last `__set_name__`.
 
 ## KEEP: debug swallow, logger OFF, pre_set hook
 
@@ -188,7 +190,9 @@ field TypeError at bind. A slots-only class (no `__dict__` in the MRO)
 TypeErrors at bind even when the field name is not a slot. A child that
 does not define `__slots__` still has `__dict__`. `@dataclass(slots=True)`
 is unsupported: dataclass replaces the descriptor after bind, and
-validation would not run.
+validation would not run. `@dataclass(frozen=True)` works: dataclass
+intercepts assign/delete with `FrozenInstanceError`; `__init__` still
+runs Door A.
 
 `add_post_validator` may transform after checks. If the field has an
 annotation, the stored value must still match it — a post processor cannot

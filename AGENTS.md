@@ -26,12 +26,15 @@ Door A only: `field: T = SomeValidator(...)`.
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
   Hang `add_*` on the field name (`@username.add_pre_validator` in the
   class body). Class access returns the descriptor (`Cls.field.add_*`
-  after bind). Dataclass default is that descriptor; `__set__` treats
-  `value is self` as unset. No Field mixin, no outer `username_field`
-  twin unless sharing one descriptor across classes.
+  after bind) and records that class as `_owner`, so a shared
+  descriptor's `Person.aadhaar.add_*` uses Person, not the last
+  `__set_name__`. Dataclass default is that descriptor; `__set__`
+  treats `value is self` as unset. No Field mixin, no outer
+  `username_field` twin unless sharing one descriptor across classes.
   Lookup walks the instance MRO (base first) so a child runs parent hooks.
   A free function on an unbound descriptor still needs `namespace=`;
   on a bound field the bag key is the bound owner.
+  `add_*` accepts async def and coroutine
   results (no `_reject_coroutine_result`);
   sync path with no running loop TypeError names the missing loop / helper;
   running loop uses the process-held nest-safe worker bridge.
@@ -82,6 +85,8 @@ Door A only: `field: T = SomeValidator(...)`.
   Get/delete use `_require_instance_dict` like store.
   `@dataclass(slots=True)` is unsupported
   (dataclass replaces the descriptor after bind).
+  `@dataclass(frozen=True)` works: dataclass intercepts assign/delete
+  with `FrozenInstanceError` before the descriptor mutates.
   `__version__` matches `pyproject.toml`.
 - Validator objects compose with `&` / `|` or `AllOf` / `AnyOf`.
   That is object composition, not leaf multiple-inheritance.
@@ -139,11 +144,12 @@ New private helpers are verbs that name the action:
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
 `_Compose._bind_kwargs`, `_Compose._flatten`, `_Opt.merge`, `_Opt.read`,
-`HookHost.bags_used`, `HookHost._install_adders`, `_bind_field_logger`,
-`_len_or_reject`, `ChoiceValidator._reject_non_container`,
-`_collect_bag_keys`.
+`HookHost.bags_used`, `HookHost._install_adders`, `HookHost._collect_bag_keys`,
+`_bind_field_logger`,
+`LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`.
 Leftover aliases when a private name was taught (`_named_extra`,
-`bound`, `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used`).
+`bound`, `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used`,
+`_collect_bag_keys`, `_len_or_reject`).
 Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app
 nickname, not a slogan.

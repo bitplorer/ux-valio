@@ -66,22 +66,6 @@ def _resolve_bag_key(
 _namespace = _resolve_bag_key
 
 
-def _collect_bag_keys(instance: Any) -> tuple[str, ...]:
-    """Owner keys from base to derived. Inherited hooks fire on a child."""
-    keys: list[str] = []
-    seen: set[str] = set()
-    for cls in instance.__class__.__mro__:
-        if cls is object:
-            continue
-        key = _bag_key(cls)
-        if key in seen:
-            continue
-        seen.add(key)
-        keys.append(key)
-    keys.reverse()
-    return tuple(keys)
-
-
 def _hook_adder(bag: str, phase: str):
     """One body for every taught ``add_*``. Bound onto ``HookHost`` from its table."""
 
@@ -137,6 +121,22 @@ class HookHost:
         ("add_post_delete_task", "_tasks", "post_delete"),
     )
 
+    @staticmethod
+    def _collect_bag_keys(instance: Any) -> tuple[str, ...]:
+        """Owner keys from base to derived. Inherited hooks fire on a child."""
+        keys: list[str] = []
+        seen: set[str] = set()
+        for cls in instance.__class__.__mro__:
+            if cls is object:
+                continue
+            key = _bag_key(cls)
+            if key in seen:
+                continue
+            seen.add(key)
+            keys.append(key)
+        keys.reverse()
+        return tuple(keys)
+
     def _init_hook_bags(self, cache_task: bool = True) -> None:
         # valio leftover: keep the kwarg. Do not skip tasks from this flag.
         self.cache_task = cache_task
@@ -166,14 +166,14 @@ class HookHost:
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
         bag = self._processors[phase]
-        for key in _collect_bag_keys(instance):
+        for key in type(self)._collect_bag_keys(instance):
             for func in bag.get(key, ()):
                 value = invoke_callable(func, instance, value)
         return value
 
     def _run_tasks(self, phase: str, instance: Any, value: Any) -> Any:
         bag = self._tasks[phase]
-        for key in _collect_bag_keys(instance):
+        for key in type(self)._collect_bag_keys(instance):
             for func in bag.get(key, ()):
                 invoke_callable(func, instance, value)
         return value
@@ -210,7 +210,7 @@ class HookHost:
         errors: list[BaseException] = []
         collect_all = getattr(self, "collect_all", False)
         name = getattr(self, "name", None)
-        for key in _collect_bag_keys(instance):
+        for key in type(self)._collect_bag_keys(instance):
             for func in self._custom_validators.get(key, ()):
                 try:
                     invoke_callable(func, instance, value)
@@ -245,5 +245,7 @@ class HookHost:
 
 HookHost._install_adders()
 
-# leftover: previous helper name. Prefer ``HookHost.bags_used``.
+# leftover: previous helper names. Prefer ``HookHost.bags_used`` /
+# ``HookHost._collect_bag_keys``.
 hook_bags_used = HookHost.bags_used
+_collect_bag_keys = HookHost._collect_bag_keys

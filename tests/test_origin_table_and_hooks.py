@@ -46,6 +46,12 @@ def test_hook_and_origin_tables_live_on_owning_types():
     assert hasattr(compose_mod._Compose, "_flatten")
     assert hasattr(compose_mod._Compose, "_merged_annotation")
 
+    import ux_valio.validators.length as length_mod
+    from ux_valio.validators.length import LengthValidator
+
+    assert LengthValidator._len_or_reject is length_mod._len_or_reject
+    assert HookHost._collect_bag_keys is hooks_mod._collect_bag_keys
+
 
 def test_pattern_compile_is_cached_on_owner():
     field = PatternValidator(pattern=r"ab+", name="code")

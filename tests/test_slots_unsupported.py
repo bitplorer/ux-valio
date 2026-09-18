@@ -94,3 +94,22 @@ def test_dataclass_slots_replaces_descriptor():
     assert not isinstance(n, ValidateProperty)
     stored = S(n="nope")
     assert stored.n == "nope"
+
+
+def test_dataclass_frozen_validates_and_rejects_mutation():
+    """@dataclass(frozen=True) keeps the descriptor. Dataclass intercepts set/delete."""
+    from dataclasses import FrozenInstanceError
+
+    @dataclass(frozen=True)
+    class F:
+        n: int = IntegerValidator(min_value=0, debug=True)
+
+    assert F(n=3).n == 3
+    with pytest.raises(TypeError):
+        F(n="nope")
+    frozen = F(n=4)
+    with pytest.raises(FrozenInstanceError):
+        frozen.n = 5
+    with pytest.raises(FrozenInstanceError):
+        del frozen.n
+    assert frozen.n == 4
