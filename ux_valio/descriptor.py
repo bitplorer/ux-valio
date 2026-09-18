@@ -187,26 +187,6 @@ def _is_unconstrained_typevar(annotation: Any) -> bool:
     )
 
 
-def _slot_names(slots: Any) -> tuple[str, ...]:
-    if isinstance(slots, str):
-        return (slots,)
-    return tuple(slots)
-
-
-def _owner_omits_instance_dict(owner: type) -> bool:
-    """True when instances of ``owner`` have no ``__dict__`` (slots-only MRO)."""
-    saw_slots = False
-    for cls in owner.__mro__:
-        if cls is object:
-            continue
-        if "__slots__" not in cls.__dict__:
-            return False
-        if "__dict__" in _slot_names(cls.__dict__["__slots__"]):
-            return False
-        saw_slots = True
-    return saw_slots
-
-
 
 class Property(Generic[_StoreT]):
     """Data descriptor used as a dataclass field default (Door A).
@@ -355,16 +335,36 @@ class Property(Generic[_StoreT]):
         cannot store any Door A field.
         """
         own_slots = owner.__dict__.get("__slots__")
-        if own_slots is not None and name in _slot_names(own_slots):
+        if own_slots is not None and name in type(self)._slot_names(own_slots):
             raise TypeError(
                 f"{owner.__name__}.{name}: Door A descriptors need "
                 "instance __dict__; __slots__ replaces them and drops validation"
             )
-        if _owner_omits_instance_dict(owner):
+        if type(self)._owner_omits_instance_dict(owner):
             raise TypeError(
                 f"{owner.__name__}.{name}: Door A descriptors need "
                 "instance __dict__; __slots__ without '__dict__' drops storage"
             )
+
+    @staticmethod
+    def _slot_names(slots: Any) -> tuple[str, ...]:
+        if isinstance(slots, str):
+            return (slots,)
+        return tuple(slots)
+
+    @staticmethod
+    def _owner_omits_instance_dict(owner: type) -> bool:
+        """True when instances of ``owner`` have no ``__dict__`` (slots-only MRO)."""
+        saw_slots = False
+        for cls in owner.__mro__:
+            if cls is object:
+                continue
+            if "__slots__" not in cls.__dict__:
+                return False
+            if "__dict__" in Property._slot_names(cls.__dict__["__slots__"]):
+                return False
+            saw_slots = True
+        return saw_slots
 
     def _take_subscript_annotation(self) -> None:
         """``Validator[int]()`` fills annotation from ``__orig_class__``.

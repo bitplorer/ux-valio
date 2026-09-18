@@ -89,7 +89,6 @@ class ValidateProperty(Property[T], ABC):
         Untyped ``Validator()`` (annotation None) does not gate. ``None`` stays
         skip, same as the type path. Custom validators are not re-run.
         """
-        self._take_subscript_annotation()
         annotation = getattr(self, "annotation", None)
         if annotation is None or value is None:
             return

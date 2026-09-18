@@ -8,18 +8,6 @@ from typing import Any
 from ux_valio.validators.typed import StringValidator
 
 
-def _require_phonenumbers():
-    """Load the optional ``phonenumbers`` engine. No carrier / geocoder network."""
-    try:
-        import phonenumbers
-    except ImportError as err:
-        raise ImportError(
-            "PhoneNumberValidator requires the phonenumbers extra: "
-            "pip install ux-valio[phonenumbers]"
-        ) from err
-    return phonenumbers
-
-
 class PhoneNumberValidator(StringValidator):
     """Door A string facade: valid number for an explicit ``region=`` door.
 
@@ -28,12 +16,24 @@ class PhoneNumberValidator(StringValidator):
     leftover). ``region`` is not a kwarg on ``Validator``.
     """
 
+    @staticmethod
+    def _require_phonenumbers():
+        """Load the optional ``phonenumbers`` engine. No carrier / geocoder network."""
+        try:
+            import phonenumbers
+        except ImportError as err:
+            raise ImportError(
+                "PhoneNumberValidator requires the phonenumbers extra: "
+                "pip install ux-valio[phonenumbers]"
+            ) from err
+        return phonenumbers
+
     def __init__(self, *, region: str, **kwargs: Any) -> None:
         if not isinstance(region, str):
             raise TypeError(
                 f"region expected type str value, got {type(region).__name__} type instead"
             )
-        self._phonenumbers = _require_phonenumbers()
+        self._phonenumbers = type(self)._require_phonenumbers()
         if region not in self._phonenumbers.SUPPORTED_REGIONS:
             raise ValueError(
                 f"region {region!r} is not a supported phonenumbers region"

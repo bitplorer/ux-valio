@@ -10,7 +10,6 @@ import phonenumbers
 from phonenumbers import PhoneNumberFormat, example_number, format_number
 
 from ux_valio import PhoneNumberValidator, Validator
-from ux_valio.validators import phone as phone_mod
 
 IN_EXAMPLE = example_number("IN")
 IN_NATIONAL = format_number(IN_EXAMPLE, PhoneNumberFormat.NATIONAL)
@@ -95,13 +94,13 @@ def test_missing_engine_fails_once_at_construct(monkeypatch):
 
 def test_validate_reuses_cached_phonenumbers_module(monkeypatch):
     calls = {"n": 0}
-    real = phone_mod._require_phonenumbers
+    real = PhoneNumberValidator._require_phonenumbers
 
     def counting():
         calls["n"] += 1
         return real()
 
-    monkeypatch.setattr(phone_mod, "_require_phonenumbers", counting)
+    monkeypatch.setattr(PhoneNumberValidator, "_require_phonenumbers", staticmethod(counting))
     field = PhoneNumberValidator(region="IN", debug=True, logger=False)
     assert calls["n"] == 1
     assert field._phonenumbers is phonenumbers
