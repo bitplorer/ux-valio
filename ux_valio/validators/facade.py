@@ -11,8 +11,8 @@ from __future__ import annotations
 from typing import Any
 
 from ux_valio.descriptor import _UNSET
+from ux_valio.errors import run_steps
 from ux_valio.validators.base import ValidateProperty
-from ux_valio.validators.errors import run_steps
 from ux_valio.validators.hooks import HookHost
 from ux_valio.validators.leaves import (
     ChoiceValidator,
@@ -23,7 +23,7 @@ from ux_valio.validators.leaves import (
     TypeValidator,
 )
 from ux_valio.validators.length import LengthValidator
-from ux_valio.validators.path import DEFAULT_PATH_NAMES, Lookup, ValidationPath
+from ux_valio.validators.validation_path import DEFAULT_PATH_NAMES, Lookup, ValidationPath
 from ux_valio.validators.value import ValueValidator
 
 
@@ -135,15 +135,3 @@ class Validator(HookHost, ValidateProperty):
             self.collect_all,
             self.name,
         )
-
-
-class IntegerValidator(Validator):
-    annotation = int
-
-
-class StringValidator(Validator):
-    annotation = str
-
-
-class BooleanValidator(Validator):
-    annotation = bool

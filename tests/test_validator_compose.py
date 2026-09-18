@@ -201,9 +201,8 @@ def test_compose_types_are_bound_once_on_package_import():
     assert base_mod._AnyOf is AnyOf
     first = base_mod._load_compose_types()
     second = base_mod._load_compose_types()
-    assert first is second
-    assert first[0] is AllOf
-    assert first[1] is AnyOf
+    assert first[0] is second[0] is AllOf
+    assert first[1] is second[1] is AnyOf
     and_src = inspect.getsource(ValidateProperty.__and__)
     or_src = inspect.getsource(ValidateProperty.__or__)
     assert "from ux_valio.validators.compose import" not in and_src

@@ -12,7 +12,8 @@ from types import SimpleNamespace
 from typing import Any, Callable
 
 from ux_valio.validators.async_bridge import invoke_callable
-from ux_valio.validators.errors import continue_or_raise, raise_collected
+from ux_valio.errors import continue_or_raise, raise_collected
+
 
 
 def _bag_key(cls: Any) -> str:

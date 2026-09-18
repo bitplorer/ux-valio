@@ -14,7 +14,7 @@ import uuid
 from typing import Any
 
 from ux_valio.pattern import Pattern, PatternType
-from ux_valio.validators.facade import StringValidator, Validator
+from ux_valio.validators.facade import Validator
 from ux_valio.validators.leaves import PatternValidator
 
 # Practical RFC 5322-ish addr-spec. EmailValidator fullmatch extra; engine KEEP.
@@ -30,6 +30,18 @@ _EMAIL_PATTERN = Pattern(
     r'\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])',
     alias="local@example.com",
 )
+
+
+class IntegerValidator(Validator):
+    annotation = int
+
+
+class StringValidator(Validator):
+    annotation = str
+
+
+class BooleanValidator(Validator):
+    annotation = bool
 
 
 class FloatValidator(Validator):

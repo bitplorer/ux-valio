@@ -2,6 +2,22 @@
 
 Door A only: `field: T = SomeValidator(...)`.
 
+Layout (core at the root, validate door inherits, named facades are parallel):
+
+- `ux_valio/descriptor.py` — `Property` (store). Imports `errors`, never
+  `validators`.
+- `ux_valio/errors.py` — `ValidationErrors` (shared collect-all type).
+- `ux_valio/pattern/` — pattern algebra (independent).
+- `ux_valio/validators/` — validate door (`ValidateProperty` : `Property`):
+  `base` → `ValidateProperty`; `hooks` → `HookHost` mixin (parallel);
+  `leaves` / `length` / `value` → concern leaves (parallel, compose with
+  `&` / `|`, no leaf MI); `compose` → `AllOf` / `AnyOf`; `facade` →
+  `Validator`; `typed` + `payment` / `expiry` / `phone` / `aadhaar` /
+  `pan` → named facades : `Validator` (parallel). Facade unit list is
+  `validation_path.py`, not `PathValidator` (`typed.py`, pathlib).
+  Primitive typed facades (`IntegerValidator` / `StringValidator` /
+  `BooleanValidator`) live in `typed.py` with the rest.
+
 - Python floor is ≥ 3.14 (same as ux-compose). Do not teach 3.10–3.12.
 
 - Frozen reference: `bitplorer/valio` @ `3415c03`. Do not edit valio.
@@ -161,5 +177,7 @@ nickname, not a slogan.
 
 Compose bind / flatten / annotation live on `_Compose`. Hook phase table
 and adders live on `HookHost`. Origin tables live next to
-`is_instance_of`. Specified-theory merge lives on `_Opt`. Do not
-reintroduce leftover aliases or hang origin tables on `TypeValidator`.
+`is_instance_of`. Specified-theory merge lives on `_Opt`. Errors live at
+`ux_valio.errors`. Descriptor does not import `validators`. Do not
+reintroduce leftover aliases, `validators/errors.py`, `validators/path.py`,
+or hang origin tables on `TypeValidator`.

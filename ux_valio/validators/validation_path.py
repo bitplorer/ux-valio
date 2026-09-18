@@ -3,13 +3,15 @@
 
 ``value`` already owns min/max/eq. ``length`` already owns min/max.
 A second ``validate()`` is a new pass — per-pass uniqueness, not process lifetime.
+
+This is the facade's unit list, not ``PathValidator`` (``typed.py``, pathlib).
 """
 
 from __future__ import annotations
 
 from typing import Any, Callable, Iterable
 
-from ux_valio.validators.errors import continue_or_raise, raise_collected
+from ux_valio.errors import continue_or_raise, raise_collected
 
 Lookup = Callable[[Any, Any, Any], Any]
 

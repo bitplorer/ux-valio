@@ -141,3 +141,44 @@ def test_export_floor_and_validation_errors():
     for name in ("Property", "ValidateProperty", "Validator", "ValidationErrors"):
         assert name in ux_valio.__all__
         assert hasattr(ux_valio, name)
+    assert ux_valio.ValidationErrors is ux_valio.errors.ValidationErrors
+
+
+def test_descriptor_does_not_import_validators():
+    """Store door depends on errors, not the validate package."""
+    import ast
+
+    src = (ROOT / "ux_valio" / "descriptor.py").read_text()
+    tree = ast.parse(src)
+    hits = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            if node.module == "ux_valio.validators" or node.module.startswith(
+                "ux_valio.validators."
+            ):
+                hits.append(node.module)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "ux_valio.validators" or alias.name.startswith(
+                    "ux_valio.validators."
+                ):
+                    hits.append(alias.name)
+    assert hits == []
+
+
+def test_errors_and_validation_path_live_at_honest_modules():
+    assert (ROOT / "ux_valio" / "errors.py").is_file()
+    assert not (ROOT / "ux_valio" / "validators" / "errors.py").exists()
+    assert (ROOT / "ux_valio" / "validators" / "validation_path.py").is_file()
+    assert not (ROOT / "ux_valio" / "validators" / "path.py").exists()
+    from ux_valio.validators.typed import (
+        BooleanValidator,
+        IntegerValidator,
+        StringValidator,
+    )
+    from ux_valio.validators.facade import Validator
+
+    assert issubclass(IntegerValidator, Validator)
+    assert issubclass(StringValidator, Validator)
+    assert issubclass(BooleanValidator, Validator)
+    assert not hasattr(ux_valio.validators.facade, "IntegerValidator")
