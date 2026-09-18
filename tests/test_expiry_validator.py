@@ -77,3 +77,21 @@ def test_expire_after_future_bound_allows_assignment():
         key: str = ExpiryValidator(expire_after=future, debug=True)
 
     assert License(key="ok").key == "ok"
+
+
+def test_expire_on_is_valid_only_on_that_calendar_day():
+    today = date.today().isoformat()
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+
+    @dataclass
+    class TodayOnly:
+        key: str = ExpiryValidator(expire_on=today, debug=True)
+
+    assert TodayOnly(key="ok").key == "ok"
+
+    @dataclass
+    class TomorrowOnly:
+        key: str = ExpiryValidator(expire_on=tomorrow, debug=True)
+
+    with pytest.raises(ValueError, match="expired on"):
+        TomorrowOnly(key="ok")

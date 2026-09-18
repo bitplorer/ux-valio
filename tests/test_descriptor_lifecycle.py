@@ -155,3 +155,70 @@ def test_star_import_does_not_leak_field_or_schema():
     assert "Schema" not in namespace
     assert "Validator" in namespace
     assert "Cap" not in namespace
+
+
+def test_assignment_counts_drop_when_instance_is_collected():
+    field = Validator(reassign=False, debug=True)
+
+    @dataclass
+    class Once:
+        s: str = field
+
+    once = Once(s="a")
+    oid = id(once)
+    assert field._assignment_counts.get(oid) == 1
+    del once
+    import gc
+
+    gc.collect()
+    assert oid not in field._assignment_counts
+    assert oid not in field._assignment_alive
+
+
+def test_post_get_does_not_replace_in_flight_never_set_error():
+    field = Validator(debug=True)
+
+    def boom(instance, value):
+        raise RuntimeError("post_get boom")
+
+    @dataclass
+    class Box:
+        s: str = field
+
+    from ux_valio.validators.hooks import _bag_key
+
+    field.add_post_get(boom, namespace=_bag_key(Box))
+    box = Box.__new__(Box)
+    with pytest.raises(AttributeError, match=r"Box\.s is not set") as exc:
+        _ = box.s
+    assert type(exc.value) is AttributeError
+    assert any(isinstance(err, RuntimeError) for err in field.errors)
+
+
+def test_post_validate_cannot_store_type_mismatch():
+    field = IntegerValidator(debug=True)
+
+    def smash(instance, value):
+        return "not-an-int"
+
+    @dataclass
+    class N:
+        n: int = field
+
+    from ux_valio.validators.hooks import _bag_key
+
+    field.add_post_validator(smash, namespace=_bag_key(N))
+    with pytest.raises(TypeError, match="int"):
+        N(n=2)
+
+
+def test_dunder_version_matches_pyproject():
+    import re
+    from pathlib import Path
+
+    import ux_valio
+
+    text = Path(__file__).resolve().parents[1].joinpath("pyproject.toml").read_text()
+    match = re.search(r'^version = "([^"]+)"', text, re.MULTILINE)
+    assert match is not None
+    assert ux_valio.__version__ == match.group(1)

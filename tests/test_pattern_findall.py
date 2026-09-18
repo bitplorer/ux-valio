@@ -31,6 +31,16 @@ def test_empty_pattern_accepts_any_string():
     assert PatternEmpty(value="1").value == "1"
 
 
+def test_findall_empty_match_star_is_a_match_keep():
+    """findall leftover: ``a*`` matches empty substrings, so ``xyz`` passes."""
+
+    @dataclass
+    class Starred:
+        value: str = PatternValidator(pattern=r"a*", debug=True)
+
+    assert Starred(value="xyz").value == "xyz"
+
+
 def test_findall_none_is_skipped():
     @dataclass
     class Patterned:

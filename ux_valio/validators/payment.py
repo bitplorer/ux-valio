@@ -10,13 +10,15 @@ from ux_valio.validators.facade import StringValidator
 
 # IIN literals from valio relib/paymentcards.py comments @ 3415c03.
 # Identity match (full string), not PatternValidator findall.
+# Rupay live identity is 60 + 14 digits except Discover overlap (6011 / 644x / 65xx).
+# The 6521/6522 alternative is dead: lookahead 5[0-9]{2} already rejects it.
 _VISA = re.compile(r"4[0-9]{12}(?:[0-9]{3})?")
 _MASTERCARD = re.compile(
     r"(?:5[1-5][0-9]{14}|222[1-9][0-9]{12}|22[3-9][0-9]{13}|2[3-6][0-9]{14}|27[01][0-9]{13}|2720[0-9]{12})"
 )
 _AMEX = re.compile(r"3[47][0-9]{13}")
 _DISCOVER = re.compile(r"(?:6011|644[0-9]|65[0-9]{2})[0-9]{12}")
-_RUPAY = re.compile(r"6(?!(?:011|44[0-9]|5[0-9]{2}))(?:0[0-9]{14}|52[12][0-9]{12})")
+_RUPAY = re.compile(r"6(?!(?:011|44[0-9]|5[0-9]{2}))0[0-9]{14}")
 
 
 def _luhn_correctness(card_number: str) -> bool:

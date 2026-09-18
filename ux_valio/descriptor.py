@@ -27,6 +27,13 @@ Never-set ``__get__`` / ``__delete__`` with ``debug=True`` raise a named
 Debug-falsy still swallows and ``__get__`` reads back ``None``.
 ``add_*`` may be async. No ``asyncio.run`` in ``__set__``.
 
+``post_get`` in ``__get__`` ``finally`` must not replace an in-flight
+exception: record it, keep the original raise / swallow.
+
+Door A stores on ``instance.__dict__``. Explicit ``__slots__`` that include
+the field TypeError at bind. ``@dataclass(slots=True)`` replaces the
+descriptor after bind — unsupported (validation would not run).
+
 Logger default is OFF.
 
 ``__set_name__`` is fail-closed on annotation conflict. If both
@@ -124,6 +131,12 @@ def _is_unresolved_annotation(annotation: Any) -> bool:
     return isinstance(annotation, (str, ForwardRef))
 
 
+def _slot_names(slots: Any) -> tuple[str, ...]:
+    if isinstance(slots, str):
+        return (slots,)
+    return tuple(slots)
+
+
 class Property:
     """Data descriptor used as a dataclass field default (Door A)."""
 
@@ -214,7 +227,7 @@ class Property:
         if logger and logger is not True and hasattr(logger, level):
             getattr(logger, level)(message)
 
-    def _swallow_or_raise(self, err: BaseException) -> None:
+    def _record_error(self, err: BaseException) -> None:
         from ux_valio.validators.errors import ValidationErrors
 
         if isinstance(err, ValidationErrors):
@@ -222,6 +235,9 @@ class Property:
         else:
             self.errors.append(err)
         self._log("error", str(err))
+
+    def _swallow_or_raise(self, err: BaseException) -> None:
+        self._record_error(err)
         if self.debug:
             raise err
 
@@ -232,6 +248,12 @@ class Property:
             elif name != self.name:
                 raise AttributeError(
                     f"{self.name} != {name}, attribute names did not match"
+                )
+            slots = getattr(owner, "__slots__", None)
+            if slots is not None and name in _slot_names(slots):
+                raise TypeError(
+                    f"{owner.__name__}.{name}: Door A descriptors need "
+                    "instance __dict__; __slots__ replaces them and drops validation"
                 )
             self._bind_owner_annotation(owner, name)
         except Exception as err:
@@ -260,6 +282,15 @@ class Property:
                 f"{_annotation_label(self.annotation)}"
             )
 
+    def _store_on_instance(self, obj: Any, value: Any) -> None:
+        namespace = getattr(obj, "__dict__", None)
+        if namespace is None:
+            raise TypeError(
+                f"{type(obj).__name__}.{self.name} cannot store: "
+                "instance has no __dict__; Door A does not support slots"
+            )
+        namespace[self.name] = value
+
     def __set__(self, obj: Any, value: Any) -> None:
         try:
             if value is None:
@@ -268,7 +299,7 @@ class Property:
                 elif self.default is not None:
                     value = self.default() if callable(self.default) else self.default
             value = self.pre_set(obj, value)
-            obj.__dict__[self.name] = value
+            self._store_on_instance(obj, value)
             self.errors.clear()
             self.post_set(obj, value)
         except Exception as err:
@@ -280,6 +311,7 @@ class Property:
     def __get__(self, obj: Any, obj_type: type | None = None) -> Any:
         if obj is None:
             return None
+        in_flight: BaseException | None = None
         try:
             self.pre_get(obj, self.name)
             try:
@@ -287,13 +319,18 @@ class Property:
             except KeyError:
                 raise self._missing_attribute(obj) from None
         except Exception as err:
+            in_flight = err
             self._swallow_or_raise(err)
             return None
         finally:
             try:
                 self.post_get(obj, self.name)
             except Exception as post_err:
-                self._swallow_or_raise(post_err)
+                if in_flight is not None:
+                    # Keep the original raise / swallow. Do not replace it.
+                    self._record_error(post_err)
+                else:
+                    self._swallow_or_raise(post_err)
 
     def __delete__(self, obj: Any) -> None:
         try:

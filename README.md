@@ -46,6 +46,9 @@ Hang `add_*` on the descriptor that is the field default: a `Validator`
 facade, or the compose **root** after `&` / `AllOf`. Concern leaves do not
 carry `add_*`. Do not invent `add_pre_set`.
 
+`&` / `|` bind `AllOf` / `AnyOf` once (compose import fills the cache).
+The operator path does not import on each use.
+
 ```python
 name_field = StringValidator(debug=True, max_length=50) & RequiredValidator(required=True)
 
@@ -108,7 +111,8 @@ run rules as `async def`.
   loop in a worker thread; not a public dial).
   Assign from an async context (`asyncio.run` of a small harness or
   pytest-asyncio). Same-thread `run_until_complete` on the caller's loop
-  is a nested-loop hazard.
+  is a nested-loop hazard. Re-entering the nest-safe worker is `TypeError`
+  (would deadlock), not a hang.
 
 `asyncio.run` is not used in `__set__`.
 
@@ -163,9 +167,24 @@ built a new list; prefer `default_factory=list` when the intent is
 per-instance.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
 exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
+`in_choice` / `not_in_choice` skip `None` (optional unset). A string bag
+must not TypeError on that skip.
+
+Door A stores on `instance.__dict__`. Explicit `__slots__` that include the
+field TypeError at bind. `@dataclass(slots=True)` is unsupported: dataclass
+replaces the descriptor after bind, and validation would not run.
+
+`add_post_validator` may transform after checks. If the field has an
+annotation, the stored value must still match it — a post processor cannot
+smuggle a `str` onto `IntegerValidator`. Untyped `Validator()` does not gate.
+
+`__get__` `post_get` runs in `finally`. A failing post_get is recorded; it
+does not replace an in-flight never-set `AttributeError` when `debug=True`.
 
 `PatternValidator` matches with `re.findall` (findall substring), not `fullmatch`.
-`EmailValidator` keeps that engine for its `pattern=` path and then requires
+Empty-match patterns (`a*`, `?`) still count as a match — that is the findall
+engine, not a fullmatch door. `EmailValidator` keeps that engine for its `pattern=`
+path and then requires
 the whole string to be an addr-spec: `"prefix user@example.com suffix"`
 is rejected. Pattern `&` / `|` is
 fail-closed on a missing fragment or mixed `str`/`bytes`; same-kind bytes

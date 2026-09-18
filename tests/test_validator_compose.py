@@ -188,3 +188,28 @@ def test_anyof_union_owner_binds_without_and_gate():
 def test_allof_conflicting_typed_facades_still_typeerror():
     with pytest.raises(TypeError, match="conflicting annotations"):
         AllOf(IntegerValidator(debug=True), StringValidator(debug=True))
+
+
+def test_compose_types_are_bound_once_on_package_import():
+    """``&`` / ``|`` must not import compose on each operator use."""
+    import inspect
+
+    from ux_valio.validators import base as base_mod
+    from ux_valio.validators.compose import AllOf, AnyOf
+
+    assert base_mod._AllOf is AllOf
+    assert base_mod._AnyOf is AnyOf
+    first = base_mod._load_compose_types()
+    second = base_mod._load_compose_types()
+    assert first is second
+    assert first[0] is AllOf
+    assert first[1] is AnyOf
+    and_src = inspect.getsource(ValidateProperty.__and__)
+    or_src = inspect.getsource(ValidateProperty.__or__)
+    assert "from ux_valio.validators.compose import" not in and_src
+    assert "from ux_valio.validators.compose import" not in or_src
+    left = IntegerValidator(debug=True, min_value=0)
+    right = RequiredValidator(required=True)
+    assert type(left & right) is AllOf
+    assert type(left | StringValidator(debug=True)) is AnyOf
+    assert base_mod._AllOf is AllOf

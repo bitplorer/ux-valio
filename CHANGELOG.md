@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- `&` / `|` bind `AllOf` / `AnyOf` once at compose import. Operator methods
+  do not import compose on each use (`_load_compose_types` is the fallback).
+- `not_in_choice` skips `None`, same as `in_choice` (string bags no longer
+  TypeError on optional unset).
+- `__get__` `post_get` records a secondary error and does not replace an
+  in-flight never-set `AttributeError`.
+- Annotation is a store invariant after `add_post_validator`.
+- Explicit `__slots__` on a Door A field TypeError at bind.
+  `@dataclass(slots=True)` stays unsupported (descriptor dropped).
+- Nest-safe worker re-entry is TypeError, not a deadlock hang.
+- Rupay identity is `60` + 14 digits except Discover overlap (dead `6521`
+  alternative removed).
+- `__version__` matches `pyproject.toml` (`0.2.0`).
+- Locks: Mastercard 2-series, `expire_on` calendar day, assignment weakref
+  drop, findall empty-match KEEP, compose bind-once.
+
 ## 0.2.0
 
 - Python floor matches ux-compose: `requires-python >=3.14`, classifier 3.14,

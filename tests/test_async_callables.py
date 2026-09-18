@@ -329,3 +329,16 @@ def test_nest_safe_executor_is_not_a_public_dial():
     assert not hasattr(vmod, "_NEST_SAFE_EXECUTOR")
     assert "_NEST_SAFE_EXECUTOR" not in ux_valio.__all__
     assert nest_safe_bridge is async_bridge.nest_safe_bridge
+
+
+def test_nested_nest_safe_bridge_is_typeerror_not_deadlock():
+    """Re-entry on the single worker must fail closed, not hang on .result()."""
+
+    async def inner():
+        return 1
+
+    async def outer():
+        return nest_safe_bridge(inner())
+
+    with pytest.raises(TypeError, match="deadlock"):
+        nest_safe_bridge(outer())

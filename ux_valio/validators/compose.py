@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from ux_valio.descriptor import _annotations_agree, merge_opt, opt_of
-from ux_valio.validators.base import ValidateProperty
+from ux_valio.validators.base import ValidateProperty, _register_compose_types
 from ux_valio.validators.errors import ValidationErrors, raise_collected, run_steps
 from ux_valio.validators.hooks import HookHost, hook_bags_used
 from ux_valio.validators.leaves import TypeValidator
@@ -217,3 +217,6 @@ class AnyOf(_Compose):
             self.collect_all,
             self.name,
         )
+
+
+_register_compose_types(AllOf, AnyOf)

@@ -340,7 +340,7 @@ class ChoiceValidator(ValidateProperty):
             raise ValueError(
                 f"{self.name} expect values in {in_choice}, got {value} as value instead"
             )
-        if not_in_choice is not None and value in not_in_choice:
+        if not_in_choice is not None and value is not None and value in not_in_choice:
             raise ValueError(
                 f"{self.name} does not expect values in {not_in_choice}, "
                 f"got {value} as value instead"
