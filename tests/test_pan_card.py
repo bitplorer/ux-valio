@@ -36,9 +36,12 @@ def test_substring_pan_is_rejected(Card):
         Card(pan=f"xx{VALID_PAN}yy")
 
 
-def test_lowercase_pan_is_rejected(Card):
-    with pytest.raises(ValueError):
-        Card(pan=VALID_PAN.lower())
+def test_lowercase_pan_is_stored_uppercase(Card):
+    assert Card(pan=VALID_PAN.lower()).pan == VALID_PAN
+
+
+def test_grouped_pan_is_stored_compact(Card):
+    assert Card(pan="AAAPA 1111 F").pan == VALID_PAN
 
 
 def test_wrong_holder_type_is_rejected(Card):

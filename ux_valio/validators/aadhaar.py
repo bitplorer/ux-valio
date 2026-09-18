@@ -55,6 +55,12 @@ class AadhaarCardValidator(StringValidator):
             return False
         return AadhaarCardValidator._verhoeff_ok(value)
 
+    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+        """UIDAI print form is 4-4-4. Store the 12-digit identity."""
+        if isinstance(value, str):
+            value = "".join(value.split()).replace("-", "")
+        return super().pre_validation_processing(instance, value)
+
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._validate_aadhaar(instance, value)
 

@@ -21,6 +21,11 @@ def test_visa_test_number_is_accepted(Card):
     assert Card(c="4111111111111111").c == "4111111111111111"
 
 
+def test_printed_visa_grouping_is_stored_compact(Card):
+    assert Card(c="4111 1111 1111 1111").c == "4111111111111111"
+    assert Card(c="4111-1111-1111-1111").c == "4111111111111111"
+
+
 def test_luhn_valid_non_brand_is_rejected(Card):
     with pytest.raises(ValueError):
         Card(c="0000000000000000")
