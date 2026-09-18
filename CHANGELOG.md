@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Field logger: `logger=True` binds a stdlib `logging.Logger` at
+  `__set_name__` named `module.qualname.field`. No files. `logger=False`
+  (default) stays OFF. `logger=None` is OFF. Get/set/delete log at info;
+  failures at error. Specified-theory still sees `True` after bind.
+- Length bounds TypeError a non-sized value with a named message
+  (`expect a sized value`), not raw `len()`.
+- `in_choice` / `not_in_choice` that are not a `Container` TypeError at
+  construct (`ChoiceValidator._reject_non_container`).
+- `EmailValidator` identity `fullmatch` reuses `PatternValidator._compiled_finder`.
+- `DateTimeValidator` (ISO `datetime.datetime`) and `URLValidator`
+  (scheme + netloc) named facades. `DateValidator` still rejects `datetime`.
+- Origin groups live on `TypeValidator._ORIGIN_GROUPS` with the origin table.
 - Locality of behavior: compose flatten / specified-theory bind / annotation
   merge live on `_Compose` (not free-floating helpers). Hook phase table and
   `add_*` install live on `HookHost`. Origin table lives on

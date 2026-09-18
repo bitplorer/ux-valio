@@ -37,7 +37,9 @@ def test_hook_and_origin_tables_live_on_owning_types():
     assert not hasattr(hooks_mod, "_PROCESSOR_PHASES")
     assert HookHost._HOOK_ADDERS[0][0] == "add_pre_validator"
     assert not hasattr(leaves_mod, "_ORIGIN_CHECKERS")
+    assert not hasattr(leaves_mod, "_ORIGIN_GROUPS")
     assert list in TypeValidator._ORIGIN_CHECKERS
+    assert TypeValidator._ORIGIN_GROUPS
     assert not hasattr(compose_mod, "_bind_compose_kwargs")
     assert not hasattr(compose_mod, "_flatten")
     assert hasattr(compose_mod._Compose, "_bind_kwargs")
@@ -51,6 +53,18 @@ def test_pattern_compile_is_cached_on_owner():
     first = field._compiled
     field._validate_pattern(None, "abbb")
     assert field._compiled is first
+
+
+def test_email_identity_reuses_compiled_finder():
+    from ux_valio import EmailValidator
+
+    field = EmailValidator(debug=True, name="email")
+    field.validate(None, "user@example.com")
+    first = field._compiled
+    assert first is not None
+    field.validate(None, "other@example.com")
+    assert field._compiled is first
+    assert first.fullmatch("user@example.com") is not None
 
 
 def test_facade_pattern_path_uses_owner_cache():

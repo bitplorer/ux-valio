@@ -14,6 +14,10 @@ Door A only: `field: T = SomeValidator(...)`.
   `default=[]` is shared; `default_factory=` is per-instance; both set is
   TypeError; callable `default=` still invoked (valio leftover);
   bound honesty (`None` ≠ `0`); debug-swallow; logger default OFF;
+  ``logger=True`` binds a stdlib ``logging.Logger`` at ``__set_name__``
+  named ``module.qualname.field`` (no files, no ``logs/`` directory);
+  ``logger=None`` is OFF (not valio's None=on); a ``logging.Logger`` is
+  used as-is; get/set/delete log at info, failures at error;
   never-set `__get__` / `__delete__` with `debug=True` is named
   `AttributeError`, not bare `KeyError`;
   Pattern `findall` (empty-match `a*` is a match; Email extra is fullmatch);
@@ -46,8 +50,15 @@ Door A only: `field: T = SomeValidator(...)`.
   `&` / `|` use AllOf / AnyOf bound once (`_register_compose_types` at
   compose import; `_load_compose_types` is the fallback). Do not import
   compose inside `__and__` / `__or__`. `leaves.py` binds `is_instance_of`
-  once via `_register_annotation_checker`.
+  once via `_register_annotation_checker`. Origin groups live on
+  `TypeValidator._ORIGIN_GROUPS` with the origin table.
   `not_in_choice` skips `None`, same as `in_choice`.
+  `in_choice` / `not_in_choice` that are not a ``Container`` TypeError at
+  construct, not at assignment.
+  Unsized ``len()`` on a length bound is a named TypeError
+  (``expect a sized value``), not the raw ``object of type 'int' has no len()``.
+  `EmailValidator` identity fullmatch uses the same compiled pattern as
+  the findall path (``PatternValidator._compiled_finder``).
   `post_get` in `__get__` `finally` records a secondary error and does
   not replace an in-flight exception.
   Annotation is a store invariant: `add_post_validator` may transform,
@@ -87,7 +98,10 @@ Door A only: `field: T = SomeValidator(...)`.
   `datetime.date`; numeric EU `YYYY-MM-DD` / IND `DD-MM-YYYY` strings parse
   on assignment (`-` `/` `:`, same delimiter both sides). Slash dates are
   IND day-month-year, not US. `DateValidator` rejects `datetime.datetime`.
-  Pattern `&` / `|` is fail-closed on missing or mixed
+  `DateTimeValidator` stores `datetime.datetime`; ISO strings parse via
+  `datetime.fromisoformat`; plain `datetime.date` is rejected.
+  `URLValidator` is a Door A string facade: scheme + netloc
+  (stdlib `urllib.parse.urlparse`). Pattern `&` / `|` is fail-closed on missing or mixed
   `str`/`bytes` fragments; inverted `count_min` / `count_max` is
   constructor `ValueError`; bytes patterns keep bytes identity.
 - `PhoneNumberValidator` is a Door A facade. Taught kwarg is `region=`
@@ -119,7 +133,8 @@ New private helpers are verbs that name the action:
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
 `_Compose._bind_kwargs`, `_Compose._flatten`, `_Opt.merge`, `_Opt.read`,
-`HookHost.bags_used`, `HookHost._install_adders`.
+`HookHost.bags_used`, `HookHost._install_adders`, `_bind_field_logger`,
+`_len_or_reject`, `ChoiceValidator._reject_non_container`.
 Leftover aliases when a private name was taught (`_named_extra`,
 `bound`, `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used`).
 Noun-only names that hide the action are not
@@ -128,5 +143,6 @@ nickname, not a slogan.
 
 Compose bind / flatten / annotation live on `_Compose`. Hook phase table
 and adders live on `HookHost`. Origin table lives on `TypeValidator`.
-Specified-theory merge lives on `_Opt`. Do not reintroduce free-floating
+Origin groups live on `TypeValidator._ORIGIN_GROUPS`. Specified-theory
+merge lives on `_Opt`. Do not reintroduce free-floating
 bind helpers next to those types.

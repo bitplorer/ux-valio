@@ -38,6 +38,7 @@ from ux_valio.validators.payment import PaymentCardValidator
 from ux_valio.validators.phone import PhoneNumberValidator
 from ux_valio.validators.typed import (
     BytesValidator,
+    DateTimeValidator,
     DateValidator,
     DecimalValidator,
     EmailValidator,
@@ -49,6 +50,7 @@ from ux_valio.validators.typed import (
     IPv6Validator,
     PathValidator,
     StringEnumValidator,
+    URLValidator,
     UUIDValidator,
 )
 from ux_valio.validators.value import MaxValueValidator, MinValueValidator, ValueValidator
@@ -61,6 +63,7 @@ __all__ = [
     "BytesValidator",
     "Chain",
     "ChoiceValidator",
+    "DateTimeValidator",
     "DateValidator",
     "DecimalValidator",
     "EmailValidator",
@@ -89,6 +92,7 @@ __all__ = [
     "StringValidator",
     "TypeValidator",
     "UUIDValidator",
+    "URLValidator",
     "ValidateProperty",
     "ValidationErrors",
     "Validator",

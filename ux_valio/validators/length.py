@@ -9,6 +9,16 @@ from ux_valio.validators.base import ValidateProperty
 from ux_valio.validators.bounds import bound_value, reject_inverted, specified
 
 
+def _len_or_reject(owner: Any, value: Any) -> int:
+    """``len(value)``, or a named TypeError when the value is not sized."""
+    try:
+        return len(value)
+    except TypeError:
+        raise TypeError(
+            f"{owner.name} expect a sized value, got {type(value).__name__} type instead"
+        ) from None
+
+
 class MinLengthValidator(ValidateProperty):
     def __init__(self, min_length: int | None = None, **kwargs: Any) -> None:
         self.min_length = min_length
@@ -18,7 +28,7 @@ class MinLengthValidator(ValidateProperty):
         min_length = bound_value(self, "min_length")
         if min_length is None or value is None:
             return
-        value_length = len(value)
+        value_length = _len_or_reject(self, value)
         if value_length < min_length:
             raise ValueError(
                 f"{self.name} expect the value of minimum length {min_length}, "
@@ -38,7 +48,7 @@ class MaxLengthValidator(ValidateProperty):
         max_length = bound_value(self, "max_length")
         if max_length is None or value is None:
             return
-        value_length = len(value)
+        value_length = _len_or_reject(self, value)
         if value_length > max_length:
             raise ValueError(
                 f"{self.name} expect the value of maximum length {max_length}, "
@@ -85,7 +95,7 @@ class LengthValidator(ValidateProperty):
         length = bound_value(self, "length")
         if length is None or value is None:
             return
-        value_length = len(value)
+        value_length = _len_or_reject(self, value)
         if value_length != length:
             raise ValueError(
                 f"{self.name} expect the value of length {length}, "

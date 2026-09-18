@@ -9,6 +9,7 @@ import weakref
 from collections.abc import (
     Callable as AbcCallable,
     Collection,
+    Container,
     Mapping,
     MutableMapping,
     MutableSequence,
@@ -21,11 +22,6 @@ from typing import Annotated, Any, Literal, TypeVar, Union, get_args, get_origin
 from ux_valio.pattern import PatternType
 from ux_valio.validators.base import ValidateProperty, _register_annotation_checker
 from ux_valio.validators.bounds import bound_value
-
-_SEQUENCE_ORIGINS = (Sequence, MutableSequence)
-_MAPPING_ORIGINS = (Mapping, MutableMapping)
-_SET_ABC_ORIGINS = (AbstractSet, MutableSet)
-_COLLECTION_ORIGINS = (Collection,)
 
 
 def _peel_annotation(annotation: Any) -> Any | _PeelFail:
@@ -107,14 +103,6 @@ def _tuple_match(value: Any, args: tuple[Any, ...]) -> bool:
     return all(is_instance_of(item, arg) for item, arg in zip(value, args, strict=True))
 
 
-_ORIGIN_GROUPS = (
-    (_MAPPING_ORIGINS, _mapping_match),
-    (_SET_ABC_ORIGINS, _elements_match),
-    (_SEQUENCE_ORIGINS, _elements_match),
-    (_COLLECTION_ORIGINS, _elements_match),
-)
-
-
 def is_instance_of(value: Any, annotation: Any) -> bool:
     """Type-door membership. Origin table lives on ``TypeValidator``."""
     if annotation is None or annotation is Any:
@@ -137,7 +125,7 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
     checker = TypeValidator._ORIGIN_CHECKERS.get(origin)
     if checker is not None:
         return checker(value, args)
-    for group, matcher in _ORIGIN_GROUPS:
+    for group, matcher in TypeValidator._ORIGIN_GROUPS:
         if origin in group:
             return isinstance(value, origin) and matcher(value, args)
     target = origin if origin is not None else annotation
@@ -160,6 +148,13 @@ class TypeValidator(ValidateProperty):
         tuple: _exact_type(tuple, _tuple_match),
         AbcCallable: _check_callable,
     }
+
+    _ORIGIN_GROUPS = (
+        ((Mapping, MutableMapping), _mapping_match),
+        ((AbstractSet, MutableSet), _elements_match),
+        ((Sequence, MutableSequence), _elements_match),
+        ((Collection,), _elements_match),
+    )
 
     def _validate_type(self, instance: Any, value: Any) -> None:
         annotation = getattr(self, "annotation", None)
@@ -323,7 +318,19 @@ class ChoiceValidator(ValidateProperty):
     ) -> None:
         self.in_choice = in_choice
         self.not_in_choice = not_in_choice
+        type(self)._reject_non_container("in_choice", in_choice)
+        type(self)._reject_non_container("not_in_choice", not_in_choice)
         super().__init__(**kwargs)
+
+    @staticmethod
+    def _reject_non_container(label: str, bag: Any) -> None:
+        """Choice bags must support ``in``. ``None`` is unspecified."""
+        if bag is None:
+            return
+        if not isinstance(bag, Container):
+            raise TypeError(
+                f"{label} expected a container, got {type(bag).__name__} type instead"
+            )
 
     def _validate_choice(self, instance: Any, value: Any) -> None:
         in_choice = getattr(self, "in_choice", None)

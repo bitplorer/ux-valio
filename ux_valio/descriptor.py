@@ -39,7 +39,12 @@ does not define slots still has ``__dict__``). ``@dataclass(slots=True)``
 replaces the descriptor after bind — unsupported (validation would not run).
 
 
-Logger default is OFF.
+Logger default is OFF (``False``). ``logger=True`` binds a stdlib
+``logging.Logger`` at ``__set_name__`` named ``module.qualname.field``.
+No files, no ``logs/`` directory — valio wrote files; pass your own
+``logging.Logger`` for that. ``logger=None`` is OFF, not valio's None=on.
+Get/set/delete log at info; failures at error. Specified-theory still
+sees ``True`` after bind (runtime logger is a separate object).
 
 ``__set_name__`` is fail-closed on annotation conflict. If both
 ``validator.annotation`` and the owner class annotation are set and they
@@ -55,6 +60,7 @@ list/dict/tuple/set/frozenset aliases are compared with stdlib
 
 from __future__ import annotations
 
+import logging
 import types
 from typing import Any, ForwardRef, Union, get_args, get_origin
 
@@ -249,10 +255,23 @@ class Property:
     def post_delete(self, obj: Any, value: Any) -> Any:
         return value
 
+    def _bind_field_logger(self, owner: type, name: str) -> None:
+        """``logger=True`` becomes a stdlib logger named for this field.
+
+        Specified-theory ``_opts["logger"]`` stays ``True``. No FileHandler.
+        """
+        if self.logger is True:
+            self.logger = logging.getLogger(
+                f"{owner.__module__}.{owner.__qualname__}.{name}"
+            )
+
     def _log(self, level: str, message: str) -> None:
         logger = self.logger
-        if logger and logger is not True and hasattr(logger, level):
-            getattr(logger, level)(message)
+        if logger is True or not logger:
+            return
+        sink = getattr(logger, level, None)
+        if callable(sink):
+            sink(message)
 
     def _record_error(self, err: BaseException) -> None:
         from ux_valio.validators.errors import ValidationErrors
@@ -278,6 +297,7 @@ class Property:
                 )
             self._reject_slots_without_dict(owner, name)
             self._bind_owner_annotation(owner, name)
+            self._bind_field_logger(owner, name)
         except Exception as err:
             self.errors.append(err)
             raise
@@ -358,6 +378,7 @@ class Property:
             value = self.pre_set(obj, value)
             self._store_on_instance(obj, value)
             self.errors.clear()
+            self._log("info", f"{type(obj).__name__}.{self.name}: set")
             self.post_set(obj, value)
         except Exception as err:
             self._swallow_or_raise(err)
@@ -371,7 +392,9 @@ class Property:
         in_flight: BaseException | None = None
         try:
             self.pre_get(obj, self.name)
-            return self._read_from_instance(obj)
+            value = self._read_from_instance(obj)
+            self._log("info", f"{type(obj).__name__}.{self.name}: get")
+            return value
         except Exception as err:
             in_flight = err
             self._swallow_or_raise(err)
@@ -390,6 +413,7 @@ class Property:
         try:
             self.pre_delete(obj, self.name)
             self._drop_from_instance(obj)
+            self._log("info", f"{type(obj).__name__}.{self.name}: delete")
             self.post_delete(obj, self.name)
         except Exception as err:
             self._swallow_or_raise(err)
