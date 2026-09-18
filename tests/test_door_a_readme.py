@@ -154,3 +154,6 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "`SetOf` character-class" in text or "`SetOf` character class" in text
     assert "examples/" in text
     assert "Python ≥ 3.14" in text
+    assert "DateTimeValidator" in text
+    assert "URLValidator" in text
+    assert "module.qualname.field" in text

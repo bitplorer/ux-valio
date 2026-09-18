@@ -277,6 +277,74 @@ def test_post_validate_may_transform_within_unnamed_str_door():
     assert Tag(s="abcd").s == "x"
 
 
+def test_length_unsized_value_is_named_typeerror():
+    from ux_valio import LengthValidator, Validator
+
+    v = LengthValidator(min_length=1, debug=True, name="n")
+    with pytest.raises(TypeError, match="sized value"):
+        v.validate(None, 5)
+
+    @dataclass
+    class Box:
+        n: int = Validator(min_length=1, debug=True)
+
+    with pytest.raises(TypeError, match="sized value"):
+        Box(n=5)
+
+
+def test_logger_true_binds_stdlib_logger_and_logs(caplog):
+    import logging
+
+    from ux_valio import StringValidator
+
+    unbound = StringValidator(logger=True, debug=True)
+    assert unbound.logger is True
+
+    @dataclass
+    class User:
+        name: str = StringValidator(logger=True, debug=True, max_length=8)
+
+    desc = User.__dict__["name"]
+    assert desc.logger is not True
+    assert desc.logger.name.endswith(".User.name")
+    assert desc._opts["logger"].value is True
+    assert desc._opts["logger"].specified is True
+
+    with caplog.at_level(logging.INFO, logger=desc.logger.name):
+        user = User(name="Ada")
+        assert user.name == "Ada"
+        del user.name
+    text = " ".join(record.getMessage() for record in caplog.records)
+    assert "User.name: set" in text
+    assert "User.name: get" in text
+    assert "User.name: delete" in text
+
+    with caplog.at_level(logging.ERROR, logger=desc.logger.name):
+        with pytest.raises(ValueError):
+            User(name="too-long-name")
+    assert any("maximum length" in rec.getMessage() for rec in caplog.records)
+
+
+def test_logger_false_stays_off_and_custom_logger_is_kept():
+    import logging
+
+    from ux_valio import StringValidator
+
+    @dataclass
+    class Quiet:
+        s: str = StringValidator(debug=True)
+
+    assert Quiet.__dict__["s"].logger is False
+
+    custom = logging.getLogger("ux_valio.test.custom")
+
+    @dataclass
+    class Loud:
+        s: str = StringValidator(logger=custom, debug=True)
+
+    assert Loud.__dict__["s"].logger is custom
+
+
 def test_annotation_checker_is_bound_once_on_leaves_import():
     from ux_valio.validators import base as base_mod
     from ux_valio.validators.leaves import is_instance_of

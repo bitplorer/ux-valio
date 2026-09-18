@@ -8,6 +8,17 @@ import pytest
 from ux_valio import ChoiceValidator, Validator
 
 
+def test_in_choice_non_container_typeerrors_at_construct():
+    with pytest.raises(TypeError, match="in_choice expected a container"):
+        ChoiceValidator(in_choice=5, debug=True)
+    with pytest.raises(TypeError, match="not_in_choice expected a container"):
+        ChoiceValidator(not_in_choice=5, debug=True)
+    with pytest.raises(TypeError, match="in_choice expected a container"):
+        Validator(in_choice=True, debug=True)
+    ChoiceValidator(in_choice=["a"], not_in_choice="xyz", debug=True)
+    Validator(in_choice=range(3), debug=True)
+
+
 def test_in_choice_skips_none():
     v = ChoiceValidator(in_choice=["a", "b"], debug=True)
     v.validate(None, None)

@@ -13,6 +13,7 @@ import pytest
 import ux_valio
 from ux_valio import (
     BytesValidator,
+    DateTimeValidator,
     DateValidator,
     DecimalValidator,
     EmailValidator,
@@ -24,6 +25,7 @@ from ux_valio import (
     IntegerEnumValidator,
     PathValidator,
     StringEnumValidator,
+    URLValidator,
     UUIDValidator,
 )
 
@@ -234,3 +236,69 @@ def test_enum_validators():
 def test_attribute_validator_is_not_shipped():
     assert not hasattr(ux_valio, "AttributeValidator")
     assert "AttributeValidator" not in ux_valio.__all__
+
+
+def test_datetime_validator_parses_iso_and_rejects_plain_date():
+    @dataclass
+    class When:
+        t: datetime.datetime = DateTimeValidator(debug=True)
+
+    moment = datetime.datetime(2020, 1, 2, 12, 30)
+    assert When(t=moment).t == moment
+    assert When(t="2020-01-02T12:30:00").t == moment
+    assert When(t="2020-01-02 12:30:00").t == moment
+    with pytest.raises(TypeError):
+        When(t=datetime.date(2020, 1, 2))
+    with pytest.raises(ValueError, match="ISO datetime"):
+        When(t="not-a-datetime")
+    with pytest.raises(ValueError, match="ISO datetime"):
+        When(t="02-01-2020")
+
+
+def test_datetime_post_validate_cannot_store_a_plain_date():
+    from ux_valio.validators.hooks import _bag_key
+
+    field = DateTimeValidator(debug=True)
+
+    def to_date(instance, value):
+        return datetime.date(2020, 1, 2)
+
+    @dataclass
+    class When:
+        t: datetime.datetime = field
+
+    field.add_post_validator(to_date, namespace=_bag_key(When))
+    with pytest.raises(TypeError):
+        When(t="2020-01-02T12:00:00")
+
+
+def test_url_validator_requires_scheme_and_netloc():
+    @dataclass
+    class Link:
+        href: str = URLValidator(debug=True)
+
+    assert Link(href="https://example.com/path?q=1").href == "https://example.com/path?q=1"
+    assert Link(href="http://localhost:8080").href == "http://localhost:8080"
+    with pytest.raises(ValueError, match="URL"):
+        Link(href="example.com")
+    with pytest.raises(ValueError, match="URL"):
+        Link(href="/relative/path")
+    with pytest.raises(ValueError, match="URL"):
+        Link(href="not a url")
+
+
+def test_url_post_validate_cannot_store_a_lie():
+    from ux_valio.validators.hooks import _bag_key
+
+    field = URLValidator(debug=True)
+
+    def smash(instance, value):
+        return "not-a-url"
+
+    @dataclass
+    class Link:
+        href: str = field
+
+    field.add_post_validator(smash, namespace=_bag_key(Link))
+    with pytest.raises(ValueError, match="URL"):
+        Link(href="https://example.com")

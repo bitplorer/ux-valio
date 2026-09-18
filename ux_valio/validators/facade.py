@@ -79,6 +79,8 @@ class Validator(HookHost, ValidateProperty):
         LengthValidator.bind_bounds(self, min_length, length, max_length)
         self.in_choice = in_choice
         self.not_in_choice = not_in_choice
+        ChoiceValidator._reject_non_container("in_choice", in_choice)
+        ChoiceValidator._reject_non_container("not_in_choice", not_in_choice)
         self._init_hook_bags(cache_task=cache_task)
         super().__init__(
             default=default,

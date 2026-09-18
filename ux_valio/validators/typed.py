@@ -9,11 +9,13 @@ import enum
 import ipaddress
 import pathlib
 import re
+import urllib.parse
 import uuid
 from typing import Any
 
 from ux_valio.pattern import Pattern
 from ux_valio.validators.facade import StringValidator, Validator
+from ux_valio.validators.leaves import PatternValidator
 
 # Practical RFC 5322-ish addr-spec. EmailValidator fullmatch extra; engine KEEP.
 _EMAIL_PATTERN = Pattern(
@@ -87,6 +89,35 @@ class DateValidator(Validator):
             )
 
 
+class DateTimeValidator(Validator):
+    """Door A datetime facade. Stores ``datetime.datetime``. ISO via fromisoformat.
+
+    Plain ``datetime.date`` is rejected (that is ``DateValidator``). Date-only
+    ISO strings follow stdlib ``datetime.fromisoformat`` (midnight on 3.11+).
+    """
+
+    annotation = datetime.datetime
+
+    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+        if isinstance(value, str):
+            try:
+                value = datetime.datetime.fromisoformat(value)
+            except ValueError as err:
+                raise ValueError(
+                    f"{self.name} expects an ISO datetime, got {value!r}"
+                ) from err
+        return super().pre_validation_processing(instance, value)
+
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if isinstance(value, datetime.datetime):
+            return
+        raise TypeError(
+            f"{self.name} expect {datetime.datetime} type, got {type(value).__name__} type instead"
+        )
+
+
 class EmailValidator(StringValidator):
     """Door A email facade. Identity of the whole string, not findall substring.
 
@@ -105,8 +136,24 @@ class EmailValidator(StringValidator):
         source = self.pattern
         if hasattr(source, "pattern"):
             source = source.pattern
-        if not isinstance(source, str) or re.fullmatch(source, value) is None:
+        if not isinstance(source, str):
             raise ValueError(f"{self.name} is not a valid email address")
+        compiled = PatternValidator._compiled_finder(self, source)
+        if compiled.fullmatch(value) is None:
+            raise ValueError(f"{self.name} is not a valid email address")
+
+
+class URLValidator(StringValidator):
+    """Door A URL facade. Identity is scheme + netloc (stdlib ``urlparse``)."""
+
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if not isinstance(value, str):
+            raise ValueError(f"{self.name} is not a valid URL")
+        parsed = urllib.parse.urlparse(value)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError(f"{self.name} is not a valid URL")
 
 
 class UUIDValidator(Validator):

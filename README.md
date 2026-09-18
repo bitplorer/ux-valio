@@ -86,8 +86,12 @@ class User:
   against explicit `True`. An omitted `collect_all` / `logger` (runtime
   default False / OFF) still collapses to a specified `True`. `debug` stays
   fail-closed (`None` is unspecified).
-- `logger` defaults **OFF** (`False`). Valio's `logger=None` enabled file
-  logging; ux-valio does not.
+- `logger` defaults **OFF** (`False`). `logger=True` binds a stdlib
+  `logging.Logger` at `__set_name__` named `module.qualname.field`.
+  No files, no `logs/` directory — valio wrote files; pass your own
+  `Logger` for that. `logger=None` is OFF, not valio's None=on.
+  Get/set/delete log at info; failures at error. A field-level logger is
+  the usage-pattern door Pydantic does not have.
 - `|` is OR: `IntegerValidator | StringValidator` is AnyOf. Conflicting
   member annotations do not TypeError. The compose root does not AND-run a
   type check before alternatives. `&` / `AllOf` still TypeErrors on
@@ -258,14 +262,21 @@ assignment; the same delimiter must appear on both sides. `02/01/2020`
 is 2 January 2020 (IND), not 1 February (US). Month names, ordinals,
 dots, and pyparsing `scanString` from valio `relib/dates.py` are not
 ported. `datetime.datetime` is still rejected after the inherited path.
+`DateTimeValidator` stores `datetime.datetime`. ISO strings parse with
+`datetime.fromisoformat` (`2020-01-02T12:00:00`). Plain `datetime.date`
+is rejected. `URLValidator` stores a `str` whose identity is scheme +
+netloc (`https://example.com`); a scheme-less host is rejected.
 
 ## Typed facades
 
 `IntegerValidator`, `StringValidator`, `BooleanValidator`, `FloatValidator`,
 `DecimalValidator`, `BytesValidator`, `DateValidator` (`datetime.date`;
 EU `YYYY-MM-DD` / IND `DD-MM-YYYY` numeric strings with `-` `/` `:` parse
-to `date` and are stored as `date`; `datetime.datetime` is rejected), `EmailValidator`
-(identity fullmatch extra; PatternValidator stays findall),
+to `date` and are stored as `date`; `datetime.datetime` is rejected),
+`DateTimeValidator` (`datetime.datetime`; ISO via `fromisoformat`;
+plain `date` is rejected), `EmailValidator`
+(identity fullmatch extra on the compiled pattern; PatternValidator stays findall),
+`URLValidator` (scheme + netloc identity),
 `UUIDValidator` (coerces UUID strings), `PathValidator` (annotation
 `pathlib.Path`; coerces `str` → `pathlib.Path`; `path_exists=True` requires
 the path to exist),

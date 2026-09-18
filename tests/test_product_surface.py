@@ -82,6 +82,8 @@ def test_min_max_leaves_are_exported():
         "WhiteSpace",
         "NonWhiteSpace",
         "PhoneNumberValidator",
+        "DateTimeValidator",
+        "URLValidator",
         "StartsWith",
         "EndsWith",
         "IfPrecededBy",
