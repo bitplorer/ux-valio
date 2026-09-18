@@ -14,7 +14,7 @@ Who depends on whom (top is core, bottom inherits):
     (parallel to each other; object-compose with ``&`` / ``|``, no leaf MI)
   - ``compose`` — ``AllOf`` / ``AnyOf`` : ``HookHost`` + ``ValidateProperty``
   - ``facade`` — ``Validator`` : ``HookHost`` + ``ValidateProperty``
-  - ``validation_path`` — ordered units on the facade (not ``PathValidator``)
+    (unit list ``ValidationPath`` lives here, not ``PathValidator``)
   - named facades (``typed``, ``payment``, ``expiry``, ``phone``,
     ``aadhaar``, ``pan``) : ``Validator`` (parallel to each other)
 

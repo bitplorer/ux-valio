@@ -14,7 +14,8 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   `&` / `|`, no leaf MI); `compose` → `AllOf` / `AnyOf`; `facade` →
   `Validator`; `typed` + `payment` / `expiry` / `phone` / `aadhaar` /
   `pan` → named facades : `Validator` (parallel). Facade unit list is
-  `validation_path.py`, not `PathValidator` (`typed.py`, pathlib).
+  `ValidationPath` on `Validator` in `facade.py`, not `PathValidator`
+  (`typed.py`, pathlib).
   Primitive typed facades (`IntegerValidator` / `StringValidator` /
   `BooleanValidator`) live in `typed.py` with the rest.
   `Validator[T]` is the stored-type subscript (one argument). It fills
@@ -167,7 +168,7 @@ Layout (core at the root, validate door inherits, named facades are parallel):
 
 Public Door A names KEEP (valio PatternTypes, `add_*`, `AllOf`,
 `Validator`, `Property`). Do not fashion-rename `Digit` / `SetOf` /
-`IfPrecededBy`. Modules are snake_case (`validation_path`, `async_bridge`).
+`IfPrecededBy`. Modules are snake_case (`async_bridge`).
 Classes are CapWords. Methods/helpers are snake_case verbs. The public
 stored-type param is `Validator[T]`; `Property` uses `_StoreT`.
 `in_choice` / `not_in_choice` / `number_of_assignment` are valio names
@@ -210,4 +211,4 @@ module `_bag_key` / `_owner_key` as a module function / `_resolve_bag_key` /
 `_parse_eu_ind_date` /
 `_parse_expiry_datetime` / `_is_valid_aadhaar` / `_is_valid_payment_card` /
 `_is_valid_pan` / `_require_phonenumbers` / `_slot_names`,
-or hang origin tables on `TypeValidator`.
+or hang origin tables on `TypeValidator`, or a `validation_path.py` module.

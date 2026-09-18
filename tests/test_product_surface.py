@@ -166,18 +166,20 @@ def test_descriptor_does_not_import_validators():
     assert hits == []
 
 
-def test_errors_and_validation_path_live_at_honest_modules():
+def test_errors_live_at_package_root_path_lives_on_facade():
     assert (ROOT / "ux_valio" / "errors.py").is_file()
     assert not (ROOT / "ux_valio" / "validators" / "errors.py").exists()
-    assert (ROOT / "ux_valio" / "validators" / "validation_path.py").is_file()
+    assert not (ROOT / "ux_valio" / "validators" / "validation_path.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "path.py").exists()
+    from ux_valio.validators.facade import ValidationPath, Validator
     from ux_valio.validators.typed import (
         BooleanValidator,
         IntegerValidator,
         StringValidator,
     )
-    from ux_valio.validators.facade import Validator
 
+    assert hasattr(Validator, "validation_path")
+    assert isinstance(Validator.validation_path, ValidationPath)
     assert issubclass(IntegerValidator, Validator)
     assert issubclass(StringValidator, Validator)
     assert issubclass(BooleanValidator, Validator)

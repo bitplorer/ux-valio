@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `ValidationPath` lives on the facade (callables, not string unit names).
+  No `validation_path.py`. Compose `pre_*` / `post_*` call member methods
+  directly — no `getattr(item, method)`.
 - Hook registries initialize in `HookHost.__init__` (cooperative
   `super()`). `_register` takes the phase dict, not a string `getattr`.
 - `add_*` hooks are declared methods on `HookHost` (valio did the same).
