@@ -17,7 +17,7 @@ from ux_valio.validators.async_bridge import resolve_coroutine
 import ux_valio.validators as vmod
 
 # Module-level host: method ``__qualname__`` is ``_NsHost.strip`` so the
-# bag key is ``module.qualname`` of ``_NsHost``, matching lookup.
+# owner key is ``module.qualname`` of ``_NsHost``, matching lookup.
 _ns_field = Validator(debug=True)
 
 
@@ -240,7 +240,7 @@ def test_sync_processor_returning_coroutine_no_loop_needs_running_loop():
     class Host:
         x: str = v
 
-    v.add_pre_validator(wrap, namespace=HookHost._bag_key(Host))
+    v.add_pre_validator(wrap, namespace=HookHost._owner_key(Host))
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
@@ -256,7 +256,7 @@ def test_sync_processor_returning_coroutine_debug_falsy_swallows_unset():
     class Host:
         x: str = field
 
-    field.add_pre_validator(wrap, namespace=HookHost._bag_key(Host))
+    field.add_pre_validator(wrap, namespace=HookHost._owner_key(Host))
 
     assert Host(x="ada").x is None
     assert field.errors
@@ -279,7 +279,7 @@ def test_free_function_without_namespace_is_type_error():
             return value
 
 
-def test_explicit_namespace_override_matches_class_bag_key():
+def test_explicit_namespace_override_matches_class_owner_key():
     """namespace= is the bag key as-is; lookup uses the same module.qualname."""
     field = Validator(debug=True)
 
@@ -362,7 +362,7 @@ def test_add_pre_validator_implicit_none_is_stored():
     class Register:
         username: str = username_field
 
-    username_field.add_pre_validator(forget_return, namespace=HookHost._bag_key(Register))
+    username_field.add_pre_validator(forget_return, namespace=HookHost._owner_key(Register))
 
     assert Register(username="ada").username is None
 
@@ -379,7 +379,7 @@ def test_add_pre_validator_task_does_not_rewrite_stored_value():
     class Register:
         username: str = username_field
 
-    username_field.add_pre_validator_task(note, namespace=HookHost._bag_key(Register))
+    username_field.add_pre_validator_task(note, namespace=HookHost._owner_key(Register))
 
     assert Register(username="ada").username == "ada"
     assert seen == ["ada"]
@@ -399,7 +399,7 @@ def test_cache_task_is_not_a_door():
     assert not hasattr(Validator(), "cache_task")
 
 
-def test_same_class_name_different_modules_get_distinct_bags():
+def test_same_class_name_different_modules_get_distinct_owner_keys():
     """Two User classes must not share a bag keyed by bare __name__."""
     field = Validator(debug=True)
     log = []
@@ -444,15 +444,15 @@ def test_same_class_name_different_modules_get_distinct_bags():
 
 
 def test_lookup_uses_same_key_helper_as_register():
-    """No __name__-only lookup path; register and lookup share _bag_key."""
+    """No __name__-only lookup path; register and lookup share _owner_key."""
     for meth in ("_run_tasks", "_run_processors", "_run_custom_validators"):
         src = inspect.getsource(getattr(Validator, meth))
         assert "instance.__class__.__name__" not in src
-        assert "_collect_bag_keys" in src
-    assert "_bag_key" in inspect.getsource(HookHost._collect_bag_keys)
-    ns_src = inspect.getsource(HookHost._resolve_bag_key)
+        assert "_collect_owner_keys" in src
+    assert "_owner_key" in inspect.getsource(HookHost._collect_owner_keys)
+    ns_src = inspect.getsource(HookHost._resolve_owner_key)
     assert 'split(".")[0]' not in ns_src
-    assert "_bag_key" in ns_src
+    assert "_owner_key" in ns_src
 
     field = Validator(debug=True)
 
@@ -464,10 +464,10 @@ def test_lookup_uses_same_key_helper_as_register():
         def strip(self, value):
             return value.strip()
 
-    key = HookHost._bag_key(Host)
+    key = HookHost._owner_key(Host)
     assert key == f"{Host.__module__}.{Host.__qualname__}"
     assert list(field._processors["pre_validate"]) == [key]
-    assert HookHost._resolve_bag_key(Host.strip, None) == key
+    assert HookHost._resolve_owner_key(Host.strip, None) == key
     assert Host(x="  Ada  ").x == "Ada"
 
 

@@ -187,7 +187,7 @@ def test_post_get_does_not_replace_in_flight_never_set_error():
 
     from ux_valio.validators.hooks import HookHost
 
-    field.add_post_get(boom, namespace=HookHost._bag_key(Box))
+    field.add_post_get(boom, namespace=HookHost._owner_key(Box))
     box = Box.__new__(Box)
     with pytest.raises(AttributeError, match=r"Box\.s is not set") as exc:
         _ = box.s
@@ -207,7 +207,7 @@ def test_post_validate_cannot_store_type_mismatch():
 
     from ux_valio.validators.hooks import HookHost
 
-    field.add_post_validator(smash, namespace=HookHost._bag_key(N))
+    field.add_post_validator(smash, namespace=HookHost._owner_key(N))
     with pytest.raises(TypeError, match="int"):
         N(n=2)
 
@@ -228,7 +228,7 @@ def test_post_validate_cannot_store_named_facade_lie():
     class Contact:
         s: str = email
 
-    email.add_post_validator(not_email, namespace=HookHost._bag_key(Contact))
+    email.add_post_validator(not_email, namespace=HookHost._owner_key(Contact))
     with pytest.raises(ValueError, match="email"):
         Contact(s="ada@example.com")
 
@@ -241,7 +241,7 @@ def test_post_validate_cannot_store_named_facade_lie():
     class Wallet:
         c: str = card
 
-    card.add_post_validator(not_card, namespace=HookHost._bag_key(Wallet))
+    card.add_post_validator(not_card, namespace=HookHost._owner_key(Wallet))
     with pytest.raises(ValueError, match="payment card"):
         Wallet(c="4111111111111111")
 
@@ -254,7 +254,7 @@ def test_post_validate_cannot_store_named_facade_lie():
     class Day:
         d: date = when
 
-    when.add_post_validator(to_datetime, namespace=HookHost._bag_key(Day))
+    when.add_post_validator(to_datetime, namespace=HookHost._owner_key(Day))
     with pytest.raises(TypeError, match="datetime"):
         Day(d=date(2020, 1, 1))
 
@@ -273,7 +273,7 @@ def test_post_validate_may_transform_within_unnamed_str_door():
     class Tag:
         s: str = field
 
-    field.add_post_validator(shorten, namespace=HookHost._bag_key(Tag))
+    field.add_post_validator(shorten, namespace=HookHost._owner_key(Tag))
     assert Tag(s="abcd").s == "x"
 
 

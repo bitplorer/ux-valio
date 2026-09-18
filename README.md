@@ -1,9 +1,16 @@
 # ux-valio
 
-Door A descriptor-on-dataclass validation. Greenfield reimplementation of
+The validator **is** the dataclass field default:
+
+```python
+name: str = StringValidator(debug=True, max_length=50)
+```
+
+Greenfield reimplementation of
 [`bitplorer/valio`](https://github.com/bitplorer/valio) frozen at
 [`3415c03`](https://github.com/bitplorer/valio/commit/3415c03e37085adda4040671a91eb19aa4fe4ac4).
-Valio itself is not edited.
+Valio called this shape **Door A** (vs a Field/Schema twin this library
+does not ship). Valio itself is not edited.
 
 ## Install
 
@@ -13,12 +20,12 @@ Python ≥ 3.14 (same floor as `ux-compose`).
 pip install -e .
 ```
 
-## Door A
+## Usage
 
 The taught caller shape is a **typed facade or `Validator`** as the dataclass
-field default. `field: T = SomeValidator(...)` is the door. There is no Field
+field default. `field: T = SomeValidator(...)` is the whole API. There is no Field
 twin and no Schema twin. Do not use bare `Property` as the field default —
-it is the descriptor base, not the product door.
+it is the descriptor base, not a product facade.
 
 ```python
 from dataclasses import dataclass
@@ -77,7 +84,7 @@ Class access `User.name` is that descriptor, so `User.name.add_post_set`
 also works after the class exists. Dataclass uses the descriptor as the
 field default; assigning it is treated as unset and applies `default` /
 `default_factory`. A shared descriptor (`aadhaar` on Person and Vendor)
-uses the class you accessed: `Person.aadhaar.add_*` bags under Person,
+uses the class you accessed: `Person.aadhaar.add_*` registers under Person,
 not the last `__set_name__`.
 
 ## KEEP: debug swallow, logger OFF, pre_set hook
@@ -142,8 +149,9 @@ run rules as `async def`.
 ### Before-store DB check (Register)
 
 valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
-for `add_pre_validator`). Door A hangs the same processor on the **field
-name**. Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong bag.
+for `add_pre_validator`). Hang the same processor on the **field
+name**. Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong
+hook — return the value from `add_pre_validator`.
 
 Class-body `username: str = username` is `NameError` only when an outer
 name collides with the field (the assignment makes `username` local).
@@ -167,15 +175,15 @@ class Register:
         return value
 ```
 
-Processor and task bags use one key on register and lookup: the owning
+Processor and task registries use one key on register and lookup: the owning
 class’s `module.qualname` (`f"{cls.__module__}.{cls.__qualname__}"`). Two
-classes named `User` in different modules do not share a bag — the old bare
+classes named `User` in different modules do not share hooks — the old bare
 `__name__` key was a collision. A method decorator derives that key from the
 method (nested classes included). Lookup walks the instance MRO (base first),
 so a child dataclass runs parent field hooks. A free function has no owning
 class: on an **unbound** descriptor `add_*` without `namespace=` is
-`TypeError`; on a bound field (`Register.username.add_*`) the bag key is
-the bound owner. `namespace=` is the bag key
+`TypeError`; on a bound field (`Register.username.add_*`) the owner key is
+the bound owner. `namespace=` is that owner key
 as-is; it fires only when that string equals the instance class’s
 `module.qualname` (or an MRO parent). Passing a class object as `namespace=` is `TypeError`
 (string keys only). Leftover teaching: `namespace="Register"` (bare
@@ -191,17 +199,17 @@ built a new list; prefer `default_factory=list` when the intent is
 per-instance.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
 exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
-`in_choice` / `not_in_choice` skip `None` (optional unset). A string bag
-must not TypeError on that skip.
+`in_choice` / `not_in_choice` skip `None` (optional unset). A string used
+as `in_choice` must not TypeError on that skip.
 
-Door A stores on `instance.__dict__`. Explicit `__slots__` that include the
+The field stores on `instance.__dict__`. Explicit `__slots__` that include the
 field TypeError at bind. A slots-only class (no `__dict__` in the MRO)
 TypeErrors at bind even when the field name is not a slot. A child that
 does not define `__slots__` still has `__dict__`. `@dataclass(slots=True)`
 is unsupported: dataclass replaces the descriptor after bind, and
 validation would not run. `@dataclass(frozen=True)` works: dataclass
 intercepts assign/delete with `FrozenInstanceError`; `__init__` still
-runs Door A.
+runs the field descriptor.
 
 `add_post_validator` may transform after checks. If the field has an
 annotation, the stored value must still match it — a post processor cannot
@@ -232,7 +240,7 @@ the package root (`from ux_valio import Pattern, Digit, StartsWith, SetOf`).
 re-home, not a second door. `WordBoundary` stays an atom `\b`.
 
 Thin PatternTypes evidenced in valio@3415c03 `valio/regexer/regexps.py`.
-Those names are the taught Door A atoms (KEEP; not `DigitAtom` /
+Those names are the taught PatternType atoms (KEEP; not `DigitAtom` /
 `CharacterClass` / `Lookbehind`):
 
 - `StartsWith` / `EndsWith` (`^` / `$`) at L414 / L421
@@ -259,7 +267,7 @@ class Part:
 
 Runnable production skeletons live under `examples/` (`python examples/<file>.py`).
 Each file is a service that injects Protocol ports in the constructor, plus a
-Door A dataclass callers can copy. `main()` is only the runnable runner.
+dataclass callers can copy. `main()` is only the runnable runner.
 Hooks (`add_pre_validator` / `add_post_set`) fail closed into validation
 errors (uniqueness, password confirm, promo/inventory, payment gateway, KYC
 registry). Password hashing is an example `PasswordHasher` port (stdlib
@@ -269,8 +277,8 @@ fail-closed; signup uses `collect_all=True` and `ValidationErrors`.
 
 Owner annotations that are still strings or `ForwardRef` (including
 `from __future__ import annotations`) fail at class body with `TypeError`.
-They are not copied into the type door and are not `eval`'d. Drop postponed
-annotations on Door A fields, or the bind stays closed.
+They are not copied onto the descriptor and are not `eval`'d. Drop postponed
+annotations on these fields, or the bind stays closed.
 
 Typed facades (`IntegerValidator`, …) conflict with `int | None` / `int | str`
 at class body. Use `Validator()` for optional/union fields, or `|` AnyOf of
@@ -348,14 +356,14 @@ class Card:
     phone: str = PhoneNumberValidator(region="IN", debug=True)
 ```
 
-`PhoneNumberValidator` is a Door A string facade. `region=` is the taught
-region door (ISO 3166-1 alpha-2 as understood by `phonenumbers`). It is
+`PhoneNumberValidator` is a string facade. `region=` is the taught
+region (ISO 3166-1 alpha-2 as understood by `phonenumbers`). It is
 required: there is no silent `"IN"` default and no `instance.region`
 lookup. The engine is the optional extra `phonenumbers`
 (`pip install ux-valio[phonenumbers]`); there is no network lookup
 (no carrier / geocoder). `region` is not a kwarg on `Validator`.
 List / dictionary / set / tuple collection facades are not
-shipped; `list[T]` / `dict[K, V]` membership is the type door.
+shipped; `list[T]` / `dict[K, V]` membership is the type check.
 
 Min/max length and value leaves (`MinLengthValidator`, `MaxLengthValidator`,
 `MinValueValidator`, `MaxValueValidator`) are public building blocks.

@@ -55,7 +55,7 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   `username_field` twin unless sharing one descriptor across classes.
   Lookup walks the instance MRO (base first) so a child runs parent hooks.
   A free function on an unbound descriptor still needs `namespace=`;
-  on a bound field the bag key is the bound owner.
+  on a bound field the owner key is the bound owner.
   `add_*` accepts async def and coroutine
   results (no `_reject_coroutine_result`);
   sync path with no running loop TypeError names the missing loop / helper;
@@ -180,10 +180,10 @@ New private helpers are verbs that name the action:
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
 `_Compose._bind_kwargs`, `_Compose._flatten`, `_Opt.merge`, `_Opt.read`,
-`HookHost.bags_used`, `HookHost._install_adders`, `HookHost._collect_bag_keys`,
+`HookHost.has_hooks`, `HookHost._install_adders`, `HookHost._collect_owner_keys`,
 `_bind_field_logger`, `_take_subscript_annotation`,
 `_is_unconstrained_typevar`,
-`HookHost._bag_key`, `HookHost._resolve_bag_key`,
+`HookHost._owner_key`, `HookHost._resolve_owner_key`,
 `HookHost._owning_class_qualname`, `HookHost._hook_adder`,
 `Property._slot_names`, `Property._owner_omits_instance_dict`,
 `DateValidator._parse_eu_ind_date`, `ExpiryValidator._parse_expiry_datetime`,
@@ -204,7 +204,8 @@ and adders live on `HookHost`. Origin tables live next to
 `is_instance_of`. Specified-theory merge lives on `_Opt`. Errors live at
 `ux_valio.errors`. Descriptor does not import `validators`. Do not
 reintroduce leftover aliases, `validators/errors.py`, `validators/path.py`,
-module `_bag_key` / `_resolve_bag_key` / `_parse_eu_ind_date` /
+module `_bag_key` / `_owner_key` as a module function / `_resolve_bag_key` /
+`_parse_eu_ind_date` /
 `_parse_expiry_datetime` / `_is_valid_aadhaar` / `_is_valid_payment_card` /
 `_is_valid_pan` / `_require_phonenumbers` / `_slot_names`,
 or hang origin tables on `TypeValidator`.
