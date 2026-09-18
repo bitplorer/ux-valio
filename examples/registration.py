@@ -103,36 +103,33 @@ class Pbkdf2PasswordHasher:
         return hmac.compare_digest(self.hash(plain), hashed)
 
 
-username_field = StringValidator(debug=True, required=True, min_length=3)
-password_field = AllOf(
-    StringValidator(debug=True, required=True, min_length=8, max_length=128),
-    StringValidator(pattern=Digit(count_min=1), debug=True),
-    StringValidator(pattern=SetOf(Pattern(r"A-Za-z"), count_min=1), debug=True),
-)
-confirm_field = StringValidator(debug=True, required=True, min_length=8, max_length=128)
-
-
 @dataclass
 class Registration:
     users: UserStore
     hasher: PasswordHasher
-    username: str = username_field
-    password: str = password_field
-    password_confirm: str = confirm_field
+    username: str = StringValidator(debug=True, required=True, min_length=3)
+    password: str = AllOf(
+        StringValidator(debug=True, required=True, min_length=8, max_length=128),
+        StringValidator(pattern=Digit(count_min=1), debug=True),
+        StringValidator(pattern=SetOf(Pattern(r"A-Za-z"), count_min=1), debug=True),
+    )
+    password_confirm: str = StringValidator(
+        debug=True, required=True, min_length=8, max_length=128
+    )
 
-    @username_field.add_pre_validator
+    @username.add_pre_validator
     def username_available(self, value: str) -> str:
         if self.users.username_taken(value):
             raise ValueError(f"username {value!r} is already registered")
         return value
 
-    @confirm_field.add_pre_validator
+    @password_confirm.add_pre_validator
     def passwords_match(self, value: str) -> str:
         if value != self.password:
             raise ValueError("password confirmation does not match")
         return value
 
-    @confirm_field.add_post_set
+    @password_confirm.add_post_set
     def persist_user(self, value: str) -> None:
         self.users.create(self.username, "", self.hasher.hash(self.password))
 

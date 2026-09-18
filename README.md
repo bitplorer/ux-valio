@@ -42,24 +42,29 @@ from ux_valio import LengthValidator, RequiredValidator
 tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(required=True)
 ```
 
-Hang `add_*` on the descriptor that is the field default: a `Validator`
-facade, or the compose **root** after `&` / `AllOf`. Concern leaves do not
+Hang `add_*` on the field name. The descriptor *is* the dataclass default —
+no outer `username_field` twin, no Field mixin. Concern leaves do not
 carry `add_*`. Do not invent `add_pre_set`.
 
 `&` / `|` bind `AllOf` / `AnyOf` once (compose import fills the cache).
 The operator path does not import on each use.
 
 ```python
-name_field = StringValidator(debug=True, max_length=50) & RequiredValidator(required=True)
-
 @dataclass
 class User:
-    name: str = name_field
+    name: str = StringValidator(debug=True, max_length=50) & RequiredValidator(
+        required=True
+    )
 
-    @name_field.add_pre_validator
+    @name.add_pre_validator
     def strip(self, value: str) -> str:
         return value.strip()
 ```
+
+Class access `User.name` is that descriptor, so `User.name.add_post_set`
+also works after the class exists. Dataclass uses the descriptor as the
+field default; assigning it is treated as unset and applies `default` /
+`default_factory`.
 
 ## KEEP: debug swallow, logger OFF, pre_set hook
 
@@ -123,27 +128,28 @@ run rules as `async def`.
 ### Before-store DB check (Register)
 
 valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
-for `add_pre_validator`). Door A hangs the same processor on the descriptor.
-Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong bag
+for `add_pre_validator`). Door A hangs the same processor on the **field
+name**. Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong bag
 (`cache_task=` is accepted on `Validator` and on compose roots; it is
 stored and never consulted. The kwarg is kept; cache behavior is retired.
 It does **not** skip re-checks.)
 
-Class-body `username: str = username` is `NameError` (the assignment makes
-`username` local). Match valio Field’s `user_field` / `user` split:
+Class-body `username: str = username` is `NameError` only when an outer
+name collides with the field (the assignment makes `username` local).
+Hang on the field name after it is assigned. An outer `username_field`
+is only needed when **sharing** one descriptor across classes.
 
 ```python
 from dataclasses import dataclass
 from ux_valio import StringValidator
 
 DB = {"taken"}
-username_field = StringValidator(debug=True, required=True, min_length=3)
 
 @dataclass
 class Register:
-    username: str = username_field
+    username: str = StringValidator(debug=True, required=True, min_length=3)
 
-    @username_field.add_pre_validator
+    @username.add_pre_validator
     def username_not_taken(self, value: str) -> str:
         if value in DB:
             raise ValueError("username already registered")
@@ -154,10 +160,13 @@ Processor and task bags use one key on register and lookup: the owning
 class’s `module.qualname` (`f"{cls.__module__}.{cls.__qualname__}"`). Two
 classes named `User` in different modules do not share a bag — the old bare
 `__name__` key was a collision. A method decorator derives that key from the
-method (nested classes included). A free function has no owning class:
-`add_*` without `namespace=` is `TypeError`. `namespace=` is the bag key
+method (nested classes included). Lookup walks the instance MRO (base first),
+so a child dataclass runs parent field hooks. A free function has no owning
+class: on an **unbound** descriptor `add_*` without `namespace=` is
+`TypeError`; on a bound field (`Register.username.add_*`) the bag key is
+the bound owner. `namespace=` is the bag key
 as-is; it fires only when that string equals the instance class’s
-`module.qualname`. Passing a class object as `namespace=` is `TypeError`
+`module.qualname` (or an MRO parent). Passing a class object as `namespace=` is `TypeError`
 (string keys only). Leftover teaching: `namespace="Register"` (bare
 `__name__`) is not rewritten to match lookup. A processor that forgets to
 return the value stores `None`; return the value from `add_pre_validator`.

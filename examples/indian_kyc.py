@@ -91,19 +91,19 @@ class KycIdentity:
     aadhaar: str = aadhaar_field
     pan: str = pan_field
 
-    @aadhaar_field.add_pre_validator
+    @aadhaar.add_pre_validator
     def aadhaar_free(self, value: str) -> str:
         if self.registry.aadhaar_registered(value):
             raise ValueError(f"aadhaar {value!r} is already registered")
         return value
 
-    @pan_field.add_pre_validator
+    @pan.add_pre_validator
     def pan_free(self, value: str) -> str:
         if self.registry.pan_registered(value):
             raise ValueError(f"PAN {value!r} is already registered")
         return value
 
-    @pan_field.add_post_set
+    @pan.add_post_set
     def commit_identity(self, value: str) -> None:
         self.registry.commit(self.aadhaar, value)
 
@@ -119,19 +119,19 @@ if HAS_PHONENUMBERS and _PHONE is not None:
         pan: str = pan_field
         phone: str = _PHONE
 
-        @aadhaar_field.add_pre_validator
+        @aadhaar.add_pre_validator
         def aadhaar_free(self, value: str) -> str:
             if self.registry.aadhaar_registered(value):
                 raise ValueError(f"aadhaar {value!r} is already registered")
             return value
 
-        @pan_field.add_pre_validator
+        @pan.add_pre_validator
         def pan_free(self, value: str) -> str:
             if self.registry.pan_registered(value):
                 raise ValueError(f"PAN {value!r} is already registered")
             return value
 
-        @pan_field.add_post_set
+        @pan.add_post_set
         def commit_identity(self, value: str) -> None:
             self.registry.commit(self.aadhaar, value)
 

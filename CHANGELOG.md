@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Hang `add_*` on the field name: `@username.add_pre_validator` in the
+  class body, no outer `username_field` twin, no Field mixin. Class
+  access returns the descriptor so `Cls.field.add_*` works after bind.
+  Dataclass default is that descriptor; `__set__` treats `value is self`
+  as unset and applies `default` / `default_factory`.
+- Hook lookup walks the instance MRO (base first). A child dataclass
+  runs parent field hooks. A free function on a bound field uses the
+  bound owner as the bag key.
 - Field logger: `logger=True` binds a stdlib `logging.Logger` at
   `__set_name__` named `module.qualname.field`. No files. `logger=False`
   (default) stays OFF. `logger=None` is OFF. Get/set/delete log at info;

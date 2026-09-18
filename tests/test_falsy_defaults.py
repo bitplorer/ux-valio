@@ -54,15 +54,23 @@ def test_callable_default_runs_only_for_none():
     assert N(n=0).n == 0
 
 
-def test_property_class_get_returns_none_so_dataclass_default_is_none():
+def test_property_class_get_returns_the_descriptor():
+    """Class access is the descriptor so ``Cls.n.add_*`` hangs after bind.
+
+    Dataclass ``getattr`` then sees the descriptor as the default; ``__set__``
+    treats that identity as unset and applies ``default``.
+    """
     field = IntegerValidator(default=5, debug=True)
 
     @dataclass
     class N:
         n: int = field
 
-    assert N.n is None
+    assert N.n is field
     assert N().n == 5
+    n = N()
+    n.n = N.n
+    assert n.n == 5
 
 
 def test_mutable_list_default_is_shared_across_instances():

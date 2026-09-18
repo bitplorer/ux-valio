@@ -31,11 +31,16 @@ def _owning_class_qualname(func: Callable[..., Any]) -> str | None:
     return owner
 
 
-def _resolve_bag_key(func: Callable[..., Any], namespace: str | None) -> str:
+def _resolve_bag_key(
+    func: Callable[..., Any],
+    namespace: str | None,
+    bound_owner: type | None = None,
+) -> str:
     """Bag key for register. Default is ``_bag_key`` of the owning class.
 
     ``namespace=`` is the key as-is (str). A free function has no owning
-    class and requires ``namespace=``. Class objects are not keys.
+    class: if the descriptor is already bound, use that owner; otherwise
+    ``namespace=`` is required. Class objects are not keys.
     """
     if namespace is not None:
         if not isinstance(namespace, str):
@@ -45,18 +50,36 @@ def _resolve_bag_key(func: Callable[..., Any], namespace: str | None) -> str:
             )
         return namespace
     owner = _owning_class_qualname(func)
-    if owner is None:
-        raise TypeError(
-            "free function requires namespace= "
-            "(bag key is module.qualname of the owning class)"
+    if owner is not None:
+        return _bag_key(
+            SimpleNamespace(__module__=func.__module__, __qualname__=owner)
         )
-    return _bag_key(
-        SimpleNamespace(__module__=func.__module__, __qualname__=owner)
+    if bound_owner is not None:
+        return _bag_key(bound_owner)
+    raise TypeError(
+        "free function requires namespace= "
+        "(bag key is module.qualname of the owning class)"
     )
 
 
 # leftover: previous helper name. Prefer ``_resolve_bag_key``.
 _namespace = _resolve_bag_key
+
+
+def _collect_bag_keys(instance: Any) -> tuple[str, ...]:
+    """Owner keys from base to derived. Inherited hooks fire on a child."""
+    keys: list[str] = []
+    seen: set[str] = set()
+    for cls in instance.__class__.__mro__:
+        if cls is object:
+            continue
+        key = _bag_key(cls)
+        if key in seen:
+            continue
+        seen.add(key)
+        keys.append(key)
+    keys.reverse()
+    return tuple(keys)
 
 
 def _hook_adder(bag: str, phase: str):
@@ -130,21 +153,29 @@ class HookHost:
         func: Callable[..., Any],
         namespace: str | None = None,
     ) -> Callable[..., Any]:
-        getattr(self, bag)[phase][_resolve_bag_key(func, namespace)].append(func)
+        getattr(self, bag)[phase][
+            _resolve_bag_key(func, namespace, getattr(self, "_owner", None))
+        ].append(func)
         return func
 
     def add_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        self._custom_validators[_resolve_bag_key(func, namespace)].append(func)
+        self._custom_validators[
+            _resolve_bag_key(func, namespace, getattr(self, "_owner", None))
+        ].append(func)
         return func
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
-        for func in self._processors[phase].get(_bag_key(instance.__class__), ()):
-            value = invoke_callable(func, instance, value)
+        bag = self._processors[phase]
+        for key in _collect_bag_keys(instance):
+            for func in bag.get(key, ()):
+                value = invoke_callable(func, instance, value)
         return value
 
     def _run_tasks(self, phase: str, instance: Any, value: Any) -> Any:
-        for func in self._tasks[phase].get(_bag_key(instance.__class__), ()):
-            invoke_callable(func, instance, value)
+        bag = self._tasks[phase]
+        for key in _collect_bag_keys(instance):
+            for func in bag.get(key, ()):
+                invoke_callable(func, instance, value)
         return value
 
     def _process_then_tasks(self, phase: str, instance: Any, value: Any) -> Any:
@@ -179,11 +210,12 @@ class HookHost:
         errors: list[BaseException] = []
         collect_all = getattr(self, "collect_all", False)
         name = getattr(self, "name", None)
-        for func in self._custom_validators.get(_bag_key(instance.__class__), ()):
-            try:
-                invoke_callable(func, instance, value)
-            except Exception as err:
-                continue_or_raise(collect_all, errors, err)
+        for key in _collect_bag_keys(instance):
+            for func in self._custom_validators.get(key, ()):
+                try:
+                    invoke_callable(func, instance, value)
+                except Exception as err:
+                    continue_or_raise(collect_all, errors, err)
         raise_collected(errors, name=name)
 
     @staticmethod

@@ -1,13 +1,12 @@
 # SPDX-License-Identifier: MIT
 """Staff profile: ``&`` / ``|`` composition, compose-root hooks, directory port.
 
-Hang ``add_*`` on the descriptor that is the field default: a ``Validator``
-facade or the compose **root** after ``&`` / ``AllOf``. Concern leaves do not
+Hang ``add_*`` on the field name (the compose root after ``&`` / ``AllOf``). Concern leaves do not
 carry ``add_*``. ``|`` is OR (``AnyOf``); the root does not AND-run a type
 check before alternatives. ``Chain`` is ``AllOf``.
 
 Inject ``StaffDirectory`` on ``StaffService``; uniqueness hangs on the
-compose-root ``name_field`` via ``add_pre_validator``. ``main()`` only runs
+compose-root ``name`` via ``add_pre_validator``. ``main()`` only runs
 the demo. ``InMemoryStaffDirectory`` is the runnable fake; production plugs
 HRIS/LDAP. This file does not ship a DB driver.
 """
@@ -50,39 +49,35 @@ class InMemoryStaffDirectory:
         self._taken[name.casefold()] = name
 
 
-name_field = StringValidator(debug=True, max_length=50) & RequiredValidator(
-    required=True
-)
-age_or_label = AnyOf(
-    IntegerValidator(min_value=0, debug=True),
-    StringValidator(min_length=1, debug=True),
-)
-
-
 @dataclass
 class StaffProfile:
     directory: StaffDirectory
-    name: str = name_field
+    name: str = StringValidator(debug=True, max_length=50) & RequiredValidator(
+        required=True
+    )
     tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(
         required=True
     )
-    note: object = age_or_label
+    note: object = AnyOf(
+        IntegerValidator(min_value=0, debug=True),
+        StringValidator(min_length=1, debug=True),
+    )
     title: str = AllOf(
         StringValidator(debug=True, min_length=2, max_length=40),
         RequiredValidator(required=True),
     )
 
-    @name_field.add_pre_validator
+    @name.add_pre_validator
     def strip_name(self, value: str) -> str:
         return value.strip()
 
-    @name_field.add_pre_validator
+    @name.add_pre_validator
     def name_available(self, value: str) -> str:
         if self.directory.name_taken(value):
             raise ValueError(f"staff name {value!r} is already in the directory")
         return value
 
-    @name_field.add_post_set
+    @name.add_post_set
     def commit_name(self, value: str) -> None:
         self.directory.commit(value)
 

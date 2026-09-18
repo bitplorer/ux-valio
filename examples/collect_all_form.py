@@ -155,19 +155,19 @@ class SignupForm:
     password_confirm: str = confirm_field
     seats: int = seats_field
 
-    @username_field.add_pre_validator
+    @username.add_pre_validator
     def username_available(self, value: str) -> str:
         if self.users.username_taken(value):
             raise ValueError(f"username {value!r} is already registered")
         return value
 
-    @confirm_field.add_pre_validator
+    @password_confirm.add_pre_validator
     def passwords_match(self, value: str) -> str:
         if value != self.password:
             raise ValueError("password confirmation does not match")
         return value
 
-    @seats_field.add_post_set
+    @seats.add_post_set
     def persist_user(self, value: int) -> None:
         self.users.create(
             self.username, self.email, self.hasher.hash(self.password)
@@ -181,7 +181,7 @@ class LoginForm:
     username: str = login_username_field
     password: str = login_password_field
 
-    @login_password_field.add_pre_validator
+    @password.add_pre_validator
     def credentials_ok(self, value: str) -> str:
         row = self.users.get(self.username)
         if row is None or not self.hasher.verify(value, row.password_hash):
