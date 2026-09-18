@@ -27,36 +27,6 @@ class HookHost:
     _processors: dict[str, dict[str, list[Callable[..., Any]]]]
     _tasks: dict[str, dict[str, list[Callable[..., Any]]]]
 
-    # No "pre_set": ValidateProperty.pre_set *is* pre_validate →
-    # validate → post_validate. add_pre_set would be a second assignment path.
-    _PROCESSOR_PHASES = (
-        "pre_validate",
-        "post_validate",
-        "post_set",
-        "pre_get",
-        "post_get",
-        "pre_delete",
-        "post_delete",
-    )
-
-    # Public add_* methods. (method, registry attribute, phase).
-    _HOOK_ADDERS = (
-        ("add_pre_validator", "_processors", "pre_validate"),
-        ("add_post_validator", "_processors", "post_validate"),
-        ("add_post_set", "_processors", "post_set"),
-        ("add_pre_get", "_processors", "pre_get"),
-        ("add_post_get", "_processors", "post_get"),
-        ("add_pre_delete", "_processors", "pre_delete"),
-        ("add_post_delete", "_processors", "post_delete"),
-        ("add_pre_validator_task", "_tasks", "pre_validate"),
-        ("add_post_validator_task", "_tasks", "post_validate"),
-        ("add_post_set_task", "_tasks", "post_set"),
-        ("add_pre_get_task", "_tasks", "pre_get"),
-        ("add_post_get_task", "_tasks", "post_get"),
-        ("add_pre_delete_task", "_tasks", "pre_delete"),
-        ("add_post_delete_task", "_tasks", "post_delete"),
-    )
-
     @staticmethod
     def _owner_key(cls: Any) -> str:
         """Owning class identity for register and lookup: ``module.qualname``."""
@@ -106,19 +76,6 @@ class HookHost:
         )
 
     @staticmethod
-    def _hook_adder(registry: str, phase: str):
-        """One body for every public ``add_*``. Bound onto ``HookHost`` from its table."""
-
-        def adder(
-            self: "HookHost",
-            func: Callable[..., Any],
-            namespace: str | None = None,
-        ) -> Callable[..., Any]:
-            return self._add(registry, phase, func, namespace)
-
-        return adder
-
-    @staticmethod
     def _collect_owner_keys(instance: Any) -> tuple[str, ...]:
         """Owner keys from base to derived. Inherited hooks fire on a child."""
         keys: list[str] = []
@@ -135,11 +92,19 @@ class HookHost:
         return tuple(keys)
 
     def _init_hooks(self) -> None:
+        # Phases are the dict keys. No add_pre_set — ValidateProperty.pre_set
+        # *is* pre_validate → validate → post_validate.
         self._custom_validators = defaultdict(list)
         self._processors = {
-            phase: defaultdict(list) for phase in type(self)._PROCESSOR_PHASES
+            "pre_validate": defaultdict(list),
+            "post_validate": defaultdict(list),
+            "post_set": defaultdict(list),
+            "pre_get": defaultdict(list),
+            "post_get": defaultdict(list),
+            "pre_delete": defaultdict(list),
+            "post_delete": defaultdict(list),
         }
-        self._tasks = {phase: defaultdict(list) for phase in type(self)._PROCESSOR_PHASES}
+        self._tasks = {phase: defaultdict(list) for phase in self._processors}
 
     def _add(
         self,
@@ -158,6 +123,48 @@ class HookHost:
             HookHost._resolve_owner_key(func, namespace, getattr(self, "_owner", None))
         ].append(func)
         return func
+
+    def add_pre_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_processors", "pre_validate", func, namespace)
+
+    def add_post_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_processors", "post_validate", func, namespace)
+
+    def add_post_set(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_processors", "post_set", func, namespace)
+
+    def add_pre_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_processors", "pre_get", func, namespace)
+
+    def add_post_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_processors", "post_get", func, namespace)
+
+    def add_pre_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_processors", "pre_delete", func, namespace)
+
+    def add_post_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_processors", "post_delete", func, namespace)
+
+    def add_pre_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_tasks", "pre_validate", func, namespace)
+
+    def add_post_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_tasks", "post_validate", func, namespace)
+
+    def add_post_set_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_tasks", "post_set", func, namespace)
+
+    def add_pre_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_tasks", "pre_get", func, namespace)
+
+    def add_post_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_tasks", "post_get", func, namespace)
+
+    def add_pre_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_tasks", "pre_delete", func, namespace)
+
+    def add_post_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        return self._add("_tasks", "post_delete", func, namespace)
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
         hooks = self._processors[phase]
@@ -227,15 +234,3 @@ class HookHost:
                 if any(phase.values()):
                     return True
         return False
-
-    @classmethod
-    def _install_adders(cls) -> None:
-        """Public add_* names. One encoding. No pre_set adder."""
-        for name, registry, phase in cls._HOOK_ADDERS:
-            adder = cls._hook_adder(registry, phase)
-            adder.__name__ = name
-            adder.__qualname__ = f"{cls.__name__}.{name}"
-            setattr(cls, name, adder)
-
-
-HookHost._install_adders()

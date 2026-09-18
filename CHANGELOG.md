@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `add_*` hooks are declared methods on `HookHost` (valio did the same).
+  No `_HOOK_ADDERS` table / `_install_adders` setattr. Phases are the
+  `_processors` dict keys.
 - Owner key is `module.qualname` (`HookHost._owner_key`). Runtime errors
   name the field / `__dict__` / bind, not "Door A". `has_hooks` replaces
   `bags_used`.
