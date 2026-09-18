@@ -68,6 +68,33 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
 
     assert hasattr(DateValidator, "_parse_eu_ind_date")
     assert not hasattr(typed_mod, "_parse_eu_ind_date")
+    from ux_valio import (
+        AadhaarCardValidator,
+        ExpiryValidator,
+        PANCardValidator,
+        PaymentCardValidator,
+        PhoneNumberValidator,
+        Property,
+    )
+    import ux_valio.validators.aadhaar as aadhaar_mod
+    import ux_valio.validators.expiry as expiry_mod
+    import ux_valio.validators.pan as pan_mod
+    import ux_valio.validators.payment as payment_mod
+    import ux_valio.validators.phone as phone_mod
+    import ux_valio.descriptor as descriptor_mod
+
+    assert hasattr(AadhaarCardValidator, "_is_valid_aadhaar")
+    assert not hasattr(aadhaar_mod, "_is_valid_aadhaar")
+    assert hasattr(PaymentCardValidator, "_is_valid_payment_card")
+    assert not hasattr(payment_mod, "_is_valid_payment_card")
+    assert hasattr(PANCardValidator, "_is_valid_pan")
+    assert not hasattr(pan_mod, "_is_valid_pan")
+    assert hasattr(ExpiryValidator, "_parse_expiry_datetime")
+    assert not hasattr(expiry_mod, "_parse_expiry_datetime")
+    assert hasattr(PhoneNumberValidator, "_require_phonenumbers")
+    assert not hasattr(phone_mod, "_require_phonenumbers")
+    assert hasattr(Property, "_slot_names")
+    assert not hasattr(descriptor_mod, "_slot_names")
     assert not hasattr(hooks_mod, "_namespace")
     assert not hasattr(hooks_mod, "hook_bags_used")
 

@@ -177,6 +177,12 @@ New private helpers are verbs that name the action:
 `_is_unconstrained_typevar`,
 `HookHost._bag_key`, `HookHost._resolve_bag_key`,
 `HookHost._owning_class_qualname`, `HookHost._hook_adder`,
+`Property._slot_names`, `Property._owner_omits_instance_dict`,
+`DateValidator._parse_eu_ind_date`, `ExpiryValidator._parse_expiry_datetime`,
+`AadhaarCardValidator._is_valid_aadhaar`,
+`PaymentCardValidator._is_valid_payment_card`,
+`PANCardValidator._is_valid_pan`,
+`PhoneNumberValidator._require_phonenumbers`,
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name).
@@ -189,5 +195,7 @@ and adders live on `HookHost`. Origin tables live next to
 `is_instance_of`. Specified-theory merge lives on `_Opt`. Errors live at
 `ux_valio.errors`. Descriptor does not import `validators`. Do not
 reintroduce leftover aliases, `validators/errors.py`, `validators/path.py`,
-module `_bag_key` / `_resolve_bag_key` / `_parse_eu_ind_date`,
+module `_bag_key` / `_resolve_bag_key` / `_parse_eu_ind_date` /
+`_parse_expiry_datetime` / `_is_valid_aadhaar` / `_is_valid_payment_card` /
+`_is_valid_pan` / `_require_phonenumbers` / `_slot_names`,
 or hang origin tables on `TypeValidator`.

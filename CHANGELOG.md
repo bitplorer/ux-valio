@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Named-facade identity helpers live on the facade (`AadhaarCardValidator`,
+  `PaymentCardValidator`, `PANCardValidator`, `ExpiryValidator`,
+  `PhoneNumberValidator`). Slot helpers live on `Property`. Brand /
+  Verhoeff / PAN tables stay module data next to the class.
 - `Validator[T]` is the stored-type subscript. `Validator[int]()` fills
   `annotation` (plain class, unbound `.validate`). Owner `n: int` must
   agree. Unconstrained TypeVars are typing-only; bound TypeVars still

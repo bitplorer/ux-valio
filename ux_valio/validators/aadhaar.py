@@ -32,28 +32,28 @@ _PERM = [
 ]
 
 
-def _verhoeff_ok(digits: str) -> bool:
-    try:
-        i = len(digits)
-        j = 0
-        checksum = 0
-        while i > 0:
-            i -= 1
-            checksum = _MULT[checksum][_PERM[j % 8][int(digits[i])]]
-            j += 1
-        return checksum == 0
-    except (ValueError, IndexError):
-        return False
-
-
-def _is_valid_aadhaar(value: Any) -> bool:
-    if not isinstance(value, str) or len(value) != 12 or not value.isdigit():
-        return False
-    return _verhoeff_ok(value)
-
-
 class AadhaarCardValidator(StringValidator):
     """Door A string facade: 12 digits ∩ Verhoeff checksum."""
+
+    @staticmethod
+    def _verhoeff_ok(digits: str) -> bool:
+        try:
+            i = len(digits)
+            j = 0
+            checksum = 0
+            while i > 0:
+                i -= 1
+                checksum = _MULT[checksum][_PERM[j % 8][int(digits[i])]]
+                j += 1
+            return checksum == 0
+        except (ValueError, IndexError):
+            return False
+
+    @staticmethod
+    def _is_valid_aadhaar(value: Any) -> bool:
+        if not isinstance(value, str) or len(value) != 12 or not value.isdigit():
+            return False
+        return AadhaarCardValidator._verhoeff_ok(value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._validate_aadhaar(instance, value)
@@ -61,5 +61,5 @@ class AadhaarCardValidator(StringValidator):
     def _validate_aadhaar(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
-        if not _is_valid_aadhaar(value):
+        if not type(self)._is_valid_aadhaar(value):
             raise ValueError(f"{self.name} is not a valid Aadhaar number")

@@ -15,27 +15,27 @@ _A_Z_MAP = {chr(ord("A") + i): i for i in range(26)}
 _BASE = 26
 
 
-def _decode_pan_char(char: str) -> int:
-    if char.isdigit():
-        return int(char)
-    return _A_Z_MAP[char]
-
-
-def _luhn_mod_26(text: str) -> bool:
-    digits = [_decode_pan_char(char) for char in text]
-    doubled = (sum(divmod(2 * digit, _BASE)) for digit in digits[-2::-2])
-    return (sum(digits[::-2]) + sum(doubled)) % _BASE == 0
-
-
-def _is_valid_pan(value: Any) -> bool:
-    """True only when the whole string matches the PAN shape **and** Luhn mod 26."""
-    if not isinstance(value, str):
-        return False
-    return _PAN.fullmatch(value) is not None and _luhn_mod_26(value)
-
-
 class PANCardValidator(StringValidator):
     """Door A string facade: 10-char PAN identity ∩ Luhn mod 26."""
+
+    @staticmethod
+    def _decode_pan_char(char: str) -> int:
+        if char.isdigit():
+            return int(char)
+        return _A_Z_MAP[char]
+
+    @staticmethod
+    def _luhn_mod_26(text: str) -> bool:
+        digits = [PANCardValidator._decode_pan_char(char) for char in text]
+        doubled = (sum(divmod(2 * digit, _BASE)) for digit in digits[-2::-2])
+        return (sum(digits[::-2]) + sum(doubled)) % _BASE == 0
+
+    @staticmethod
+    def _is_valid_pan(value: Any) -> bool:
+        """True only when the whole string matches the PAN shape **and** Luhn mod 26."""
+        if not isinstance(value, str):
+            return False
+        return _PAN.fullmatch(value) is not None and PANCardValidator._luhn_mod_26(value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._validate_pan(instance, value)
@@ -43,5 +43,5 @@ class PANCardValidator(StringValidator):
     def _validate_pan(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
             return
-        if not _is_valid_pan(value):
+        if not type(self)._is_valid_pan(value):
             raise ValueError(f"{self.name} is not a valid PAN number")
