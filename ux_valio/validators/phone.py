@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ux_valio.validators.facade import StringValidator
+from ux_valio.validators.typed import StringValidator
 
 
 def _require_phonenumbers():

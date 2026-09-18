@@ -7,7 +7,7 @@ from datetime import date, timedelta
 import pytest
 
 from ux_valio import ExpiryValidator, Validator
-from ux_valio.validators.path import DEFAULT_PATH_NAMES
+from ux_valio.validators.validation_path import DEFAULT_PATH_NAMES
 
 
 def test_expire_before_string_sets_timeline():

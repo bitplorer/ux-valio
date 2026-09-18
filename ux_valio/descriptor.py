@@ -73,6 +73,8 @@ import logging
 import types
 from typing import Any, ForwardRef, Union, get_args, get_origin
 
+from ux_valio.errors import ValidationErrors
+
 _UNSET = object()
 
 
@@ -301,8 +303,6 @@ class Property:
             sink(message)
 
     def _record_error(self, err: BaseException) -> None:
-        from ux_valio.validators.errors import ValidationErrors
-
         if isinstance(err, ValidationErrors):
             self.errors.extend(err.errors)
         else:

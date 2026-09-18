@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ux_valio.validators.facade import StringValidator
+from ux_valio.validators.typed import StringValidator
 
 # IIN literals from valio relib/paymentcards.py comments @ 3415c03.
 # Identity match (full string), not PatternValidator findall.

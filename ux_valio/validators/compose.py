@@ -11,8 +11,9 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from ux_valio.descriptor import _Opt, _annotations_agree
+from ux_valio.errors import ValidationErrors, raise_collected, run_steps
 from ux_valio.validators.base import ValidateProperty, _register_compose_types
-from ux_valio.validators.errors import ValidationErrors, raise_collected, run_steps
+
 from ux_valio.validators.hooks import HookHost
 from ux_valio.validators.leaves import TypeValidator
 

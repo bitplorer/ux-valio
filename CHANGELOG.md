@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- `ValidationErrors` lives at `ux_valio.errors`. Descriptor no longer
+  imports the validators package (store door does not depend on validate
+  door).
+- Primitive typed facades (`IntegerValidator`, `StringValidator`,
+  `BooleanValidator`) live in `typed.py` with the rest. `facade.py` is
+  only `Validator`.
+- Facade unit list renamed `validators/path.py` → `validation_path.py`
+  so it is not confused with `PathValidator`.
+- Compose bind cache is `_AllOf` / `_AnyOf` only (dropped the third
+  `_compose_types` store).
 - Origin tables `_ORIGIN_CHECKERS` / `_ORIGIN_GROUPS` sit next to
   `is_instance_of`, not on `TypeValidator`.
 - Coercing facades declare `T | str`: owner annotation may be `T`, `str`,
@@ -15,7 +25,7 @@
 - `@dataclass(frozen=True)` is supported (dataclass intercepts
   assign/delete). `@dataclass(slots=True)` stays unsupported.
 - `LengthValidator._len_or_reject` and `HookHost._collect_bag_keys` live
-  on the owning type (leftover module aliases kept).
+  on the owning type.
 - Email identity peels `PatternType` the same way as findall (no
   `hasattr` dance).
 - Hang `add_*` on the field name: `@username.add_pre_validator` in the

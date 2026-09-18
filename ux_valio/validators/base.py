@@ -26,26 +26,24 @@ if TYPE_CHECKING:
 # first operator use. Not a public dial.
 _AllOf: type | None = None
 _AnyOf: type | None = None
-_compose_types: tuple[type, type] | None = None
 _matches_annotation = None
 
 
 def _register_compose_types(allof: type, anyof: type) -> None:
     """Bind AllOf / AnyOf once. ``compose.py`` calls this at import."""
-    global _AllOf, _AnyOf, _compose_types
+    global _AllOf, _AnyOf
     _AllOf = allof
     _AnyOf = anyof
-    _compose_types = (allof, anyof)
 
 
 def _load_compose_types() -> tuple[type, type]:
     """Return ``(AllOf, AnyOf)``, loading compose at most once."""
-    if _compose_types is None:
+    if _AllOf is None or _AnyOf is None:
         from ux_valio.validators.compose import AllOf, AnyOf
 
         _register_compose_types(AllOf, AnyOf)
-    assert _compose_types is not None
-    return _compose_types
+    assert _AllOf is not None and _AnyOf is not None
+    return _AllOf, _AnyOf
 
 
 def _register_annotation_checker(checker: Any) -> None:

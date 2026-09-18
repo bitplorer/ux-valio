@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Collected validation failures from collect_all=True.
 
+Shared by the store door (``descriptor``) and the validate door. Lives at
+the package root so ``descriptor`` does not import ``validators``.
 Default Door A stays fail-fast. collect_all is not debug-swallow.
 """
 

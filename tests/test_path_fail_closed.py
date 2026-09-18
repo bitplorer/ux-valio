@@ -4,7 +4,7 @@
 import pytest
 
 from ux_valio import Validator
-from ux_valio.validators.path import DEFAULT_PATH_NAMES, ValidationPath
+from ux_valio.validators.validation_path import DEFAULT_PATH_NAMES, ValidationPath
 
 
 def test_duplicate_unit_fails_closed():

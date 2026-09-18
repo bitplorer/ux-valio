@@ -7,6 +7,7 @@ belong at the call site or on ``add_validator``.
 """
 
 from ux_valio.descriptor import Property
+from ux_valio.errors import ValidationErrors
 from ux_valio.pattern import (
     Digit,
     EndsWith,
@@ -64,7 +65,6 @@ from ux_valio.validators import (
     UUIDValidator,
     URLValidator,
     ValidateProperty,
-    ValidationErrors,
     Validator,
     ValueValidator,
 )
