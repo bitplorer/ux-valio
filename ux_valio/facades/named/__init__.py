@@ -96,6 +96,7 @@ from ux_valio.facades.named.us import (
     ABARoutingValidator,
     CUSIPValidator,
     EINValidator,
+    ITINValidator,
     SSNValidator,
     USZipCodeValidator,
 )
@@ -137,6 +138,7 @@ __all__ = [
     "ISBNValidator",
     "ISINValidator",
     "ISSNValidator",
+    "ITINValidator",
     "LEIValidator",
     "LLPINValidator",
     "LocaleValidator",

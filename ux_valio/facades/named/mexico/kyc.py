@@ -43,7 +43,10 @@ class MexicoRFCValidator(StringValidator):
             return False
         if _PERSON.fullmatch(value) is None and _COMPANY.fullmatch(value) is None:
             return False
-        return MexicoRFCValidator._check_digit(value[:-1]) == value[-1]
+        try:
+            return MexicoRFCValidator._check_digit(value[:-1]) == value[-1]
+        except ValueError:
+            return False
 
     def _pre_validate(self, instance: Any, value: Any) -> Any:
         if isinstance(value, str):

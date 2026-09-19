@@ -8,6 +8,7 @@ import pytest
 from ux_valio import (
     CanadianSINValidator,
     EINValidator,
+    ITINValidator,
     MexicoRFCValidator,
     NINOValidator,
     SSNValidator,
@@ -27,6 +28,18 @@ def test_ssn_and_ein():
         Us(ssn="000-12-3456", ein="123456789")
     with pytest.raises(ValueError):
         Us(ssn="856456789", ein="00-3456789")
+
+
+def test_itin_group_and_not_ssn():
+    @dataclass
+    class Alien:
+        itin: str = ITINValidator()
+
+    assert Alien(itin="912-70-1234").itin == "912701234"
+    with pytest.raises(ValueError):
+        Alien(itin="856-45-6789")
+    with pytest.raises(ValueError):
+        Alien(itin="912-93-1234")
 
 
 def test_nino_hmrc_prefix():

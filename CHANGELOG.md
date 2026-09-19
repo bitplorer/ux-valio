@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- ``ITINValidator`` (the SSN docstring hole). RFC check-digit ``ValueError``
+  is fail-closed. README duplicate IBAN row dropped. CURP not added
+  (published check digits disagree).
+
 - Onboarding KYC: ``SSNValidator``, ``EINValidator``, ``NINOValidator``,
   ``CanadianSINValidator``, ``MexicoRFCValidator``. ``canada/`` and
   ``mexico/`` are country folders (same rule as ``us`` / ``india``).
