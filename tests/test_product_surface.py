@@ -179,6 +179,8 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert not (ROOT / "ux_valio" / "validators" / "path.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "compose.py").exists()
     assert (ROOT / "ux_valio" / "facades" / "typed.py").is_file()
+    assert (ROOT / "ux_valio" / "facades" / "named" / "aadhaar.py").is_file()
+    assert not (ROOT / "ux_valio" / "facades" / "aadhaar.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "typed.py").exists()
     from ux_valio.validators.facade import ValidationPath, Validator
     from ux_valio.facades.typed import (
@@ -208,4 +210,42 @@ def test_validators_do_not_import_facades():
                     "ux_valio.facades."
                 ):
                     hits.append(f"{path.name}: {node.module}")
+    assert hits == []
+
+
+def test_typed_does_not_import_named():
+    """Primitives sit under identity products. typed never imports named."""
+    import ast
+
+    src = (ROOT / "ux_valio" / "facades" / "typed.py").read_text()
+    tree = ast.parse(src)
+    hits = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            if node.module == "ux_valio.facades.named" or node.module.startswith(
+                "ux_valio.facades.named."
+            ):
+                hits.append(node.module)
+    assert hits == []
+
+
+def test_named_facades_do_not_import_each_other():
+    """Identity products are parallel. They depend on typed or the door."""
+    import ast
+
+    hits = []
+    named = ROOT / "ux_valio" / "facades" / "named"
+    for path in named.glob("*.py"):
+        if path.name == "__init__.py":
+            continue
+        stem = path.stem
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                mod = node.module
+                if mod == "ux_valio.facades.named" or (
+                    mod.startswith("ux_valio.facades.named.")
+                    and not mod.endswith(stem)
+                ):
+                    hits.append(f"{path.name}: {mod}")
     assert hits == []

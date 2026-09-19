@@ -18,10 +18,12 @@ a parallel folder, not inside the layer they depend on.
   `Validator`. Does not import `facades`.
   Facade unit list is `ValidationPath` on `Validator` in `facade.py`,
   not `PathValidator` (`facades/typed.py`, pathlib).
-- `ux_valio/facades/` — named Door A products (`IntegerValidator`,
-  `PaymentCardValidator`, `GSTINValidator`, `IFSCValidator`, …) :
-  `Validator`. Parallel to each other.
-  Primitive typed facades live in `typed.py` with the rest.
+- `ux_valio/facades/` — Door A products, two layers:
+  `typed.py` — primitives (`IntegerValidator`, `StringValidator`, …) :
+  `Validator`. `named/` — identity products (`PaymentCardValidator`,
+  `GSTINValidator`, `IFSCValidator`, …) : `StringValidator` (expiry :
+  `Validator`). `named` does not import sibling named modules. `typed`
+  does not import `named`.
   Construction is `Any` to type checkers (`ValidateProperty.__new__`;
   mypy plugin `ux_valio.mypy_plugin`) so any store type works — no
   `AsStr` / `AsUser` mixin. Set `annotation` on the facade.

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Facades import layers: ``typed`` (primitives) under ``named`` (identity
+  products). ``typed`` does not import ``named``; named modules do not
+  import each other.
+
 - Named identity facades: ``GSTINValidator``, ``IFSCValidator``,
   ``PinCodeValidator``, ``UPIIdValidator``, ``IBANValidator``,
   ``IMEIValidator``. Format ∩ checksum where one exists; no network.

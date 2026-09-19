@@ -110,7 +110,7 @@ def test_validate_reuses_cached_phonenumbers_module(monkeypatch):
 
 
 def test_phone_module_has_no_network_or_matcher():
-    source = (ROOT / "ux_valio" / "facades" / "phone.py").read_text()
+    source = (ROOT / "ux_valio" / "facades" / "named" / "phone.py").read_text()
     assert "import urllib" not in source
     assert "import requests" not in source
     assert "phonenumbers.carrier" not in source

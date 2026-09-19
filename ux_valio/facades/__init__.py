@@ -1,21 +1,25 @@
 # SPDX-License-Identifier: MIT
-"""Named Door A facades. Parallel products, all subclass ``Validator``.
+"""Door A facades.
 
-Import layer: this package depends on ``ux_valio.validators`` (the door)
-and ``ux_valio.pattern``. Nothing in ``validators`` imports this package.
+Layers (down only): ``typed`` (primitives : ``Validator``) then ``named``
+(identity products : ``StringValidator`` / ``Validator``). ``named`` does
+not import sibling named modules. ``typed`` does not import ``named``.
+The validate door does not import this package.
 """
 
-from ux_valio.facades.aadhaar import AadhaarCardValidator
-from ux_valio.facades.expiry import ExpiryValidator
-from ux_valio.facades.gstin import GSTINValidator
-from ux_valio.facades.iban import IBANValidator
-from ux_valio.facades.ifsc import IFSCValidator
-from ux_valio.facades.imei import IMEIValidator
-from ux_valio.facades.pan import PANCardValidator
-from ux_valio.facades.payment import PaymentCardValidator
-from ux_valio.facades.phone import PhoneNumberValidator
-from ux_valio.facades.pincode import PinCodeValidator
-from ux_valio.facades.upi import UPIIdValidator
+from ux_valio.facades.named import (
+    AadhaarCardValidator,
+    ExpiryValidator,
+    GSTINValidator,
+    IBANValidator,
+    IFSCValidator,
+    IMEIValidator,
+    PANCardValidator,
+    PaymentCardValidator,
+    PhoneNumberValidator,
+    PinCodeValidator,
+    UPIIdValidator,
+)
 from ux_valio.facades.typed import (
     BooleanValidator,
     BytesValidator,

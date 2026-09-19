@@ -105,17 +105,17 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
         Property,
         UPIIdValidator,
     )
-    import ux_valio.facades.aadhaar as aadhaar_mod
-    import ux_valio.facades.expiry as expiry_mod
-    import ux_valio.facades.gstin as gstin_mod
-    import ux_valio.facades.iban as iban_mod
-    import ux_valio.facades.ifsc as ifsc_mod
-    import ux_valio.facades.imei as imei_mod
-    import ux_valio.facades.pan as pan_mod
-    import ux_valio.facades.payment as payment_mod
-    import ux_valio.facades.phone as phone_mod
-    import ux_valio.facades.pincode as pincode_mod
-    import ux_valio.facades.upi as upi_mod
+    import ux_valio.facades.named.aadhaar as aadhaar_mod
+    import ux_valio.facades.named.expiry as expiry_mod
+    import ux_valio.facades.named.gstin as gstin_mod
+    import ux_valio.facades.named.iban as iban_mod
+    import ux_valio.facades.named.ifsc as ifsc_mod
+    import ux_valio.facades.named.imei as imei_mod
+    import ux_valio.facades.named.pan as pan_mod
+    import ux_valio.facades.named.payment as payment_mod
+    import ux_valio.facades.named.phone as phone_mod
+    import ux_valio.facades.named.pincode as pincode_mod
+    import ux_valio.facades.named.upi as upi_mod
     import ux_valio.descriptor as descriptor_mod
 
     assert hasattr(AadhaarCardValidator, "_is_valid_aadhaar")
