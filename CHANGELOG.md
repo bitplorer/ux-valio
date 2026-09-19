@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Note: ``docs/host-peer-plan.md`` — host decides / peer applies (optional
+  native apply later; instance stays Python). Not implemented.
+
 - Hot path: ``ValidationPath.run`` no longer allocates ``ran``/``results``
   per set (uniqueness is ``__init__``). Default-path fields run only
   specified units (type always). Concrete ``int``/``str`` skip the

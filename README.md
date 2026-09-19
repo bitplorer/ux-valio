@@ -542,3 +542,7 @@ hooks on the field default (`ValidateProperty`). No multiple inheritance of leav
 no Cap Host, no `rule/`. Path helpers and async-bridge names are not in the
 package `__all__`. Import Pattern names from `ux_valio` (or `ux_valio.pattern`
 for the same objects). There is no `ux_valio.regexer`.
+
+Hot-path compile (`_active_units`) is Python. A later optional native
+peer (host decides, peer applies; instance stays Python) is mapped in
+[`docs/host-peer-plan.md`](docs/host-peer-plan.md) — not implemented.
