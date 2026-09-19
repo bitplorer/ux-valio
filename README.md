@@ -127,9 +127,11 @@ not the last `__set_name__`.
 `pre_validate → validate → post_validate`. There is no `_processors["pre_set"]`
 bag and no `add_pre_set` — hang before-store work on `add_process_pre_validate`
 (transform; **return the value**), `add_validator` (check; return ignored),
-or `add_task_pre_validate` (side effect, same thread; return ignored).
-`add_task_post_set` is persist-after-store. `add_process_post_set`
-runs after store; its return is not stored. Tasks are not background jobs.
+or `add_task_pre_validate` (background side effect; return ignored; setter
+does not wait). Persist/reserve that must fail-closed hangs on
+`add_process_post_set`. Welcome-email hangs on `add_task_post_set`.
+Tasks are sync or async; they run on a process-held pool, not the
+nest-safe processor worker.
 
 `add_process_*` / `add_task_*` accept **sync or async** callables. `async def`
 registers. Coroutine **objects** at run are not a second reject door: same

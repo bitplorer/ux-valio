@@ -103,7 +103,7 @@ class KycIdentity:
             raise ValueError(f"PAN {value!r} is already registered")
         return value
 
-    @pan.add_task_post_set
+    @pan.add_process_post_set
     def commit_identity(self, value: str) -> None:
         self.registry.commit(self.aadhaar, value)
 
@@ -131,7 +131,7 @@ if HAS_PHONENUMBERS and _PHONE is not None:
                 raise ValueError(f"PAN {value!r} is already registered")
             return value
 
-        @pan.add_task_post_set
+        @pan.add_process_post_set
         def commit_identity(self, value: str) -> None:
             self.registry.commit(self.aadhaar, value)
 

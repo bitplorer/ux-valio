@@ -1,15 +1,14 @@
 # SPDX-License-Identifier: MIT
-"""Nest-safe sync bridge for async processors and tasks.
+"""Nest-safe processor bridge and background task spawn.
 
-``add_process_*`` / ``add_task_*`` accept sync or async callables. Coroutine
-functions register. Coroutine objects follow run rules. On the sync
-descriptor path: no running loop → TypeError naming the missing loop /
-helper; running loop → nest-safe worker private loop. No ``asyncio.run``
-in the setter.
+``add_process_*`` must finish before the next pipeline step. Async
+processors on the sync path: no running loop → TypeError; running loop →
+nest-safe worker. No ``asyncio.run`` in ``__set__``.
 
-The worker pool is one thread (KEEP). Re-entering ``nest_safe_bridge``
-from that worker would deadlock on ``.result()``; that is TypeError, not
-a hang.
+``add_task_*`` is a background side effect (email after username set).
+The setter does not wait. Sync or async. Isolated worker — not the
+nest-safe pool, not the caller's loop (so ``asyncio.run`` teardown cannot
+cancel it). Errors are recorded on the host; they do not fail the set.
 """
 
 from __future__ import annotations
@@ -22,8 +21,18 @@ import threading
 from typing import Any, Callable
 
 # One worker is KEEP: one private loop, no nested-run races.
-_NEST_SAFE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+_NEST_SAFE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=1, thread_name_prefix="ux-valio-nest"
+)
 atexit.register(_NEST_SAFE_EXECUTOR.shutdown, wait=False)
+
+_TASK_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    thread_name_prefix="ux-valio-task"
+)
+atexit.register(_TASK_EXECUTOR.shutdown, wait=False)
+
+_outstanding: set[concurrent.futures.Future[Any]] = set()
+_OUTSTANDING_LOCK = threading.Lock()
 
 _nest_safe_worker_ident: int | None = None
 _NEST_SAFE_IDENT_LOCK = threading.Lock()
@@ -71,7 +80,7 @@ def nest_safe_bridge(coro: Any) -> Any:
 
 
 def resolve_coroutine(result: Any) -> Any:
-    """Apply run rules to a processor/task/validator return.
+    """Apply run rules to a processor/validator return.
 
     Coroutine objects are not rejected as a class. Sync values pass
     through. Coroutine: if ``get_running_loop()`` exists, nest-safe
@@ -92,3 +101,45 @@ def resolve_coroutine(result: Any) -> Any:
 
 def invoke_callable(func: Callable[..., Any], instance: Any, value: Any) -> Any:
     return resolve_coroutine(func(instance, value))
+
+
+def _track(fut: concurrent.futures.Future[Any]) -> None:
+    with _OUTSTANDING_LOCK:
+        _outstanding.add(fut)
+    fut.add_done_callback(_forget)
+
+
+def _forget(fut: concurrent.futures.Future[Any]) -> None:
+    with _OUTSTANDING_LOCK:
+        _outstanding.discard(fut)
+
+
+def _call_task(host: Any, func: Callable[..., Any], instance: Any, value: Any) -> None:
+    try:
+        result = func(instance, value)
+        if inspect.iscoroutine(result):
+            asyncio.run(result)
+    except Exception as err:
+        record = getattr(host, "_record_error", None)
+        if callable(record):
+            record(err)
+
+
+def spawn_task(
+    host: Any, func: Callable[..., Any], instance: Any, value: Any
+) -> None:
+    """Fire-and-forget. Setter does not wait. Return ignored."""
+    _track(_TASK_EXECUTOR.submit(_call_task, host, func, instance, value))
+
+
+def wait_tasks(timeout: float | None = None) -> None:
+    """Wait for background ``add_task_*`` work. Tests and shutdown."""
+    with _OUTSTANDING_LOCK:
+        futs = list(_outstanding)
+    if not futs:
+        return
+    done, not_done = concurrent.futures.wait(futs, timeout=timeout)
+    if not_done:
+        raise TimeoutError(
+            f"{len(not_done)} background task(s) still running after {timeout!r}"
+        )

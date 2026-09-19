@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Processor and task registries.
 
-Hang ``add_process_*`` / ``add_task_*`` on the field default. There is no
-``add_pre_set`` / ``_processors["pre_set"]`` registry. Tasks are same-thread
-side effects, not background jobs.
+Hang ``add_process_*`` / ``add_task_*`` on the field default. Process
+must finish. Task is background (email); persist/reserve that must
+fail-closed hangs on ``add_process_post_set``. No ``add_pre_set``.
 """
 
 from __future__ import annotations
@@ -12,7 +12,8 @@ from collections import defaultdict
 from types import SimpleNamespace
 from typing import Any, Callable
 
-from ux_valio.validators.async_bridge import invoke_callable
+from ux_valio.validators.async_bridge import invoke_callable, spawn_task, wait_tasks
+
 from ux_valio.errors import continue_or_raise, raise_collected
 
 
@@ -21,10 +22,11 @@ class HookHost:
 
     ``add_process_{phase}`` — transform; return is the pipeline value.
     Stored only for ``pre_validate`` / ``post_validate`` (inside ``pre_set``).
-    ``add_task_{phase}`` — side effect in this thread; return ignored.
-    Not a background job, not another thread. ``add_validator`` — check
-    during ``validate()``; return ignored. No ``add_process_pre_set`` —
-    ``pre_set`` *is* the validate pipeline.
+    ``add_task_{phase}`` — background side effect; return ignored; setter
+    does not wait. Not the nest-safe pool. Hang persist/reserve that must
+    fail-closed on ``add_process_post_set``. Hang email on
+    ``add_task_post_set``. ``add_validator`` — check during ``validate()``.
+    No ``add_process_pre_set`` — ``pre_set`` *is* the validate pipeline.
     """
 
     @staticmethod
@@ -154,31 +156,34 @@ class HookHost:
         return self._register(self._processors["post_delete"], func, namespace)
 
     def add_task_pre_validate(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        """Side effect before validate. Same thread. Return ignored."""
+        """Background side effect before validate. Return ignored. Setter does not wait."""
         return self._register(self._tasks["pre_validate"], func, namespace)
 
     def add_task_post_validate(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        """Side effect after validate. Same thread. Return ignored."""
+        """Background side effect after validate. Return ignored. Setter does not wait."""
         return self._register(self._tasks["post_validate"], func, namespace)
 
     def add_task_post_set(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        """Side effect after store. Same thread. Return ignored. Not a background job."""
+        """Background after store (email). Return ignored. Setter does not wait.
+
+        Persist/reserve that must fail-closed hangs on ``add_process_post_set``.
+        """
         return self._register(self._tasks["post_set"], func, namespace)
 
     def add_task_pre_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        """Side effect before read. Same thread. Return ignored."""
+        """Background side effect before read. Return ignored. Setter does not wait."""
         return self._register(self._tasks["pre_get"], func, namespace)
 
     def add_task_post_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        """Side effect after read. Same thread. Return ignored."""
+        """Background side effect after read. Return ignored. Setter does not wait."""
         return self._register(self._tasks["post_get"], func, namespace)
 
     def add_task_pre_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        """Side effect before delete. Same thread. Return ignored."""
+        """Background side effect before delete. Return ignored. Setter does not wait."""
         return self._register(self._tasks["pre_delete"], func, namespace)
 
     def add_task_post_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
-        """Side effect after delete. Same thread. Return ignored."""
+        """Background side effect after delete. Return ignored. Setter does not wait."""
         return self._register(self._tasks["post_delete"], func, namespace)
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
@@ -192,8 +197,13 @@ class HookHost:
         hooks = self._tasks[phase]
         for key in type(self)._collect_owner_keys(instance):
             for func in hooks.get(key, ()):
-                invoke_callable(func, instance, value)
+                spawn_task(self, func, instance, value)
         return value
+
+    @staticmethod
+    def wait_tasks(timeout: float | None = None) -> None:
+        """Wait for background ``add_task_*`` work."""
+        wait_tasks(timeout)
 
     def _process_then_tasks(self, phase: str, instance: Any, value: Any) -> Any:
         value = self._run_processors(phase, instance, value)

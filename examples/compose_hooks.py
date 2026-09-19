@@ -77,7 +77,7 @@ class StaffProfile:
             raise ValueError(f"staff name {value!r} is already in the directory")
         return value
 
-    @name.add_task_post_set
+    @name.add_process_post_set
     def commit_name(self, value: str) -> None:
         self.directory.commit(value)
 

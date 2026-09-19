@@ -2,11 +2,14 @@
 
 ## Unreleased
 
+- `add_task_*` is background: setter does not wait. Sync or async. Isolated
+  pool (not nest-safe, not the caller's loop). Errors record on the host;
+  they do not fail the set. Persist/reserve hang on `add_process_post_set`.
+  `HookHost.wait_tasks()` waits for tests/shutdown.
 - Hook names are `add_process_{phase}` and `add_task_{phase}`. Process
-  transforms (return is stored only inside `pre_set`). Task is a
-  same-thread side effect, not a background job. Persist hangs on
-  `add_task_post_set`. Retired: `add_pre_validator`, `add_post_set`,
-  `add_*_task` suffix.
+  transforms (return is stored only inside `pre_set`). Task is background.
+  Persist hangs on `add_process_post_set`. Retired: `add_pre_validator`,
+  `add_post_set`, `add_*_task` suffix.
 - `_Of.__init__` takes `debug=`, `default=`, `logger=` (same names as
   `Property`). No `kwargs.pop("debug")`. `_Opts` is a dataclass: `merge` /
   `overlay` / `keeps_nesting` follow its fields. `_Opts.from_call` is the

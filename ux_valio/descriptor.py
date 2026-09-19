@@ -28,7 +28,9 @@ mutates. ``@dataclass(slots=True)`` stays unsupported.
 
 Only the descriptor ``pre_set`` hook return is stored. That hook is the
 validate pipeline, not a ``_processors[\"pre_set\"]`` bag. Hang before-store
-work on ``add_process_pre_validate`` / ``add_validator`` / ``add_task_pre_validate``.
+work on ``add_process_pre_validate`` / ``add_validator``. Persist after store
+hangs on ``add_process_post_set``. Background email hangs on
+``add_task_post_set``.
 ``post_set`` / get / delete return values are ignored. ``__get__`` /
 ``__delete__`` pass ``self.name`` into hooks, not the stored value.
 Never-set ``__get__`` / ``__delete__`` with ``debug=True`` raise a named

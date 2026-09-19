@@ -167,7 +167,7 @@ class SignupForm:
             raise ValueError("password confirmation does not match")
         return value
 
-    @seats.add_task_post_set
+    @seats.add_process_post_set
     def persist_user(self, value: int) -> None:
         self.users.create(
             self.username, self.email, self.hasher.hash(self.password)
