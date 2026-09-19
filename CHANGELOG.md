@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Package layers: ``errors`` / ``descriptor`` / ``pattern`` / ``validators``
+  (the door) / ``facades`` (named products, sibling of the door). The door
+  does not import facades.
+
 - Bind uses ``is_subclass_of`` (owner annotation vs validator); set uses
   ``is_instance_of`` (value vs annotation). ``Account | None`` on both
   sides binds. A subclass owner (`Admin(Account)`) binds. Owner wider

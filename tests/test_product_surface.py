@@ -172,8 +172,10 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert not (ROOT / "ux_valio" / "validators" / "validation_path.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "path.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "compose.py").exists()
+    assert (ROOT / "ux_valio" / "facades" / "typed.py").is_file()
+    assert not (ROOT / "ux_valio" / "validators" / "typed.py").exists()
     from ux_valio.validators.facade import ValidationPath, Validator
-    from ux_valio.validators.typed import (
+    from ux_valio.facades.typed import (
         BooleanValidator,
         IntegerValidator,
         StringValidator,
@@ -185,3 +187,19 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert issubclass(StringValidator, Validator)
     assert issubclass(BooleanValidator, Validator)
     assert not hasattr(ux_valio.validators.facade, "IntegerValidator")
+
+
+def test_validators_do_not_import_facades():
+    """Named products depend on the door. The door does not depend on them."""
+    import ast
+
+    hits = []
+    for path in (ROOT / "ux_valio" / "validators").glob("*.py"):
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                if node.module == "ux_valio.facades" or node.module.startswith(
+                    "ux_valio.facades."
+                ):
+                    hits.append(f"{path.name}: {node.module}")
+    assert hits == []

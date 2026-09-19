@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ux_valio.validators.typed import StringValidator
+from ux_valio.facades.typed import StringValidator
 
 # Verhoeff d / p tables. Identity of the assigned 12-digit string, not findall.
 _MULT = [
