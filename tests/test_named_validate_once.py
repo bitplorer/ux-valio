@@ -7,11 +7,16 @@ import pytest
 
 from ux_valio import (
     AadhaarCardValidator,
+    BICValidator,
     DateValidator,
+    EANValidator,
     ExpiryValidator,
+    ISBNValidator,
+    ISINValidator,
     PANCardValidator,
     PaymentCardValidator,
     PhoneNumberValidator,
+    VINValidator,
 )
 
 
@@ -118,3 +123,25 @@ def test_named_facade_extra_is_validate_named_facade():
     with pytest.raises(ValueError):
         v._validate_named_facade(None, "4111111111111112")
     v._validate_named_facade(None, "4111111111111111")
+
+
+@pytest.mark.parametrize(
+    "cls, value",
+    [
+        (BICValidator, "DEUTDEFF"),
+        (ISINValidator, "US0378331005"),
+        (ISBNValidator, "9780306406157"),
+        (VINValidator, "1HGCM82633A004352"),
+        (EANValidator, "4006381333931"),
+    ],
+)
+def test_new_identity_facades_do_not_grow_custom_bag(cls, value):
+    v = cls(debug=True, logger=False)
+
+    @dataclass
+    class Row:
+        x: str = v
+
+    Row(x=value)
+    Row(x=value)
+    assert _bags_did_not_grow(v), v._custom_validators

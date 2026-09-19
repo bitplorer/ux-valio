@@ -81,6 +81,15 @@ def test_min_max_leaves_are_exported():
         "UPIIdValidator",
         "IBANValidator",
         "IMEIValidator",
+        "BICValidator",
+        "ISINValidator",
+        "ISBNValidator",
+        "VINValidator",
+        "MACAddressValidator",
+        "EANValidator",
+        "TANValidator",
+        "CINValidator",
+        "VoterIdValidator",
         "Digit",
         "Word",
         "NonDigit",
@@ -182,6 +191,8 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert not (ROOT / "ux_valio" / "validators" / "compose.py").exists()
     assert (ROOT / "ux_valio" / "facades" / "typed.py").is_file()
     assert (ROOT / "ux_valio" / "facades" / "named" / "aadhaar.py").is_file()
+    assert (ROOT / "ux_valio" / "facades" / "named" / "bic.py").is_file()
+    assert (ROOT / "ux_valio" / "facades" / "named" / "isbn.py").is_file()
     assert not (ROOT / "ux_valio" / "facades" / "aadhaar.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "typed.py").exists()
     assert (ROOT / "ux_valio" / "facades" / "named" / "email.py").is_file()

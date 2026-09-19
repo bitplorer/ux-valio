@@ -155,6 +155,12 @@ a parallel folder, not inside the layer they depend on.
   `expire_before`. `expire_on` is valid only on that calendar day.
   `expire_before` is its own bound. `expire_*` are not
   kwargs on `Validator`. No `expiry` path unit.
+  `BICValidator` is ISO 9362 (8/11). `ISINValidator` is ISO 6166 ∩ Luhn.
+  `ISBNValidator` is ISBN-10 (mod 11, ``X``) or ISBN-13 (978/979 ∩ EAN).
+  `EANValidator` is 13-digit GS1. `VINValidator` is ISO 3779 (no I/O/Q).
+  `MACAddressValidator` stores 12 uppercase hex digits. `TANValidator` /
+  `CINValidator` / `VoterIdValidator` are format identities (no portal).
+  All stdlib, no network.
 - Named typed facades call their extra check from `validate()` after the
   inherited path; they do not hang ``validator`` themselves on each assignment.
   `collect_all=True` continues into that extra check. No NamedOnce Cap.
