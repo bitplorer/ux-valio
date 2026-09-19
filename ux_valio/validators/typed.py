@@ -16,6 +16,17 @@ from typing import Any
 from ux_valio.pattern import Pattern, PatternType
 from ux_valio.validators.facade import Validator
 from ux_valio.validators.leaves import PatternValidator
+from ux_valio.validators.store_view import (
+    AsBool,
+    AsBytes,
+    AsDate,
+    AsDateTime,
+    AsDecimal,
+    AsFloat,
+    AsInt,
+    AsStr,
+    AsUUID,
+)
 
 # Practical RFC 5322-ish addr-spec. EmailValidator fullmatch extra; engine KEEP.
 _EMAIL_PATTERN = Pattern(
@@ -32,23 +43,23 @@ _EMAIL_PATTERN = Pattern(
 )
 
 
-class IntegerValidator(Validator[int]):
+class IntegerValidator(Validator[int], AsInt):
     annotation = int
 
 
-class StringValidator(Validator[str]):
+class StringValidator(Validator[str], AsStr):
     annotation = str
 
 
-class BooleanValidator(Validator[bool]):
+class BooleanValidator(Validator[bool], AsBool):  # type: ignore[misc]
     annotation = bool
 
 
-class FloatValidator(Validator[float]):
+class FloatValidator(Validator[float], AsFloat):
     annotation = float
 
 
-class DecimalValidator(Validator[decimal.Decimal]):
+class DecimalValidator(Validator[decimal.Decimal], AsDecimal):
     annotation = decimal.Decimal | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
@@ -70,7 +81,7 @@ class DecimalValidator(Validator[decimal.Decimal]):
             )
 
 
-class BytesValidator(Validator[bytes]):
+class BytesValidator(Validator[bytes], AsBytes):
     annotation = bytes
 
 
@@ -78,7 +89,7 @@ _EU_DATE = re.compile(r"(\d{4})([-:/])(\d{1,2})\2(\d{1,2})")
 _IND_DATE = re.compile(r"(\d{1,2})([-:/])(\d{1,2})\2(\d{4})")
 
 
-class DateValidator(Validator[datetime.date]):
+class DateValidator(Validator[datetime.date], AsDate):
     annotation = datetime.date | str
 
     @staticmethod
@@ -120,7 +131,7 @@ class DateValidator(Validator[datetime.date]):
         )
 
 
-class DateTimeValidator(Validator[datetime.datetime]):
+class DateTimeValidator(Validator[datetime.datetime], AsDateTime):
     """Door A datetime facade. Stores ``datetime.datetime``. ISO via fromisoformat.
 
     Plain ``datetime.date`` is rejected (that is ``DateValidator``). Date-only
@@ -187,7 +198,7 @@ class URLValidator(StringValidator):
             raise ValueError(f"{self.name} is not a valid URL")
 
 
-class UUIDValidator(Validator[uuid.UUID]):
+class UUIDValidator(Validator[uuid.UUID], AsUUID):
     annotation = uuid.UUID | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:

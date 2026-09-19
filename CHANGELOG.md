@@ -2,11 +2,9 @@
 
 ## Unreleased
 
-- `name: str = StringValidator()` type-checks. Named-facade construction is
-  `Any` for type checkers (same kind of lie as `dataclasses.field() -> T`,
-  but `Any` keeps `&` / `|`). mypy: `plugins = ["ux_valio.mypy_plugin"]`.
-  Pylance: `Validator.__new__ -> Any`. `User(name=1)` still errors.
-  `@name.add_*` may underline (annotation is `str`).
+- `name: str = StringValidator()` type-checks without a plugin. Named
+  facades present as the store type (`StringValidator <: str`) under
+  TYPE_CHECKING. Runtime bases are empty. `User(name=1)` still errors.
 - `add_task_*` is background: setter does not wait. Sync or async. Isolated
   pool (not nest-safe, not the caller's loop). Errors record on the host;
   they do not fail the set. Persist/reserve hang on `add_process_post_set`.

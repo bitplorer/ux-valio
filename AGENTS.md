@@ -76,8 +76,8 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   Unresolved owner `str` / `ForwardRef` annotations TypeError at bind
   (not copied, not eval'd). Owner annotation that is a Property class
   (`StringValidator` / `Validator[str]`) peels to the store type.
-  `name: str = StringValidator()` type-checks: mypy plugin
-  `ux_valio.mypy_plugin`, Pylance `Validator.__new__ -> Any`.
+  `name: str = StringValidator()` type-checks: named facades mix in a
+  TYPE_CHECKING store view (`StringValidator <: str`). No mypy plugin.
   `AnyOf` does not AND-gate root type; `AllOf`
   keeps annotation-conflict TypeError. Unknown path unit is `ValueError`.
   TypedDict membership stays fail-closed on the private helper. Callable
