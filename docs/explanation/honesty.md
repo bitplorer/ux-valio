@@ -55,6 +55,11 @@ No files, no `logs/` directory. `logger=None` is OFF, not valio's
 None=on. Get/set/delete log at info; failures at error. A field-level
 logger is the usage pattern Pydantic does not have.
 
+The stored value is **not** in the message. Pass your own
+`logging.Logger` when you want a `FileHandler`. Full what / where /
+how, compose conflicts, `debug=False` + logger, and a runnable form:
+[Field-level logging](../how-to/logging.md), `examples/field_logging.py`.
+
 Turn it on in development when you need to see which field assigned.
 Leave it off on a hot path ([performance](performance.md)).
 

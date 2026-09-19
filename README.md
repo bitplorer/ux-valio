@@ -50,6 +50,7 @@ then `mkdocs serve`).
 | [docs/index.md](docs/index.md) | map |
 | [Tutorial](docs/tutorial.md) | first field, hang, compose |
 | [Hang API](docs/how-to/hang.md) | `pre_validate` / `task_*` / `wait_tasks` |
+| [Field logging](docs/how-to/logging.md) | `logger=True` → `module.qualname.field` |
 | [Workflows](docs/how-to/workflows.md) | one file per real-world case |
 | [Typing](docs/how-to/typing.md) | `Validator[T]`, mypy plugin |
 | [Named identities](docs/reference/named.md) | compact identity catalog |

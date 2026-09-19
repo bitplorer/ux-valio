@@ -27,6 +27,7 @@ nav:
       - Compose: how-to/compose.md
       - TypedDict schema: how-to/typed-dict.md
       - Workflows: how-to/workflows.md
+      - Field-level logging: how-to/logging.md
       - Typing: how-to/typing.md
   - Reference:
       - Validator: reference/validator.md

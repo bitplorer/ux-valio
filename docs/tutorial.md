@@ -70,7 +70,8 @@ Three traps that look like bugs and are not:
 - You do not pass `debug=True` on every field. Omitted `debug` is
   already `True` (failures raise). Omitted `collect_all` is `True`
   (several concerns on one field surface together). Omitted `logger` is
-  OFF (no log files).
+  OFF (no log files). To watch one field, see
+  [field-level logging](how-to/logging.md).
 
 ## Hang a rule the validator does not already own
 

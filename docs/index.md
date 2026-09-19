@@ -32,6 +32,7 @@ facade you want.
 | Combine length + required + pattern | [Compose](how-to/compose.md) |
 | Schema without BaseModel | [TypedDict schema](how-to/typed-dict.md) |
 | Copy a production workflow | [Workflows](how-to/workflows.md) |
+| Log one field (`logger=True`) | [Field-level logging](how-to/logging.md) |
 | Keep mypy/Pylance quiet | [Typing](how-to/typing.md) |
 | Know every kwarg / leaf | [Validator](reference/validator.md) |
 | `int` / `str` / `date` / `UUID` / … | [Typed facades](reference/typed.md) |

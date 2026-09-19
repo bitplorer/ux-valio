@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Field-level logging: how-to + ``examples/field_logging.py``
+  (``logger=True`` / custom ``Logger`` / OFF).
+
 - Handbook pages explain what / where / how with usage examples
   (tutorial, hang, compose, TypedDict, pattern, typed, named, honesty).
 
