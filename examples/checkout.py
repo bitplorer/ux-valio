@@ -203,6 +203,14 @@ class CheckoutService:
         )
 
 
+def _must_raise(fn, *types: type[BaseException]) -> None:
+    try:
+        fn()
+    except types:
+        return
+    raise AssertionError(f"expected {types}")
+
+
 def main() -> Checkout:
     service = CheckoutService(
         promos=InMemoryPromoCatalog(codes={"SPRING30"}),
@@ -218,30 +226,57 @@ def main() -> Checkout:
         sku="WIDGET",
         quantity=1,
     )
-    try:
-        service.place(
+    _must_raise(
+        lambda: service.place(
             holder="Ada Lovelace",
             number="4111111111111112",
             card_expiry="12/28",
             amount=Decimal("19.99"),
             promo_code="SPRING30",
-        )
-    except ValueError:
-        pass
-    try:
-        service.place(
+        ),
+        ValueError,
+    )
+    _must_raise(
+        lambda: service.place(
             holder="Ada Lovelace",
             number="4111111111111111",
             card_expiry="12/28",
             amount=Decimal("19.99"),
             promo_code="NOPE",
-        )
-    except ValueError:
-        pass
-    try:
-        ExpiredHold(promo_code="LATE")
-    except ValueError:
-        pass
+        ),
+        ValueError,
+    )
+    _must_raise(lambda: ExpiredHold(promo_code="LATE"), ValueError)
+    _must_raise(
+        lambda: CheckoutService(
+            promos=InMemoryPromoCatalog(codes={"SPRING30"}),
+            inventory=InMemoryInventory(stock={"WIDGET": 1}),
+            gateway=StubPaymentGateway(),
+        ).place(
+            holder="Ada Lovelace",
+            number="4111111111111111",
+            card_expiry="12/28",
+            amount=Decimal("19.99"),
+            promo_code="SPRING30",
+            sku="WIDGET",
+            quantity=2,
+        ),
+        ValueError,
+    )
+    _must_raise(
+        lambda: CheckoutService(
+            promos=InMemoryPromoCatalog(codes={"SPRING30"}),
+            inventory=InMemoryInventory(stock={"WIDGET": 10}),
+            gateway=StubPaymentGateway(declines={"4111111111111111"}),
+        ).place(
+            holder="Ada Lovelace",
+            number="4111111111111111",
+            card_expiry="12/28",
+            amount=Decimal("19.99"),
+            promo_code="SPRING30",
+        ),
+        ValueError,
+    )
     return order
 
 

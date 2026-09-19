@@ -8,7 +8,7 @@ on ``FilingService``.
 
 import pathlib
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Protocol, runtime_checkable
 
 from ux_valio import DateValidator, IPv4Validator, PathValidator, Validator
@@ -85,6 +85,14 @@ class FilingService:
         )
 
 
+def _must_raise(fn, *types: type[BaseException]) -> None:
+    try:
+        fn()
+    except types:
+        return
+    raise AssertionError(f"expected {types}")
+
+
 def main() -> FiledDocument:
     service = FilingService(InMemoryArchive())
     row = service.file(
@@ -93,22 +101,25 @@ def main() -> FiledDocument:
         folder=".",
         host="127.0.0.1",
     )
-    try:
-        service.file("2020-01-02", "02/01/2020", ".", "127.0.0.1")
-    except ValueError:
-        pass
-    try:
-        FilingService(InMemoryArchive()).file(
+    _must_raise(
+        lambda: service.file("2020-01-02", "02/01/2020", ".", "127.0.0.1"),
+        ValueError,
+    )
+    _must_raise(
+        lambda: FilingService(InMemoryArchive()).file(
             "2020-13-40", "02/01/2020", ".", "127.0.0.1"
-        )
-    except ValueError:
-        pass
-    try:
-        FilingService(InMemoryArchive()).file(
-            datetime(2020, 1, 2), "02/01/2020", ".", "127.0.0.1"
-        )
-    except TypeError:
-        pass
+        ),
+        ValueError,
+    )
+    _must_raise(
+        lambda: FilingService(InMemoryArchive()).file(
+            datetime(2020, 1, 2, tzinfo=timezone.utc),
+            "02/01/2020",
+            ".",
+            "127.0.0.1",
+        ),
+        TypeError,
+    )
     return row
 
 

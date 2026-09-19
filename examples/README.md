@@ -11,7 +11,9 @@ injects ports in the constructor. Ports are
 `Validator[Port](required=True)` with `field(repr=False, compare=False)`.
 Hooks (`pre_validate` / `post_validate` / `post_set`) fail closed into
 `ValueError` / `ValidationErrors`. Omitted `debug` / `collect_all` are
-True. `main()` only runs the demo. Examples do not ship a DB driver.
+True. `main()` runs the happy path **and** `_must_raise` on conflict /
+identity failures so `python examples/<file>.py` is a live check, not a
+silent `except: pass`. Examples do not ship a DB driver.
 
 Password hashing stays in the example `PasswordHasher` port
 (`Pbkdf2PasswordHasher` uses stdlib PBKDF2 with a **fixed demo salt**).

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Examples: ``main()`` live-checks conflict/identity failures via
+  ``_must_raise`` (no silent ``except: pass``).
+
 - Examples: one file per workflow (``signup``, ``checkout``, ``kyc``,
   ``vendor``, ``storefront``, ``catalog``, ``invite``, ``filing``). Dropped
   overlapping registration / account / compose / sku / lookaround twins.

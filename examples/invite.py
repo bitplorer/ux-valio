@@ -88,21 +88,29 @@ class InviteService:
         )
 
 
+def _must_raise(fn, *types: type[BaseException]) -> None:
+    try:
+        fn()
+    except types:
+        return
+    raise AssertionError(f"expected {types}")
+
+
 def main() -> Invite:
     taken = InviteService(InMemoryInviteLog(emails={"ada@example.com"}))
     row = InviteService(InMemoryInviteLog()).invite(
         name="  Ada  ", email="ada@example.com", age=36
     )
-    try:
-        taken.invite(name="Ada", email="ada@example.com", age=36)
-    except ValueError:
-        pass
-    try:
-        InviteService(InMemoryInviteLog()).invite(
+    _must_raise(
+        lambda: taken.invite(name="Ada", email="ada@example.com", age=36),
+        ValueError,
+    )
+    _must_raise(
+        lambda: InviteService(InMemoryInviteLog()).invite(
             name="A1", email="ada@example.com", age=36
-        )
-    except ValueError:
-        pass
+        ),
+        ValueError,
+    )
     return row
 
 
