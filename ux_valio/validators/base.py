@@ -15,7 +15,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Iterable, TypeVar
 
-from ux_valio.descriptor import Property, _Opts, _UNSET, _annotations_agree
+from ux_valio.descriptor import Property, _Opts, _UNSET, is_subclass_of
 from ux_valio.errors import ValidationErrors, raise_collected, run_steps
 from ux_valio.validators.hooks import HookHost
 
@@ -215,7 +215,7 @@ class _Of(ValidateProperty):
             if chosen is None:
                 chosen = annotation
                 continue
-            if not _annotations_agree(chosen, annotation):
+            if not is_subclass_of(annotation, chosen):
                 raise TypeError(
                     "composed validators have conflicting annotations: "
                     f"{chosen!r} vs {annotation!r}"

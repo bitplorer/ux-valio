@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Bind uses ``is_subclass_of`` (owner annotation vs validator); set uses
+  ``is_instance_of`` (value vs annotation). ``Account | None`` on both
+  sides binds. A subclass owner (`Admin(Account)`) binds. Owner wider
+  than the validator still TypeErrors.
+
 - Construction is generic: `ValidateProperty.__new__ -> Any` (Pylance) and
   a mypy plugin. No `AsStr` / `AsInt` mixins. A custom store type is
   `class AccountValidator(Validator[Account]): annotation = Account`.

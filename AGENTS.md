@@ -22,6 +22,8 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   Construction is `Any` to type checkers (`ValidateProperty.__new__`;
   mypy plugin `ux_valio.mypy_plugin`) so any store type works — no
   `AsStr` / `AsUser` mixin. Set `annotation` on the facade.
+  Bind: `is_subclass_of(owner, validator)`. Set: `is_instance_of(value,
+  annotation)`. Optional is `| None` on both sides.
   `Validator[T]` is the stored-type subscript (one argument). It fills
   `annotation` when the class did not declare one. Named facades
   specialize it (`IntegerValidator` is `Validator[int]`). Unconstrained
