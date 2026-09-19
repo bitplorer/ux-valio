@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- TypedDict keys accept Door A assignment (``name: str = StringValidator()``)
+  and ``@name.add_process_*`` / ``@name.add_validator`` in that class body.
+  ``self`` is the mapping. ``pre_set`` write-back then ``post_set``.
+
 - TypedDict presence is ``__required_keys__`` (``total=`` / ``Required`` /
   ``NotRequired``). ``ReadOnly`` peels with the other qualifiers. Extras on
   an omitted ``NotRequired`` key do not run.

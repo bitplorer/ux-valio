@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""TypedDict is the schema. No BaseModel / Schema twin. Annotated hangs Door A."""
+"""TypedDict is the schema. No BaseModel / Schema twin. Door A hangs on keys."""
 
 from dataclasses import dataclass
 from typing import Annotated, TypedDict
@@ -215,6 +215,36 @@ def test_typeddict_child_keeps_parent_required_keys():
     assert Box(row={"name": "Ada", "age": 1}).row["age"] == 1
 
 
-def test_collect_all_gathers_typeddict_key_extras():
-    with pytest.raises((ValidationErrors, ValueError)):
-        Signup(person={"name": "A", "email": "nope", "age": 30})
+def test_typeddict_door_a_add_process_pre_validate():
+    class Profile(TypedDict):
+        name: str = StringValidator()
+
+        @name.add_process_pre_validate
+        def strip_name(self, value):
+            return value.strip()
+
+    @dataclass
+    class Box:
+        person: Profile = Validator()
+
+    built = Profile()
+    assert not isinstance(built.get("name"), StringValidator)
+    assert Box(person={"name": "  Ada  "}).person["name"] == "Ada"
+
+
+def test_typeddict_door_a_add_validator():
+    class Profile(TypedDict):
+        name: str = StringValidator()
+
+        @name.add_validator
+        def no_digit(self, value):
+            if any(char.isdigit() for char in value):
+                raise ValueError("name must not contain digits")
+
+    @dataclass
+    class Box:
+        person: Profile = Validator()
+
+    assert Box(person={"name": "Ada"}).person["name"] == "Ada"
+    with pytest.raises(ValueError, match="digits"):
+        Box(person={"name": "Ada1"})

@@ -93,6 +93,34 @@ class HookHost:
         keys.reverse()
         return tuple(keys)
 
+    def _iter_owner_keys(self, instance: Any) -> tuple[str, ...]:
+        """Owner keys for this run. ``_hook_schema`` is a TypedDict class.
+
+        TypedDict values are dicts at runtime, so instance MRO is ``dict``.
+        Hooks hung on the TypedDict (``@name.add_*`` in that class body) live
+        under the schema's ``module.qualname``.
+        """
+        seen: set[str] = set()
+        keys: list[str] = []
+        schema = getattr(self, "_hook_schema", None)
+        if schema is not None:
+            for cls in getattr(schema, "__mro__", ()):
+                if cls is object or cls is dict:
+                    continue
+                key = HookHost._owner_key(cls)
+                if key in seen:
+                    continue
+                seen.add(key)
+                keys.append(key)
+            keys.reverse()
+        if instance is not None:
+            for key in HookHost._collect_owner_keys(instance):
+                if key in seen:
+                    continue
+                seen.add(key)
+                keys.append(key)
+        return tuple(keys)
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Phases are these dict keys. No add_pre_set — ValidateProperty.pre_set
         # *is* pre_validate → validate → post_validate.
@@ -188,14 +216,14 @@ class HookHost:
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
         hooks = self._processors[phase]
-        for key in type(self)._collect_owner_keys(instance):
+        for key in self._iter_owner_keys(instance):
             for func in hooks.get(key, ()):
                 value = invoke_callable(func, instance, value)
         return value
 
     def _run_tasks(self, phase: str, instance: Any, value: Any) -> Any:
         hooks = self._tasks[phase]
-        for key in type(self)._collect_owner_keys(instance):
+        for key in self._iter_owner_keys(instance):
             for func in hooks.get(key, ()):
                 spawn_task(self, func, instance, value)
         return value
@@ -232,12 +260,12 @@ class HookHost:
         return self._process_then_tasks("post_delete", instance, value)
 
     def _run_custom_validators(self, instance: Any, value: Any) -> None:
-        if instance is None:
+        if instance is None and getattr(self, "_hook_schema", None) is None:
             return
         errors: list[BaseException] = []
         collect_all = getattr(self, "collect_all", True)
         name = getattr(self, "name", None)
-        for key in type(self)._collect_owner_keys(instance):
+        for key in self._iter_owner_keys(instance):
             for func in self._custom_validators.get(key, ()):
                 try:
                     invoke_callable(func, instance, value)
