@@ -8,9 +8,13 @@ import pytest
 from ux_valio import (
     BICValidator,
     CINValidator,
+    DINValidator,
     EANValidator,
+    FSSAIValidator,
+    IndianPassportValidator,
     ISBNValidator,
     ISINValidator,
+    LLPINValidator,
     MACAddressValidator,
     TANValidator,
     UdyamValidator,
@@ -157,3 +161,43 @@ def test_udyam_format_identity():
     assert Firm(udyam="udyam-mh-00-0000001").udyam == "UDYAM-MH-00-0000001"
     with pytest.raises(ValueError):
         Firm(udyam="UDYAM-MH-0000001")
+
+
+def test_din_eight_digits_keeps_leading_zeros():
+    @dataclass
+    class Director:
+        din: str = DINValidator()
+
+    assert Director(din="00123456").din == "00123456"
+    with pytest.raises(ValueError):
+        Director(din="1234567")
+
+
+def test_llpin_strips_hyphen():
+    @dataclass
+    class Llp:
+        llpin: str = LLPINValidator()
+
+    assert Llp(llpin="aab-1234").llpin == "AAB1234"
+    with pytest.raises(ValueError):
+        Llp(llpin="AA1234")
+
+
+def test_fssai_licence_and_central_code():
+    @dataclass
+    class Fbo:
+        fssai: str = FSSAIValidator()
+
+    assert Fbo(fssai="10012345678901").fssai == "10012345678901"
+    with pytest.raises(ValueError):
+        Fbo(fssai="30012345678901")
+
+
+def test_indian_passport_letter_plus_seven():
+    @dataclass
+    class Traveller:
+        passport: str = IndianPassportValidator()
+
+    assert Traveller(passport="a1234567").passport == "A1234567"
+    with pytest.raises(ValueError):
+        Traveller(passport="1234567")

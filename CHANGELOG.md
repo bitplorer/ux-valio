@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- India layers: ``DINValidator``, ``LLPINValidator``, ``FSSAIValidator``,
+  ``IndianPassportValidator``. Aadhaar rejects UIDAI-reserved first digit
+  0/1 even when Verhoeff holds.
+
 - ``named/india`` is a package: ``kyc`` / ``gst`` / ``registry`` / ``bank``.
   Layers do not import each other. ``from ux_valio import GSTINValidator``
   unchanged.

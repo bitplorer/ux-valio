@@ -25,6 +25,11 @@ def test_verhoeff_valid_aadhaar_is_accepted(Card):
     assert Card(aadhaar=VALID_AADHAAR).aadhaar == VALID_AADHAAR
 
 
+def test_uidai_reserved_first_digit_is_rejected(Card):
+    with pytest.raises(ValueError):
+        Card(aadhaar="123456789006")
+
+
 def test_one_digit_mutation_is_rejected(Card):
     with pytest.raises(ValueError):
         Card(aadhaar=INVALID_CHECKSUM)
