@@ -177,7 +177,9 @@ or `add_task_pre_validate` (background side effect; return ignored; setter
 does not wait). Persist/reserve that must fail-closed hangs on
 `add_process_post_set`. Welcome-email hangs on `add_task_post_set`.
 Tasks are sync or async; they run on a process-held pool, not the
-nest-safe processor worker.
+nest-safe processor worker. `from ux_valio import wait_tasks` waits for
+them (tests / shutdown). A free function on an unbound descriptor takes
+`namespace=Host` (the class), not a hand-built string key.
 
 `add_process_*` / `add_task_*` accept **sync or async** callables. `async def`
 registers. Coroutine **objects** at run are not a second reject door: same

@@ -308,7 +308,7 @@ def test_datetime_post_validate_cannot_store_a_plain_date():
     class When:
         t: datetime.datetime = field
 
-    field.add_process_post_validate(to_date, namespace=HookHost._owner_key(When))
+    field.add_process_post_validate(to_date, namespace=When)
     with pytest.raises(TypeError):
         When(t="2020-01-02T12:00:00")
 
@@ -326,7 +326,7 @@ def test_uuid_post_validate_cannot_store_a_str():
     class Row:
         u: uuid.UUID = field
 
-    field.add_process_post_validate(smash, namespace=HookHost._owner_key(Row))
+    field.add_process_post_validate(smash, namespace=Row)
     with pytest.raises(TypeError):
         Row(u=raw)
 
@@ -359,6 +359,6 @@ def test_url_post_validate_cannot_store_a_lie():
     class Link:
         href: str = field
 
-    field.add_process_post_validate(smash, namespace=HookHost._owner_key(Link))
+    field.add_process_post_validate(smash, namespace=Link)
     with pytest.raises(ValueError, match="URL"):
         Link(href="https://example.com")

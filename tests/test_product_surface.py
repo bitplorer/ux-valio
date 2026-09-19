@@ -147,7 +147,9 @@ def test_export_floor_and_validation_errors():
     for name in ("Property", "ValidateProperty", "Validator", "ValidationErrors"):
         assert name in ux_valio.__all__
         assert hasattr(ux_valio, name)
-    assert ux_valio.ValidationErrors is ux_valio.errors.ValidationErrors
+    assert "wait_tasks" in ux_valio.__all__
+    assert hasattr(ux_valio, "wait_tasks")
+    assert "HookHost" not in ux_valio.__all__
 
 
 def test_descriptor_does_not_import_validators():

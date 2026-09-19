@@ -8,6 +8,7 @@ belong at the call site or on ``add_validator``.
 
 from ux_valio.descriptor import Property
 from ux_valio.errors import ValidationErrors
+from ux_valio.validators.async_bridge import wait_tasks
 from ux_valio.facades import (
     AadhaarCardValidator,
     BooleanValidator,
@@ -141,6 +142,7 @@ __all__ = [
     "ValidationErrors",
     "Validator",
     "ValueValidator",
+    "wait_tasks",
     "WhiteSpace",
     "Word",
     "WordBoundary",

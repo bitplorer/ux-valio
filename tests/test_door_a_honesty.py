@@ -39,7 +39,7 @@ def test_add_process_pre_validate_is_the_pre_set_pipeline():
     class Host:
         x: str = v
 
-    v.add_process_pre_validate(strip, namespace=HookHost._owner_key(Host))
+    v.add_process_pre_validate(strip, namespace=Host)
 
     assert Host(x="  Ada  ").x == "Ada"
 

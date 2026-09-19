@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- ``namespace=`` accepts the owning class (not only a ``module.qualname``
+  str). ``wait_tasks`` is on the package root. ``TypeAliasType`` peels by
+  identity.
+
 - HookHost public hang API is ``add_process_*`` / ``add_task_*`` /
   ``add_validator`` / ``wait_tasks``. Pipeline runners and ``has_hooks``
   are private (``_pre_validate``, ``_has_hooks``, ``_notify_pre_set``).
