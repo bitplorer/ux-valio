@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Typed Door A facades. No Field/Schema twin; no RGB/HSL; no HexColor public facade.
+"""Typed validator facades. No Field/Schema twin; no RGB/HSL; no HexColor public facade.
 
 Primitives and stdlib store types live here. String identities (email, URL,
 GSTIN, …) live in ``facades.named``. Construction is ``Any`` to type checkers
@@ -97,7 +97,7 @@ class DateValidator(Validator[datetime.date]):
 
 
 class DateTimeValidator(Validator[datetime.datetime]):
-    """Door A datetime facade. Stores ``datetime.datetime``. ISO via fromisoformat.
+    """Stores ``datetime.datetime``. ISO via fromisoformat.
 
     Plain ``datetime.date`` is rejected (that is ``DateValidator``). Date-only
     ISO strings follow stdlib ``datetime.fromisoformat`` (midnight on 3.11+).

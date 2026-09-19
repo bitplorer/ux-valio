@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Phone-number Door A facade. Region ∩ phonenumbers; no network."""
+"""Phone-number. Region ∩ phonenumbers; no network."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from ux_valio.facades.typed import StringValidator
 
 
 class PhoneNumberValidator(StringValidator):
-    """Door A string facade: valid number for an explicit ``region=`` door.
+    """Valid number for an explicit ``region=``.
 
     Leftover: valio defaulted to ``instance.region`` or ``"IN"``. Pass
     ``region=`` on this facade (typically ``region="IN"`` to match that

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Real-environment Door A paths: dataclass, pickle, inherit, KYC, checkout.
+"""Real-environment field-default paths: dataclass, pickle, inherit, KYC, checkout.
 
 No ``from __future__ import annotations`` — unresolved string annotations
 TypeError at bind (KEEP).

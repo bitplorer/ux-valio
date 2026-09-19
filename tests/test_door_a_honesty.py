@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Door A honesty — generics, reuse, unknown kwargs. No add_pre_set."""
+"""descriptor honesty — generics, reuse, unknown kwargs. No add_pre_set."""
 
 from dataclasses import dataclass
 

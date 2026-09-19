@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""mypy/pyright Door A: natural ``name: str = StringValidator()``."""
+"""mypy/pyright: natural ``name: str = StringValidator()``."""
 
 from dataclasses import dataclass
 

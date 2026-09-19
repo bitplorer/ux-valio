@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Door A stores on instance __dict__. slots drop the descriptor."""
+"""The descriptor stores on instance __dict__. slots drop the descriptor."""
 
 from dataclasses import dataclass
 
@@ -16,7 +16,7 @@ def _cause_or_self(err: BaseException) -> BaseException:
 def test_explicit_slots_fail_closed_at_bind():
     """CPython rejects a slot name that is also a class variable (ValueError).
 
-    Door A TypeErrors if bind still runs. Either path is fail-closed.
+    Bind TypeErrors if bind still runs. Either path is fail-closed.
     """
     with pytest.raises((TypeError, ValueError), match="slots"):
 
@@ -26,7 +26,7 @@ def test_explicit_slots_fail_closed_at_bind():
 
 
 def test_slots_without_dict_fail_closed_at_bind():
-    """A slots-only class cannot store any Door A field, even under another name."""
+    """A slots-only class cannot store any descriptor field, even under another name."""
     with pytest.raises((TypeError, RuntimeError)) as caught:
 
         class Box:
@@ -80,7 +80,7 @@ def test_parent_slot_same_name_does_not_block_child_with_dict():
 
 
 def test_dataclass_slots_replaces_descriptor():
-    """@dataclass(slots=True) runs after __set_name__ and drops Door A.
+    """@dataclass(slots=True) runs after __set_name__ and drops field default.
 
     Unsupported: assignment does not validate. Lock the drop so a future
     accidental restore of the descriptor is visible.

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Examples stay importable Door A scripts (no Field / Schema / Cap)."""
+"""Examples stay importable example scripts (no Field / Schema / Cap)."""
 
 import ast
 from decimal import Decimal

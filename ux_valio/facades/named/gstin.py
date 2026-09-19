@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""GSTIN Door A facade. 15-char identity ∩ Luhn mod 36. No GST portal."""
+"""GSTIN. 15-char identity ∩ Luhn mod 36. No GST portal."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ _CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
 class GSTINValidator(StringValidator):
-    """Door A string facade: GSTIN format ∩ Luhn mod 36 checksum."""
+    """GSTIN format ∩ Luhn mod 36 checksum."""
 
     @staticmethod
     def _luhn_mod_36(body: str) -> str:

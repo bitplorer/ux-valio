@@ -5,7 +5,7 @@
 (substring), not ``fullmatch``. ``StartsWith`` / ``EndsWith`` make an identity
 SKU. ``SetOf`` is the character class (``~SetOf(...)`` negates). Stdlib atoms
 ``Digit`` / ``Word`` / ``NonWhiteSpace`` share the count-kwargs door. Names
-match valio@3415c03; they are the taught Door A PatternTypes.
+match valio@3415c03; they are the taught field default PatternTypes.
 """
 
 from dataclasses import dataclass

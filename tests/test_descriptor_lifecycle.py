@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Descriptor lifecycle + remaining Door A honesty."""
+"""Descriptor lifecycle + remaining descriptor honesty."""
 
 from dataclasses import dataclass
 

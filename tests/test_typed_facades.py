@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Typed Door A facades. AttributeValidator stays absent."""
+"""Typed field-default facades. AttributeValidator stays absent."""
 
 import datetime
 import decimal

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Validator objects compose with each other as one Door A descriptor.
+"""Validator objects compose with each other as one field-default descriptor.
 
 Inheritance hygiene (facades do not subclass leaves) is a separate lock.
 """

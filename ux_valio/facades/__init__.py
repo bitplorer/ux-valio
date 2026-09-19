@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Door A facades.
+"""Typed and named validator facades.
 
 Layers (down only): ``typed`` (primitives : ``Validator``) then ``named``
 (identity products : ``StringValidator`` / ``Validator``). ``named`` does

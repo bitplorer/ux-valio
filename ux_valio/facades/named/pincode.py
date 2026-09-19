@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""India PIN Door A facade. 6-digit India Post identity. No locality lookup."""
+"""India PIN. 6-digit India Post identity. No locality lookup."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ _PIN = re.compile(r"[1-9][0-9]{5}")
 
 
 class PinCodeValidator(StringValidator):
-    """Door A string facade: Indian PIN code identity."""
+    """Indian PIN code identity."""
 
     @staticmethod
     def _is_valid_pincode(value: Any) -> bool:

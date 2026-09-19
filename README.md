@@ -9,8 +9,7 @@ name: str = StringValidator(max_length=50)
 Greenfield reimplementation of
 [`bitplorer/valio`](https://github.com/bitplorer/valio) frozen at
 [`3415c03`](https://github.com/bitplorer/valio/commit/3415c03e37085adda4040671a91eb19aa4fe4ac4).
-Valio called this shape **Door A** (vs a Field/Schema twin this library
-does not ship). Valio itself is not edited.
+There is no Field twin and no Schema twin. Valio itself is not edited.
 
 ## Install
 
@@ -38,7 +37,7 @@ class User:
     n: int = IntegerValidator(min_value=0, max_value=10, multiple_of=2)
 ```
 
-`Validator[int]` is the same door with the stored type on the descriptor.
+`Validator[int]` is the same descriptor with the stored type on it.
 Use it on a plain class (no field annotation) or next to `n: int` — the
 two must agree. `IntegerValidator` is already `Validator[int]`. An
 unconstrained `TypeVar` (`item: T = Validator()` on a generic class) is
@@ -50,13 +49,12 @@ class Stats:
     n = Validator[int](min_value=0)
 ```
 
-A `TypedDict` is the schema (stdlib, no BaseModel). Door A is still
-`field: SomeTypedDict = Validator()`. Extra keys fail-closed. `total=False`
-and PEP 655 `Required` / `NotRequired` are the TypedDict metaclass
-Hang extras with `Annotated`, or the same Door A assignment as a dataclass
-(`name: str = StringValidator()`), then `@name.add_process_pre_validate` /
-`@name.add_validator` in the TypedDict body. `self` in those hooks is the
-mapping. No Schema twin.
+A `TypedDict` is the schema (stdlib, no BaseModel). Extra keys fail-closed.
+`total=False` and PEP 655 `Required` / `NotRequired` are the TypedDict
+metaclass (`__required_keys__`) — hang extras with `Annotated`, or the same
+assignment as a dataclass (`name: str = StringValidator()`), then
+`@name.add_process_pre_validate` / `@name.add_validator` in the TypedDict
+body. `self` in those hooks is the mapping. No Schema twin.
 
 ```python
 from typing import Annotated, TypedDict
@@ -106,7 +104,7 @@ class User:
         return value.strip()
 ```
 
-Runtime Door A is `name: str`. Construction is `Any` to type checkers
+Runtime the instance sees `str`. Construction is `Any` to type checkers
 (`ValidateProperty.__new__`; mypy via `plugins = ["ux_valio.mypy_plugin"]`)
 so `StringValidator()` assigns to `str` and a custom `UserValidator()`
 assigns to `User`. No per-type mixin. `User(name=1)` still errors.
@@ -163,7 +161,7 @@ not the last `__set_name__`.
   No files, no `logs/` directory — valio wrote files; pass your own
   `Logger` for that. `logger=None` is OFF, not valio's None=on.
   Get/set/delete log at info; failures at error. A field-level logger is
-  the usage-pattern door Pydantic does not have.
+  the usage pattern Pydantic does not have.
 - `|` is OR: `IntegerValidator | StringValidator` is AnyOf. Conflicting
   member annotations do not TypeError. The compose root does not AND-run a
   type check before alternatives. `&` / `AllOf` still TypeErrors on
@@ -182,7 +180,7 @@ them (tests / shutdown). A free function on an unbound descriptor takes
 `namespace=Host` (the class), not a hand-built string key.
 
 `add_process_*` / `add_task_*` accept **sync or async** callables. `async def`
-registers. Coroutine **objects** at run are not a second reject door: same
+registers. Coroutine **objects** at run are not a second reject path: same
 run rules as `async def`.
 
 **Run rules:** on the sync descriptor path,
@@ -199,7 +197,7 @@ run rules as `async def`.
 
 ### Before-store DB check (Register)
 
-valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
+valio README taught this on a Field factory (`@user_field.add_pre_valiator` — typo
 for `add_process_pre_validate`). Hang the same processor on the **field
 name**. Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong
 hook — return the value from `add_process_pre_validate`.
@@ -244,7 +242,7 @@ return the value stores `None`; return the value from `add_process_pre_validate`
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
 `default=[]` is the same list on every instance. `default_factory=` is a
 zero-arg callable invoked on each None assignment (dataclass-shaped, still
-the descriptor door — not a Field twin). Setting both is `TypeError`.
+the descriptor — not a Field twin). Setting both is `TypeError`.
 Leftover: a callable `default=` is still invoked, so `default=list` already
 built a new list; prefer `default_factory=list` when the intent is
 per-instance.
@@ -277,7 +275,7 @@ does not replace an in-flight never-set `AttributeError` when `debug=True`.
 
 `PatternValidator` matches with `re.findall` (findall substring), not `fullmatch`.
 Empty-match patterns (`a*`, `?`) still count as a match — that is the findall
-engine, not a fullmatch door. `EmailValidator` keeps that engine for its `pattern=`
+engine, not a fullmatch. `EmailValidator` keeps that engine for its `pattern=`
 path and then requires
 the whole string to be an addr-spec: `"prefix user@example.com suffix"`
 is rejected. Pattern `&` / `|` is
@@ -288,7 +286,7 @@ fragments concatenate as bytes. `count_min > count_max` is constructor
 Pattern lives in the `ux_valio.pattern` package. The taught import is still
 the package root (`from ux_valio import Pattern, Digit, StartsWith, SetOf`).
 `from ux_valio.pattern import Pattern` is the same objects — a package
-re-home, not a second door. `WordBoundary` stays an atom `\b`.
+re-home, not a second API. `WordBoundary` stays an atom `\b`.
 
 Thin PatternTypes evidenced in valio@3415c03 `valio/regexer/regexps.py`.
 Those names are the taught PatternType atoms (KEEP; not `DigitAtom` /
@@ -430,12 +428,12 @@ Identity facades (stdlib only, no network): `AadhaarCardValidator`,
 `IMEIValidator` (Luhn), `PaymentCardValidator`, `ExpiryValidator`.
 `PhoneNumberValidator` stays the `phonenumbers` extra.
 
-## Migration (Door B → Door A)
+## From valio's Field factory
 
-Valio README taught a second door: construct a `*Field`, hang decorators on
+Valio README taught a second shape: construct a `*Field`, hang decorators on
 it, then assign `password: str = password_field.validator`. That Field factory
 duplicated kwargs, dropped `gt`/`lt`/`eq`/`multiple_of`/`in_choice` from its
-signature, and is untested. ux-valio retires Door B. Move the kwargs onto
+signature, and is untested. ux-valio does not ship it. Move the kwargs onto
 `StringValidator` / `IntegerValidator` / `Validator` as the dataclass default,
 and hang `add_process_pre_validate` / `add_validator` on that descriptor. Star-import
 of valio's 306 names is gone; import the names in `__all__`.

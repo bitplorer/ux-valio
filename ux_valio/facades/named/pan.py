@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""PAN Door A facade. Identity fullmatch ∩ Luhn mod 26 (complete A–Z map)."""
+"""PAN. Identity fullmatch ∩ Luhn mod 26 (complete A–Z map)."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ _BASE = 26
 
 
 class PANCardValidator(StringValidator):
-    """Door A string facade: 10-char PAN identity ∩ Luhn mod 26."""
+    """10-char PAN identity ∩ Luhn mod 26."""
 
     @staticmethod
     def _decode_pan_char(char: str) -> int:

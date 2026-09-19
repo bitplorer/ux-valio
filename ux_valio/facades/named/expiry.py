@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Expiry Door A facade. Exclusive expire_* kwargs; expire_before is its own bound."""
+"""Expiry. Exclusive expire_* kwargs; expire_before is its own bound."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ _DATE_TYPES = (datetime.datetime, datetime.date, datetime.time)
 
 
 class ExpiryValidator(Validator):
-    """Door A facade: reject assignment when *now* matches the exclusive timeline.
+    """reject assignment when *now* matches the exclusive timeline.
 
     Not ``Validator[datetime]`` — this gates wall-clock on whatever the field
     stores. ``expire_*`` are constructor bounds, not the assigned value's type.

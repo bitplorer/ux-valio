@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Single-concern Door A leaves. Each leaf owns its validate methods."""
+"""Single-concern validator leaves. Each leaf owns its validate methods."""
 
 from __future__ import annotations
 
@@ -233,7 +233,7 @@ def _typed_dict_match(value: Any, annotation: Any) -> bool:
 
 
 def _typed_dict_key_validators(schema: Any, key: str, field_ann: Any) -> tuple[Any, ...]:
-    """Class-body Door A default, then ``Annotated`` extras. One object once."""
+    """Class-body field default, then ``Annotated`` extras. One object once."""
     found: list[Any] = []
     attr = schema.__dict__.get(key)
     if isinstance(attr, ValidateProperty):
@@ -245,7 +245,7 @@ def _typed_dict_key_validators(schema: Any, key: str, field_ann: Any) -> tuple[A
 
 
 def _validate_typed_dict(owner: Any, value: Any, annotation: Any = None) -> None:
-    """Run Door A key validators on a TypedDict mapping.
+    """Run key validators on a TypedDict mapping.
 
     ``name: str = StringValidator()`` on the TypedDict is the same default
     as a dataclass field: ``type`` calls ``__set_name__``, so ``_owner``
@@ -274,6 +274,8 @@ def _validate_typed_dict(owner: Any, value: Any, annotation: Any = None) -> None
             continue
         item = value[key]
         for extra in _typed_dict_key_validators(annotation, key, field_ann):
+            # Errors name ``person.email``; restore so a shared descriptor
+            # keeps the bind name from ``__set_name__``.
             previous_name = extra.name
             extra.name = f"{prefix}.{key}" if prefix else key
             try:

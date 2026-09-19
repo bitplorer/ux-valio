@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Validator[T] is the stored-type subscript. Not a second door.
 
-Owner field annotation remains Door A. The subscript fills annotation when
+Owner field annotation remains field default. The subscript fills annotation when
 the class did not declare one. Unconstrained TypeVars are typing-only.
 """
 
