@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Hot path: skip empty hook MRO walks; ``is_instance_of`` fast-path for
+  concrete types (``int`` / ``str`` / Enum). Empty ``_process_then_tasks``
+  is a no-op when nothing is hung.
+
 - ``EmailValidator`` stores stripped lowercase (login uniqueness).
   IBAN check digits must be ``02``–``98`` (ISO 13616).
 

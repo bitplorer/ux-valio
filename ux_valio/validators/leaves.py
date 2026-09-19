@@ -144,6 +144,11 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
     """Value vs annotation at set. Twin of ``is_subclass_of`` (bind)."""
     if annotation is None or annotation is Any:
         return True
+    # Concrete classes (int, str, Enum) skip peel / origin tables.
+    if isinstance(annotation, type) and get_origin(annotation) is None:
+        if is_typeddict(annotation):
+            return _typed_dict_match(value, annotation)
+        return _isinstance_closed(value, annotation)
     peeled = _peel_annotation(annotation)
     if peeled is _PeelFail:
         return False
