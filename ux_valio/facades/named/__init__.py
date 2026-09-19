@@ -1,5 +1,15 @@
 # SPDX-License-Identifier: MIT
-"""Named identity facades. Parallel products on top of ``typed``.
+"""Named identity facades, grouped by where they are used.
+
+Sibling domain modules (parallel, do not import each other)::
+
+    india    — KYC / tax / bank / GST  (Aadhaar, PAN, GSTIN, …)
+    finance  — money / cards / ISO currency (IBAN, BIC, PaymentCard, …)
+    catalog  — goods (ISBN, EAN, GTIN, VIN)
+    contact  — how to reach (Email, Phone, URL, Hostname)
+    device   — hardware (IMEI, MAC)
+    portal   — SaaS tenancy / i18n (Slug, Country, Timezone, ULID)
+    expiry   — wall-clock ``ExpiryValidator`` (not a string identity)
 
 The taught usage is the field default — same shape as every other
 validator in this library::
@@ -22,42 +32,53 @@ Every named facade:
   the optional ``phonenumbers`` extra and still does no carrier lookup.
 
 They import ``ux_valio.facades.typed`` or the validate door — never each
-other, and ``typed`` never imports this package.
+other, and ``typed`` never imports this package. Public names re-export
+from ``ux_valio``; domain imports are for source navigation
+(``from ux_valio.facades.named.india import GSTINValidator``).
 """
 
-from ux_valio.facades.named.aadhaar import AadhaarCardValidator
-from ux_valio.facades.named.bic import BICValidator
-from ux_valio.facades.named.cin import CINValidator
-from ux_valio.facades.named.ean import EANValidator
-from ux_valio.facades.named.email import EmailValidator
+from ux_valio.facades.named.catalog import (
+    EANValidator,
+    GTINValidator,
+    ISBNValidator,
+    VINValidator,
+)
+from ux_valio.facades.named.contact import (
+    EmailValidator,
+    HostnameValidator,
+    PhoneNumberValidator,
+    URLValidator,
+)
+from ux_valio.facades.named.device import IMEIValidator, MACAddressValidator
 from ux_valio.facades.named.expiry import ExpiryValidator
-from ux_valio.facades.named.gstin import GSTINValidator
-from ux_valio.facades.named.iban import IBANValidator
-from ux_valio.facades.named.ifsc import IFSCValidator
-from ux_valio.facades.named.imei import IMEIValidator
-from ux_valio.facades.named.isbn import ISBNValidator
-from ux_valio.facades.named.isin import ISINValidator
-from ux_valio.facades.named.mac import MACAddressValidator
-from ux_valio.facades.named.pan import PANCardValidator
-from ux_valio.facades.named.payment import PaymentCardValidator
-from ux_valio.facades.named.phone import PhoneNumberValidator
-from ux_valio.facades.named.pincode import PinCodeValidator
-from ux_valio.facades.named.tan import TANValidator
-from ux_valio.facades.named.upi import UPIIdValidator
-from ux_valio.facades.named.url import URLValidator
-from ux_valio.facades.named.vin import VINValidator
-from ux_valio.facades.named.voter import VoterIdValidator
-from ux_valio.facades.named.aba import ABARoutingValidator
-from ux_valio.facades.named.card_expiry import CardExpiryValidator
-from ux_valio.facades.named.country import CountryCodeValidator
-from ux_valio.facades.named.currency import CurrencyCodeValidator
-from ux_valio.facades.named.gtin import GTINValidator
-from ux_valio.facades.named.hostname import HostnameValidator
-from ux_valio.facades.named.hsn import HSNCodeValidator
-from ux_valio.facades.named.lei import LEIValidator
-from ux_valio.facades.named.slug import SlugValidator
-from ux_valio.facades.named.timezone import TimezoneValidator
-from ux_valio.facades.named.ulid import ULIDValidator
+from ux_valio.facades.named.finance import (
+    ABARoutingValidator,
+    BICValidator,
+    CardExpiryValidator,
+    CurrencyCodeValidator,
+    IBANValidator,
+    ISINValidator,
+    LEIValidator,
+    PaymentCardValidator,
+)
+from ux_valio.facades.named.india import (
+    AadhaarCardValidator,
+    CINValidator,
+    GSTINValidator,
+    HSNCodeValidator,
+    IFSCValidator,
+    PANCardValidator,
+    PinCodeValidator,
+    TANValidator,
+    UPIIdValidator,
+    VoterIdValidator,
+)
+from ux_valio.facades.named.portal import (
+    CountryCodeValidator,
+    SlugValidator,
+    TimezoneValidator,
+    ULIDValidator,
+)
 
 __all__ = [
     "ABARoutingValidator",

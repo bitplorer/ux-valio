@@ -170,5 +170,6 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "VoterIdValidator" in text
     assert "GTINValidator" in text
     assert "HostnameValidator" in text
-    assert "CardExpiryValidator" in text
+    assert "facades/named/" in text
+    assert "named.india" in text
     assert "`PhoneNumberValidator` is a string facade" in text
