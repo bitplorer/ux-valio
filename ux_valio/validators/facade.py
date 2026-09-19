@@ -157,6 +157,22 @@ class Validator(ValidateProperty[T]):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         """Named-facade extra check after the inherited path. Default is none."""
 
+    def _reject_unless_instance(self, value: Any, expected: type) -> None:
+        if value is None:
+            return
+        if not isinstance(value, expected):
+            raise TypeError(
+                f"{self.name} expect {expected} type, got {type(value).__name__} type instead"
+            )
+
+    def _coerce_str(self, value: Any, conv: Callable[[str], Any], what: str) -> Any:
+        if not isinstance(value, str):
+            return value
+        try:
+            return conv(value)
+        except (ValueError, TypeError, ArithmeticError) as err:
+            raise ValueError(f"{self.name} expects a {what}, got {value!r}") from err
+
     def validate(self, instance: Any = None, value: Any = None) -> None:
         run_steps(
             (

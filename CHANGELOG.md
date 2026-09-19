@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Typed facades share one TYPE_CHECKING store mixin (`AsStr` / `AsInt` / …)
+  in `typed.py`. `store_view.py` is gone. Identity extras use
+  `Validator._reject_unless_instance` / `_coerce_str`.
+
 - Omitted `collect_all` and `debug` are True. Pass `False` to opt out.
   Specified-theory is unchanged: omitted stays unspecified so compose with
   explicit `False` does not TypeError. One collected failure re-raises as
