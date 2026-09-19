@@ -128,7 +128,7 @@ class HookHost:
         self._tasks: dict[str, dict[str, list[Callable[..., Any]]]] = {
             phase: defaultdict(list) for phase in self._processors
         }
-        self._has_hooks = False
+        self._hooks_hung = False
         super().__init__(*args, **kwargs)
 
     def _register(
@@ -142,7 +142,7 @@ class HookHost:
             func, namespace, getattr(self, "_owner", None)
         )
         bucket[key].append(func)
-        self._has_hooks = True
+        self._hooks_hung = True
         return func
 
     def validator(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
@@ -236,7 +236,7 @@ class HookHost:
         wait_outstanding(timeout)
 
     def _process_then_tasks(self, phase: str, instance: Any, value: Any) -> Any:
-        if not self._has_hooks:
+        if not self._hooks_hung:
             return value
         value = self._run_processors(phase, instance, value)
         self._run_tasks(phase, instance, value)
