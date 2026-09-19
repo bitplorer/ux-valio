@@ -32,6 +32,7 @@ hasher to `ux_valio`.
 | Invite (TypedDict schema) | `invite.py` | `InviteLog` | `InMemoryInviteLog` | unique invite email |
 | File a document | `filing.py` | `Archive` | `InMemoryArchive` | unique (folder, host) |
 | Field-level logging | `field_logging.py` | — | stdlib `logging` | your `Logger` / `FileHandler` |
+| Validator kwargs | `validator_kwargs.py` | — | `doc` / `default` / `default_factory` / `reassign` / … | — |
 
 ```console
 python examples/signup.py
@@ -43,6 +44,7 @@ python examples/catalog.py
 python examples/invite.py
 python examples/filing.py
 python examples/field_logging.py
+python examples/validator_kwargs.py
 ```
 
 `kyc.py` uses optional extra `phonenumbers` for the IN phone door

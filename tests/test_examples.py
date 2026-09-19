@@ -21,6 +21,7 @@ EXAMPLE_MODULES = (
     "invite",
     "filing",
     "field_logging",
+    "validator_kwargs",
 )
 
 

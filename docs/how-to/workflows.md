@@ -22,6 +22,9 @@ pass`, a regression would print OK. Examples do not ship a DB driver.
 | Catalog line | `catalog.py` | SKU index + stock |
 | Invite (TypedDict) | `invite.py` | invite email log |
 | File a document | `filing.py` | archive uniqueness |
+| Field logging | `field_logging.py` | — (capability) |
+| Constructor kwargs | `validator_kwargs.py` | — (capability) |
+
 
 ## Shared skeleton
 
