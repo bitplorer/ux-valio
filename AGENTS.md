@@ -18,7 +18,9 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   `ValidationPath` on `Validator` in `facade.py`, not `PathValidator`
   (`typed.py`, pathlib).
   Primitive typed facades (`IntegerValidator` / `StringValidator` /
-  `BooleanValidator`) live in `typed.py` with the rest.
+  `BooleanValidator`) live in `typed.py` with the rest. TYPE_CHECKING
+  `AsStr` / `AsInt` mixins live there too (runtime one empty base) so
+  `name: str = StringValidator()` type-checks without a plugin.
   `Validator[T]` is the stored-type subscript (one argument). It fills
   `annotation` when the class did not declare one. Named facades
   specialize it (`IntegerValidator` is `Validator[int]`). Unconstrained

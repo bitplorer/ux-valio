@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: MIT
-"""Typed Door A facades. No Field/Schema twin; no RGB/HSL; no HexColor public facade."""
+"""Typed Door A facades. No Field/Schema twin; no RGB/HSL; no HexColor public facade.
+
+``AsStr`` / ``AsInt`` / … are TYPE_CHECKING bases so ``name: str = StringValidator()``
+is str on both sides. Runtime they are one empty mixin.
+"""
 
 from __future__ import annotations
 
@@ -11,22 +15,48 @@ import pathlib
 import re
 import urllib.parse
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ux_valio.pattern import Pattern, PatternType
 from ux_valio.validators.facade import Validator
 from ux_valio.validators.leaves import PatternValidator
-from ux_valio.validators.store_view import (
-    AsBool,
-    AsBytes,
-    AsDate,
-    AsDateTime,
-    AsDecimal,
-    AsFloat,
-    AsInt,
-    AsStr,
-    AsUUID,
-)
+
+if TYPE_CHECKING:
+    class _AsStore:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any: ...
+        def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+
+    class AsStr(_AsStore, str):
+        pass
+
+    class AsInt(_AsStore, int):
+        pass
+
+    class AsBool(_AsStore, bool):  # type: ignore[misc]
+        pass
+
+    class AsFloat(_AsStore, float):
+        pass
+
+    class AsBytes(_AsStore, bytes):
+        pass
+
+    class AsDecimal(_AsStore, decimal.Decimal):
+        pass
+
+    class AsDate(_AsStore, datetime.date):
+        pass
+
+    class AsDateTime(_AsStore, datetime.datetime):
+        pass
+
+    class AsUUID(_AsStore, uuid.UUID):
+        pass
+else:
+    class _AsStore:
+        __slots__ = ()
+
+    AsStr = AsInt = AsBool = AsFloat = AsBytes = AsDecimal = AsDate = AsDateTime = AsUUID = _AsStore
 
 # Practical RFC 5322-ish addr-spec. EmailValidator fullmatch extra; engine KEEP.
 _EMAIL_PATTERN = Pattern(
@@ -63,22 +93,12 @@ class DecimalValidator(Validator[decimal.Decimal], AsDecimal):
     annotation = decimal.Decimal | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
-        if isinstance(value, str):
-            try:
-                value = decimal.Decimal(value)
-            except decimal.InvalidOperation as err:
-                raise ValueError(
-                    f"{self.name} expects a Decimal, got {value!r}"
-                ) from err
-        return super().pre_validation_processing(instance, value)
+        return super().pre_validation_processing(
+            instance, self._coerce_str(value, decimal.Decimal, "Decimal")
+        )
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if not isinstance(value, decimal.Decimal):
-            raise TypeError(
-                f"{self.name} expect {decimal.Decimal} type, got {type(value).__name__} type instead"
-            )
+        self._reject_unless_instance(value, decimal.Decimal)
 
 
 class BytesValidator(Validator[bytes], AsBytes):
@@ -122,13 +142,11 @@ class DateValidator(Validator[datetime.date], AsDate):
         return super().pre_validation_processing(instance, value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
-            return
-        raise TypeError(
-            f"{self.name} expect {datetime.date} type, got {type(value).__name__} type instead"
-        )
+        if isinstance(value, datetime.datetime):
+            raise TypeError(
+                f"{self.name} expect {datetime.date} type, got {type(value).__name__} type instead"
+            )
+        self._reject_unless_instance(value, datetime.date)
 
 
 class DateTimeValidator(Validator[datetime.datetime], AsDateTime):
@@ -142,23 +160,12 @@ class DateTimeValidator(Validator[datetime.datetime], AsDateTime):
     annotation = datetime.datetime | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
-        if isinstance(value, str):
-            try:
-                value = datetime.datetime.fromisoformat(value)
-            except ValueError as err:
-                raise ValueError(
-                    f"{self.name} expects an ISO datetime, got {value!r}"
-                ) from err
-        return super().pre_validation_processing(instance, value)
+        return super().pre_validation_processing(
+            instance, self._coerce_str(value, datetime.datetime.fromisoformat, "ISO datetime")
+        )
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if isinstance(value, datetime.datetime):
-            return
-        raise TypeError(
-            f"{self.name} expect {datetime.datetime} type, got {type(value).__name__} type instead"
-        )
+        self._reject_unless_instance(value, datetime.datetime)
 
 
 class EmailValidator(StringValidator):
@@ -202,20 +209,12 @@ class UUIDValidator(Validator[uuid.UUID], AsUUID):
     annotation = uuid.UUID | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
-        if isinstance(value, str):
-            try:
-                value = uuid.UUID(value)
-            except ValueError as err:
-                raise ValueError(f"{self.name} expects a UUID, got {value!r}") from err
-        return super().pre_validation_processing(instance, value)
+        return super().pre_validation_processing(
+            instance, self._coerce_str(value, uuid.UUID, "UUID")
+        )
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if not isinstance(value, uuid.UUID):
-            raise TypeError(
-                f"{self.name} expect {uuid.UUID} type, got {type(value).__name__} type instead"
-            )
+        self._reject_unless_instance(value, uuid.UUID)
 
 
 class PathValidator(Validator[pathlib.Path]):
@@ -235,70 +234,45 @@ class PathValidator(Validator[pathlib.Path]):
         return super().pre_validation_processing(instance, value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if not isinstance(value, pathlib.Path):
-            raise TypeError(
-                f"{self.name} expect {pathlib.Path} type, got {type(value).__name__} type instead"
-            )
-        if self.path_exists is True and not value.exists():
+        self._reject_unless_instance(value, pathlib.Path)
+        if value is not None and self.path_exists is True and not value.exists():
             raise FileNotFoundError(f"{self.name} expects an existing path, got {value}")
+
+
+def _reject_unless_ip(owner: Any, value: Any, parser: Any, label: str) -> None:
+    if value is None:
+        return
+    try:
+        parser(value)
+    except (ValueError, ipaddress.AddressValueError) as err:
+        raise ValueError(
+            f"{owner.name} expects a valid {label}, got {value} as value instead"
+        ) from err
 
 
 class IPv4Validator(StringValidator):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        try:
-            ipaddress.IPv4Address(value)
-        except (ValueError, ipaddress.AddressValueError) as err:
-            raise ValueError(
-                f"{self.name} expects a valid IPv4 address, got {value} as value instead"
-            ) from err
+        _reject_unless_ip(self, value, ipaddress.IPv4Address, "IPv4 address")
 
 
 class IPv6Validator(StringValidator):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        try:
-            ipaddress.IPv6Address(value)
-        except (ValueError, ipaddress.AddressValueError) as err:
-            raise ValueError(
-                f"{self.name} expects a valid IPv6 address, got {value} as value instead"
-            ) from err
+        _reject_unless_ip(self, value, ipaddress.IPv6Address, "IPv6 address")
 
 
 class IPAddressValidator(StringValidator):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        try:
-            ipaddress.ip_address(value)
-        except (ValueError, ipaddress.AddressValueError) as err:
-            raise ValueError(
-                f"{self.name} expects a valid IP address, got {value} as value instead"
-            ) from err
+        _reject_unless_ip(self, value, ipaddress.ip_address, "IP address")
 
 
 class EnumValidator(Validator[enum.Enum]):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if not isinstance(value, enum.Enum):
-            raise TypeError(
-                f"{self.name} expect {enum.Enum} type, got {type(value).__name__} type instead"
-            )
+        self._reject_unless_instance(value, enum.Enum)
 
 
 class IntegerEnumValidator(Validator[enum.IntEnum]):
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if not isinstance(value, enum.IntEnum):
-            raise TypeError(
-                f"{self.name} expect {enum.IntEnum} type, got {type(value).__name__} type instead"
-            )
+        self._reject_unless_instance(value, enum.IntEnum)
 
 
 class StringEnumValidator(Validator[enum.Enum]):
