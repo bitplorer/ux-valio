@@ -8,7 +8,6 @@ Depends on typed. Public names re-export from ``ux_valio`` /
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from ux_valio.facades.typed import StringValidator

@@ -122,7 +122,7 @@ def test_public_all_is_explicit_and_small():
     assert "AllOf" in ux_valio.__all__
     assert "ValidationErrors" in ux_valio.__all__
     assert "MinLengthValidator" in ux_valio.__all__
-    assert len(ux_valio.__all__) < 100
+    assert len(ux_valio.__all__) < 110
 
 
 def test_no_field_schema_cap_on_package():
@@ -177,5 +177,8 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "DINValidator" in text
     assert "FSSAIValidator" in text
     assert "IndianPassportValidator" in text
+    assert "USZipCodeValidator" in text
+    assert "CLABEValidator" in text
+    assert "LocaleValidator" in text
     assert "UnionPay" in text
     assert "`PhoneNumberValidator` is a string facade" in text

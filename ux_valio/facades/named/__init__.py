@@ -5,10 +5,11 @@ Sibling domain modules (parallel, do not import each other)::
 
     india/    — KYC / GST / registry / bank  (folder of layers)
     finance/  — rails / market / card / ISO currency (folder of layers)
-    catalog  — goods (ISBN, EAN, GTIN, VIN)
+    catalog  — goods (ISBN, ISSN, EAN, GTIN, VIN)
+    address  — US ZIP / CA / UK postcode
     contact  — how to reach (Email, Phone, URL, Hostname)
     device   — hardware (IMEI, MAC)
-    portal   — SaaS tenancy / i18n (Slug, Country, Timezone, ULID)
+    portal   — SaaS (Slug, Country, Timezone, ULID, Locale, SemVer)
     expiry   — wall-clock ``ExpiryValidator`` (not a string identity)
 
 The taught usage is the field default — same shape as every other
@@ -37,10 +38,16 @@ from ``ux_valio``; domain imports are for source navigation
 (``from ux_valio.facades.named.india.gst import GSTINValidator``).
 """
 
+from ux_valio.facades.named.address import (
+    CAPostalCodeValidator,
+    UKPostcodeValidator,
+    USZipCodeValidator,
+)
 from ux_valio.facades.named.catalog import (
     EANValidator,
     GTINValidator,
     ISBNValidator,
+    ISSNValidator,
     VINValidator,
 )
 from ux_valio.facades.named.contact import (
@@ -54,12 +61,15 @@ from ux_valio.facades.named.expiry import ExpiryValidator
 from ux_valio.facades.named.finance import (
     ABARoutingValidator,
     BICValidator,
+    CLABEValidator,
+    CUSIPValidator,
     CardExpiryValidator,
     CurrencyCodeValidator,
     IBANValidator,
     ISINValidator,
     LEIValidator,
     PaymentCardValidator,
+    UKSortCodeValidator,
 )
 from ux_valio.facades.named.india import (
     AadhaarCardValidator,
@@ -80,6 +90,8 @@ from ux_valio.facades.named.india import (
 )
 from ux_valio.facades.named.portal import (
     CountryCodeValidator,
+    LocaleValidator,
+    SemVerValidator,
     SlugValidator,
     TimezoneValidator,
     ULIDValidator,
@@ -89,7 +101,10 @@ __all__ = [
     "ABARoutingValidator",
     "AadhaarCardValidator",
     "BICValidator",
+    "CAPostalCodeValidator",
     "CINValidator",
+    "CLABEValidator",
+    "CUSIPValidator",
     "CardExpiryValidator",
     "CountryCodeValidator",
     "CurrencyCodeValidator",
@@ -107,20 +122,26 @@ __all__ = [
     "IMEIValidator",
     "ISBNValidator",
     "ISINValidator",
+    "ISSNValidator",
     "IndianPassportValidator",
     "LEIValidator",
     "LLPINValidator",
+    "LocaleValidator",
     "MACAddressValidator",
     "PANCardValidator",
     "PaymentCardValidator",
     "PhoneNumberValidator",
     "PinCodeValidator",
+    "SemVerValidator",
     "SlugValidator",
     "TANValidator",
     "TimezoneValidator",
+    "UKPostcodeValidator",
+    "UKSortCodeValidator",
     "ULIDValidator",
     "UPIIdValidator",
     "URLValidator",
+    "USZipCodeValidator",
     "UdyamValidator",
     "VINValidator",
     "VoterIdValidator",

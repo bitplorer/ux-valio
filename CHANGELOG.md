@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Everyday identities every app reimplements: US/CA/UK postal, CLABE,
+  UK sort, CUSIP, ISSN, locale, SemVer. Payment cards accept JCB and
+  Diners. Unused ``re`` dropped from ``currency``.
+
 - ``named/finance`` is a package: ``rail`` / ``market`` / ``card`` /
   ``currency``. Layers do not import each other.
 

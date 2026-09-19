@@ -53,6 +53,11 @@ def test_unionpay_16_to_19_is_accepted(Card):
     assert Card(c="62000000000000000").c == "62000000000000000"
 
 
+def test_jcb_and_diners_are_accepted(Card):
+    assert Card(c="3530111333300000").c == "3530111333300000"
+    assert Card(c="30569309025904").c == "30569309025904"
+
+
 def test_rupay_does_not_claim_dead_6521_branch():
     from ux_valio.facades.named.finance.card import _RUPAY
     assert "52[12]" not in _RUPAY.pattern
