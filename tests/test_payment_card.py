@@ -49,7 +49,7 @@ def test_amex_discover_rupay_brand_numbers_are_accepted(Card):
 
 
 def test_rupay_does_not_claim_dead_6521_branch():
-    from ux_valio.validators.payment import _RUPAY
+    from ux_valio.facades.payment import _RUPAY
 
     assert "52[12]" not in _RUPAY.pattern
     assert _RUPAY.fullmatch("6521000000000000") is None

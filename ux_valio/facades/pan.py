@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ux_valio.validators.typed import StringValidator
+from ux_valio.facades.typed import StringValidator
 
 # Fourth-character holder set includes K (regex, not the docstring list).
 _PAN = re.compile(r"[A-Z]{3}[ABCFGHLJPTK][A-Z][0-9]{4}[A-Z]")

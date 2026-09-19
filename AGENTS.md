@@ -2,23 +2,25 @@
 
 Door A only: `field: T = SomeValidator(...)`.
 
-Layout (core at the root, validate door inherits, named facades are parallel):
+Layout is an **import graph** (layers) plus **sibling packages** (parallel
+subsystems). Lower layers never import higher. Parallel products sit in
+a parallel folder, not inside the layer they depend on.
 
+- `ux_valio/errors.py` — `ValidationErrors` (layer 0, shared).
 - `ux_valio/descriptor.py` — `Property` (store). Imports `errors`, never
-  `validators`.
-- `ux_valio/errors.py` — `ValidationErrors` (shared collect-all type).
-- `ux_valio/pattern/` — pattern algebra (independent).
+  `validators` or `facades`.
+- `ux_valio/pattern/` — pattern algebra. Independent sibling of the store.
 - `ux_valio/validators/` — validate door (`ValidateProperty` : `Property`):
   `base` → `ValidateProperty` (`HookHost` + `Property`) and `AllOf` /
   `AnyOf` (the operators); `hooks` → `HookHost` (inherited by
   `ValidateProperty`); `leaves` / `length` / `value` → concern leaves
   (parallel, compose with `&` / `|`, no leaf MI); `facade` →
-  `Validator`; `typed` + `payment` / `expiry` / `phone` / `aadhaar` /
-  `pan` → named facades : `Validator` (parallel). Facade unit list is
-  `ValidationPath` on `Validator` in `facade.py`, not `PathValidator`
-  (`typed.py`, pathlib).
-  Primitive typed facades (`IntegerValidator` / `StringValidator` /
-  `BooleanValidator`) live in `typed.py` with the rest.
+  `Validator`. Does not import `facades`.
+  Facade unit list is `ValidationPath` on `Validator` in `facade.py`,
+  not `PathValidator` (`facades/typed.py`, pathlib).
+- `ux_valio/facades/` — named Door A products (`IntegerValidator`,
+  `PaymentCardValidator`, …) : `Validator`. Parallel to each other.
+  Primitive typed facades live in `typed.py` with the rest.
   Construction is `Any` to type checkers (`ValidateProperty.__new__`;
   mypy plugin `ux_valio.mypy_plugin`) so any store type works — no
   `AsStr` / `AsUser` mixin. Set `annotation` on the facade.

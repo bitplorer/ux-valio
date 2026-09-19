@@ -86,8 +86,8 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
     assert not hasattr(hooks_mod, "_owner_key")
     assert not hasattr(hooks_mod, "_resolve_owner_key")
     assert not hasattr(hooks_mod, "_hook_adder")
-    from ux_valio.validators.typed import DateValidator
-    import ux_valio.validators.typed as typed_mod
+    from ux_valio.facades.typed import DateValidator
+    import ux_valio.facades.typed as typed_mod
 
     assert hasattr(DateValidator, "_parse_eu_ind_date")
     assert not hasattr(typed_mod, "_parse_eu_ind_date")
@@ -99,11 +99,11 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
         PhoneNumberValidator,
         Property,
     )
-    import ux_valio.validators.aadhaar as aadhaar_mod
-    import ux_valio.validators.expiry as expiry_mod
-    import ux_valio.validators.pan as pan_mod
-    import ux_valio.validators.payment as payment_mod
-    import ux_valio.validators.phone as phone_mod
+    import ux_valio.facades.aadhaar as aadhaar_mod
+    import ux_valio.facades.expiry as expiry_mod
+    import ux_valio.facades.pan as pan_mod
+    import ux_valio.facades.payment as payment_mod
+    import ux_valio.facades.phone as phone_mod
     import ux_valio.descriptor as descriptor_mod
 
     assert hasattr(AadhaarCardValidator, "_is_valid_aadhaar")
