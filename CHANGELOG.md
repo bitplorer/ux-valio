@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- TypedDict presence is ``__required_keys__`` (``total=`` / ``Required`` /
+  ``NotRequired``). ``ReadOnly`` peels with the other qualifiers. Extras on
+  an omitted ``NotRequired`` key do not run.
+
 - TypedDict is the schema on the type door (required keys, no extras).
   ``Annotated[T, SomeValidator()]`` on a key runs that Door A validator.
   No ``TypedDictValidator`` / Schema twin.
