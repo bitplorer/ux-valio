@@ -16,6 +16,11 @@ class Person(TypedDict):
     def strip_name(self, value: str) -> str:
         return value.strip()
 
+    @name.validator
+    def no_digit(self, value: str) -> None:
+        if any(char.isdigit() for char in value):
+            raise ValueError("name must not contain digits")
+
 
 @dataclass
 class Signup:

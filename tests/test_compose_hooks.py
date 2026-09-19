@@ -17,13 +17,13 @@ from ux_valio import (
 from ux_valio.validators.hooks import HookHost
 
 
-def test_compose_root_and_leaves_have_add_star():
+def test_compose_root_and_leaves_have_hang_api():
     field = LengthValidator(min_length=1, debug=True) & RequiredValidator(required=True)
     assert hasattr(field, "pre_validate")
-    assert hasattr(field, "add_validator")
+    assert hasattr(field, "validator")
     assert hasattr(field, "task_pre_validate")
     assert hasattr(LengthValidator(min_length=1), "pre_validate")
-    assert hasattr(RequiredValidator(required=True), "add_validator")
+    assert hasattr(RequiredValidator(required=True), "validator")
     assert not hasattr(field, "add_pre_set")
     assert "pre_set" not in field._processors
 

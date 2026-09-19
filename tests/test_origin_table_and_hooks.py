@@ -38,7 +38,10 @@ def test_add_hooks_are_declared_on_the_class():
     assert hasattr(HookHost, "task_pre_validate")
     assert hasattr(HookHost, "post_set")
     assert hasattr(HookHost, "task_post_set")
-    assert hasattr(HookHost, "add_validator")
+    assert hasattr(HookHost, "validator")
+    assert not hasattr(HookHost, "add_validator")
+    src_v = inspect.getsource(HookHost.validator)
+    assert "def validator" in src_v
     assert hasattr(HookHost, "wait_tasks")
     assert hasattr(HookHost, "_register")
     assert hasattr(HookHost, "_pre_validate")

@@ -3,7 +3,7 @@
 
 Explicit ``__all__``. No star-import barrel, no Field, no Schema, no Cap.
 ``AttributeValidator`` is not exported — object-attribute presence checks
-belong at the call site or on ``add_validator``.
+belong at the call site or on ``validator``.
 """
 
 from ux_valio.descriptor import Property

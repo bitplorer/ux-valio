@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Processor and task registries.
 
-Hang ``pre_validate`` / ``post_set`` / ``task_*`` on the field default. Process
+Hang ``pre_validate`` / ``validator`` / ``post_set`` / ``task_*`` on the field default. Process
 must finish. Task is background (email); persist/reserve that must
 fail-closed hangs on ``post_set``. No ``add_pre_set``.
 """
@@ -26,11 +26,12 @@ class HookHost:
     """Processor and task registries on the validating descriptor.
 
     Public hang API: ``pre_validate`` / ``post_set`` / … (process; return
-    is the pipeline value), ``task_{phase}`` (background), ``add_validator``,
+    is the pipeline value), ``task_{phase}`` (background), ``validator``,
     ``wait_tasks``. Process is the default kind — no ``process_`` prefix.
     ``post_set`` is hang, not the descriptor lifecycle (that is
     ``_run_post_set``). No hang named ``pre_set`` — ``_run_pre_set`` *is*
-    ``pre_validate → validate → post_validate``. Pipeline runners
+    ``pre_validate → validate → post_validate``. ``validator`` is the check
+    (attrs ``@x.validator``); ``validate()`` runs it. Pipeline runners
     (``_pre_validate``, …) are private.
     """
 
@@ -142,7 +143,7 @@ class HookHost:
         bucket[key].append(func)
         return func
 
-    def add_validator(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def validator(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Check during ``validate()``. Return ignored."""
         return self._register(self._custom_validators, func, namespace)
 

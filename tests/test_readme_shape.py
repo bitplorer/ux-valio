@@ -156,7 +156,11 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "module.qualname.field" in text
     assert "@username.pre_validate" in text
     assert "@name.pre_validate" in text
+    assert "@name.validator" in text
+    assert "### Hang API" in text
     assert "FrozenInstanceError" in text
     assert "Person.aadhaar.pre_validate" in text
+    assert "namespace=" in text
+    assert "owning class" in text
     assert "uuid.UUID | str" in text
     assert "T | str" in text

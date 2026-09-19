@@ -30,7 +30,7 @@ mutates. ``@dataclass(slots=True)`` stays unsupported.
 
 Only ``_run_pre_set`` return is stored. That method is the
 validate pipeline, not a ``_processors["pre_set"]`` bag. Hang before-store
-work on ``pre_validate`` / ``add_validator``. Persist after store
+work on ``pre_validate`` / ``validator``. Persist after store
 hangs on ``post_set``. Background email hangs on
 ``task_post_set``.
 Hang ``post_set`` / get / delete return values are ignored. ``__get__`` /

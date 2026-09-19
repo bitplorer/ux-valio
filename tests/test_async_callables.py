@@ -349,7 +349,7 @@ def test_nested_nest_safe_bridge_is_typeerror_not_deadlock():
         nest_safe_bridge(outer())
 
 
-def test_async_add_validator_no_loop_fail_closed():
+def test_async_validator_no_loop_fail_closed():
     v = Validator(debug=True)
 
     async def unique(instance, value):
@@ -359,12 +359,12 @@ def test_async_add_validator_no_loop_fail_closed():
     class Host:
         x: str = v
 
-    v.add_validator(unique, namespace=Host)
+    v.validator(unique, namespace=Host)
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
 
 
-def test_async_add_validator_runs_with_running_loop():
+def test_async_validator_runs_with_running_loop():
     seen = []
     v = Validator(debug=True)
 
@@ -376,7 +376,7 @@ def test_async_add_validator_runs_with_running_loop():
     class Host:
         x: str = v
 
-    v.add_validator(unique, namespace=Host)
+    v.validator(unique, namespace=Host)
     host = _assign_on_running_loop(lambda: Host(x="ada"))
     assert host.x == "ada"
     assert seen == ["ada"]

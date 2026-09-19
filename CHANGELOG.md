@@ -2,19 +2,19 @@
 
 ## Unreleased
 
+- Hang check is ``validator`` (attrs ``@x.validator``). ``add_validator``
+  is leftover. ``validate()`` still runs the bag. README Hang API lists
+  every public hook; ``namespace=`` is the owning class or its
+  ``module.qualname`` str.
+
 - Every hang API (``pre_validate`` … ``post_delete``, ``task_*``,
-  ``add_validator``) is sync and async. Process / ``add_validator``:
+  ``validator``) is sync and async. Process / ``validator``:
   no loop → TypeError; running loop → nest-safe. ``task_*``: isolated
   worker, setter does not wait.
 
 - Descriptor lifecycle is private (``_run_pre_set`` / ``_run_post_set``).
   Hang API is the phase name: ``pre_validate``, ``post_set``, ``task_post_set``.
-  Process is the default kind (no ``process_`` prefix). ``add_validator``
-  unchanged.
-
-- Hang API compact: ``pre_validate`` / ``task_post_set`` (the
-  decorator *is* the add; ``post_set`` stays the descriptor lifecycle).
-  ``add_validator`` / ``wait_tasks`` unchanged.
+  Process is the default kind (no ``process_`` prefix).
 
 - Intentful names: ``ValidateStep`` (was ``Lookup``), ``_emit_log``,
   ``read_bound``. Test files drop leftover ``door_a`` filenames.
@@ -26,16 +26,15 @@
   str). ``wait_tasks`` is on the package root. ``TypeAliasType`` peels by
   identity.
 
-- HookHost public hang API is ``process_*`` / ``task_*`` /
-  ``add_validator`` / ``wait_tasks``. Pipeline runners and ``has_hooks``
-  are private (``_pre_validate``, ``_has_hooks``, ``_notify_pre_set``).
+- HookHost pipeline runners and ``has_hooks`` are private
+  (``_pre_validate``, ``_has_hooks``, ``_notify_pre_set``).
 
 - TypedDict hook lookup uses ``__set_name__`` ``_owner`` (no ``_hook_schema``
   sticky state). Qualifiers peel by identity. ``_validate_typed_dict``.
 
 - TypedDict keys accept field-default assignment (``name: str = StringValidator()``)
-  and ``@name.process_*`` / ``@name.add_validator`` in that class body.
-  ``self`` is the mapping. ``pre_set`` write-back then ``post_set``.
+  and ``@name.pre_validate`` / ``@name.validator`` in that class body.
+  ``self`` is the mapping. ``_run_pre_set`` write-back then ``_run_post_set``.
 
 - TypedDict presence is ``__required_keys__`` (``total=`` / ``Required`` /
   ``NotRequired``). ``ReadOnly`` peels with the other qualifiers. Extras on
