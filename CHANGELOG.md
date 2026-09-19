@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Every hang API (``pre_validate`` … ``post_delete``, ``task_*``,
+  ``add_validator``) is sync and async. Process / ``add_validator``:
+  no loop → TypeError; running loop → nest-safe. ``task_*``: isolated
+  worker, setter does not wait.
+
 - Descriptor lifecycle is private (``_run_pre_set`` / ``_run_post_set``).
   Hang API is the phase name: ``pre_validate``, ``post_set``, ``task_post_set``.
   Process is the default kind (no ``process_`` prefix). ``add_validator``

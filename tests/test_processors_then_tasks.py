@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
-"""Processors run then tasks once. Only the pre_set *hook* return is stored.
+"""Processors run then tasks once. Only ``pre_validate`` / ``post_validate`` return is stored.
 
-There is no ``add_pre_set`` / ``_processors["pre_set"]`` bag. Hang before-store
-work on ``pre_validate`` (inside ``pre_set``). ``post_set`` runs after
-store and its return is ignored.
+There is no hang named ``pre_set`` / ``_processors["pre_set"]`` bag. Hang
+before-store work on ``pre_validate``. ``post_set`` runs after store and
+its return is ignored.
 """
 
 from dataclasses import dataclass
