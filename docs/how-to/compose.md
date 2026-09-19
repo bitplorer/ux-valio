@@ -27,10 +27,11 @@ class Handle:
     def fold(self, value: str) -> str:
         return value.strip().casefold()
 
-    @handle.validator
-    def not_reserved(self, value: str) -> None:
+    @handle.post_validate
+    def not_reserved(self, value: str) -> str:
         if value in RESERVED:
             raise ValueError("reserved handle")
+        return value
 ```
 
 `&` / `|` return `AllOf` / `AnyOf` from `ValidateProperty` — same

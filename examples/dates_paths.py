@@ -7,7 +7,7 @@ on ``FilingService``.
 """
 
 import pathlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Protocol
 
@@ -41,17 +41,16 @@ class InMemoryArchive:
 
 @dataclass
 class FiledDocument:
-    archive: Archive
+    archive: Archive = field(repr=False, compare=False)
     opened_eu: date = DateValidator(required=True)
     opened_ind: date = DateValidator(required=True)
     folder: pathlib.Path = PathValidator(required=True, path_exists=True)
     host: str = IPv4Validator(required=True)
 
-    @host.pre_validate
+    @host.post_validate
     def not_already_filed(self, value: str) -> str:
-        folder = getattr(self, "folder", None)
-        if folder is not None and self.archive.already_filed(folder, value):
-            raise ValueError(f"already filed {folder} from {value}")
+        if self.archive.already_filed(self.folder, value):
+            raise ValueError(f"already filed {self.folder} from {value}")
         return value
 
     @host.post_set

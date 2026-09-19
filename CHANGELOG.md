@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Examples: store lookup hangs on ``post_validate`` (after identity);
+  persist on ``post_set``. Injected ports are ``field(repr=False)``
+  (shared store, not a column).
+
 - Examples are service+port workflows (uniqueness / stock), not blank
   checks on top of ``required``. Docs compose hang is reserved-handle,
   not ``if not value``.

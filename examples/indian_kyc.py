@@ -6,12 +6,14 @@ field's inherited path into the named facade check. The engine is optional extra
 ``phonenumbers``; there is no network lookup. This module still imports and
 runs identity checks when the extra is missing.
 
-Inject ``IdentityRegistry`` on ``KycService``; ``main()`` only runs the demo.
+Inject ``IdentityRegistry`` on ``KycService``. Uniqueness hangs on
+``post_validate`` (after Verhoeff / Luhn). Persist on ``post_set`` of
+the last identity field. ``registry`` is the injected store, not a column.
 ``InMemoryIdentityRegistry`` is the runnable fake; production plugs a KYC
 warehouse unique Aadhaar/PAN. This file does not ship a DB driver.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -84,17 +86,17 @@ pan_field = PANCardValidator(required=True)
 class KycIdentity:
     """Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26. Always importable."""
 
-    registry: IdentityRegistry
+    registry: IdentityRegistry = field(repr=False, compare=False)
     aadhaar: str = aadhaar_field
     pan: str = pan_field
 
-    @aadhaar.pre_validate
+    @aadhaar.post_validate
     def aadhaar_free(self, value: str) -> str:
         if self.registry.aadhaar_registered(value):
             raise ValueError(f"aadhaar {value!r} is already registered")
         return value
 
-    @pan.pre_validate
+    @pan.post_validate
     def pan_free(self, value: str) -> str:
         if self.registry.pan_registered(value):
             raise ValueError(f"PAN {value!r} is already registered")
@@ -111,18 +113,18 @@ if HAS_PHONENUMBERS and _PHONE is not None:
     class KycRecord:
         """Production shape: identity plus ``PhoneNumberValidator(region='IN')``."""
 
-        registry: IdentityRegistry
+        registry: IdentityRegistry = field(repr=False, compare=False)
         aadhaar: str = aadhaar_field
         pan: str = pan_field
         phone: str = _PHONE
 
-        @aadhaar.pre_validate
+        @aadhaar.post_validate
         def aadhaar_free(self, value: str) -> str:
             if self.registry.aadhaar_registered(value):
                 raise ValueError(f"aadhaar {value!r} is already registered")
             return value
 
-        @pan.pre_validate
+        @pan.post_validate
         def pan_free(self, value: str) -> str:
             if self.registry.pan_registered(value):
                 raise ValueError(f"PAN {value!r} is already registered")

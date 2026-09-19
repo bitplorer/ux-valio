@@ -4,7 +4,8 @@
 ``ExpiryValidator`` is a timeline on *now* (offer / hold window), not card
 ``MM/YY``. Card print form is ``CardExpiryValidator``.
 
-Ports fail closed into validation errors via ``pre_validate``:
+Ports fail closed into validation errors via ``post_validate`` (after
+the field’s own identity). Persist/reserve on ``post_set``:
 
 * ``PromoCatalog.lookup`` — unknown code
 * ``Inventory.ensure_available`` / ``reserve`` — stock
@@ -15,7 +16,7 @@ In-memory fakes keep it offline. Production plugs an offers table, a stock
 row (or Redis), and Stripe/Razorpay. This file does not ship a DB driver.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Protocol
@@ -104,9 +105,9 @@ class StubPaymentGateway:
 
 @dataclass
 class Checkout:
-    promos: PromoCatalog
-    inventory: Inventory
-    gateway: PaymentGateway
+    promos: PromoCatalog = field(repr=False, compare=False)
+    inventory: Inventory = field(repr=False, compare=False)
+    gateway: PaymentGateway = field(repr=False, compare=False)
     holder: str = StringValidator(
         required=True, min_length=2, max_length=80
     )
@@ -119,16 +120,16 @@ class Checkout:
     promo_code: str = ExpiryValidator(expire_after=_PROMO_UNTIL, required=True)
     quantity: int = IntegerValidator(min_value=1, required=True)
 
-    @promo_code.pre_validate
+    @promo_code.post_validate
     def promo_known(self, value: str) -> str:
         return self.promos.lookup(value)
 
-    @quantity.pre_validate
+    @quantity.post_validate
     def stock_available(self, value: int) -> int:
         self.inventory.ensure_available(self.sku, value)
         return value
 
-    @quantity.pre_validate
+    @quantity.post_validate
     def card_authorized(self, value: int) -> int:
         self.gateway.authorize(self.number, self.amount)
         return value

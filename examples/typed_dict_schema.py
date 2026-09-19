@@ -7,7 +7,7 @@ Hang extras with ``Annotated`` or field-default assignment, then
 ``InviteService``.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Protocol, TypedDict
 
 from ux_valio import EmailValidator, StringValidator, Validator
@@ -55,7 +55,7 @@ class Person(TypedDict):
 
 @dataclass
 class Invite:
-    log: InviteLog
+    log: InviteLog = field(repr=False, compare=False)
     person: Person = Validator()
 
     @person.post_validate

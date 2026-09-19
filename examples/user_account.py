@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: MIT
 """Open a product user account: identity, role, email, UUID.
 
-Username uniqueness hangs on ``pre_validate`` (not a second “blank”
-check — ``required`` / ``min_length`` already own None and short
-strings). Inject ``AccountDirectory`` on ``AccountService``. Hashed
-passwords live in ``collect_all_form.py`` / ``registration.py``.
+Username uniqueness hangs on ``post_validate`` (after ``required`` /
+``min_length``). Persist on ``post_set``. ``directory`` is the injected
+store (``repr=False``), not a column — one shared instance from
+``AccountService``.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 from uuid import UUID, uuid4
 
@@ -47,7 +47,7 @@ class InMemoryAccountDirectory:
 
 @dataclass
 class UserAccount:
-    directory: AccountDirectory
+    directory: AccountDirectory = field(repr=False, compare=False)
     username: str = StringValidator(required=True, min_length=3, max_length=32)
     display_name: str = StringValidator(max_length=80, default="")
     role: str = Validator(
@@ -62,15 +62,15 @@ class UserAccount:
     def fold_username(self, value: str) -> str:
         return value.strip().casefold()
 
-    @username.pre_validate
+    @username.post_validate
     def username_available(self, value: str) -> str:
         if self.directory.username_taken(value):
             raise ValueError(f"username {value!r} is already registered")
         return value
 
-    @username.post_set
+    @email.post_set
     def commit_username(self, value: str) -> None:
-        self.directory.commit(value)
+        self.directory.commit(self.username)
 
 
 class AccountService:

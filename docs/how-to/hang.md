@@ -28,35 +28,42 @@ No hang named `pre_set`. Persist/reserve that must fail-closed hangs on
 `from ux_valio import wait_tasks`.
 
 **Only the before-store pipeline return is stored.** That pipeline *is*
-`pre_validate → validate → post_validate`. Hang before-store work on
-`pre_validate` (transform; **return the value**), `validator` (check;
-return ignored), or `task_pre_validate` (background; setter does not
-wait).
+`pre_validate → validate → post_validate`.
+
+- `pre_validate` — transform (`strip`, `casefold`); **return the value**
+- `validate()` — identity (`required`, `min_length`, checksum, …)
+- `post_validate` — store lookup (uniqueness) **after** identity; invalid
+  names never hit the database
+- `post_set` — persist / reserve (fail-closed)
 
 ```python
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from ux_valio import StringValidator
-
-taken = {"ada"}
 
 @dataclass
 class Register:
+    users: UserStore = field(repr=False, compare=False)
     username: str = StringValidator(required=True, min_length=3)
 
     @username.pre_validate
     def fold(self, value: str) -> str:
         return value.strip().casefold()
 
-    @username.pre_validate
+    @username.post_validate
     def username_not_taken(self, value: str) -> str:
-        if value in taken:
+        if self.users.username_taken(value):
             raise ValueError("username already registered")
         return value
+
+    @username.post_set
+    def commit(self, value: str) -> None:
+        self.users.commit(value)
 ```
 
-Production injects a store port (see `examples/registration.py`) instead
-of a module-level set. `required` / `min_length` already reject `None`
-and short strings — the hang is uniqueness, not “blank”.
+`users` is the injected store (one shared instance from the service),
+not a product column. `required` / `min_length` already reject `None`
+and short strings — do not hang `if not value`. See
+`examples/registration.py`.
 
 Class access `User.name` is that descriptor, so `User.name.post_set`
 also works after the class exists. A shared descriptor (`aadhaar` on
