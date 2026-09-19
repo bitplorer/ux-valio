@@ -453,8 +453,11 @@ site or with `validator`. RGB/HSL color validators are retired.
 `HexColorValidator` is not a public facade.
 
 Identity facades (stdlib only, no network): `AadhaarCardValidator`,
-`PANCardValidator`, `GSTINValidator` (Luhn mod 36), `IFSCValidator`,
+`PANCardValidator`, `GSTINValidator` (Luhn mod 36), `TANValidator`,
+`CINValidator`, `VoterIdValidator` (EPIC), `IFSCValidator`,
 `PinCodeValidator` (India PIN), `UPIIdValidator`, `IBANValidator` (mod-97),
+`BICValidator` (SWIFT), `ISINValidator` (Luhn), `ISBNValidator` (10/13),
+`EANValidator` (GS1), `VINValidator` (ISO 3779), `MACAddressValidator`,
 `IMEIValidator` (Luhn), `PaymentCardValidator`, `ExpiryValidator`.
 `PhoneNumberValidator` stays the `phonenumbers` extra.
 

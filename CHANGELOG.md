@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Named identity facades: ``BICValidator`` (SWIFT), ``ISINValidator``,
+  ``ISBNValidator``, ``EANValidator``, ``VINValidator``,
+  ``MACAddressValidator``, ``TANValidator``, ``CINValidator``,
+  ``VoterIdValidator``. Stdlib only, no network.
+
 - Hang check is ``validator`` (attrs ``@x.validator``). ``add_validator``
   is leftover. ``validate()`` still runs the bag. README Hang API lists
   every public hook; ``namespace=`` is the owning class or its
