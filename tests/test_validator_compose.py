@@ -11,8 +11,8 @@ import pytest
 from ux_valio import (
     AllOf,
     AnyOf,
-    Chain,
     IntegerValidator,
+
     LengthValidator,
     PatternValidator,
     RequiredValidator,
@@ -54,24 +54,6 @@ def test_allof_length_required_explicit():
         User(name="Ab")
     with pytest.raises(ValueError):
         User(name=None)
-
-
-def test_chain_is_ordered_allof():
-    assert Chain is AllOf
-    field = Chain(
-        LengthValidator(min_length=2, debug=True),
-        RequiredValidator(required=True),
-    )
-    assert isinstance(field, AllOf)
-    assert type(field) is AllOf
-
-    @dataclass
-    class Token:
-        s: str = field
-
-    assert Token(s="ok").s == "ok"
-    with pytest.raises(ValueError):
-        Token(s="x")
 
 
 def test_and_flattens_nested_allof():

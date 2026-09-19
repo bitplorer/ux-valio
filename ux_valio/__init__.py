@@ -103,8 +103,8 @@ from ux_valio.pattern import (
 from ux_valio.validators import (
     AllOf,
     AnyOf,
-    Chain,
     ChoiceValidator,
+
     LengthValidator,
     MaxLengthValidator,
     MaxValueValidator,
@@ -133,7 +133,6 @@ __all__ = [
     "CanadianSINValidator",
     "CAPostalCodeValidator",
     "CardExpiryValidator",
-    "Chain",
     "ChoiceValidator",
     "CINValidator",
     "CLABEValidator",

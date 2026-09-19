@@ -3,9 +3,9 @@
 
 ``ValidateProperty`` is the unit. Concern leaves and facades subclass it
 once — they do not multiple-inherit each other. ``&`` / ``|`` (and
-``AllOf`` / ``AnyOf``) live here: they *are* those operators. ``Chain``
-is ``AllOf``. ``pre_validate`` / ``task_*`` live on ``ValidateProperty`` — hang on the
+``AllOf`` / ``AnyOf``) live here: they *are* those operators. ``pre_validate`` / ``task_*`` live on ``ValidateProperty`` — hang on the
 field default, leaf or facade.
+
 
 ``leaves.py`` binds ``is_instance_of`` once for the store type door.
 """
@@ -309,9 +309,6 @@ class AllOf(_Of):
             extra = getattr(item, "_validate_named_facade", None)
             if extra is not None:
                 extra(None, value)
-
-
-Chain = AllOf
 
 
 class AnyOf(_Of):

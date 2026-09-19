@@ -6,7 +6,7 @@ no `ux_valio.regexer`. No star-import barrel, no Field, no Schema, no Cap.
 
 ## Descriptor / compose
 
-`Property`, `ValidateProperty`, `Validator`, `AllOf`, `AnyOf`, `Chain`,
+`Property`, `ValidateProperty`, `Validator`, `AllOf`, `AnyOf`,
 `ValidationErrors`, `wait_tasks`
 
 ## Concern leaves

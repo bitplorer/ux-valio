@@ -103,7 +103,7 @@ a parallel folder, not inside the layer they depend on.
   specified `debug` / `default` / `default_factory` / `collect_all` /
   `logger` is TypeError.
   Explicit `False` is specified. Omitted `collect_all` / `logger` / `debug`
-  still collapse to a specified `True`. `Chain` is `AllOf`.
+  still collapse to a specified `True`.
   Unresolved owner `str` / `ForwardRef` annotations TypeError at bind
   (not copied, not eval'd). Owner annotation that is a Property class
   (`StringValidator` / `Validator[str]`) peels to the store type.
@@ -155,6 +155,7 @@ a parallel folder, not inside the layer they depend on.
   `__version__` matches `pyproject.toml`.
 - Validator objects compose with `&` / `|` or `AllOf` / `AnyOf`.
   That is object composition, not leaf multiple-inheritance.
+  There is no `Chain` alias.
 - `AttributeValidator` is not shipped. Object-attribute presence checks
   belong at the call site or on `validator`.
 - `PaymentCardValidator` is brand ∩ Luhn (stdlib `re`; a Luhn-valid

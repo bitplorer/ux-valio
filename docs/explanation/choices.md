@@ -99,7 +99,7 @@ Python loop, not a walk of every possible leaf.
 ## `AllOf` / `AnyOf` are objects, not mixins
 
 Facades do not multiple-inherit leaves. `tag: str = LengthValidator(...) & RequiredValidator(...)`
-is one descriptor. `Chain` is `AllOf`. `|` is OR: the compose root does
+is one descriptor. `|` is OR: the compose root does
 not AND-run a type check before alternatives. Conflicting specified
 `debug` / `default` / `default_factory` / `collect_all` / `logger` is
 `TypeError` at compose, not a silent pick.

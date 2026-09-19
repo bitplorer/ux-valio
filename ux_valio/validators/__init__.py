@@ -4,7 +4,8 @@
 """
 
 from ux_valio.errors import ValidationErrors
-from ux_valio.validators.base import AllOf, AnyOf, Chain, ValidateProperty
+from ux_valio.validators.base import AllOf, AnyOf, ValidateProperty
+
 from ux_valio.validators.facade import Validator
 from ux_valio.validators.leaves import (
     ChoiceValidator,
@@ -20,7 +21,6 @@ from ux_valio.validators.value import MaxValueValidator, MinValueValidator, Valu
 __all__ = [
     "AllOf",
     "AnyOf",
-    "Chain",
     "ChoiceValidator",
     "LengthValidator",
     "MaxLengthValidator",
