@@ -453,8 +453,9 @@ def test_lookup_uses_same_key_helper_as_register():
     for meth in ("_run_tasks", "_run_processors", "_run_custom_validators"):
         src = inspect.getsource(getattr(Validator, meth))
         assert "instance.__class__.__name__" not in src
-        assert "_collect_owner_keys" in src
+        assert "_iter_owner_keys" in src or "_collect_owner_keys" in src
     assert "_owner_key" in inspect.getsource(HookHost._collect_owner_keys)
+    assert "_collect_owner_keys" in inspect.getsource(HookHost._iter_owner_keys)
     ns_src = inspect.getsource(HookHost._resolve_owner_key)
     assert 'split(".")[0]' not in ns_src
     assert "_owner_key" in ns_src

@@ -95,8 +95,10 @@ a parallel folder, not inside the layer they depend on.
   keeps annotation-conflict TypeError. Unknown path unit is `ValueError`.
   TypedDict is the schema: ``__required_keys__`` (``total=`` / ``Required`` /
   ``NotRequired``), extra keys fail-closed, values via ``is_instance_of``.
-  ``Annotated[T, SomeValidator()]`` on a TypedDict key runs that Door A
-  validator (no Schema / Field / BaseModel twin). Omitted ``NotRequired``
+  ``Annotated[T, SomeValidator()]`` or Door A assignment
+  (`name: str = StringValidator()`) on a TypedDict key; hang
+  ``@name.add_*`` in that class body (``self`` is the mapping).
+  No Schema / Field / BaseModel twin. Omitted ``NotRequired``
   keys skip extras. ``ReadOnly`` peels like the other qualifiers.
   Callable
   origin is checked; signature is not. Generic subclass instance params

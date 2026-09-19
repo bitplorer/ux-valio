@@ -221,11 +221,28 @@ def _typed_dict_match(value: Any, annotation: Any) -> bool:
     return True
 
 
-def _apply_typed_dict_extras(owner: Any, instance: Any, value: Any, annotation: Any = None) -> None:
-    """Run ``Annotated[..., SomeValidator()]`` extras on TypedDict keys.
+def _typed_dict_key_validators(schema: Any, key: str, field_ann: Any) -> tuple[Any, ...]:
+    """Door A on the TypedDict class attr, then ``Annotated`` extras. One object once."""
+    found: list[Any] = []
+    for cls in getattr(schema, "__mro__", (schema,)):
+        if cls is object or cls is dict:
+            continue
+        attr = getattr(cls, "__dict__", {}).get(key)
+        if isinstance(attr, ValidateProperty) and all(item is not attr for item in found):
+            found.append(attr)
+    for extra in _unwrap_field_annotation(field_ann)[1]:
+        if isinstance(extra, ValidateProperty) and all(item is not extra for item in found):
+            found.append(extra)
+    return tuple(found)
 
-    No Schema twin: the TypedDict *is* the schema. Inner validators are the
-    same Door A objects hung as annotation metadata.
+
+def _apply_typed_dict_extras(owner: Any, instance: Any, value: Any, annotation: Any = None) -> None:
+    """Run Door A key validators on a TypedDict mapping.
+
+    Same objects as dataclass field defaults: ``name: str = StringValidator()``
+    on the TypedDict, hang ``@name.add_process_pre_validate`` in that class
+    body. ``Annotated[T, SomeValidator()]`` still works. ``pre_set`` then
+    write-back then ``post_set``. ``self`` in those hooks is the mapping.
     """
     if annotation is None:
         annotation = getattr(owner, "annotation", None)
@@ -248,23 +265,27 @@ def _apply_typed_dict_extras(owner: Any, instance: Any, value: Any, annotation: 
         if key not in value:
             continue
         item = value[key]
-        extras: tuple[Any, ...] = ()
-        store, extras = _unwrap_field_annotation(field_ann)
-        for extra in extras:
-            if not isinstance(extra, ValidateProperty):
-                continue
-            previous = extra.name
+        for extra in _typed_dict_key_validators(annotation, key, field_ann):
+            previous_name = extra.name
+            previous_schema = getattr(extra, "_hook_schema", None)
             extra.name = f"{prefix}.{key}" if prefix else key
+            extra._hook_schema = annotation
             try:
-                extra.validate(instance, item)
+                new_item = extra.pre_set(value, item)
+                if isinstance(value, MutableMapping):
+                    value[key] = new_item
+                extra.post_set(value, new_item)
+                item = new_item
             except Exception as err:
                 continue_or_raise(collect, errors, err)
             finally:
-                extra.name = previous
-        nested = _annotated_store_type(store)
+                extra.name = previous_name
+                extra._hook_schema = previous_schema
+        nested = _annotated_store_type(field_ann)
         if is_typeddict(nested):
+            nested_value = value[key] if key in value else item
             try:
-                _apply_typed_dict_extras(owner, instance, item, nested)
+                _apply_typed_dict_extras(owner, instance, nested_value, nested)
             except Exception as err:
                 continue_or_raise(collect, errors, err)
     raise_collected(errors, name=prefix)

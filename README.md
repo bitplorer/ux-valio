@@ -53,16 +53,23 @@ class Stats:
 A `TypedDict` is the schema (stdlib, no BaseModel). Door A is still
 `field: SomeTypedDict = Validator()`. Extra keys fail-closed. `total=False`
 and PEP 655 `Required` / `NotRequired` are the TypedDict metaclass
-(`__required_keys__`) — hang extras with `Annotated`, not `RequiredValidator`.
+Hang extras with `Annotated`, or the same Door A assignment as a dataclass
+(`name: str = StringValidator()`), then `@name.add_process_pre_validate` /
+`@name.add_validator` in the TypedDict body. `self` in those hooks is the
+mapping. No Schema twin.
 
 ```python
 from typing import Annotated, TypedDict
 from ux_valio import EmailValidator, StringValidator, Validator
 
 class Person(TypedDict):
-    name: Annotated[str, StringValidator(min_length=2)]
+    name: str = StringValidator(min_length=2)
     email: Annotated[str, EmailValidator()]
     age: int
+
+    @name.add_process_pre_validate
+    def strip_name(self, value):
+        return value.strip()
 
 @dataclass
 class Signup:
