@@ -11,6 +11,7 @@ PRODUCT_GLOBS = (
     "README.md",
     "AGENTS.md",
     "CHANGELOG.md",
+    "docs/**/*.md",
 )
 # Concatenated so this lock file is not itself a teaching surface.
 _TOKENS = (
