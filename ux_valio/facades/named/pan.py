@@ -37,11 +37,11 @@ class PANCardValidator(StringValidator):
             return False
         return _PAN.fullmatch(value) is not None and PANCardValidator._luhn_mod_26(value)
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
         """ITD letters are case-insensitive. Store the A–Z identity."""
         if isinstance(value, str):
             value = "".join(value.split()).replace("-", "").upper()
-        return super().pre_validation_processing(instance, value)
+        return super()._pre_validate(instance, value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._validate_pan(instance, value)

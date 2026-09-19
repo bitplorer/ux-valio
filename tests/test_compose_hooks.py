@@ -49,8 +49,8 @@ def test_compose_does_not_copy_root_hooks_onto_members():
     field = left & right
     assert left._processors is not field._processors
     assert right._processors is not field._processors
-    assert not HookHost.has_hooks(left)
-    assert not HookHost.has_hooks(right)
+    assert not HookHost._has_hooks(left)
+    assert not HookHost._has_hooks(right)
 
 
 def test_hang_on_facade_before_compose_still_runs():

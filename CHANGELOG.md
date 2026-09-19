@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- HookHost public hang API is ``add_process_*`` / ``add_task_*`` /
+  ``add_validator`` / ``wait_tasks``. Pipeline runners and ``has_hooks``
+  are private (``_pre_validate``, ``_has_hooks``, ``_notify_pre_set``).
+
 - TypedDict hook lookup uses ``__set_name__`` ``_owner`` (no ``_hook_schema``
   sticky state). Qualifiers peel by identity. ``_validate_typed_dict``.
 

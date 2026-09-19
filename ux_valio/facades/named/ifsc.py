@@ -19,10 +19,10 @@ class IFSCValidator(StringValidator):
     def _is_valid_ifsc(value: Any) -> bool:
         return isinstance(value, str) and _IFSC.fullmatch(value) is not None
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
         if isinstance(value, str):
             value = "".join(value.split()).replace("-", "").upper()
-        return super().pre_validation_processing(instance, value)
+        return super()._pre_validate(instance, value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:

@@ -397,15 +397,15 @@ class ReassignValidator(ValidateProperty):
             pass
         return oid
 
-    def notify_pre_set(self: Any, obj: Any) -> None:
+    def _notify_pre_set(self: Any, obj: Any) -> None:
         self._assignment_counts.setdefault(self._watch_assignment(obj), 0)
 
-    def notify_post_set(self: Any, obj: Any) -> None:
+    def _notify_post_set(self: Any, obj: Any) -> None:
         oid = self._watch_assignment(obj)
         self._assignment_counts[oid] = self._assignment_counts.get(oid, 0) + 1
         self.number_of_assignment += 1
 
-    def post_delete_processing(self: Any, instance: Any, value: Any) -> Any:
+    def _post_delete(self: Any, instance: Any, value: Any) -> Any:
         oid = id(instance)
         self._assignment_counts.pop(oid, None)
         self._assignment_alive.pop(oid, None)

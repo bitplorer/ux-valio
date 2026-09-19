@@ -20,13 +20,14 @@ from ux_valio.errors import continue_or_raise, raise_collected
 class HookHost:
     """Processor and task registries on the validating descriptor.
 
-    ``add_process_{phase}`` — transform; return is the pipeline value.
-    Stored only for ``pre_validate`` / ``post_validate`` (inside ``pre_set``).
-    ``add_task_{phase}`` — background side effect; return ignored; setter
-    does not wait. Not the nest-safe pool. Hang persist/reserve that must
-    fail-closed on ``add_process_post_set``. Hang email on
-    ``add_task_post_set``. ``add_validator`` — check during ``validate()``.
-    No ``add_process_pre_set`` — ``pre_set`` *is* the validate pipeline.
+    Public hang API (kind, then phase): ``add_process_{phase}``,
+    ``add_task_{phase}``, ``add_validator``, ``wait_tasks``.
+    Process must finish; return is the pipeline value (stored only for
+    ``pre_validate`` / ``post_validate``). Task is background (email);
+    return ignored; setter does not wait. Persist/reserve that must
+    fail-closed hangs on ``add_process_post_set``. No ``add_process_pre_set``
+    — ``pre_set`` *is* the validate pipeline. Pipeline runners
+    (``_pre_validate``, …) are private override points, not Door A.
     """
 
     @staticmethod
@@ -224,25 +225,25 @@ class HookHost:
         self._run_tasks(phase, instance, value)
         return value
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
         return self._process_then_tasks("pre_validate", instance, value)
 
-    def post_validation_processing(self, instance: Any, value: Any) -> Any:
+    def _post_validate(self, instance: Any, value: Any) -> Any:
         return self._process_then_tasks("post_validate", instance, value)
 
-    def post_set_processing(self, instance: Any, value: Any) -> Any:
+    def _post_set(self, instance: Any, value: Any) -> Any:
         return self._process_then_tasks("post_set", instance, value)
 
-    def pre_get_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_get(self, instance: Any, value: Any) -> Any:
         return self._process_then_tasks("pre_get", instance, value)
 
-    def post_get_processing(self, instance: Any, value: Any) -> Any:
+    def _post_get(self, instance: Any, value: Any) -> Any:
         return self._process_then_tasks("post_get", instance, value)
 
-    def pre_delete_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_delete(self, instance: Any, value: Any) -> Any:
         return self._process_then_tasks("pre_delete", instance, value)
 
-    def post_delete_processing(self, instance: Any, value: Any) -> Any:
+    def _post_delete(self, instance: Any, value: Any) -> Any:
         return self._process_then_tasks("post_delete", instance, value)
 
     def _run_custom_validators(self, instance: Any, value: Any) -> None:
@@ -261,7 +262,7 @@ class HookHost:
         raise_collected(errors, name=name)
 
     @staticmethod
-    def has_hooks(item: Any) -> bool:
+    def _has_hooks(item: Any) -> bool:
         """True when this host has a custom, processor, or task callable registered."""
         customs = getattr(item, "_custom_validators", None)
         if customs and any(customs.values()):

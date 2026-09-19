@@ -59,10 +59,10 @@ class ValidateProperty(HookHost, Property[T], ABC):
 
     def pre_set(self, obj: Any, value: Any) -> Any:
         self._take_subscript_annotation()
-        self.notify_pre_set(obj)
-        value = self.pre_validation_processing(obj, value)
+        self._notify_pre_set(obj)
+        value = self._pre_validate(obj, value)
         self.validate(instance=obj, value=value)
-        value = self.post_validation_processing(obj, value)
+        value = self._post_validate(obj, value)
         self._reject_store_type_mismatch(value)
         self._reject_store_identity(value)
         return value
@@ -107,25 +107,25 @@ class ValidateProperty(HookHost, Property[T], ABC):
         extra(None, value)
 
     def post_set(self, obj: Any, value: Any) -> Any:
-        self.notify_post_set(obj)
-        return self.post_set_processing(obj, value)
+        self._notify_post_set(obj)
+        return self._post_set(obj, value)
 
     def pre_get(self, obj: Any, value: Any) -> Any:
-        return self.pre_get_processing(obj, value)
+        return self._pre_get(obj, value)
 
     def post_get(self, obj: Any, value: Any) -> Any:
-        return self.post_get_processing(obj, value)
+        return self._post_get(obj, value)
 
     def pre_delete(self, obj: Any, value: Any) -> Any:
-        return self.pre_delete_processing(obj, value)
+        return self._pre_delete(obj, value)
 
     def post_delete(self, obj: Any, value: Any) -> Any:
-        return self.post_delete_processing(obj, value)
+        return self._post_delete(obj, value)
 
-    def notify_pre_set(self, obj: Any) -> None:
+    def _notify_pre_set(self, obj: Any) -> None:
         """Lifecycle hook for composition; default no-op."""
 
-    def notify_post_set(self, obj: Any) -> None:
+    def _notify_post_set(self, obj: Any) -> None:
         """Lifecycle hook for composition; default no-op."""
 
     def __and__(self, other: object) -> Any:
@@ -193,7 +193,7 @@ class _Of(ValidateProperty):
     def _keep_nested(item: Any) -> bool:
         if not isinstance(item, _Of):
             return False
-        if HookHost.has_hooks(item):
+        if HookHost._has_hooks(item):
             return True
         members = _Opts.merge(*(member._opts for member in item.validators))
         return item._opts.keeps_nesting(members)
@@ -234,50 +234,50 @@ class _Of(ValidateProperty):
             if propagate and item.annotation is None and self.annotation is not None:
                 item.annotation = self.annotation
 
-    def notify_pre_set(self, obj: Any) -> None:
+    def _notify_pre_set(self, obj: Any) -> None:
         for item in self.validators:
-            item.notify_pre_set(obj)
+            item._notify_pre_set(obj)
 
-    def notify_post_set(self, obj: Any) -> None:
+    def _notify_post_set(self, obj: Any) -> None:
         for item in self.validators:
-            item.notify_post_set(obj)
+            item._notify_post_set(obj)
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
         value = self._process_then_tasks("pre_validate", instance, value)
         for item in self.validators:
-            value = item.pre_validation_processing(instance, value)
+            value = item._pre_validate(instance, value)
         return value
 
-    def post_validation_processing(self, instance: Any, value: Any) -> Any:
+    def _post_validate(self, instance: Any, value: Any) -> Any:
         for item in self.validators:
-            value = item.post_validation_processing(instance, value)
+            value = item._post_validate(instance, value)
         return self._process_then_tasks("post_validate", instance, value)
 
-    def post_set_processing(self, instance: Any, value: Any) -> Any:
+    def _post_set(self, instance: Any, value: Any) -> Any:
         for item in self.validators:
-            value = item.post_set_processing(instance, value)
+            value = item._post_set(instance, value)
         return self._process_then_tasks("post_set", instance, value)
 
-    def pre_get_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_get(self, instance: Any, value: Any) -> Any:
         value = self._process_then_tasks("pre_get", instance, value)
         for item in self.validators:
-            value = item.pre_get_processing(instance, value)
+            value = item._pre_get(instance, value)
         return value
 
-    def post_get_processing(self, instance: Any, value: Any) -> Any:
+    def _post_get(self, instance: Any, value: Any) -> Any:
         for item in self.validators:
-            value = item.post_get_processing(instance, value)
+            value = item._post_get(instance, value)
         return self._process_then_tasks("post_get", instance, value)
 
-    def pre_delete_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_delete(self, instance: Any, value: Any) -> Any:
         value = self._process_then_tasks("pre_delete", instance, value)
         for item in self.validators:
-            value = item.pre_delete_processing(instance, value)
+            value = item._pre_delete(instance, value)
         return value
 
-    def post_delete_processing(self, instance: Any, value: Any) -> Any:
+    def _post_delete(self, instance: Any, value: Any) -> Any:
         for item in self.validators:
-            value = item.post_delete_processing(instance, value)
+            value = item._post_delete(instance, value)
         return self._process_then_tasks("post_delete", instance, value)
 
 

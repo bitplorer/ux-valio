@@ -39,8 +39,8 @@ class FloatValidator(Validator[float]):
 class DecimalValidator(Validator[decimal.Decimal]):
     annotation = decimal.Decimal | str
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
-        return super().pre_validation_processing(
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
+        return super()._pre_validate(
             instance, self._coerce_str(value, decimal.Decimal, "Decimal")
         )
 
@@ -77,7 +77,7 @@ class DateValidator(Validator[datetime.date]):
                 return None
         return None
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
         if isinstance(value, str):
             parsed = type(self)._parse_eu_ind_date(value)
             if parsed is None:
@@ -86,7 +86,7 @@ class DateValidator(Validator[datetime.date]):
                     f"or IND DD-MM-YYYY (delimiters -, /, :), got {value!r}"
                 )
             value = parsed
-        return super().pre_validation_processing(instance, value)
+        return super()._pre_validate(instance, value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if isinstance(value, datetime.datetime):
@@ -106,8 +106,8 @@ class DateTimeValidator(Validator[datetime.datetime]):
 
     annotation = datetime.datetime | str
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
-        return super().pre_validation_processing(
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
+        return super()._pre_validate(
             instance, self._coerce_str(value, datetime.datetime.fromisoformat, "ISO datetime")
         )
 
@@ -118,8 +118,8 @@ class DateTimeValidator(Validator[datetime.datetime]):
 class UUIDValidator(Validator[uuid.UUID]):
     annotation = uuid.UUID | str
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
-        return super().pre_validation_processing(
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
+        return super()._pre_validate(
             instance, self._coerce_str(value, uuid.UUID, "UUID")
         )
 
@@ -138,10 +138,10 @@ class PathValidator(Validator[pathlib.Path]):
         self.path_exists = path_exists
         super().__init__(**kwargs)
 
-    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
         if isinstance(value, str):
             value = pathlib.Path(value)
-        return super().pre_validation_processing(instance, value)
+        return super()._pre_validate(instance, value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._reject_unless_instance(value, pathlib.Path)
