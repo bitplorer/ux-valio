@@ -6,24 +6,25 @@ Sibling layers (do not import each other)::
     kyc       — person documents (Aadhaar, PAN, Voter, passport)
     gst       — GST invoice (GSTIN, HSN)
     registry  — TAN, CIN, Udyam, DIN, LLPIN, FSSAI
-    bank      — IFSC, PIN, UPI
+    bank      — IFSC, UPI
+    postal    — PIN, state
 
 Parallel to ``named.finance`` / ``named.catalog``. Public names
 still re-export from ``ux_valio``; navigation is
 ``from ux_valio.facades.named.india.gst import GSTINValidator``.
 """
 
-from ux_valio.facades.named.india.bank import (
-    IFSCValidator,
-    PinCodeValidator,
-    UPIIdValidator,
-)
+from ux_valio.facades.named.india.bank import IFSCValidator, UPIIdValidator
 from ux_valio.facades.named.india.gst import GSTINValidator, HSNCodeValidator
 from ux_valio.facades.named.india.kyc import (
     AadhaarCardValidator,
     IndianPassportValidator,
     PANCardValidator,
     VoterIdValidator,
+)
+from ux_valio.facades.named.india.postal import (
+    IndiaStateCodeValidator,
+    PinCodeValidator,
 )
 from ux_valio.facades.named.india.registry import (
     CINValidator,
@@ -42,6 +43,7 @@ __all__ = [
     "GSTINValidator",
     "HSNCodeValidator",
     "IFSCValidator",
+    "IndiaStateCodeValidator",
     "IndianPassportValidator",
     "LLPINValidator",
     "PANCardValidator",

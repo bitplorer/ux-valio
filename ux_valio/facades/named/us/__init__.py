@@ -3,7 +3,7 @@
 
 Sibling layers (do not import each other)::
 
-    postal — ZIP
+    postal — ZIP, state
     bank   — ABA routing
     market — CUSIP
     kyc    — SSN, ITIN, EIN
@@ -15,7 +15,7 @@ from ``ux_valio``.
 from ux_valio.facades.named.us.bank import ABARoutingValidator
 from ux_valio.facades.named.us.kyc import EINValidator, ITINValidator, SSNValidator
 from ux_valio.facades.named.us.market import CUSIPValidator
-from ux_valio.facades.named.us.postal import USZipCodeValidator
+from ux_valio.facades.named.us.postal import USStateValidator, USZipCodeValidator
 
 __all__ = [
     "ABARoutingValidator",
@@ -23,5 +23,6 @@ __all__ = [
     "EINValidator",
     "ITINValidator",
     "SSNValidator",
+    "USStateValidator",
     "USZipCodeValidator",
 ]

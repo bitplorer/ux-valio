@@ -96,6 +96,8 @@ def test_min_max_leaves_are_exported():
         "FSSAIValidator",
         "IndianPassportValidator",
         "USZipCodeValidator",
+        "USStateValidator",
+        "IndiaStateCodeValidator",
         "CAPostalCodeValidator",
         "UKPostcodeValidator",
         "CLABEValidator",
@@ -228,6 +230,7 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert (india / "gst.py").is_file()
     assert (india / "registry.py").is_file()
     assert (india / "bank.py").is_file()
+    assert (india / "postal.py").is_file()
     assert not (named / "india.py").exists()
     finance = named / "finance"
     assert finance.is_dir()

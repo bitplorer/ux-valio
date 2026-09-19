@@ -2,8 +2,7 @@
 """Paid checkout: card brand ∩ Luhn, card MM/YY, promo lookup, stock, gateway.
 
 ``ExpiryValidator`` is a timeline on *now* (offer / hold window), not card
-``MM/YY``. Card expiry uses ``StartsWith`` / ``EndsWith`` so findall is an
-identity match. ``PaymentCardValidator`` rejects a Luhn-valid non-brand number.
+``MM/YY``. Card print form is ``CardExpiryValidator``.
 
 Ports fail closed into validation errors via ``pre_validate``:
 
@@ -22,18 +21,14 @@ from decimal import Decimal
 from typing import Protocol
 
 from ux_valio import (
+    CardExpiryValidator,
     DecimalValidator,
-    Digit,
-    EndsWith,
     ExpiryValidator,
     IntegerValidator,
-    Pattern,
     PaymentCardValidator,
-    StartsWith,
     StringValidator,
 )
 
-_CARD_EXPIRY = StartsWith(Digit(count=2)) & Pattern(r"/") & EndsWith(Digit(count=2))
 _PROMO_UNTIL = (date.today() + timedelta(days=30)).isoformat()
 _PROMO_ENDED = (date.today() - timedelta(days=1)).isoformat()
 
@@ -116,9 +111,7 @@ class Checkout:
         required=True, min_length=2, max_length=80
     )
     number: str = PaymentCardValidator(required=True)
-    card_expiry: str = StringValidator(
-        pattern=_CARD_EXPIRY, required=True
-    )
+    card_expiry: str = CardExpiryValidator(required=True)
     sku: str = StringValidator(required=True, min_length=1, max_length=32)
     amount: Decimal = DecimalValidator(
         min_value=Decimal("0.01"), required=True

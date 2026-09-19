@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Address / bank workflow: ``USStateValidator``, ``IndiaStateCodeValidator``,
+  IBAN ISO 13616 **national length** (unknown country fail-closed). PIN
+  moved ``india/bank`` → ``india/postal``. Checkout uses
+  ``CardExpiryValidator``.
+
 - Payment card Luhn runs once, then brand match (Diners was 8× Luhn).
   IANA timezones load on first ``TimezoneValidator`` check, not import.
   ``portal.py`` stdlib imports first.

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""India payment rails (IFSC, PIN, UPI).
+"""India payment rails (IFSC, UPI).
 
 Sibling of the other ``india`` layers — does not import them.
 Depends on typed. Public names re-export from ``ux_valio`` /
@@ -41,34 +41,6 @@ class IFSCValidator(StringValidator):
             return
         if not type(self)._is_valid_ifsc(value):
             raise ValueError(f"{self.name} is not a valid IFSC")
-
-_PIN = re.compile(r"[1-9][0-9]{5}")
-
-
-class PinCodeValidator(StringValidator):
-    """India Post PIN: 6 digits, first 1–9.
-
-    Usage::
-
-        pin: str = PinCodeValidator()
-
-    Non-digits strip; stores compact ``226001``. No locality lookup.
-    """
-
-    @staticmethod
-    def _is_valid_pincode(value: Any) -> bool:
-        return isinstance(value, str) and _PIN.fullmatch(value) is not None
-
-    def _pre_validate(self, instance: Any, value: Any) -> Any:
-        if isinstance(value, str):
-            value = "".join(ch for ch in value if ch.isdigit())
-        return super()._pre_validate(instance, value)
-
-    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if not type(self)._is_valid_pincode(value):
-            raise ValueError(f"{self.name} is not a valid Indian PIN code")
 
 _VPA = re.compile(r"[a-z0-9._-]{3,50}@[a-z]{2,20}")
 

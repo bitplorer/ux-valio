@@ -22,7 +22,7 @@ a parallel folder, not inside the layer they depend on.
   `typed.py` — primitives (`IntegerValidator`, `StringValidator`, …) :
   `Validator`. `named/` — identity products, **sibling domain modules**
   (parallel, do not import each other): `india/` is a folder of layers
-  (`kyc`, `gst`, `registry`, `bank` — they do not import each other);
+  (`kyc`, `gst`, `registry`, `bank`, `postal` — they do not import each other);
   `us/` (`postal`, `bank`, `market`, `kyc`); `uk/` (`postal`, `bank`, `kyc`);
   `canada/` (`postal`, `kyc`); `mexico/` (`bank`, `kyc`);
   `finance/` is international only (`rail` IBAN/BIC, `market` ISIN/LEI,

@@ -3,7 +3,7 @@
 
 Sibling domain modules (parallel, do not import each other)::
 
-    india/    — KYC / GST / registry / bank
+    india/    — KYC / GST / registry / bank / postal
     us/       — postal / bank / market / kyc
     uk/       — postal / bank / kyc
     canada/   — postal / kyc
@@ -77,6 +77,7 @@ from ux_valio.facades.named.india import (
     GSTINValidator,
     HSNCodeValidator,
     IFSCValidator,
+    IndiaStateCodeValidator,
     IndianPassportValidator,
     LLPINValidator,
     PANCardValidator,
@@ -98,6 +99,7 @@ from ux_valio.facades.named.us import (
     EINValidator,
     ITINValidator,
     SSNValidator,
+    USStateValidator,
     USZipCodeValidator,
 )
 from ux_valio.facades.named.portal import (
@@ -135,6 +137,7 @@ __all__ = [
     "IFSCValidator",
     "IMEIValidator",
     "IndianPassportValidator",
+    "IndiaStateCodeValidator",
     "ISBNValidator",
     "ISINValidator",
     "ISSNValidator",
@@ -160,6 +163,7 @@ __all__ = [
     "ULIDValidator",
     "UPIIdValidator",
     "URLValidator",
+    "USStateValidator",
     "USZipCodeValidator",
     "VINValidator",
     "VoterIdValidator",
