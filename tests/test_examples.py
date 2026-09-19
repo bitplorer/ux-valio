@@ -21,6 +21,7 @@ EXAMPLE_MODULES = (
     "lookaround_units",
     "compose_hooks",
     "collect_all_form",
+    "typed_dict_schema",
 )
 
 

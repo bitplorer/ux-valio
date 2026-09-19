@@ -50,6 +50,24 @@ class Stats:
     n = Validator[int](min_value=0)
 ```
 
+A `TypedDict` is the schema (stdlib, no BaseModel). Door A is still
+`field: SomeTypedDict = Validator()`. Extra keys fail-closed. Hang extra
+validators on a key with `Annotated` — same objects as field defaults.
+
+```python
+from typing import Annotated, TypedDict
+from ux_valio import EmailValidator, StringValidator, Validator
+
+class Person(TypedDict):
+    name: Annotated[str, StringValidator(min_length=2)]
+    email: Annotated[str, EmailValidator()]
+    age: int
+
+@dataclass
+class Signup:
+    person: Person = Validator()
+```
+
 Concern leaves (`LengthValidator`, `RequiredValidator`, …) are the **advanced**
 path: compose validator objects with `&` (AllOf) / `|` (AnyOf), or explicit
 `AllOf` / `AnyOf`, as **one** descriptor. `Chain` is `AllOf` — an alias, not a
