@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""TypedDict schema: builtin dict shape, Door A extras via Annotated."""
+"""TypedDict schema: Door A assignment + Annotated extras. No BaseModel."""
 
 from dataclasses import dataclass
 from typing import Annotated, TypedDict
@@ -8,9 +8,13 @@ from ux_valio import EmailValidator, StringValidator, Validator
 
 
 class Person(TypedDict):
-    name: Annotated[str, StringValidator(min_length=2)]
+    name: str = StringValidator(min_length=2)
     email: Annotated[str, EmailValidator()]
     age: int
+
+    @name.add_process_pre_validate
+    def strip_name(self, value: str) -> str:
+        return value.strip()
 
 
 @dataclass
@@ -19,7 +23,7 @@ class Signup:
 
 
 def main() -> None:
-    row = Signup(person={"name": "Ada", "email": "ada@example.com", "age": 36})
+    row = Signup(person={"name": "  Ada  ", "email": "ada@example.com", "age": 36})
     print(row.person)
 
 

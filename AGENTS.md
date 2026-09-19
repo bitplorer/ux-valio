@@ -67,7 +67,8 @@ a parallel folder, not inside the layer they depend on.
   treats `value is self` as unset. No Field mixin, no outer
   `username_field` twin unless sharing one descriptor across classes.
   Lookup walks the instance MRO (base first) so a child runs parent hooks.
-  A free function on an unbound descriptor still needs `namespace=`;
+  A free function on an unbound descriptor still needs `namespace=`
+  (the owning class, or its `module.qualname` str);
   on a bound field the owner key is the bound owner.
   `add_*` accepts async def and coroutine
   results (no `_reject_coroutine_result`);

@@ -34,11 +34,12 @@ _TYPED_DICT_QUALIFIERS = tuple(
     )
     if qualifier is not None
 )
+_TYPE_ALIAS_TYPE = getattr(typing, "TypeAliasType", None)
 
 
 def _peel_annotation(annotation: Any) -> Any:
 
-    if type(annotation).__name__ == "TypeAliasType":
+    if _TYPE_ALIAS_TYPE is not None and isinstance(annotation, _TYPE_ALIAS_TYPE):
         inner = getattr(annotation, "__value__", None)
         return _PeelFail if inner is None else inner
     supertype = getattr(annotation, "__supertype__", None)
@@ -184,7 +185,6 @@ def _unwrap_field_annotation(annotation: Any) -> tuple[Any, tuple[Any, ...]]:
             annotation = args[0] if args else annotation
             extras.extend(args[1:])
             continue
-        name = getattr(origin, "__name__", "")
         if origin in _TYPED_DICT_QUALIFIERS:
             args = get_args(annotation)
             annotation = args[0] if args else annotation

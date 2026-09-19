@@ -37,7 +37,7 @@ def test_hang_after_compose_on_root():
 
     field.add_process_pre_validate(
         lambda instance, value: value.strip() if isinstance(value, str) else value,
-        namespace=HookHost._owner_key(User),
+        namespace=User,
     )
 
     assert User(name="  Ada  ").name == "Ada"
@@ -63,7 +63,7 @@ def test_hang_on_facade_before_compose_still_runs():
 
     left.add_process_pre_validate(
         lambda instance, value: value.strip() if isinstance(value, str) else value,
-        namespace=HookHost._owner_key(User),
+        namespace=User,
     )
 
     assert User(name="  Ada  ").name == "Ada"

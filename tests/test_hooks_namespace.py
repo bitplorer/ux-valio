@@ -242,7 +242,7 @@ def test_sync_processor_returning_coroutine_no_loop_needs_running_loop():
     class Host:
         x: str = v
 
-    v.add_process_pre_validate(wrap, namespace=HookHost._owner_key(Host))
+    v.add_process_pre_validate(wrap, namespace=Host)
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
@@ -258,7 +258,7 @@ def test_sync_processor_returning_coroutine_debug_falsy_swallows_unset():
     class Host:
         x: str = field
 
-    field.add_process_pre_validate(wrap, namespace=HookHost._owner_key(Host))
+    field.add_process_pre_validate(wrap, namespace=Host)
 
     assert Host(x="ada").x is None
     assert field.errors
@@ -364,7 +364,7 @@ def test_add_process_pre_validate_implicit_none_is_stored():
     class Register:
         username: str = username_field
 
-    username_field.add_process_pre_validate(forget_return, namespace=HookHost._owner_key(Register))
+    username_field.add_process_pre_validate(forget_return, namespace=Register)
 
     assert Register(username="ada").username is None
 
@@ -381,7 +381,7 @@ def test_add_task_pre_validate_does_not_rewrite_stored_value():
     class Register:
         username: str = username_field
 
-    username_field.add_task_pre_validate(note, namespace=HookHost._owner_key(Register))
+    username_field.add_task_pre_validate(note, namespace=Register)
 
     assert Register(username="ada").username == "ada"
     HookHost.wait_tasks(timeout=2)
@@ -473,10 +473,17 @@ def test_lookup_uses_same_key_helper_as_register():
     assert key == f"{Host.__module__}.{Host.__qualname__}"
     assert list(field._processors["pre_validate"]) == [key]
     assert HookHost._resolve_owner_key(Host.strip, None) == key
+    assert HookHost._resolve_owner_key(lambda inst, val: val, Host) == key
+    try:
+        HookHost._resolve_owner_key(lambda inst, val: val, object())
+    except TypeError as err:
+        assert "owning class" in str(err)
+    else:
+        raise AssertionError("namespace=object() must TypeError")
     assert Host(x="  Ada  ").x == "Ada"
 
 
-def test_class_object_namespace_is_type_error():
+def test_class_object_namespace_is_the_owner():
     field = Validator(debug=True)
 
     def fn(instance, value):
@@ -486,9 +493,8 @@ def test_class_object_namespace_is_type_error():
     class Host:
         x: str = field
 
-    with pytest.raises(TypeError, match="namespace="):
-        field.add_process_pre_validate(fn, namespace=Host)
-
+    field.add_process_pre_validate(fn, namespace=Host)
     keys = list(field._processors["pre_validate"])
-    assert Host not in keys
+    assert keys == [HookHost._owner_key(Host)]
     assert all(isinstance(key, str) for key in keys)
+    assert Host(x="Ada").x == "Ada"
