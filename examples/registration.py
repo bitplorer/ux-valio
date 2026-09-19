@@ -104,16 +104,7 @@ class Pbkdf2PasswordHasher:
         return hmac.compare_digest(self.hash(plain), hashed)
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class Registration:
     username: str = StringValidator(required=True, min_length=3)
     password: str = AllOf(
@@ -124,6 +115,21 @@ class Registration:
     password_confirm: str = StringValidator(
         required=True, min_length=8, max_length=128
     )
+
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        password_confirm: str,
+        *,
+        users: UserStore,
+        hasher: PasswordHasher,
+    ) -> None:
+        self.users = users
+        self.hasher = hasher
+        self.username = username
+        self.password = password
+        self.password_confirm = password_confirm
 
     @username.pre_validate
     def fold_username(self, value: str) -> str:
@@ -157,12 +163,12 @@ class RegistrationService:
         self, username: str, password: str, password_confirm: str
     ) -> Registration:
         """Reserve ``username`` with a hashed password. Failures raise ``ValueError``."""
-        return _bind(
-            Registration,
-            {"users": self.users, "hasher": self.hasher},
-            username=username,
-            password=password,
-            password_confirm=password_confirm,
+        return Registration(
+            username,
+            password,
+            password_confirm,
+            users=self.users,
+            hasher=self.hasher,
         )
 
 

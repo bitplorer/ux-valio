@@ -47,16 +47,7 @@ class InMemoryStaffDirectory:
         self._taken[name.casefold()] = name
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class StaffProfile:
     name: str = StringValidator(max_length=50) & RequiredValidator(
         required=True
@@ -72,6 +63,21 @@ class StaffProfile:
         StringValidator(min_length=2, max_length=40),
         RequiredValidator(required=True),
     )
+
+    def __init__(
+        self,
+        name: str,
+        tag: str,
+        note: int | str,
+        title: str,
+        *,
+        directory: StaffDirectory,
+    ) -> None:
+        self.directory = directory
+        self.name = name
+        self.tag = tag
+        self.note = note
+        self.title = title
 
     @name.pre_validate
     def strip_name(self, value: str) -> str:
@@ -98,13 +104,8 @@ class StaffService:
         self, name: str, tag: str, note: int | str, title: str
     ) -> StaffProfile:
         """Create a staff profile. Compose, hook, and directory failures raise."""
-        return _bind(
-            StaffProfile,
-            {"directory": self.directory},
-            name=name,
-            tag=tag,
-            note=note,
-            title=title,
+        return StaffProfile(
+            name, tag, note, title, directory=self.directory
         )
 
 

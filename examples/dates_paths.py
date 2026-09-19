@@ -39,21 +39,27 @@ class InMemoryArchive:
         self._filed.add((str(folder), host))
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class FiledDocument:
     opened_eu: date = DateValidator(required=True)
     opened_ind: date = DateValidator(required=True)
     folder: pathlib.Path = PathValidator(required=True, path_exists=True)
     host: str = IPv4Validator(required=True)
+
+    def __init__(
+        self,
+        opened_eu: str | date,
+        opened_ind: str | date,
+        folder: str | pathlib.Path,
+        host: str,
+        *,
+        archive: Archive,
+    ) -> None:
+        self.archive = archive
+        self.opened_eu = opened_eu
+        self.opened_ind = opened_ind
+        self.folder = folder
+        self.host = host
 
     @host.post_validate
     def not_already_filed(self, value: str) -> str:
@@ -79,13 +85,8 @@ class FilingService:
         folder: str | pathlib.Path,
         host: str,
     ) -> FiledDocument:
-        return _bind(
-            FiledDocument,
-            {"archive": self.archive},
-            opened_eu=opened_eu,
-            opened_ind=opened_ind,
-            folder=folder,
-            host=host,
+        return FiledDocument(
+            opened_eu, opened_ind, folder, host, archive=self.archive
         )
 
 

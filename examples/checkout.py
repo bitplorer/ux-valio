@@ -103,16 +103,7 @@ class StubPaymentGateway:
         return f"auth-{number[-4:]}"
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class Checkout:
     holder: str = StringValidator(
         required=True, min_length=2, max_length=80
@@ -125,6 +116,31 @@ class Checkout:
     )
     promo_code: str = ExpiryValidator(expire_after=_PROMO_UNTIL, required=True)
     quantity: int = IntegerValidator(min_value=1, required=True)
+
+    def __init__(
+        self,
+        holder: str,
+        number: str,
+        card_expiry: str,
+        amount: Decimal,
+        promo_code: str,
+        sku: str,
+        quantity: int,
+        *,
+        promos: PromoCatalog,
+        inventory: Inventory,
+        gateway: PaymentGateway,
+    ) -> None:
+        self.promos = promos
+        self.inventory = inventory
+        self.gateway = gateway
+        self.holder = holder
+        self.number = number
+        self.card_expiry = card_expiry
+        self.sku = sku
+        self.amount = amount
+        self.promo_code = promo_code
+        self.quantity = quantity
 
     @promo_code.post_validate
     def promo_known(self, value: str) -> str:
@@ -179,20 +195,17 @@ class CheckoutService:
         quantity: int = 1,
     ) -> Checkout:
         """Place a validated order. Invalid card, promo, stock, or gateway raise."""
-        return _bind(
-            Checkout,
-            {
-                "promos": self.promos,
-                "inventory": self.inventory,
-                "gateway": self.gateway,
-            },
-            holder=holder,
-            number=number,
-            card_expiry=card_expiry,
-            sku=sku,
-            amount=amount,
-            promo_code=promo_code,
-            quantity=quantity,
+        return Checkout(
+            holder,
+            number,
+            card_expiry,
+            amount,
+            promo_code,
+            sku,
+            quantity,
+            promos=self.promos,
+            inventory=self.inventory,
+            gateway=self.gateway,
         )
 
 

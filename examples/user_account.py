@@ -45,16 +45,7 @@ class InMemoryAccountDirectory:
         self._taken.add(username.casefold())
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class UserAccount:
     username: str = StringValidator(required=True, min_length=3, max_length=32)
     display_name: str = StringValidator(max_length=80, default="")
@@ -65,6 +56,25 @@ class UserAccount:
     reputation: int = IntegerValidator(min_value=0, max_value=10_000, default=0)
     email: str = EmailValidator(required=True)
     account_id: UUID = UUIDValidator(default_factory=uuid4)
+
+    def __init__(
+        self,
+        username: str,
+        email: str,
+        *,
+        directory: AccountDirectory,
+        display_name: str = "",
+        role: str = "member",
+        reputation: int = 0,
+        account_id: UUID | None = None,
+    ) -> None:
+        self.directory = directory
+        self.username = username
+        self.display_name = display_name
+        self.role = role
+        self.reputation = reputation
+        self.email = email
+        self.account_id = account_id
 
     @username.pre_validate
     def fold_username(self, value: str) -> str:
@@ -97,16 +107,15 @@ class AccountService:
         reputation: int = 0,
         account_id: UUID | None = None,
     ) -> UserAccount:
-        kwargs: dict[str, object] = {
-            "username": username,
-            "display_name": display_name,
-            "role": role,
-            "reputation": reputation,
-            "email": email,
-        }
-        if account_id is not None:
-            kwargs["account_id"] = account_id
-        return _bind(UserAccount, {"directory": self.directory}, **kwargs)
+        return UserAccount(
+            username,
+            email,
+            directory=self.directory,
+            display_name=display_name,
+            role=role,
+            reputation=reputation,
+            account_id=account_id,
+        )
 
 
 def main() -> UserAccount:

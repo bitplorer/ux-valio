@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Examples: ``@dataclass(init=False)`` + explicit ``__init__`` sets
+  ports first, then product fields. No ``object.__new__``. ``InitVar`` /
+  ``__post_init__`` is too late (fields already assigned).
+
 - Examples: ports are not dataclass ``__init__`` fields. Service does
   ``__new__``, sets the store, then product ``__init__``.
 

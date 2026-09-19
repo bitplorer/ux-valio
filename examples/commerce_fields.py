@@ -44,16 +44,7 @@ class InMemoryStoreCatalog:
         self._hosts.add(host.casefold())
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class Storefront:
     public_id: str = ULIDValidator(required=True)
     host: str = HostnameValidator(required=True)
@@ -62,6 +53,27 @@ class Storefront:
     currency: str = CurrencyCodeValidator(required=True)
     tz: str = TimezoneValidator(required=True)
     zip: str = USZipCodeValidator()
+
+    def __init__(
+        self,
+        public_id: str,
+        host: str,
+        slug: str,
+        currency: str,
+        tz: str,
+        *,
+        catalog: StoreCatalog,
+        gtin: str | None = None,
+        zip: str | None = None,
+    ) -> None:
+        self.catalog = catalog
+        self.public_id = public_id
+        self.host = host
+        self.slug = slug
+        self.gtin = gtin
+        self.currency = currency
+        self.tz = tz
+        self.zip = zip
 
     @host.post_validate
     def host_available(self, value: str) -> str:
@@ -91,14 +103,13 @@ class StorefrontService:
         gtin: str | None = None,
         zip: str | None = None,
     ) -> Storefront:
-        return _bind(
-            Storefront,
-            {"catalog": self.catalog},
-            public_id=public_id,
-            host=host,
-            slug=slug,
-            currency=currency,
-            tz=tz,
+        return Storefront(
+            public_id,
+            host,
+            slug,
+            currency,
+            tz,
+            catalog=self.catalog,
             gtin=gtin,
             zip=zip,
         )

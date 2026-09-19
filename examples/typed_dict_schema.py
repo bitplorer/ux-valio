@@ -38,15 +38,6 @@ class InMemoryInviteLog:
         self._emails.add(email.casefold())
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
 class Person(TypedDict):
     name: str = StringValidator(min_length=2, required=True)
     email: Annotated[str, EmailValidator(required=True)]
@@ -62,9 +53,13 @@ class Person(TypedDict):
             raise ValueError("name must not contain digits")
 
 
-@dataclass
+@dataclass(init=False)
 class Invite:
     person: Person = Validator()
+
+    def __init__(self, person: Person, *, log: InviteLog) -> None:
+        self.log = log
+        self.person = person
 
     @person.post_validate
     def email_free(self, value: Person) -> Person:
@@ -85,10 +80,8 @@ class InviteService:
         self.log = log
 
     def invite(self, name: str, email: str, age: int) -> Invite:
-        return _bind(
-            Invite,
-            {"log": self.log},
-            person={"name": name, "email": email, "age": age},
+        return Invite(
+            {"name": name, "email": email, "age": age}, log=self.log
         )
 
 

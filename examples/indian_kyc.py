@@ -82,21 +82,19 @@ aadhaar_field = AadhaarCardValidator(required=True)
 pan_field = PANCardValidator(required=True)
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class KycIdentity:
     """Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26. Always importable."""
 
     aadhaar: str = aadhaar_field
     pan: str = pan_field
+
+    def __init__(
+        self, aadhaar: str, pan: str, *, registry: IdentityRegistry
+    ) -> None:
+        self.registry = registry
+        self.aadhaar = aadhaar
+        self.pan = pan
 
     @aadhaar.post_validate
     def aadhaar_free(self, value: str) -> str:
@@ -117,13 +115,26 @@ class KycIdentity:
 
 if HAS_PHONENUMBERS and _PHONE is not None:
 
-    @dataclass
+    @dataclass(init=False)
     class KycRecord:
         """Production shape: identity plus ``PhoneNumberValidator(region='IN')``."""
 
         aadhaar: str = aadhaar_field
         pan: str = pan_field
         phone: str = _PHONE
+
+        def __init__(
+            self,
+            aadhaar: str,
+            pan: str,
+            phone: str,
+            *,
+            registry: IdentityRegistry,
+        ) -> None:
+            self.registry = registry
+            self.aadhaar = aadhaar
+            self.pan = pan
+            self.phone = phone
 
         @aadhaar.post_validate
         def aadhaar_free(self, value: str) -> str:
@@ -156,19 +167,10 @@ class KycService:
     ) -> KycIdentity:
         """Accept a KYC row. Identity, registry, or phone failures raise."""
         if phone is not None and HAS_PHONENUMBERS and KycRecord is not KycIdentity:
-            return _bind(
-                KycRecord,
-                {"registry": self.registry},
-                aadhaar=aadhaar,
-                pan=pan,
-                phone=phone,
+            return KycRecord(
+                aadhaar, pan, phone, registry=self.registry
             )
-        return _bind(
-            KycIdentity,
-            {"registry": self.registry},
-            aadhaar=aadhaar,
-            pan=pan,
-        )
+        return KycIdentity(aadhaar, pan, registry=self.registry)
 
 
 def main() -> KycIdentity:
