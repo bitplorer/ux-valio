@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Construction is generic: `ValidateProperty.__new__ -> Any` (Pylance) and
+  a mypy plugin. No `AsStr` / `AsInt` mixins. A custom store type is
+  `class AccountValidator(Validator[Account]): annotation = Account`.
+
 - Typed facades share one TYPE_CHECKING store mixin (`AsStr` / `AsInt` / …)
   in `typed.py`. `store_view.py` is gone. Identity extras use
   `Validator._reject_unless_instance` / `_coerce_str`.

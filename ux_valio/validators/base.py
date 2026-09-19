@@ -13,7 +13,7 @@ field default, leaf or facade.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, TypeVar
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar
 
 from ux_valio.descriptor import Property, _Opts, _UNSET, _annotations_agree
 from ux_valio.errors import ValidationErrors, raise_collected, run_steps
@@ -48,7 +48,14 @@ class ValidateProperty(HookHost, Property[T], ABC):
     ``ValidateProperty[int]`` / ``Validator[int]`` is the stored-type
     subscript. It fills ``annotation`` when the class did not declare one.
     ``add_*`` and the processor registries come from ``HookHost``.
+
+    Type checkers: construction is ``Any`` so ``name: str = StringValidator()``
+    and ``owner: User = UserValidator()`` both assign. Runtime the object is
+    still this descriptor. mypy honors this via ``ux_valio.mypy_plugin``.
     """
+
+    if TYPE_CHECKING:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any: ...
 
     def pre_set(self, obj: Any, value: Any) -> Any:
         self._take_subscript_annotation()

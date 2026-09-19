@@ -97,3 +97,21 @@ def test_unconstrained_typevar_subscript_is_typing_only():
     field.validate(None, 1)
     field.validate(None, "x")
     assert field.annotation is None
+
+
+def test_custom_store_type_needs_no_mixin():
+    class Account:
+        def __init__(self, id: str) -> None:
+            self.id = id
+
+    class AccountValidator(Validator[Account]):
+        annotation = Account
+
+    @dataclass
+    class Row:
+        owner: Account = AccountValidator()
+
+    row = Row(owner=Account("a1"))
+    assert row.owner.id == "a1"
+    with pytest.raises(TypeError):
+        Row(owner="a1")
