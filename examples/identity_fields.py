@@ -1,74 +1,122 @@
 # SPDX-License-Identifier: MIT
-"""Named identity facades as field defaults. Compact store, no portal.
+"""Vendor onboarding: GSTIN + IBAN identities, registry uniqueness.
 
-Copy the dataclass. Production uniqueness / registry lookup stays in a
-port (see ``indian_kyc.py``) — these facades only prove the identity
-string. ``help(GSTINValidator)`` is the per-type contract.
+Facades prove the identity string (compact store, no portal). Uniqueness
+hangs on ``pre_validate``; persist on ``post_set``. Inject
+``VendorRegistry`` on ``VendorService``. Extra named identities
+(CIN, ISBN, MAC, …) ride on the same row. ``help(GSTINValidator)`` is
+the per-type contract.
 """
 
 from dataclasses import dataclass
+from typing import Protocol
 
 from ux_valio import (
     BICValidator,
     CINValidator,
-    DINValidator,
-    EANValidator,
-    FSSAIValidator,
     GSTINValidator,
     IBANValidator,
     ISBNValidator,
-    ISINValidator,
-    IndianPassportValidator,
-    LLPINValidator,
     MACAddressValidator,
-    TANValidator,
-    UdyamValidator,
-    VINValidator,
-    VoterIdValidator,
 )
 
 
+class VendorRegistry(Protocol):
+    """Already-onboarded GSTIN. Production: unique GSTIN in the vendor store."""
+
+    def gstin_taken(self, gstin: str) -> bool:
+        """True when this GSTIN is already on file."""
+        ...
+
+    def commit(self, gstin: str) -> None:
+        """Persist after a successful set."""
+        ...
+
+
+class InMemoryVendorRegistry:
+    """Runnable fake. Plug in the vendor warehouse that satisfies ``VendorRegistry``."""
+
+    def __init__(self, gstins: set[str] | None = None) -> None:
+        self._gstins = set(gstins or ())
+
+    def gstin_taken(self, gstin: str) -> bool:
+        return gstin in self._gstins
+
+    def commit(self, gstin: str) -> None:
+        self._gstins.add(gstin)
+
+
 @dataclass
-class Counterparty:
-    gstin: str = GSTINValidator()
-    tan: str = TANValidator()
+class Vendor:
+    registry: VendorRegistry
+    gstin: str = GSTINValidator(required=True)
+    iban: str = IBANValidator(required=True)
+    bic: str = BICValidator(required=True)
     cin: str = CINValidator()
-    din: str = DINValidator()
-    llpin: str = LLPINValidator()
-    udyam: str = UdyamValidator()
-    fssai: str = FSSAIValidator()
-    epic: str = VoterIdValidator()
-    passport: str = IndianPassportValidator()
-    iban: str = IBANValidator()
-    bic: str = BICValidator()
-    isin: str = ISINValidator()
     isbn: str = ISBNValidator()
-    ean: str = EANValidator()
-    vin: str = VINValidator()
     mac: str = MACAddressValidator()
 
+    @gstin.pre_validate
+    def gstin_available(self, value: str) -> str:
+        if self.registry.gstin_taken(value):
+            raise ValueError(f"GSTIN {value!r} is already onboarded")
+        return value
 
-def main() -> None:
-    row = Counterparty(
+    @gstin.post_set
+    def commit_gstin(self, value: str) -> None:
+        self.registry.commit(value)
+
+
+class VendorService:
+    """Composition root. Production: ``VendorService(SqlVendorRegistry(pool))``."""
+
+    def __init__(self, registry: VendorRegistry) -> None:
+        self.registry = registry
+
+    def onboard(
+        self,
+        gstin: str,
+        iban: str,
+        bic: str,
+        *,
+        cin: str | None = None,
+        isbn: str | None = None,
+        mac: str | None = None,
+    ) -> Vendor:
+        return Vendor(
+            registry=self.registry,
+            gstin=gstin,
+            iban=iban,
+            bic=bic,
+            cin=cin,
+            isbn=isbn,
+            mac=mac,
+        )
+
+
+def main() -> Vendor:
+    taken = VendorService(
+        InMemoryVendorRegistry(gstins={"09AAAPA1111F1ZP"})
+    )
+    row = VendorService(InMemoryVendorRegistry()).onboard(
         gstin="09 AAAPA1111F 1Z P",
-        tan="dela12345a",
-        cin="u12345mh2000ptc123456",
-        din="00123456",
-        llpin="aab-1234",
-        udyam="udyam-mh-00-0000001",
-        fssai="10012345678901",
-        epic="abc1234567",
-        passport="a1234567",
         iban="GB82 WEST 1234 5698 7654 32",
         bic="deutdeff",
-        isin="us 0378331005",
+        cin="u12345mh2000ptc123456",
         isbn="978-0-306-40615-7",
-        ean="4006381333931",
-        vin="1HGCM82633A004352",
         mac="aa:bb:cc:dd:ee:ff",
     )
-    print(row.gstin, row.iban, row.bic, row.isbn, row.mac)
+    try:
+        taken.onboard(
+            gstin="09AAAPA1111F1ZP",
+            iban="GB82 WEST 1234 5698 7654 32",
+            bic="DEUTDEFF",
+        )
+    except ValueError:
+        pass
+    return row
 
 
 if __name__ == "__main__":
-    main()
+    created = main()
+    print(created.gstin, created.iban, created.bic)

@@ -37,18 +37,26 @@ wait).
 from dataclasses import dataclass
 from ux_valio import StringValidator
 
-DB = {"taken"}
+taken = {"ada"}
 
 @dataclass
 class Register:
     username: str = StringValidator(required=True, min_length=3)
 
     @username.pre_validate
+    def fold(self, value: str) -> str:
+        return value.strip().casefold()
+
+    @username.pre_validate
     def username_not_taken(self, value: str) -> str:
-        if value in DB:
+        if value in taken:
             raise ValueError("username already registered")
         return value
 ```
+
+Production injects a store port (see `examples/registration.py`) instead
+of a module-level set. `required` / `min_length` already reject `None`
+and short strings — the hang is uniqueness, not “blank”.
 
 Class access `User.name` is that descriptor, so `User.name.post_set`
 also works after the class exists. A shared descriptor (`aadhaar` on

@@ -1,23 +1,17 @@
 # SPDX-License-Identifier: MIT
-"""E-commerce / SaaS identity fields as dataclass defaults.
+"""Publish a storefront: host + slug uniqueness, catalog identities.
 
-Copy the dataclass. Uniqueness (SKU, tenant host) stays in a port —
-these facades only prove the identity string.
+Facades prove host/slug/GTIN/ZIP. Uniqueness hangs on ``pre_validate``.
+Inject ``StoreCatalog`` on ``StorefrontService``.
 """
 
 from dataclasses import dataclass
+from typing import Protocol
 
 from ux_valio import (
-    ABARoutingValidator,
-    CardExpiryValidator,
-    CountryCodeValidator,
     CurrencyCodeValidator,
     GTINValidator,
-    HSNCodeValidator,
     HostnameValidator,
-    LEIValidator,
-    LocaleValidator,
-    SemVerValidator,
     SlugValidator,
     TimezoneValidator,
     ULIDValidator,
@@ -25,43 +19,106 @@ from ux_valio import (
 )
 
 
+class StoreCatalog(Protocol):
+    """Host uniqueness. Production: unique index on tenant host."""
+
+    def host_taken(self, host: str) -> bool:
+        """True when this hostname is already published."""
+        ...
+
+    def commit(self, host: str) -> None:
+        """Persist after a successful set."""
+        ...
+
+
+class InMemoryStoreCatalog:
+    """Runnable fake. Plug in DNS/tenant table that satisfies ``StoreCatalog``."""
+
+    def __init__(self, hosts: set[str] | None = None) -> None:
+        self._hosts = {host.casefold() for host in (hosts or set())}
+
+    def host_taken(self, host: str) -> bool:
+        return host.casefold() in self._hosts
+
+    def commit(self, host: str) -> None:
+        self._hosts.add(host.casefold())
+
+
 @dataclass
 class Storefront:
-    public_id: str = ULIDValidator()
-    host: str = HostnameValidator()
-    slug: str = SlugValidator()
+    catalog: StoreCatalog
+    public_id: str = ULIDValidator(required=True)
+    host: str = HostnameValidator(required=True)
+    slug: str = SlugValidator(required=True)
     gtin: str = GTINValidator()
-    hsn: str = HSNCodeValidator()
-    currency: str = CurrencyCodeValidator()
-    country: str = CountryCodeValidator()
-    tz: str = TimezoneValidator()
-    exp: str = CardExpiryValidator()
-    routing: str = ABARoutingValidator()
-    lei: str = LEIValidator()
+    currency: str = CurrencyCodeValidator(required=True)
+    tz: str = TimezoneValidator(required=True)
     zip: str = USZipCodeValidator()
-    locale: str = LocaleValidator()
-    version: str = SemVerValidator()
+
+    @host.pre_validate
+    def host_available(self, value: str) -> str:
+        if self.catalog.host_taken(value):
+            raise ValueError(f"host {value!r} is already published")
+        return value
+
+    @host.post_set
+    def commit_host(self, value: str) -> None:
+        self.catalog.commit(value)
 
 
-def main() -> None:
-    row = Storefront(
+class StorefrontService:
+    """Composition root. Production: ``StorefrontService(SqlStoreCatalog(pool))``."""
+
+    def __init__(self, catalog: StoreCatalog) -> None:
+        self.catalog = catalog
+
+    def publish(
+        self,
+        public_id: str,
+        host: str,
+        slug: str,
+        currency: str,
+        tz: str,
+        *,
+        gtin: str | None = None,
+        zip: str | None = None,
+    ) -> Storefront:
+        return Storefront(
+            catalog=self.catalog,
+            public_id=public_id,
+            host=host,
+            slug=slug,
+            currency=currency,
+            tz=tz,
+            gtin=gtin,
+            zip=zip,
+        )
+
+
+def main() -> Storefront:
+    taken = StorefrontService(InMemoryStoreCatalog(hosts={"shop.example.com"}))
+    row = StorefrontService(InMemoryStoreCatalog()).publish(
         public_id="01ARZ3NDEKTSV4RRFFQ69G5FAV",
         host="API.Example.COM.",
         slug="Hello-World",
-        gtin="036000291452",
-        hsn="87032110",
         currency="inr",
-        country="in",
         tz="Asia/Kolkata",
-        exp="12/25",
-        routing="021000021",
-        lei="5493001KJTIIGC8Y1R12",
+        gtin="036000291452",
         zip="90210-1234",
-        locale="en_IN",
-        version="1.2.3",
     )
-    print(row.host, row.slug, row.currency, row.exp)
+    try:
+        taken.publish(
+            public_id="01ARZ3NDEKTSV4RRFFQ69G5FAV",
+            host="shop.example.com",
+            slug="taken",
+            currency="USD",
+            tz="UTC",
+        )
+    except ValueError:
+        pass
+    return row
 
 
 if __name__ == "__main__":
-    main()
+    created = main()
+    print(created.host, created.slug, created.currency)

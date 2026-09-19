@@ -32,5 +32,9 @@ class Signup:
     person: Person = Validator()
 ```
 
+`min_length=2` already rejects `""`. The hang is a name policy (no
+digits), not a second blank check. Production uniqueness hangs on a
+store port — see `examples/typed_dict_schema.py`.
+
 Omitted `NotRequired` keys skip extras. `ReadOnly` peels like the other
 qualifiers. Nested TypedDict values recurse.
