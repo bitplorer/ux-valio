@@ -483,7 +483,6 @@ row = Counterparty(
 | `MACAddressValidator` | 12 hex | 48-bit; colon/hyphen/Cisco ok |
 | `IMEIValidator` | 15 digits | Luhn |
 | `PaymentCardValidator` | compact digits | brand ∩ Luhn (incl. UnionPay / JCB / Diners) |
-| `IBANValidator` | 15–34 chars | ISO 13616 mod-97 |
 | `CLABEValidator` | 18 digits | Banxico check |
 | `UKSortCodeValidator` | 6 digits | UK sort code |
 | `CUSIPValidator` | 9 chars | US security check digit |
@@ -493,6 +492,7 @@ row = Counterparty(
 | `UKPostcodeValidator` | outward inward | Royal Mail |
 | `LocaleValidator` | `en` / `en-IN` | ISO 639-1 + 3166-1 |
 | `SSNValidator` | 9 digits | SSA area/group/serial |
+| `ITINValidator` | 9 digits | IRS ITIN (starts 9) |
 | `EINValidator` | 9 digits | US EIN |
 | `NINOValidator` | 9 chars | HMRC NINO |
 | `CanadianSINValidator` | 9 digits | Luhn |

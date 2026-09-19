@@ -105,6 +105,7 @@ def test_min_max_leaves_are_exported():
         "LocaleValidator",
         "SemVerValidator",
         "SSNValidator",
+        "ITINValidator",
         "EINValidator",
         "NINOValidator",
         "CanadianSINValidator",
