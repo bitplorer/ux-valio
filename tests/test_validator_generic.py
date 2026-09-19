@@ -115,3 +115,86 @@ def test_custom_store_type_needs_no_mixin():
     assert row.owner.id == "a1"
     with pytest.raises(TypeError):
         Row(owner="a1")
+
+
+def test_optional_custom_type_agrees_on_both_sides():
+    class Account:
+        def __init__(self, id: str) -> None:
+            self.id = id
+
+    class AccountValidator(Validator[Account]):
+        annotation = Account | None
+
+    @dataclass
+    class Row:
+        owner: Account | None = AccountValidator(default=None)
+
+    assert Row().owner is None
+    assert Row(owner=Account("a1")).owner.id == "a1"
+    assert Row(owner=None).owner is None
+    with pytest.raises(TypeError):
+        Row(owner="a1")
+
+
+def test_optional_validator_accepts_required_owner():
+    class Account:
+        pass
+
+    class AccountValidator(Validator[Account]):
+        annotation = Account | None
+
+    @dataclass
+    class Row:
+        owner: Account = AccountValidator()
+
+    assert Row(owner=Account()).owner is not None
+
+
+def test_required_validator_rejects_optional_owner():
+    class Account:
+        pass
+
+    class AccountValidator(Validator[Account]):
+        annotation = Account
+
+    with pytest.raises((TypeError, RuntimeError)):
+        @dataclass
+        class Row:
+            owner: Account | None = AccountValidator()
+
+
+def test_subclass_owner_agrees_with_base_validator():
+    class Account:
+        pass
+
+    class Admin(Account):
+        pass
+
+    class AccountValidator(Validator[Account]):
+        annotation = Account
+
+    @dataclass
+    class Row:
+        owner: Admin = AccountValidator()
+
+    row = Row(owner=Admin())
+    assert isinstance(row.owner, Admin)
+    assert Row.__dict__["owner"].annotation is Account
+
+
+def test_optional_subclass_owner_agrees_with_optional_base():
+    class Account:
+        pass
+
+    class Admin(Account):
+        pass
+
+    class AccountValidator(Validator[Account]):
+        annotation = Account | None
+
+    @dataclass
+    class Row:
+        owner: Admin | None = AccountValidator(default=None)
+
+    assert Row().owner is None
+    assert isinstance(Row(owner=Admin()).owner, Admin)

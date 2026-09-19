@@ -86,18 +86,21 @@ so `StringValidator()` assigns to `str` and a custom `UserValidator()`
 assigns to `User`. No per-type mixin. `User(name=1)` still errors.
 `@name.add_*` may underline (the annotation is `str`).
 
-A new store type is a subclass and an `annotation`:
+A new store type is a subclass and an `annotation`. Optional needs
+`| None` on **both** sides — `Account` vs `Account | None` is a conflict
+(same as `int` vs `int | None`). A subclass owner (`Admin(Account)`)
+binds (`is_subclass_of` at bind, `is_instance_of` at set).
 
 ```python
 class Account:
     ...
 
 class AccountValidator(Validator[Account]):
-    annotation = Account
+    annotation = Account | None
 
 @dataclass
 class Row:
-    owner: Account = AccountValidator()
+    owner: Account | None = AccountValidator(default=None)
 ```
 
 Class access `User.name` is that descriptor, so `User.name.add_process_post_set`

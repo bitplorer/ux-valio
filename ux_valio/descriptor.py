@@ -60,9 +60,11 @@ Get/set/delete log at info; failures at error. Specified-theory still
 sees ``True`` after bind (runtime logger is a separate object).
 
 ``__set_name__`` is fail-closed on annotation conflict. If both
-``validator.annotation`` and the owner class annotation are set and they
-disagree, raise ``TypeError``. Owner wins only when the validator annotation
-was ``None``. The validator annotation is kept when the owner has none.
+``validator.annotation`` and the owner class annotation are set and the
+owner is not a subclass/member of the validator (``is_subclass_of``),
+raise ``TypeError``. Owner wins only when the validator annotation
+was ``None``. The validator annotation is kept when the owner has none
+(and when they agree — coercing ``T | str`` stays ``T | str``).
 Unresolved owner annotations (``str`` / ``ForwardRef``, including
 ``from __future__ import annotations``) raise ``TypeError`` at bind and are
 not copied into the type door. They are not ``eval``'d. Union forms and
@@ -263,32 +265,48 @@ def _annotation_identity(annotation: Any) -> Any:
     return annotation
 
 
-def _union_member_ids(annotation: Any) -> frozenset[Any] | None:
-    ident = _annotation_identity(annotation)
-    if isinstance(ident, tuple) and ident and ident[0] is Union:
-        return ident[1]
+def _union_args(annotation: Any) -> tuple[Any, ...] | None:
+    origin = get_origin(annotation)
+    if origin is Union or origin is types.UnionType:
+        return get_args(annotation)
     return None
 
 
-def _annotations_agree(left: Any, right: Any) -> bool:
-    """Owner (right) matches validator (left), or is a member/subset of it.
-
-    Coercing facades declare ``T | str``. Owner ``T``, ``str``, or ``T | str``
-    all bind. Owner wider than validator (``int | str`` vs ``int``) does not.
-    """
-    if left is right:
-        return True
-    left_id = _annotation_identity(left)
-    right_id = _annotation_identity(right)
-    if left_id == right_id:
-        return True
-    left_u = _union_member_ids(left)
-    if left_u is None:
+def _issubclass_closed(subtype: Any, supertype: Any) -> bool:
+    try:
+        return (
+            isinstance(subtype, type)
+            and isinstance(supertype, type)
+            and issubclass(subtype, supertype)
+        )
+    except TypeError:
         return False
-    right_u = _union_member_ids(right)
-    if right_u is not None:
-        return right_u <= left_u
-    return right_id in left_u
+
+
+def is_subclass_of(subtype: Any, supertype: Any) -> bool:
+    """Owner annotation vs validator annotation at bind.
+
+    Twin of ``is_instance_of`` (value vs annotation at set). Same split as
+    valio's ``issubclassx`` / ``isinstancex``, without typingx.
+
+    ``Account | None`` matches ``Account | None``. ``Account`` matches
+    ``Account | None``. ``Admin(Account)`` matches ``Account``. Owner
+    wider than the validator (``Account | None`` vs ``Account``) does not.
+    """
+    if subtype is supertype:
+        return True
+    if _annotation_identity(subtype) == _annotation_identity(supertype):
+        return True
+    super_u = _union_args(supertype)
+    if super_u is not None:
+        sub_u = _union_args(subtype)
+        if sub_u is not None:
+            return all(is_subclass_of(member, supertype) for member in sub_u)
+        return any(is_subclass_of(subtype, member) for member in super_u)
+    sub_u = _union_args(subtype)
+    if sub_u is not None:
+        return all(is_subclass_of(member, supertype) for member in sub_u)
+    return _issubclass_closed(subtype, supertype)
 
 
 def _annotation_label(annotation: Any) -> str:
@@ -507,7 +525,7 @@ class Property(Generic[_StoreT]):
         if self.annotation is None:
             self.annotation = subscript
             return
-        if not _annotations_agree(self.annotation, subscript):
+        if not is_subclass_of(subscript, self.annotation):
             raise TypeError(
                 f"{type(self).__qualname__}[{_annotation_label(subscript)}] "
                 f"did not match {type(self).__qualname__}: "
@@ -534,7 +552,7 @@ class Property(Generic[_StoreT]):
             return
         if owner_annotation is None:
             return
-        if not _annotations_agree(self.annotation, owner_annotation):
+        if not is_subclass_of(owner_annotation, self.annotation):
             raise TypeError(
                 f"{owner.__name__}.{self.name}: {_annotation_label(owner_annotation)}"
                 f" annotation did not match {type(self).__qualname__}: "

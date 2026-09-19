@@ -128,7 +128,7 @@ _ORIGIN_GROUPS = (
 
 
 def is_instance_of(value: Any, annotation: Any) -> bool:
-    """Type-door membership. Origin tables sit beside this function."""
+    """Value vs annotation at set. Twin of ``is_subclass_of`` (bind)."""
     if annotation is None or annotation is Any:
         return True
     peeled = _peel_annotation(annotation)
