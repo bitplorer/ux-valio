@@ -1,0 +1,37 @@
+site_name: ux-valio
+site_description: Dataclass field-default validation via descriptors
+repo_url: https://github.com/bitplorer/ux-valio
+repo_name: bitplorer/ux-valio
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: black
+    accent: light blue
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - content.code.copy
+markdown_extensions:
+  - tables
+  - fenced_code
+  - toc:
+      permalink: true
+nav:
+  - Handbook: index.md
+  - Tutorial: tutorial.md
+  - How-to:
+      - Hang hooks: how-to/hang.md
+      - Compose: how-to/compose.md
+      - TypedDict schema: how-to/typed-dict.md
+  - Reference:
+      - Validator: reference/validator.md
+      - Typed facades: reference/typed.md
+      - Named identities: reference/named.md
+      - Pattern: reference/pattern.md
+      - Public API: reference/api.md
+  - Explanation:
+      - Honesty: explanation/honesty.md
+      - Layering: explanation/layering.md
+      - Host / peer: explanation/host-peer-plan.md
+docs_dir: docs

@@ -18,9 +18,15 @@ classifiers = [
 ]
 keywords = ["validation", "dataclass", "descriptor"]
 
+[project.urls]
+Homepage = "https://github.com/bitplorer/ux-valio"
+Documentation = "https://github.com/bitplorer/ux-valio/tree/main/docs"
+Source = "https://github.com/bitplorer/ux-valio"
+
 [project.optional-dependencies]
 dev = ["pytest>=7", "phonenumbers>=9.0.0", "mypy>=1.8"]
 phonenumbers = ["phonenumbers>=9.0.0"]
+docs = ["mkdocs>=1.6", "mkdocs-material>=9"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["ux_valio"]
