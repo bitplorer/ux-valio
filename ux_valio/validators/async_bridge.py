@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Nest-safe sync bridge for async processors and tasks.
 
-``add_*`` / ``add_*_task`` accept sync or async callables. Coroutine
+``add_process_*`` / ``add_task_*`` accept sync or async callables. Coroutine
 functions register. Coroutine objects follow run rules. On the sync
 descriptor path: no running loop → TypeError naming the missing loop /
 helper; running loop → nest-safe worker private loop. No ``asyncio.run``

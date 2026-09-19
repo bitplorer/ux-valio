@@ -19,10 +19,10 @@ from ux_valio.validators.hooks import HookHost
 
 def test_compose_root_and_leaves_have_add_star():
     field = LengthValidator(min_length=1, debug=True) & RequiredValidator(required=True)
-    assert hasattr(field, "add_pre_validator")
+    assert hasattr(field, "add_process_pre_validate")
     assert hasattr(field, "add_validator")
-    assert hasattr(field, "add_pre_validator_task")
-    assert hasattr(LengthValidator(min_length=1), "add_pre_validator")
+    assert hasattr(field, "add_task_pre_validate")
+    assert hasattr(LengthValidator(min_length=1), "add_process_pre_validate")
     assert hasattr(RequiredValidator(required=True), "add_validator")
     assert not hasattr(field, "add_pre_set")
     assert "pre_set" not in field._processors
@@ -35,7 +35,7 @@ def test_hang_after_compose_on_root():
     class User:
         name: str = field
 
-    field.add_pre_validator(
+    field.add_process_pre_validate(
         lambda instance, value: value.strip() if isinstance(value, str) else value,
         namespace=HookHost._owner_key(User),
     )
@@ -61,7 +61,7 @@ def test_hang_on_facade_before_compose_still_runs():
     class User:
         name: str = field
 
-    left.add_pre_validator(
+    left.add_process_pre_validate(
         lambda instance, value: value.strip() if isinstance(value, str) else value,
         namespace=HookHost._owner_key(User),
     )
@@ -71,7 +71,7 @@ def test_hang_on_facade_before_compose_still_runs():
 
 def test_nested_compose_with_hooks_is_not_flattened():
     inner = LengthValidator(min_length=1, debug=True) & RequiredValidator(required=True)
-    inner.add_pre_validator(lambda instance, value: value, namespace="compose.User")
+    inner.add_process_pre_validate(lambda instance, value: value, namespace="compose.User")
     outer = inner & LengthValidator(max_length=10)
     assert len(outer.validators) == 2
     assert type(outer.validators[0]) is AllOf
@@ -156,7 +156,7 @@ def test_chain_is_allof_alias():
 def test_anyof_root_also_has_add_star():
     field = StringValidator(debug=True) | RequiredValidator(required=True)
     assert isinstance(field, AnyOf)
-    assert hasattr(field, "add_post_validator")
+    assert hasattr(field, "add_process_post_validate")
     assert not hasattr(Validator, "add_pre_set")
 
 

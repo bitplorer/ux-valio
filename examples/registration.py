@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Reserve a unique username with password hash before store.
 
-Hang uniqueness on ``add_pre_validator`` (return the value). Confirm match
-on the same hook. Persist the hashed password on ``add_post_set`` of the
+Hang uniqueness on ``add_process_pre_validate`` (return the value). Confirm match
+on the same hook. Persist the hashed password on ``add_task_post_set`` of the
 last field so a failed set does not consume the name. Do not invent
-``add_pre_set``. A uniqueness **task** is the wrong bag.
+``add_pre_set``. A uniqueness **task** is the wrong bag — uniqueness is a
+process (it can reject). Persist is a task (side effect after store).
 
 Inject ``UserStore`` and ``PasswordHasher`` on ``RegistrationService``;
 ``main()`` only runs the demo. Full collect_all signup + login lives in
@@ -117,19 +118,19 @@ class Registration:
         debug=True, required=True, min_length=8, max_length=128
     )
 
-    @username.add_pre_validator
+    @username.add_process_pre_validate
     def username_available(self, value: str) -> str:
         if self.users.username_taken(value):
             raise ValueError(f"username {value!r} is already registered")
         return value
 
-    @password_confirm.add_pre_validator
+    @password_confirm.add_process_pre_validate
     def passwords_match(self, value: str) -> str:
         if value != self.password:
             raise ValueError("password confirmation does not match")
         return value
 
-    @password_confirm.add_post_set
+    @password_confirm.add_task_post_set
     def persist_user(self, value: str) -> None:
         self.users.create(self.username, "", self.hasher.hash(self.password))
 

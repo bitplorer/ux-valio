@@ -14,7 +14,7 @@ opt-in: fail-fast remains the door. ``collect_all=True`` continues remaining
 concerns and surfaces every failure. Do not overload ``debug`` into collect.
 
 Class access (``obj is None``) returns the descriptor, so
-``Cls.field.add_pre_validator`` works after the class exists — hang
+``Cls.field.add_process_pre_validate`` works after the class exists — hang
 hooks on the field name, no outer ``username_field`` twin. Dataclass
 ``getattr`` then sees the descriptor as the field default; ``__set__``
 treats ``value is self`` as unset and applies ``default`` /
@@ -28,7 +28,7 @@ mutates. ``@dataclass(slots=True)`` stays unsupported.
 
 Only the descriptor ``pre_set`` hook return is stored. That hook is the
 validate pipeline, not a ``_processors[\"pre_set\"]`` bag. Hang before-store
-work on ``add_pre_validator`` / ``add_validator`` / ``add_pre_validator_task``.
+work on ``add_process_pre_validate`` / ``add_validator`` / ``add_task_pre_validate``.
 ``post_set`` / get / delete return values are ignored. ``__get__`` /
 ``__delete__`` pass ``self.name`` into hooks, not the stored value.
 Never-set ``__get__`` / ``__delete__`` with ``debug=True`` raise a named

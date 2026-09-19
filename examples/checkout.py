@@ -5,7 +5,7 @@
 ``MM/YY``. Card expiry uses ``StartsWith`` / ``EndsWith`` so findall is an
 identity match. ``PaymentCardValidator`` rejects a Luhn-valid non-brand number.
 
-Ports fail closed into validation errors via ``add_pre_validator``:
+Ports fail closed into validation errors via ``add_process_pre_validate``:
 
 * ``PromoCatalog.lookup`` — unknown code
 * ``Inventory.ensure_available`` / ``reserve`` — stock
@@ -126,21 +126,21 @@ class Checkout:
     promo_code: str = ExpiryValidator(expire_after=_PROMO_UNTIL, debug=True, required=True)
     quantity: int = IntegerValidator(min_value=1, debug=True, required=True)
 
-    @promo_code.add_pre_validator
+    @promo_code.add_process_pre_validate
     def promo_known(self, value: str) -> str:
         return self.promos.lookup(value)
 
-    @quantity.add_pre_validator
+    @quantity.add_process_pre_validate
     def stock_available(self, value: int) -> int:
         self.inventory.ensure_available(self.sku, value)
         return value
 
-    @quantity.add_pre_validator
+    @quantity.add_process_pre_validate
     def card_authorized(self, value: int) -> int:
         self.gateway.authorize(self.number, self.amount)
         return value
 
-    @quantity.add_post_set
+    @quantity.add_task_post_set
     def reserve_stock(self, value: int) -> None:
         self.inventory.reserve(self.sku, value)
 

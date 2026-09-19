@@ -6,7 +6,7 @@ Hang ``add_*`` on the field name (the compose root after ``&`` / ``AllOf``).
 check before alternatives. ``Chain`` is ``AllOf``.
 
 Inject ``StaffDirectory`` on ``StaffService``; uniqueness hangs on the
-compose-root ``name`` via ``add_pre_validator``. ``main()`` only runs
+compose-root ``name`` via ``add_process_pre_validate``. ``main()`` only runs
 the demo. ``InMemoryStaffDirectory`` is the runnable fake; production plugs
 HRIS/LDAP. This file does not ship a DB driver.
 """
@@ -67,17 +67,17 @@ class StaffProfile:
         RequiredValidator(required=True),
     )
 
-    @name.add_pre_validator
+    @name.add_process_pre_validate
     def strip_name(self, value: str) -> str:
         return value.strip()
 
-    @name.add_pre_validator
+    @name.add_process_pre_validate
     def name_available(self, value: str) -> str:
         if self.directory.name_taken(value):
             raise ValueError(f"staff name {value!r} is already in the directory")
         return value
 
-    @name.add_post_set
+    @name.add_task_post_set
     def commit_name(self, value: str) -> None:
         self.directory.commit(value)
 

@@ -75,12 +75,12 @@ class User:
         required=True
     )
 
-    @name.add_pre_validator
+    @name.add_process_pre_validate
     def strip(self, value: str) -> str:
         return value.strip()
 ```
 
-Class access `User.name` is that descriptor, so `User.name.add_post_set`
+Class access `User.name` is that descriptor, so `User.name.add_process_post_set`
 also works after the class exists. Dataclass uses the descriptor as the
 field default; assigning it is treated as unset and applies `default` /
 `default_factory`. A shared descriptor (`aadhaar` on Person and Vendor)
@@ -125,12 +125,13 @@ not the last `__set_name__`.
 
 **Only the descriptor `pre_set` hook return is stored.** That hook *is*
 `pre_validate → validate → post_validate`. There is no `_processors["pre_set"]`
-bag and no `add_pre_set` — hang before-store work on `add_pre_validator`
+bag and no `add_pre_set` — hang before-store work on `add_process_pre_validate`
 (transform; **return the value**), `add_validator` (check; return ignored),
-or `add_pre_validator_task` (side effect; return ignored). `add_post_set`
-runs after store; its return is ignored.
+or `add_task_pre_validate` (side effect, same thread; return ignored).
+`add_task_post_set` is persist-after-store. `add_process_post_set`
+runs after store; its return is not stored. Tasks are not background jobs.
 
-`add_*` / `add_*_task` accept **sync or async** callables. `async def`
+`add_process_*` / `add_task_*` accept **sync or async** callables. `async def`
 registers. Coroutine **objects** at run are not a second reject door: same
 run rules as `async def`.
 
@@ -149,9 +150,9 @@ run rules as `async def`.
 ### Before-store DB check (Register)
 
 valio README taught this on Door B (`@user_field.add_pre_valiator` — typo
-for `add_pre_validator`). Hang the same processor on the **field
+for `add_process_pre_validate`). Hang the same processor on the **field
 name**. Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong
-hook — return the value from `add_pre_validator`.
+hook — return the value from `add_process_pre_validate`.
 
 Class-body `username: str = username` is `NameError` only when an outer
 name collides with the field (the assignment makes `username` local).
@@ -168,7 +169,7 @@ DB = {"taken"}
 class Register:
     username: str = StringValidator(debug=True, required=True, min_length=3)
 
-    @username.add_pre_validator
+    @username.add_process_pre_validate
     def username_not_taken(self, value: str) -> str:
         if value in DB:
             raise ValueError("username already registered")
@@ -188,7 +189,7 @@ as-is; it fires only when that string equals the instance class’s
 `module.qualname` (or an MRO parent). Passing a class object as `namespace=` is `TypeError`
 (string keys only). Leftover teaching: `namespace="Register"` (bare
 `__name__`) is not rewritten to match lookup. A processor that forgets to
-return the value stores `None`; return the value from `add_pre_validator`.
+return the value stores `None`; return the value from `add_process_pre_validate`.
 
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
 `default=[]` is the same list on every instance. `default_factory=` is a
@@ -211,7 +212,7 @@ validation would not run. `@dataclass(frozen=True)` works: dataclass
 intercepts assign/delete with `FrozenInstanceError`; `__init__` still
 runs the field descriptor.
 
-`add_post_validator` may transform after checks. If the field has an
+`add_process_post_validate` may transform after checks. If the field has an
 annotation, the stored value must still match it — a post processor cannot
 smuggle a `str` onto `IntegerValidator`. Named facades (`EmailValidator`,
 `PaymentCardValidator`, `DateValidator`, …) re-check their extra on the
@@ -268,7 +269,7 @@ class Part:
 Runnable production skeletons live under `examples/` (`python examples/<file>.py`).
 Each file is a service that injects Protocol ports in the constructor, plus a
 dataclass callers can copy. `main()` is only the runnable runner.
-Hooks (`add_pre_validator` / `add_post_set`) fail closed into validation
+Hooks (`add_process_pre_validate` / `add_process_post_set`) fail closed into validation
 errors (uniqueness, password confirm, promo/inventory, payment gateway, KYC
 registry). Password hashing is an example `PasswordHasher` port (stdlib
 PBKDF2 demo); production replaces it with bcrypt/argon2id. In-memory fakes
@@ -379,7 +380,7 @@ it, then assign `password: str = password_field.validator`. That Field factory
 duplicated kwargs, dropped `gt`/`lt`/`eq`/`multiple_of`/`in_choice` from its
 signature, and is untested. ux-valio retires Door B. Move the kwargs onto
 `StringValidator` / `IntegerValidator` / `Validator` as the dataclass default,
-and hang `add_pre_validator` / `add_validator` on that descriptor. Star-import
+and hang `add_process_pre_validate` / `add_validator` on that descriptor. Star-import
 of valio's 306 names is gone; import the names in `__all__`.
 
 ## Public surface

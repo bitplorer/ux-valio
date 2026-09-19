@@ -14,6 +14,8 @@ def test_no_add_pre_set_on_validator():
     """pre_set is the validate pipeline, not a processor bag."""
     assert not hasattr(Validator, "add_pre_set")
     assert not hasattr(Validator, "add_pre_set_task")
+    assert not hasattr(Validator, "add_process_pre_set")
+    assert not hasattr(Validator, "add_task_pre_set")
     assert "pre_set" not in Facade()._processors
     assert "pre_set" not in Facade()._tasks
     assert set(Facade()._processors) == {
@@ -27,7 +29,7 @@ def test_no_add_pre_set_on_validator():
     }
 
 
-def test_add_pre_validator_is_the_pre_set_pipeline():
+def test_add_process_pre_validate_is_the_pre_set_pipeline():
     v = Validator(debug=True)
 
     def strip(instance, value):
@@ -37,7 +39,7 @@ def test_add_pre_validator_is_the_pre_set_pipeline():
     class Host:
         x: str = v
 
-    v.add_pre_validator(strip, namespace=HookHost._owner_key(Host))
+    v.add_process_pre_validate(strip, namespace=HookHost._owner_key(Host))
 
     assert Host(x="  Ada  ").x == "Ada"
 
