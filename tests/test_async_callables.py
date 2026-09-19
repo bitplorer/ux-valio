@@ -116,7 +116,7 @@ def test_sync_path_without_loop_debug_falsy_swallows_unset():
     )
 
 
-def test_async_task_sync_path_without_loop_fail_closed():
+def test_async_task_runs_without_caller_loop():
     v = Validator(debug=True)
     seen = []
 
@@ -129,9 +129,10 @@ def test_async_task_sync_path_without_loop_fail_closed():
 
     v.add_task_pre_validate(note, namespace=HookHost._owner_key(Host))
 
-    with pytest.raises(TypeError, match="running event loop"):
-        Host(x="ada")
-    assert seen == []
+    host = Host(x="ada")
+    assert host.x == "ada"
+    HookHost.wait_tasks(timeout=2)
+    assert seen == ["ada"]
 
 
 def _assign_on_running_loop(factory):
@@ -180,6 +181,7 @@ def test_sync_path_with_running_loop_runs_async_task():
 
     host = _assign_on_running_loop(lambda: Host(x="ada"))
     assert host.x == "ada"
+    HookHost.wait_tasks(timeout=2)
     assert log == ["ada"]
 
 
@@ -205,6 +207,7 @@ def test_sync_path_with_running_loop_processors_then_tasks_once():
 
     host = _assign_on_running_loop(lambda: Host(x="raw"))
     assert host.x == "raw-p"
+    HookHost.wait_tasks(timeout=2)
     assert log == [("proc", "raw"), ("task", "raw-p")]
 
 

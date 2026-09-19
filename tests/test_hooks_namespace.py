@@ -384,6 +384,7 @@ def test_add_task_pre_validate_does_not_rewrite_stored_value():
     username_field.add_task_pre_validate(note, namespace=HookHost._owner_key(Register))
 
     assert Register(username="ada").username == "ada"
+    HookHost.wait_tasks(timeout=2)
     assert seen == ["ada"]
 
 
@@ -439,9 +440,11 @@ def test_same_class_name_different_modules_get_distinct_owner_keys():
     )
 
     UserA(x="x")
+    HookHost.wait_tasks(timeout=2)
     assert log == ["a"]
     log.clear()
     UserB(x="x")
+    HookHost.wait_tasks(timeout=2)
     assert log == ["b"]
 
 

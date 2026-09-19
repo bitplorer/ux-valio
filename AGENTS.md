@@ -46,7 +46,7 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   `AttributeError`, not bare `KeyError`;
   Pattern `findall` (empty-match `a*` is a match; Email extra is fullmatch);
   facades do not multiple-inherit concern leaves;
-  path fail-closed; processors then tasks once;
+  processors then tasks once (tasks spawn; setter does not wait);
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
   Hang `add_*` on the field name (`@username.add_process_pre_validate` in the
   class body). `add_*` lives on `ValidateProperty` (facade, leaf, or
@@ -182,7 +182,7 @@ New private helpers are verbs that name the action:
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
 `_Of._flatten`, `_Opts.merge`, `_Opts.from_call`, `_Opts.overlay`,
 `_Opt.merge`, `_Opt.keeps_nesting`,
-`HookHost.has_hooks`, `HookHost._collect_owner_keys`, `HookHost._register`,
+`HookHost.has_hooks`, `HookHost.wait_tasks`, `HookHost._collect_owner_keys`, `HookHost._register`,
 `_bind_field_logger`, `_take_subscript_annotation`,
 `_is_unconstrained_typevar`,
 `HookHost._owner_key`, `HookHost._resolve_owner_key`,

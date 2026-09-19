@@ -140,7 +140,7 @@ class Checkout:
         self.gateway.authorize(self.number, self.amount)
         return value
 
-    @quantity.add_task_post_set
+    @quantity.add_process_post_set
     def reserve_stock(self, value: int) -> None:
         self.inventory.reserve(self.sku, value)
 

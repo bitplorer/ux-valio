@@ -38,6 +38,7 @@ def test_validator_runs_processing_then_task_once():
 
     host = Host(x="raw")
     assert host.x == "raw-p"
+    HookHost.wait_tasks(timeout=2)
     assert log == [("pre_proc", "raw"), ("pre_task", "raw-p")]
 
 
@@ -65,23 +66,28 @@ def test_validator_all_phases_run_task_once_after_processing():
     host = Host(x="raw")
     _ = host.x
     del host.x
+    HookHost.wait_tasks(timeout=2)
 
-    assert log == [
+    procs = [event for event in log if event[0].endswith("_proc")]
+    tasks = [event for event in log if event[0].endswith("_task")]
+    assert procs == [
         ("pre_proc", "raw"),
-        ("pre_task", "raw-p"),
         ("post_proc", "raw-p"),
-        ("post_task", "raw-p-p"),
         ("set_proc", "raw-p-p"),
-        ("set_task", "raw-p-p-s"),
         ("pget_proc", "x"),
-        ("pget_task", "x-p"),
         ("gget_proc", "x"),
-        ("gget_task", "x-g"),
         ("pdel_proc", "x"),
-        ("pdel_task", "x-p"),
         ("gdel_proc", "x"),
-        ("gdel_task", "x-g"),
     ]
+    assert set(tasks) == {
+        ("pre_task", "raw-p"),
+        ("post_task", "raw-p-p"),
+        ("set_task", "raw-p-p-s"),
+        ("pget_task", "x-p"),
+        ("gget_task", "x-g"),
+        ("pdel_task", "x-p"),
+        ("gdel_task", "x-g"),
+    }
 
 
 def test_plain_validator_processing_without_tasks():
@@ -134,3 +140,49 @@ def test_get_processors_see_attribute_name_not_stored_value():
     host = Host(x="stored")
     assert host.x == "stored"
     assert log == [("pget", "x")]
+
+
+def test_task_does_not_block_the_setter():
+    import threading
+
+    started = threading.Event()
+    release = threading.Event()
+    seen: list[str] = []
+    v = Validator(debug=True)
+
+    def email(instance, value):
+        started.set()
+        release.wait(timeout=2)
+        seen.append(value)
+
+    @dataclass
+    class Host:
+        x: str = v
+
+    v.add_task_post_set(email, namespace=HookHost._owner_key(Host))
+
+    host = Host(x="ada")
+    assert host.x == "ada"
+    assert started.wait(timeout=2)
+    assert seen == []
+    release.set()
+    HookHost.wait_tasks(timeout=2)
+    assert seen == ["ada"]
+
+
+def test_task_error_does_not_fail_the_set():
+    v = Validator(debug=True)
+
+    def boom(instance, value):
+        raise RuntimeError("smtp down")
+
+    @dataclass
+    class Host:
+        x: str = v
+
+    v.add_task_post_set(boom, namespace=HookHost._owner_key(Host))
+
+    host = Host(x="ada")
+    assert host.x == "ada"
+    HookHost.wait_tasks(timeout=2)
+    assert any(isinstance(err, RuntimeError) for err in v.errors)
