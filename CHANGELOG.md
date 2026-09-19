@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- ``named/india`` is a package: ``kyc`` / ``gst`` / ``registry`` / ``bank``.
+  Layers do not import each other. ``from ux_valio import GSTINValidator``
+  unchanged.
+
 - GSTIN accepts jurisdiction ``97`` / ``99``. Payment cards accept UnionPay.
   ``UdyamValidator`` is the MSME identity.
 

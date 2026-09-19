@@ -3,7 +3,7 @@
 
 Sibling domain modules (parallel, do not import each other)::
 
-    india    — KYC / tax / bank / GST  (Aadhaar, PAN, GSTIN, …)
+    india/   — KYC / GST / registry / bank  (folder of layers)
     finance  — money / cards / ISO currency (IBAN, BIC, PaymentCard, …)
     catalog  — goods (ISBN, EAN, GTIN, VIN)
     contact  — how to reach (Email, Phone, URL, Hostname)
@@ -34,7 +34,7 @@ Every named facade:
 They import ``ux_valio.facades.typed`` or the validate door — never each
 other, and ``typed`` never imports this package. Public names re-export
 from ``ux_valio``; domain imports are for source navigation
-(``from ux_valio.facades.named.india import GSTINValidator``).
+(``from ux_valio.facades.named.india.gst import GSTINValidator``).
 """
 
 from ux_valio.facades.named.catalog import (
