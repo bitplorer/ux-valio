@@ -67,12 +67,15 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   `enable_async` is not a door (unknown-kwarg TypeError).
   `cache_task` is not a door (unknown-kwarg TypeError). valio's
   id(tasks) cache is retired, not stored.
-  `collect_all` default False (fail-fast). Do not overload `debug` into
+  `collect_all` omitted is True (continue remaining concerns). One
+  collected failure re-raises as itself; two or more are `ValidationErrors`.
+  `collect_all=False` is fail-fast. Omitted `debug` is True (re-raise);
+  `debug=False` swallows. Do not overload `debug` into
   collect-all. Hang `add_*` on the field default. Compose merge fail-closed: conflicting
   specified `debug` / `default` / `default_factory` / `collect_all` /
   `logger` is TypeError.
-  Explicit `False` is specified. Omitted `collect_all` / `logger` still
-  collapse to a specified `True`. `Chain` is `AllOf`.
+  Explicit `False` is specified. Omitted `collect_all` / `logger` / `debug`
+  still collapse to a specified `True`. `Chain` is `AllOf`.
   Unresolved owner `str` / `ForwardRef` annotations TypeError at bind
   (not copied, not eval'd). Owner annotation that is a Property class
   (`StringValidator` / `Validator[str]`) peels to the store type.

@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Open a product user account: identity, role, email, UUID.
 
-Callers copy the dataclass and ``open_account``. ``debug=True`` is fail-closed:
-invalid assignment raises. Assigned ``0`` / ``""`` are kept (not replaced by
+Callers copy the dataclass and ``open_account``. Invalid assignment raises
+(omitted ``debug`` is True). Assigned ``0`` / ``""`` are kept (not replaced by
 ``default``). ``default_factory`` builds a per-instance UUID. Username
 uniqueness via an injectable ``UserStore`` and hashed passwords via
 ``PasswordHasher`` live in ``collect_all_form.py`` and ``registration.py``.
@@ -23,19 +23,18 @@ from ux_valio import (
 @dataclass
 class UserAccount:
     username: str = StringValidator(
-        debug=True, required=True, min_length=3, max_length=32
+        required=True, min_length=3, max_length=32
     )
-    display_name: str = StringValidator(debug=True, max_length=80, default="")
+    display_name: str = StringValidator(max_length=80, default="")
     role: str = Validator(
         in_choice=["member", "moderator", "admin"],
         default="member",
-        debug=True,
     )
     reputation: int = IntegerValidator(
-        min_value=0, max_value=10_000, default=0, debug=True
+        min_value=0, max_value=10_000, default=0
     )
-    email: str = EmailValidator(debug=True, required=True)
-    account_id: UUID = UUIDValidator(debug=True, default_factory=uuid4)
+    email: str = EmailValidator(required=True)
+    account_id: UUID = UUIDValidator(default_factory=uuid4)
 
 
 def open_account(

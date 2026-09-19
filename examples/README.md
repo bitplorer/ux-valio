@@ -7,7 +7,8 @@ or list/dict/set/tuple collection facade.
 Each file is a service-shaped module callers copy: a Protocol port, an
 in-memory fake, a Door A dataclass, and a service that injects ports in the
 constructor. Hooks (`add_process_pre_validate` / `add_process_post_set`) fail closed into
-`ValueError` / `ValidationErrors`. `debug=True` is fail-closed. `main()` is
+`ValueError` / `ValidationErrors`. Omitted `debug` / `collect_all` are True.
+`main()` is
 only the runnable runner (wire the fake, show the conflict path). Replace
 the fake with a SQL/Redis/HTTP adapter that satisfies the Protocol. Examples
 do not ship a DB driver.

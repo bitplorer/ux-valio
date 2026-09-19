@@ -27,6 +27,7 @@ from ux_valio import (
     StringEnumValidator,
     URLValidator,
     UUIDValidator,
+    ValidationErrors,
 )
 
 
@@ -49,7 +50,7 @@ def test_decimal_validator_rejects_float():
 
     assert Price(n=decimal.Decimal("1.50")).n == decimal.Decimal("1.50")
     assert Price(n="1.50").n == decimal.Decimal("1.50")
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, ValidationErrors)):
         Price(n=1.5)
     with pytest.raises(ValueError):
         Price(n="not-a-decimal")
@@ -253,7 +254,7 @@ def test_enum_validators():
         c: Color = EnumValidator(debug=True)
 
     assert Flag(c=Color.RED).c is Color.RED
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, ValidationErrors)):
         Flag(c="red")
 
     @dataclass
@@ -261,7 +262,7 @@ def test_enum_validators():
         r: Rank = IntegerEnumValidator(debug=True)
 
     assert Grade(r=Rank.LOW).r is Rank.LOW
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, ValidationErrors)):
         Grade(r=Color.RED)
 
     @dataclass
@@ -269,7 +270,7 @@ def test_enum_validators():
         c: Color = StringEnumValidator(debug=True)
 
     assert Shade(c=Color.BLUE).c is Color.BLUE
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, ValidationErrors)):
         Shade(c=Rank.LOW)
 
 
@@ -287,7 +288,7 @@ def test_datetime_validator_parses_iso_and_rejects_plain_date():
     assert When(t=moment).t == moment
     assert When(t="2020-01-02T12:30:00").t == moment
     assert When(t="2020-01-02 12:30:00").t == moment
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, ValidationErrors)):
         When(t=datetime.date(2020, 1, 2))
     with pytest.raises(ValueError, match="ISO datetime"):
         When(t="not-a-datetime")

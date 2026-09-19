@@ -8,10 +8,12 @@ a zero-arg callable invoked per None assignment. Both set is ``TypeError``.
 Leftover: a callable ``default=`` is still invoked (valio).
 
 ``debug`` falsy swallows exceptions, appends them to ``errors``, and does
-not re-raise. ``debug=True`` re-raises. This swallow is KEEP — not a
-silent fail-closed flip. ``collect_all`` (default ``False``) is a separate
-opt-in: fail-fast remains the door. ``collect_all=True`` continues remaining
-concerns and surfaces every failure. Do not overload ``debug`` into collect.
+not re-raise. Omitted ``debug`` is ``True`` (re-raise). ``debug=False``
+opts into swallow. This swallow is KEEP — not a silent fail-closed flip.
+``collect_all`` omitted is ``True``: remaining concerns continue and every
+failure surfaces. ``collect_all=False`` is fail-fast. Do not overload
+``debug`` into collect. Omitted stays unspecified so compose with an
+explicit ``False`` does not TypeError.
 
 Class access (``obj is None``) returns the descriptor, so
 ``Cls.field.add_process_pre_validate`` works after the class exists — hang
@@ -90,7 +92,7 @@ class _Opt:
 
     Runtime value is ``.value``. Merge uses ``.specified``.
     ``debug is None`` and logger/collect_all ``_UNSET`` are omitted.
-    Explicit ``False`` is specified.
+    Omitted debug/collect_all resolve True. Explicit ``False`` is specified.
     """
 
     __slots__ = ("value", "specified")
@@ -177,7 +179,7 @@ class _Opts:
                 )
             logger_opt = _Opt.set(False if logger is None else logger)
         if collect_all is _UNSET:
-            collect_opt = _Opt.omitted(False)
+            collect_opt = _Opt.omitted(True)
         else:
             if not isinstance(collect_all, bool):
                 raise TypeError(
@@ -191,7 +193,7 @@ class _Opts:
         if default is not None and default_factory is not None:
             raise TypeError("default and default_factory cannot both be set")
         return cls(
-            debug=_Opt.set(debug) if debug is not None else _Opt.omitted(None),
+            debug=_Opt.set(debug) if debug is not None else _Opt.omitted(True),
             default=_Opt.set(default) if default is not None else _Opt.omitted(None),
             default_factory=(
                 _Opt.set(default_factory) if default_factory is not None else _Opt.omitted(None)

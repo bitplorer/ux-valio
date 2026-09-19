@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from ux_valio import IntegerValidator, ValidateProperty
+from ux_valio import IntegerValidator, ValidateProperty, ValidationErrors
 
 
 def _cause_or_self(err: BaseException) -> BaseException:
@@ -105,7 +105,7 @@ def test_dataclass_frozen_validates_and_rejects_mutation():
         n: int = IntegerValidator(min_value=0, debug=True)
 
     assert F(n=3).n == 3
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, ValidationErrors)):
         F(n="nope")
     frozen = F(n=4)
     with pytest.raises(FrozenInstanceError):

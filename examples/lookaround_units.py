@@ -33,9 +33,9 @@ not_pounds = Digit(count_min=1) & IfNotFollowedBy(Pattern(r"lb"))
 
 @dataclass
 class Shipment:
-    mass: str = StringValidator(pattern=mass_kg, debug=True, required=True)
-    price: str = StringValidator(pattern=usd_amount, debug=True, required=True)
-    quantity: str = StringValidator(pattern=not_pounds, debug=True, required=True)
+    mass: str = StringValidator(pattern=mass_kg, required=True)
+    price: str = StringValidator(pattern=usd_amount, required=True)
+    quantity: str = StringValidator(pattern=not_pounds, required=True)
 
 
 def book_shipment(mass: str, price: str, quantity: str) -> Shipment:
