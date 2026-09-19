@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Drop unused ``Chain`` alias (it was ``AllOf``). Compose with ``AllOf``
+  / ``&``. Not in ``__all__``.
+
 - Validator constructor kwargs documented one-by-one with examples
   (``doc``, ``default``, ``default_factory``, ``reassign``, bounds, …).
   Live check: ``examples/validator_kwargs.py``.

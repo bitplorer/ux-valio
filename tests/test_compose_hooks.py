@@ -8,8 +8,8 @@ import pytest
 from ux_valio import (
     AllOf,
     AnyOf,
-    Chain,
     LengthValidator,
+
     RequiredValidator,
     StringValidator,
     Validator,
@@ -134,23 +134,6 @@ def test_compose_root_rejects_cache_task_kwarg():
             RequiredValidator(required=True),
             cache_task=False,
         )
-
-
-def test_chain_is_allof_alias():
-    assert Chain is AllOf
-    field = Chain(
-        LengthValidator(min_length=2, debug=True),
-        RequiredValidator(required=True),
-    )
-    assert type(field) is AllOf
-
-    @dataclass
-    class Token:
-        s: str = field
-
-    assert Token(s="ok").s == "ok"
-    with pytest.raises(ValueError):
-        Token(s="x")
 
 
 def test_anyof_root_also_has_add_star():

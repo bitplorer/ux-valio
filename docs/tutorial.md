@@ -130,7 +130,7 @@ password: str = AllOf(
 )
 ```
 
-`Chain` is `AllOf` — an alias, not a third AND. `|` is OR
+`AllOf` is AND. `|` is OR
 (`IntegerValidator | StringValidator` accepts either). Walkthrough:
 [compose](how-to/compose.md).
 

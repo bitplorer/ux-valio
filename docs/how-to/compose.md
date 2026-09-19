@@ -6,9 +6,9 @@ descriptor — one dataclass default, one hang target.
 
 Concern leaves (`LengthValidator`, `RequiredValidator`, …) are the
 **advanced** path: compose validator objects with `&` (AllOf) / `|`
-(AnyOf), or explicit `AllOf` / `AnyOf`, as **one** descriptor. `Chain`
-is `AllOf` — an alias, not a third AND. Facades do not multiple-inherit
-leaves. You do not write `class Password(StringValidator, DigitMixin)`.
+(AnyOf), or explicit `AllOf` / `AnyOf`, as **one** descriptor. Facades
+do not multiple-inherit leaves. You do not write
+`class Password(StringValidator, DigitMixin)`.
 
 ## When to use which
 

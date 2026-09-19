@@ -36,7 +36,8 @@ class User:
 ```
 
 Hang `@username.pre_validate` / `@name.validator` on the field name.
-`Chain` is `AllOf`. Full hang table, TypedDict schema, named identities
+Full hang table, TypedDict schema, named identities
+
 (GSTIN, IBAN, ZIP, UnionPay, …), Pattern, KEEP honesty, and the
 **why** of every default live in the handbook.
 
@@ -67,8 +68,8 @@ Protocol ports in the constructor. See [`examples/README.md`](examples/README.md
 
 ## Public surface
 
-`Validator`, typed facades, concern leaves, `AllOf` / `AnyOf` (`Chain` is
-`AllOf`, not a third AND), `ValidationErrors`, and `Pattern` / `PatternType`
+`Validator`, typed facades, concern leaves, `AllOf` / `AnyOf`,
+`ValidationErrors`, and `Pattern` / `PatternType`
 combinators (`&` / `|`) plus stdlib atoms `Digit` / `Word` / `NonDigit` /
 `NonWord` / `WhiteSpace` / `NonWhiteSpace` / `WordBoundary`, anchors
 `StartsWith` / `EndsWith`, lookarounds `IfPrecededBy` / `IfFollowedBy` (and

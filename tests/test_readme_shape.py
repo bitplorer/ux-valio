@@ -117,6 +117,7 @@ def test_logger_defaults_off():
 def test_public_all_is_explicit_and_small():
     assert "Field" not in ux_valio.__all__
     assert "Schema" not in ux_valio.__all__
+    assert "Chain" not in ux_valio.__all__
     assert "Validator" in ux_valio.__all__
     assert "StringValidator" in ux_valio.__all__
     assert "AllOf" in ux_valio.__all__
@@ -129,6 +130,7 @@ def test_no_field_schema_cap_on_package():
     assert not hasattr(ux_valio, "Field")
     assert not hasattr(ux_valio, "Schema")
     assert not hasattr(ux_valio, "Cap")
+    assert not hasattr(ux_valio, "Chain")
     assert not hasattr(ux_valio, "StringField")
 
 
@@ -140,7 +142,6 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     for path in (root / "docs").rglob("*.md"):
         text += "\n" + path.read_text()
     assert "Do not use bare `Property` as the field default" in text
-    assert "`Chain` is `AllOf`" in text
     assert "findall substring" in text
     assert "`PhoneNumberValidator` is a string facade" in text
     assert "List / dictionary / set / tuple collection facades are not" in text
