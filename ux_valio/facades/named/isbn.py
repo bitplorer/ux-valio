@@ -9,7 +9,15 @@ from ux_valio.facades.typed import StringValidator
 
 
 class ISBNValidator(StringValidator):
-    """ISBN-10 (mod 11, ``X``) or ISBN-13 (978/979 ∩ EAN check). Compact store."""
+    """ISBN-10 (mod 11, trailing ``X``) or ISBN-13 (978/979 ∩ EAN check).
+
+    Usage::
+
+        isbn: str = ISBNValidator()
+
+    Hyphens/spaces strip; stores compact (``9780306406157`` / ``0306406152``).
+    ISBN-13 without 978/979 is an EAN — use ``EANValidator``. No catalog.
+    """
 
     @staticmethod
     def _isbn10_ok(digits: str) -> bool:

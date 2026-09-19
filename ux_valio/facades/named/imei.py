@@ -9,7 +9,15 @@ from ux_valio.facades.typed import StringValidator
 
 
 class IMEIValidator(StringValidator):
-    """15 digits ∩ Luhn checksum."""
+    """IMEI: 15 digits ∩ Luhn.
+
+    Usage::
+
+        imei: str = IMEIValidator()
+
+    Non-digits strip; stores 15-digit compact. Format-only is rejected.
+    No GSMA lookup.
+    """
 
     @staticmethod
     def _luhn_ok(digits: str) -> bool:

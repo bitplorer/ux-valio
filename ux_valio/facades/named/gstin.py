@@ -16,7 +16,15 @@ _CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
 class GSTINValidator(StringValidator):
-    """GSTIN format ∩ Luhn mod 36 checksum."""
+    """GSTIN: 15-char identity ∩ Luhn mod 36.
+
+    Usage::
+
+        gstin: str = GSTINValidator()
+
+    State ``01–38``, then PAN holder, entity, ``Z``, check. Spaces/hyphens
+    strip; stores uppercase compact. Format-only is rejected. No GST portal.
+    """
 
     @staticmethod
     def _luhn_mod_36(body: str) -> str:

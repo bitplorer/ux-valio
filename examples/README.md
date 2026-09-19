@@ -25,7 +25,7 @@ hash — never plaintext. Do not add a hasher to `ux_valio`.
 | Paid checkout (card ∩ Luhn, card `MM/YY` Pattern, promo window) | `checkout.py` | `PromoCatalog`, `Inventory`, `PaymentGateway` | `InMemoryPromoCatalog`, `InMemoryInventory`, `StubPaymentGateway` | offers table, stock row or Redis, Stripe/Razorpay (decline → `ValueError`) |
 | India KYC (Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26, `region="IN"`) | `indian_kyc.py` | `IdentityRegistry` | `InMemoryIdentityRegistry` | KYC warehouse unique Aadhaar/PAN |
 | Staff profile (`&` / `\|`, `AllOf` / `AnyOf`, compose-root `pre_validate`) | `compose_hooks.py` | `StaffDirectory` | `InMemoryStaffDirectory` | HRIS/LDAP unique display name |
-| TypedDict schema (`Annotated` hangs validator extras, no BaseModel) | `typed_dict_schema.py` | — | — | copy the TypedDict; extras are the same validators as field defaults |
+| Identity fields (GSTIN/IBAN/BIC/ISBN/VIN/MAC/TAN/CIN/EPIC compact store) | `identity_fields.py` | — | — | copy the dataclass; registry uniqueness stays in a port |
 | Filed document (EU/IND `DateValidator`, `PathValidator`, IPv4) | `dates_paths.py` | — | — | copy the dataclass; `path_exists=True` is the filesystem door |
 | Catalog SKU (`Pattern`, `StartsWith`, `EndsWith`, `SetOf`, stdlib atoms) | `sku_codes.py` | — | — | copy the Pattern algebra; names KEEP |
 | Warehouse units (`IfPrecededBy` / `IfFollowedBy` on descriptor fields) | `lookaround_units.py` | — | — | copy the lookaround units |
@@ -40,6 +40,7 @@ python examples/sku_codes.py
 python examples/lookaround_units.py
 python examples/compose_hooks.py
 python examples/collect_all_form.py
+python examples/identity_fields.py
 python examples/typed_dict_schema.py
 ```
 

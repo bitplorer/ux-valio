@@ -13,7 +13,14 @@ _PIN = re.compile(r"[1-9][0-9]{5}")
 
 
 class PinCodeValidator(StringValidator):
-    """Indian PIN code identity."""
+    """India Post PIN: 6 digits, first 1–9.
+
+    Usage::
+
+        pin: str = PinCodeValidator()
+
+    Non-digits strip; stores compact ``226001``. No locality lookup.
+    """
 
     @staticmethod
     def _is_valid_pincode(value: Any) -> bool:

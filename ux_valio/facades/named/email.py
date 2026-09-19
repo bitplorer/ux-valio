@@ -26,7 +26,16 @@ _EMAIL_PATTERN = Pattern(
 
 
 class EmailValidator(StringValidator):
-    """Identity of the whole string, not findall substring."""
+    """Addr-spec identity of the **whole** string (fullmatch).
+
+    Usage::
+
+        email: str = EmailValidator()
+
+    ``PatternValidator`` findall still exists for ``pattern=`` on other
+    fields; this facade's extra is fullmatch so a substring address is
+    rejected. No MX lookup.
+    """
 
     def __init__(self, pattern: Any = _EMAIL_PATTERN, **kwargs: Any) -> None:
         super().__init__(pattern=pattern, **kwargs)

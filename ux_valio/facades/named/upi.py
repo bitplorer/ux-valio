@@ -13,7 +13,15 @@ _VPA = re.compile(r"[a-z0-9._-]{3,50}@[a-z]{2,20}")
 
 
 class UPIIdValidator(StringValidator):
-    """UPI virtual payment address identity."""
+    """UPI VPA: ``local@handle`` (NPCI identity).
+
+    Usage::
+
+        vpa: str = UPIIdValidator()
+
+    Spaces strip; stores lowercase (``name@oksbi``). Local 3–50,
+    handle 2–20 letters. No PSP lookup.
+    """
 
     @staticmethod
     def _is_valid_upi_id(value: Any) -> bool:

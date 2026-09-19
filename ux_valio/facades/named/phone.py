@@ -11,9 +11,15 @@ from ux_valio.facades.typed import StringValidator
 class PhoneNumberValidator(StringValidator):
     """Valid number for an explicit ``region=``.
 
-    Leftover: valio defaulted to ``instance.region`` or ``"IN"``. Pass
-    ``region=`` on this facade (typically ``region="IN"`` to match that
-    leftover). ``region`` is not a kwarg on ``Validator``.
+    Usage::
+
+        phone: str = PhoneNumberValidator(region="IN")
+
+    ``region`` is required (ISO 3166-1 alpha-2 as ``phonenumbers``
+    understands it). Leftover: valio defaulted to ``instance.region`` or
+    ``"IN"`` — pass ``region=`` here. ``region`` is not a kwarg on
+    ``Validator``. Engine: ``pip install ux-valio[phonenumbers]``. No
+    carrier / geocoder network.
     """
 
     @staticmethod

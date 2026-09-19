@@ -18,7 +18,15 @@ _FORBIDDEN = set("IOQ")
 
 
 class VINValidator(StringValidator):
-    """17-character VIN ∩ ISO 3779 check digit (position 9)."""
+    """Vehicle identification number: ISO 3779, 17 chars ∩ check digit.
+
+    Usage::
+
+        vin: str = VINValidator()
+
+    Spaces/hyphens strip; stores uppercase. ``I`` / ``O`` / ``Q`` forbidden.
+    Position 9 is the check (``0–9`` or ``X``). No registry lookup.
+    """
 
     @staticmethod
     def _is_valid_vin(value: Any) -> bool:

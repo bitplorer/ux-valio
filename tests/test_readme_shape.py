@@ -163,6 +163,9 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "namespace=" in text
     assert "owning class" in text
     assert "uuid.UUID | str" in text
+    assert "Named identity facades" in text
+    assert "compact identity" in text
     assert "ISBNValidator" in text
     assert "BICValidator" in text
     assert "VoterIdValidator" in text
+    assert "`PhoneNumberValidator` is a string facade" in text

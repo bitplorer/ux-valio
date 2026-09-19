@@ -12,7 +12,15 @@ _EPIC = re.compile(r"[A-Z]{3}[0-9]{7}")
 
 
 class VoterIdValidator(StringValidator):
-    """Indian EPIC voter identity."""
+    """Indian EPIC voter ID: 3 letters + 7 digits.
+
+    Usage::
+
+        epic: str = VoterIdValidator()
+
+    Spaces/hyphens strip; stores uppercase compact (``ABC1234567``).
+    No ECI lookup.
+    """
 
     @staticmethod
     def _is_valid_voter_id(value: Any) -> bool:

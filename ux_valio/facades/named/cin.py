@@ -13,7 +13,15 @@ _CIN = re.compile(r"[LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}")
 
 
 class CINValidator(StringValidator):
-    """Corporate Identity Number format identity."""
+    """Corporate Identity Number: 21-char MCA format.
+
+    Usage::
+
+        cin: str = CINValidator()
+
+    ``L``/``U`` + ROC 5 + state 2 + year 4 + class 3 + serial 6.
+    Spaces/hyphens strip; stores uppercase. No MCA portal.
+    """
 
     @staticmethod
     def _is_valid_cin(value: Any) -> bool:

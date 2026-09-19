@@ -12,7 +12,15 @@ _IBAN = re.compile(r"[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}")
 
 
 class IBANValidator(StringValidator):
-    """IBAN length 15–34 ∩ rearrange-and-mod-97 == 1."""
+    """IBAN: ISO 13616, length 15–34 ∩ rearrange-and-mod-97 == 1.
+
+    Usage::
+
+        iban: str = IBANValidator()
+
+    Print groups (``GB82 WEST …``) strip; stores uppercase compact.
+    Format-only is rejected. No bank lookup. Pair with ``BICValidator``.
+    """
 
     @staticmethod
     def _mod97(text: str) -> bool:

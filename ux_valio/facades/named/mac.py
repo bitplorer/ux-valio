@@ -12,7 +12,15 @@ _MAC = re.compile(r"[0-9A-F]{12}")
 
 
 class MACAddressValidator(StringValidator):
-    """48-bit MAC. Stores 12 uppercase hex digits. Colon/hyphen/Cisco dots strip."""
+    """48-bit (6-octet) MAC. Stores 12 uppercase hex digits.
+
+    Usage::
+
+        mac: str = MACAddressValidator()
+
+    Accepts ``aa:bb:cc:dd:ee:ff``, hyphens, Cisco ``aabb.ccdd.eeff``, or
+    compact hex. Stores ``AABBCCDDEEFF``. Not EUI-64. No OUI lookup.
+    """
 
     @staticmethod
     def _is_valid_mac(value: Any) -> bool:

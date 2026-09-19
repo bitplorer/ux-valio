@@ -22,6 +22,7 @@ EXAMPLE_MODULES = (
     "compose_hooks",
     "collect_all_form",
     "typed_dict_schema",
+    "identity_fields",
 )
 
 

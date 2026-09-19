@@ -16,7 +16,15 @@ _BASE = 26
 
 
 class PANCardValidator(StringValidator):
-    """10-char PAN identity ∩ Luhn mod 26."""
+    """Income-tax PAN: 10-char identity ∩ Luhn mod 26.
+
+    Usage::
+
+        pan: str = PANCardValidator()
+
+    Letters case-fold to A–Z; spaces/hyphens strip. Format-only generators
+    are rejected. No ITD lookup.
+    """
 
     @staticmethod
     def _decode_pan_char(char: str) -> int:

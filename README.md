@@ -396,52 +396,78 @@ owner may be `Path`, `str`, or the union; `path_exists=True` requires
 the path to exist), `DecimalValidator` (coerces Decimal strings; rejects
 float),
 `IPv4Validator` / `IPv6Validator` / `IPAddressValidator`,
-`EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`,
-`PaymentCardValidator` (Visa / Mastercard / Amex / Discover / Rupay, each
-Luhn **and** brand; a Luhn-valid non-brand number is rejected),
-`AadhaarCardValidator` (12 digits ∩ Verhoeff checksum; a substring or
-wrong-length value is rejected), `PANCardValidator` (10-character identity
-`fullmatch` ∩ Luhn mod 26; a format-only generator is rejected), and
-`ExpiryValidator` (`expire_after` / `expire_on` / `expire_before` are
-exclusive; a bad `expire_before` string is checked on that kwarg, not on
-`expire_after`). `expire_*` are not accepted on `Validator`. There is no
-`expiry` path unit — the check lives on the facade.
+`EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`.
 
-Named typed facades (`DateValidator`, `PathValidator`, IP, `PaymentCardValidator`,
-`AadhaarCardValidator`, `PANCardValidator`, `ExpiryValidator`,
-`PhoneNumberValidator`) run their
-extra check from `validate()` after the inherited path. They do not
+Named identity facades (`PaymentCardValidator`, `AadhaarCardValidator`,
+`PANCardValidator`, `ExpiryValidator`, `PhoneNumberValidator`, …) run
+their extra from `validate()` after the inherited path. They do not
 register that check with `validator` on each assignment. That extra
-check joins the collected bag instead of being skipped after an inherited
-failure (`collect_all=False` restores fail-fast).
+check joins the collected bag (`collect_all=False` restores fail-fast).
+
+## Named identity facades
+
+Same field-default pattern as `StringValidator`. Print grouping strips;
+the **stored value is the compact identity**. `None` skips. Stdlib only —
+no portal, no DNS, no BIN lookup. `help(GSTINValidator)` is the per-facade
+contract.
 
 ```python
 from dataclasses import dataclass
 from ux_valio import (
-    AadhaarCardValidator,
-    ExpiryValidator,
-    PANCardValidator,
-    PaymentCardValidator,
-    PhoneNumberValidator,
+    BICValidator,
+    GSTINValidator,
+    IBANValidator,
+    ISBNValidator,
+    MACAddressValidator,
 )
 
 @dataclass
-class Card:
-    number: str = PaymentCardValidator()
-    aadhaar: str = AadhaarCardValidator()
-    pan: str = PANCardValidator()
-    # expire_before is its own bound; do not also pass expire_after.
-    until: str = ExpiryValidator(expire_before="2020-01-01")
-    # leftover: valio defaulted to instance.region or "IN"; pass region=.
-    phone: str = PhoneNumberValidator(region="IN")
+class Counterparty:
+    gstin: str = GSTINValidator()
+    iban: str = IBANValidator()
+    bic: str = BICValidator()
+    isbn: str = ISBNValidator()
+    mac: str = MACAddressValidator()
+
+row = Counterparty(
+    gstin="09 AAAPA1111F 1Z P",
+    iban="GB82 WEST 1234 5698 7654 32",
+    bic="deutdeff",
+    isbn="978-0-306-40615-7",
+    mac="aa:bb:cc:dd:ee:ff",
+)
+# gstin "09AAAPA1111F1ZP", iban compact, bic "DEUTDEFF",
+# isbn "9780306406157", mac "AABBCCDDEEFF"
 ```
 
-`PhoneNumberValidator` is a string facade. `region=` is the taught
-region (ISO 3166-1 alpha-2 as understood by `phonenumbers`). It is
-required: there is no silent `"IN"` default and no `instance.region`
-lookup. The engine is the optional extra `phonenumbers`
-(`pip install ux-valio[phonenumbers]`); there is no network lookup
-(no carrier / geocoder). `region` is not a kwarg on `Validator`.
+| facade | stores | identity |
+|---|---|---|
+| `AadhaarCardValidator` | 12 digits | Verhoeff |
+| `PANCardValidator` | 10 A–Z/digits | Luhn mod 26 |
+| `GSTINValidator` | 15 A–Z/digits | Luhn mod 36, state 01–38 |
+| `TANValidator` | 10 chars | ITD format |
+| `CINValidator` | 21 chars | MCA `L`/`U` + ROC + state + year |
+| `VoterIdValidator` | 3 letters + 7 digits | EPIC |
+| `IFSCValidator` | 11 chars | `ABCD0XXXXXX` |
+| `PinCodeValidator` | 6 digits | India Post, first 1–9 |
+| `UPIIdValidator` | lowercase VPA | `local@handle` |
+| `IBANValidator` | 15–34 chars | ISO 13616 mod-97 |
+| `BICValidator` | 8 or 11 A–Z/digits | ISO 9362 / SWIFT |
+| `ISINValidator` | 12 chars | ISO 6166 ∩ Luhn |
+| `ISBNValidator` | 10 or 13 | ISBN-10 mod 11 / ISBN-13 978\|979 |
+| `EANValidator` | 13 digits | GS1 check |
+| `VINValidator` | 17 chars | ISO 3779 check digit, no I/O/Q |
+| `MACAddressValidator` | 12 hex | 48-bit; colon/hyphen/Cisco ok |
+| `IMEIValidator` | 15 digits | Luhn |
+| `PaymentCardValidator` | compact digits | brand ∩ Luhn |
+| `EmailValidator` | given string | addr-spec **fullmatch** |
+| `URLValidator` | given string | scheme + netloc |
+| `ExpiryValidator` | field's store type | exclusive `expire_*` wall-clock |
+| `PhoneNumberValidator` | given string | `region=` required; `phonenumbers` extra |
+
+`PhoneNumberValidator` is a string facade. Pass `region="IN"` (required).
+`ExpiryValidator(expire_before="2020-01-01")` — exactly one `expire_*`.
+
 List / dictionary / set / tuple collection facades are not
 shipped; `list[T]` / `dict[K, V]` membership is the type check.
 
@@ -451,15 +477,6 @@ Min/max length and value leaves (`MinLengthValidator`, `MaxLengthValidator`,
 `AttributeValidator` is **not** shipped. Check object attributes at the call
 site or with `validator`. RGB/HSL color validators are retired.
 `HexColorValidator` is not a public facade.
-
-Identity facades (stdlib only, no network): `AadhaarCardValidator`,
-`PANCardValidator`, `GSTINValidator` (Luhn mod 36), `TANValidator`,
-`CINValidator`, `VoterIdValidator` (EPIC), `IFSCValidator`,
-`PinCodeValidator` (India PIN), `UPIIdValidator`, `IBANValidator` (mod-97),
-`BICValidator` (SWIFT), `ISINValidator` (Luhn), `ISBNValidator` (10/13),
-`EANValidator` (GS1), `VINValidator` (ISO 3779), `MACAddressValidator`,
-`IMEIValidator` (Luhn), `PaymentCardValidator`, `ExpiryValidator`.
-`PhoneNumberValidator` stays the `phonenumbers` extra.
 
 ## From valio's Field factory
 

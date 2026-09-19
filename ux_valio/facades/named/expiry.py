@@ -12,10 +12,16 @@ _DATE_TYPES = (datetime.datetime, datetime.date, datetime.time)
 
 
 class ExpiryValidator(Validator):
-    """reject assignment when *now* matches the exclusive timeline.
+    """Gate assignment when *now* matches an exclusive timeline.
 
-    Not ``Validator[datetime]`` — this gates wall-clock on whatever the field
-    stores. ``expire_*`` are constructor bounds, not the assigned value's type.
+    Usage::
+
+        until: str = ExpiryValidator(expire_before="2020-01-01")
+
+    Not ``Validator[datetime]`` — this is a wall-clock bound on whatever
+    the field stores. Pass exactly one of ``expire_after`` / ``expire_on``
+    / ``expire_before``. ``expire_on`` is valid only that calendar day.
+    ``expire_*`` are not kwargs on ``Validator``.
     """
 
     expiry: Any

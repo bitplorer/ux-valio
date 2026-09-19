@@ -13,7 +13,16 @@ _TAN = re.compile(r"[A-Z]{3}[ABCFGHLJPT][0-9]{5}[A-Z]")
 
 
 class TANValidator(StringValidator):
-    """10-char TAN identity. Complements ``PANCardValidator`` / ``GSTINValidator``."""
+    """Tax Deduction Account Number: 10-char ITD identity.
+
+    Usage::
+
+        tan: str = TANValidator()
+
+    Shape: 3-letter jurisdiction + status (``ABCFGHLJPT``) + 5 digits +
+    letter. Spaces/hyphens strip; stores uppercase. No ITD lookup.
+    Complements ``PANCardValidator`` / ``GSTINValidator``.
+    """
 
     @staticmethod
     def _is_valid_tan(value: Any) -> bool:

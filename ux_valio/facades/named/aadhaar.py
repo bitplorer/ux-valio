@@ -33,7 +33,15 @@ _PERM = [
 
 
 class AadhaarCardValidator(StringValidator):
-    """12 digits ∩ Verhoeff checksum."""
+    """UIDAI Aadhaar: 12 digits ∩ Verhoeff.
+
+    Usage::
+
+        aadhaar: str = AadhaarCardValidator()
+
+    Print form ``2345 6789 0124`` / hyphens strips; stores ``234567890124``.
+    Substring or wrong length is rejected. No UIDAI lookup.
+    """
 
     @staticmethod
     def _verhoeff_ok(digits: str) -> bool:
