@@ -93,10 +93,11 @@ a parallel folder, not inside the layer they depend on.
   (`ValidateProperty.__new__`, mypy plugin). No per-type mixin.
   `AnyOf` does not AND-gate root type; `AllOf`
   keeps annotation-conflict TypeError. Unknown path unit is `ValueError`.
-  TypedDict is the schema: required keys present, extra keys fail-closed,
-  values via ``is_instance_of``. ``Annotated[T, SomeValidator()]`` on a
-  TypedDict key runs that Door A validator (no Schema / Field / BaseModel
-  twin). ``NotRequired`` / ``total=False`` keys may be omitted.
+  TypedDict is the schema: ``__required_keys__`` (``total=`` / ``Required`` /
+  ``NotRequired``), extra keys fail-closed, values via ``is_instance_of``.
+  ``Annotated[T, SomeValidator()]`` on a TypedDict key runs that Door A
+  validator (no Schema / Field / BaseModel twin). Omitted ``NotRequired``
+  keys skip extras. ``ReadOnly`` peels like the other qualifiers.
   Callable
   origin is checked; signature is not. Generic subclass instance params
   are not inspected.

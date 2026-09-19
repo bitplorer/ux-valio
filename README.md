@@ -51,8 +51,9 @@ class Stats:
 ```
 
 A `TypedDict` is the schema (stdlib, no BaseModel). Door A is still
-`field: SomeTypedDict = Validator()`. Extra keys fail-closed. Hang extra
-validators on a key with `Annotated` — same objects as field defaults.
+`field: SomeTypedDict = Validator()`. Extra keys fail-closed. `total=False`
+and PEP 655 `Required` / `NotRequired` are the TypedDict metaclass
+(`__required_keys__`) — hang extras with `Annotated`, not `RequiredValidator`.
 
 ```python
 from typing import Annotated, TypedDict

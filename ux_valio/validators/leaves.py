@@ -160,7 +160,11 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
 
 
 def _unwrap_field_annotation(annotation: Any) -> tuple[Any, tuple[Any, ...]]:
-    """Peel ``Annotated`` / ``Required`` / ``NotRequired``. Keep validator extras."""
+    """Peel ``Annotated`` and TypedDict qualifiers. Keep validator extras.
+
+    Presence is ``TypedDict.__required_keys__`` (the metaclass), not this
+    peel. This only exposes the store type and ``Annotated`` metadata.
+    """
     extras: list[Any] = []
     while True:
         origin = get_origin(annotation)
@@ -170,7 +174,7 @@ def _unwrap_field_annotation(annotation: Any) -> tuple[Any, tuple[Any, ...]]:
             extras.extend(args[1:])
             continue
         name = getattr(origin, "__name__", "")
-        if name in {"Required", "NotRequired"}:
+        if name in {"Required", "NotRequired", "ReadOnly"}:
             args = get_args(annotation)
             annotation = args[0] if args else annotation
             continue
@@ -182,10 +186,11 @@ def _annotated_store_type(annotation: Any) -> Any:
 
 
 def _typed_dict_match(value: Any, annotation: Any) -> bool:
-    """Mapping vs TypedDict: required keys, no extras, value types.
+    """Mapping vs TypedDict using the metaclass keys, not a second parser.
 
-    Extra keys fail-closed (schema). ``NotRequired`` / ``total=False`` keys
-    may be omitted. Nested TypedDict recurses through ``is_instance_of``.
+    ``__required_keys__`` is what ``total=`` / ``Required`` / ``NotRequired``
+    already computed. Extra keys fail-closed. Value types peel qualifiers
+    then ``is_instance_of``.
     """
     if not isinstance(value, Mapping) or isinstance(value, (str, bytes)):
         return False
