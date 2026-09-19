@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- GSTIN accepts jurisdiction ``97`` / ``99``. Payment cards accept UnionPay.
+  ``UdyamValidator`` is the MSME identity.
+
 - Named facades group by use: sibling modules ``india`` / ``finance`` /
   ``catalog`` / ``contact`` / ``device`` / ``portal`` / ``expiry``.
   Public ``from ux_valio import GSTINValidator`` unchanged. Domain

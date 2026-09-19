@@ -48,6 +48,11 @@ def test_amex_discover_rupay_brand_numbers_are_accepted(Card):
     assert Card(c="6000000000000007").c == "6000000000000007"
 
 
+def test_unionpay_16_to_19_is_accepted(Card):
+    assert Card(c="6200000000000005").c == "6200000000000005"
+    assert Card(c="62000000000000000").c == "62000000000000000"
+
+
 def test_rupay_does_not_claim_dead_6521_branch():
     from ux_valio.facades.named.finance import _RUPAY
     assert "52[12]" not in _RUPAY.pattern

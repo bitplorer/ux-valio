@@ -169,7 +169,10 @@ a parallel folder, not inside the layer they depend on.
   `CountryCodeValidator` (ISO 3166-1 alpha-2), `TimezoneValidator`
   (IANA / ``zoneinfo``), `ULIDValidator`, `LEIValidator`,
   `CardExpiryValidator` (MMYY print form, not ``ExpiryValidator``),
-  `HSNCodeValidator`, `ABARoutingValidator`.
+  `HSNCodeValidator`, `ABARoutingValidator`, `UdyamValidator`.
+  `GSTINValidator` state is ``01–38`` plus ``97`` / ``99``.
+  `PaymentCardValidator` includes UnionPay (``62`` + 14–17 digits) without
+  resurrecting Rupay ``6521``.
   All stdlib, no network.
 - Named typed facades call their extra check from `validate()` after the
   inherited path; they do not hang ``validator`` themselves on each assignment.

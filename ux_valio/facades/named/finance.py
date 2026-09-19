@@ -208,10 +208,11 @@ _MASTERCARD = re.compile(
 _AMEX = re.compile(r"3[47][0-9]{13}")
 _DISCOVER = re.compile(r"(?:6011|644[0-9]|65[0-9]{2})[0-9]{12}")
 _RUPAY = re.compile(r"6(?!(?:011|44[0-9]|5[0-9]{2}))0[0-9]{14}")
+_UNIONPAY = re.compile(r"62[0-9]{14,17}")
 
 
 class PaymentCardValidator(StringValidator):
-    """Visa / Mastercard / Amex / Discover / Rupay ∩ Luhn.
+    """Visa / Mastercard / Amex / Discover / Rupay / UnionPay ∩ Luhn.
 
     Usage::
 
@@ -257,6 +258,7 @@ class PaymentCardValidator(StringValidator):
             or is_card(_AMEX, card_number)
             or is_card(_DISCOVER, card_number)
             or is_card(_RUPAY, card_number)
+            or is_card(_UNIONPAY, card_number)
         )
 
     def _pre_validate(self, instance: Any, value: Any) -> Any:

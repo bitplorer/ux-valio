@@ -13,6 +13,7 @@ from ux_valio import (
     ISINValidator,
     MACAddressValidator,
     TANValidator,
+    UdyamValidator,
     VINValidator,
     VoterIdValidator,
 )
@@ -146,3 +147,13 @@ def test_voter_id_epic_format():
     assert Citizen(epic="abc1234567").epic == "ABC1234567"
     with pytest.raises(ValueError):
         Citizen(epic="AB1234567")
+
+
+def test_udyam_format_identity():
+    @dataclass
+    class Firm:
+        udyam: str = UdyamValidator()
+
+    assert Firm(udyam="udyam-mh-00-0000001").udyam == "UDYAM-MH-00-0000001"
+    with pytest.raises(ValueError):
+        Firm(udyam="UDYAM-MH-0000001")

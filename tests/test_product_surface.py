@@ -90,6 +90,7 @@ def test_min_max_leaves_are_exported():
         "TANValidator",
         "CINValidator",
         "VoterIdValidator",
+        "UdyamValidator",
         "GTINValidator",
         "HostnameValidator",
         "SlugValidator",

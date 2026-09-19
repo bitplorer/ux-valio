@@ -71,6 +71,7 @@ from ux_valio.facades.named.india import (
     PinCodeValidator,
     TANValidator,
     UPIIdValidator,
+    UdyamValidator,
     VoterIdValidator,
 )
 from ux_valio.facades.named.portal import (
@@ -111,6 +112,7 @@ __all__ = [
     "TimezoneValidator",
     "ULIDValidator",
     "UPIIdValidator",
+    "UdyamValidator",
     "URLValidator",
     "VINValidator",
     "VoterIdValidator",

@@ -134,7 +134,7 @@ class PANCardValidator(StringValidator):
             raise ValueError(f"{self.name} is not a valid PAN number")
 
 _GSTIN = re.compile(
-    r"(?:0[1-9]|[12][0-9]|3[0-8])[A-Z]{3}[ABCFGHLJPTK][A-Z][0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]"
+    r"(?:0[1-9]|[12][0-9]|3[0-8]|97|99)[A-Z]{3}[ABCFGHLJPTK][A-Z][0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]"
 )
 _CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -146,7 +146,8 @@ class GSTINValidator(StringValidator):
 
         gstin: str = GSTINValidator()
 
-    State ``01–38``, then PAN holder, entity, ``Z``, check. Spaces/hyphens
+    State ``01–38`` plus ``97`` (other territory) / ``99`` (centre), then
+    PAN holder, entity, ``Z``, check. Spaces/hyphens
     strip; stores uppercase compact. Format-only is rejected. No GST portal.
     """
 
@@ -379,3 +380,33 @@ class HSNCodeValidator(StringValidator):
             return
         if not type(self)._is_valid_hsn(value):
             raise ValueError(f"{self.name} is not a valid HSN/SAC code")
+
+
+_UDYAM = re.compile(r"UDYAM-[A-Z]{2}-\d{2}-\d{7}")
+
+
+class UdyamValidator(StringValidator):
+    """Udyam MSME registration identity.
+
+    Usage::
+
+        udyam: str = UdyamValidator()
+
+    ``UDYAM-MH-00-0000001`` — state 2, district 2, serial 7. Spaces
+    strip; stores uppercase. No MSME portal lookup.
+    """
+
+    @staticmethod
+    def _is_valid_udyam(value: Any) -> bool:
+        return isinstance(value, str) and _UDYAM.fullmatch(value) is not None
+
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
+        if isinstance(value, str):
+            value = "".join(value.split()).upper()
+        return super()._pre_validate(instance, value)
+
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if not type(self)._is_valid_udyam(value):
+            raise ValueError(f"{self.name} is not a valid Udyam registration")

@@ -42,6 +42,13 @@ def test_grouped_gstin_is_stored_compact(Firm):
 def test_bad_state_code_is_rejected(Firm):
     with pytest.raises(ValueError):
         Firm(gstin="00AAAPA1111F1ZP")
+    with pytest.raises(ValueError):
+        Firm(gstin="39AAAPA1111F1ZP")
+
+
+def test_other_territory_and_centre_gstin_are_accepted(Firm):
+    assert Firm(gstin="97AAAPA1111F1ZK").gstin == "97AAAPA1111F1ZK"
+    assert Firm(gstin="99AAAPA1111F1ZG").gstin == "99AAAPA1111F1ZG"
 
 
 def test_substring_gstin_is_rejected(Firm):
