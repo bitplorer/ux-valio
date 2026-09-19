@@ -58,11 +58,11 @@ a parallel folder, not inside the layer they depend on.
   facades do not multiple-inherit concern leaves;
   processors then tasks once (tasks spawn; setter does not wait);
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
-  Hang `add_*` on the field name (`@username.add_process_pre_validate` in the
-  class body). `add_*` lives on `ValidateProperty` (facade, leaf, or
-  AllOf / AnyOf). Class access returns the descriptor (`Cls.field.add_*`
+  Hang `process_*` / `task_*` on the field name (`@username.process_pre_validate` in the
+  class body). Those methods live on `ValidateProperty` (facade, leaf, or
+  AllOf / AnyOf). Class access returns the descriptor (`Cls.field.process_*`
   after bind) and records that class as `_owner`, so a shared
-  descriptor's `Person.aadhaar.add_*` uses Person, not the last
+  descriptor's `Person.aadhaar.process_*` uses Person, not the last
   `__set_name__`. Dataclass default is that descriptor; `__set__`
   treats `value is self` as unset. No Field mixin, no outer
   `username_field` twin unless sharing one descriptor across classes.
@@ -70,7 +70,7 @@ a parallel folder, not inside the layer they depend on.
   A free function on an unbound descriptor still needs `namespace=`
   (the owning class, or its `module.qualname` str);
   on a bound field the owner key is the bound owner.
-  `add_*` accepts async def and coroutine
+  `process_*` / `task_*` accept async def and coroutine
   results (no `_reject_coroutine_result`);
   sync path with no running loop TypeError names the missing loop / helper;
   running loop uses the process-held nest-safe worker bridge.
@@ -82,7 +82,7 @@ a parallel folder, not inside the layer they depend on.
   collected failure re-raises as itself; two or more are `ValidationErrors`.
   `collect_all=False` is fail-fast. Omitted `debug` is True (re-raise);
   `debug=False` swallows. Do not overload `debug` into
-  collect-all. Hang `add_*` on the field default. Compose merge fail-closed: conflicting
+  collect-all. Hang `process_*` on the field default. Compose merge fail-closed: conflicting
   specified `debug` / `default` / `default_factory` / `collect_all` /
   `logger` is TypeError.
   Explicit `False` is specified. Omitted `collect_all` / `logger` / `debug`
@@ -98,7 +98,7 @@ a parallel folder, not inside the layer they depend on.
   ``NotRequired``), extra keys fail-closed, values via ``is_instance_of``.
   ``Annotated[T, SomeValidator()]`` or field-default assignment
   (`name: str = StringValidator()`) on a TypedDict key; hang
-  ``@name.add_*`` in that class body (``self`` is the mapping).
+  ``@name.process_*`` in that class body (``self`` is the mapping).
   No Schema / Field / BaseModel twin. Omitted ``NotRequired``
   keys skip extras. ``ReadOnly`` peels like the other qualifiers.
   Callable
@@ -118,7 +118,7 @@ a parallel folder, not inside the layer they depend on.
   the findall path (``PatternValidator._compiled_finder``).
   `post_get` in `__get__` `finally` records a secondary error and does
   not replace an in-flight exception.
-  Annotation is a store invariant: `add_process_post_validate` may transform,
+  Annotation is a store invariant: `process_post_validate` may transform,
   then `_reject_store_type_mismatch` TypeErrors a value that would not
   pass the type door. Named-facade extra is the same class of invariant
   (`_reject_store_identity` re-runs `_validate_named_facade` on the
@@ -192,7 +192,7 @@ a parallel folder, not inside the layer they depend on.
 
 ## Naming
 
-Public names KEEP (valio PatternTypes, `add_*`, `AllOf`,
+Public names KEEP (valio PatternTypes, `process_*` / `task_*` / `add_validator`, `AllOf`,
 `Validator`, `Property`). Do not fashion-rename `Digit` / `SetOf` /
 `IfPrecededBy`. Modules are snake_case (`async_bridge`).
 Classes are CapWords. Methods/helpers are snake_case verbs. The public
@@ -227,14 +227,14 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `add_pre_validator`, `add_post_set`, `add_pre_validator_task`,
 `add_post_set_task`, `has_hooks`, `pre_validation_processing`,
 `post_set_processing`, `notify_pre_set`, `on_pre_set`,
-`add_pre_validate_process`, `_init_hooks`, `_load_compose_types`,
+`add_pre_validate_process`, `add_process_pre_validate`, `add_task_post_set`, `_init_hooks`, `_load_compose_types`,
 `_register_compose_types`, `_Opt.read`, `_Of._bind_kwargs`,
 `_Of._merged_attr`, `Lookup`, `_log`, `bound_value`, `door_a`).
 Noun-only names that hide the action are not
 added. Names should fit any caller library — not a one-app
 nickname, not a slogan.
 
-AllOf / AnyOf live next to ``&`` / ``|`` on ``ValidateProperty``. Hook ``add_*``
+AllOf / AnyOf live next to ``&`` / ``|`` on ``ValidateProperty``. Hook ``process_*`` / ``task_*``
 methods live on `HookHost` (declared, not setattr from a table). Origin
 tables live next to
 `is_instance_of`. Specified-theory merge lives on `_Opts` (named fields, not string

@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Nest-safe processor bridge and background task spawn.
 
-``add_process_*`` must finish before the next pipeline step. Async
+``process_*`` must finish before the next pipeline step. Async
 processors on the sync path: no running loop → TypeError; running loop →
 nest-safe worker. No ``asyncio.run`` in ``__set__``.
 
-``add_task_*`` is a background side effect (email after username set).
+``task_*`` is a background side effect (email after username set).
 The setter does not wait. Sync or async. Isolated worker — not the
 nest-safe pool, not the caller's loop (so ``asyncio.run`` teardown cannot
 cancel it). Errors are recorded on the host; they do not fail the set.
@@ -133,7 +133,7 @@ def spawn_task(
 
 
 def wait_tasks(timeout: float | None = None) -> None:
-    """Wait for background ``add_task_*`` work. Tests and shutdown."""
+    """Wait for background ``task_*`` work. Tests and shutdown."""
     with _OUTSTANDING_LOCK:
         futs = list(_outstanding)
     if not futs:

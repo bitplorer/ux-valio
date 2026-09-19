@@ -4,7 +4,7 @@
 ``ValidateProperty`` is the unit. Concern leaves and facades subclass it
 once — they do not multiple-inherit each other. ``&`` / ``|`` (and
 ``AllOf`` / ``AnyOf``) live here: they *are* those operators. ``Chain``
-is ``AllOf``. ``add_*`` lives on ``ValidateProperty`` — hang it on the
+is ``AllOf``. ``process_*`` / ``task_*`` live on ``ValidateProperty`` — hang on the
 field default, leaf or facade.
 
 ``leaves.py`` binds ``is_instance_of`` once for the store type door.
@@ -47,7 +47,7 @@ class ValidateProperty(HookHost, Property[T], ABC):
 
     ``ValidateProperty[int]`` / ``Validator[int]`` is the stored-type
     subscript. It fills ``annotation`` when the class did not declare one.
-    ``add_*`` and the processor registries come from ``HookHost``.
+    ``process_*`` / ``task_*`` and the processor registries come from ``HookHost``.
 
     Type checkers: construction is ``Any`` so ``name: str = StringValidator()``
     and ``owner: User = UserValidator()`` both assign. Runtime the object is

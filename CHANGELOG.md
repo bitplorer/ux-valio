@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Hang API compact: ``process_pre_validate`` / ``task_post_set`` (the
+  decorator *is* the add; ``post_set`` stays the descriptor lifecycle).
+  ``add_validator`` / ``wait_tasks`` unchanged.
+
 - Intentful names: ``ValidateStep`` (was ``Lookup``), ``_emit_log``,
   ``read_bound``. Test files drop leftover ``door_a`` filenames.
 
@@ -12,7 +16,7 @@
   str). ``wait_tasks`` is on the package root. ``TypeAliasType`` peels by
   identity.
 
-- HookHost public hang API is ``add_process_*`` / ``add_task_*`` /
+- HookHost public hang API is ``process_*`` / ``task_*`` /
   ``add_validator`` / ``wait_tasks``. Pipeline runners and ``has_hooks``
   are private (``_pre_validate``, ``_has_hooks``, ``_notify_pre_set``).
 
@@ -20,7 +24,7 @@
   sticky state). Qualifiers peel by identity. ``_validate_typed_dict``.
 
 - TypedDict keys accept field-default assignment (``name: str = StringValidator()``)
-  and ``@name.add_process_*`` / ``@name.add_validator`` in that class body.
+  and ``@name.process_*`` / ``@name.add_validator`` in that class body.
   ``self`` is the mapping. ``pre_set`` write-back then ``post_set``.
 
 - TypedDict presence is ``__required_keys__`` (``total=`` / ``Required`` /
@@ -68,13 +72,13 @@
 - `name: str = StringValidator()` type-checks without a plugin. Named
   facades present as the store type (`StringValidator <: str`) under
   TYPE_CHECKING. Runtime bases are empty. `User(name=1)` still errors.
-- `add_task_*` is background: setter does not wait. Sync or async. Isolated
+- `task_*` is background: setter does not wait. Sync or async. Isolated
   pool (not nest-safe, not the caller's loop). Errors record on the host;
-  they do not fail the set. Persist/reserve hang on `add_process_post_set`.
+  they do not fail the set. Persist/reserve hang on `process_post_set`.
   `HookHost.wait_tasks()` waits for tests/shutdown.
-- Hook names are `add_process_{phase}` and `add_task_{phase}`. Process
+- Hook names are `process_{phase}` and `task_{phase}`. Process
   transforms (return is stored only inside `pre_set`). Task is background.
-  Persist hangs on `add_process_post_set`. Retired: `add_pre_validator`,
+  Persist hangs on `process_post_set`. Retired: `add_pre_validator`,
   `add_post_set`, `add_*_task` suffix.
 - `_Of.__init__` takes `debug=`, `default=`, `logger=` (same names as
   `Property`). No `kwargs.pop("debug")`. `_Opts` is a dataclass: `merge` /
@@ -141,7 +145,7 @@
   on the owning type.
 - Email identity peels `PatternType` the same way as findall (no
   `hasattr` dance).
-- Hang `add_*` on the field name: `@username.add_process_pre_validate` in the
+- Hang `add_*` on the field name: `@username.process_pre_validate` in the
   class body, no outer `username_field` twin, no Field mixin. Class
   access returns the descriptor so `Cls.field.add_*` works after bind.
   Dataclass default is that descriptor; `__set__` treats `value is self`
@@ -175,7 +179,7 @@
   TypeError on optional unset).
 - `__get__` `post_get` records a secondary error and does not replace an
   in-flight never-set `AttributeError`.
-- Annotation is a store invariant after `add_process_post_validate`. Named-facade
+- Annotation is a store invariant after `process_post_validate`. Named-facade
   extra is the same class of invariant (`_reject_store_identity`):
   post_validate cannot smuggle `"not-an-email"` onto `EmailValidator` or
   a `datetime` onto `DateValidator`. `AllOf` walks member extras; `AnyOf`
