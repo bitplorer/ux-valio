@@ -29,7 +29,7 @@ def test_no_add_pre_set_on_validator():
     }
 
 
-def test_process_pre_validate_is_the_pre_set_pipeline():
+def test_pre_validate_is_the_pre_set_pipeline():
     v = Validator(debug=True)
 
     def strip(instance, value):
@@ -39,7 +39,7 @@ def test_process_pre_validate_is_the_pre_set_pipeline():
     class Host:
         x: str = v
 
-    v.process_pre_validate(strip, namespace=Host)
+    v.pre_validate(strip, namespace=Host)
 
     assert Host(x="  Ada  ").x == "Ada"
 

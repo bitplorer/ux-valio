@@ -53,7 +53,7 @@ A `TypedDict` is the schema (stdlib, no BaseModel). Extra keys fail-closed.
 `total=False` and PEP 655 `Required` / `NotRequired` are the TypedDict
 metaclass (`__required_keys__`) — hang extras with `Annotated`, or the same
 assignment as a dataclass (`name: str = StringValidator()`), then
-`@name.process_pre_validate` / `@name.add_validator` in the TypedDict
+`@name.pre_validate` / `@name.add_validator` in the TypedDict
 body. `self` in those hooks is the mapping. No Schema twin.
 
 ```python
@@ -65,7 +65,7 @@ class Person(TypedDict):
     email: Annotated[str, EmailValidator()]
     age: int
 
-    @name.process_pre_validate
+    @name.pre_validate
     def strip_name(self, value):
         return value.strip()
 
@@ -85,9 +85,10 @@ from ux_valio import LengthValidator, RequiredValidator
 tag: str = LengthValidator(min_length=3) & RequiredValidator(required=True)
 ```
 
-Hang `process_*` / `task_*` on the field name. The descriptor *is* the dataclass default —
+Hang `pre_validate` / `post_set` / `task_*` on the field name. The descriptor *is* the dataclass default —
 no outer `username_field` twin, no Field mixin. Those methods live on
-`ValidateProperty` (leaf or facade). Do not invent `add_pre_set` or `process_pre_set`.
+`ValidateProperty` (leaf or facade). Do not invent `pre_set` as a hang —
+`_run_pre_set` *is* the validate pipeline.
 
 `&` / `|` return `AllOf` / `AnyOf` from `ValidateProperty` — same module
 as the operators, no per-use import.
@@ -99,7 +100,7 @@ class User:
         required=True
     )
 
-    @name.process_pre_validate
+    @name.pre_validate
     def strip(self, value: str) -> str:
         return value.strip()
 ```
@@ -108,7 +109,7 @@ Runtime the instance sees `str`. Construction is `Any` to type checkers
 (`ValidateProperty.__new__`; mypy via `plugins = ["ux_valio.mypy_plugin"]`)
 so `StringValidator()` assigns to `str` and a custom `UserValidator()`
 assigns to `User`. No per-type mixin. `User(name=1)` still errors.
-`@name.process_*` may underline (the annotation is `str`).
+`@name.pre_validate` may underline (the annotation is `str`).
 
 A new store type is a subclass and an `annotation`. Optional needs
 `| None` on **both** sides — `Account` vs `Account | None` is a conflict
@@ -127,11 +128,11 @@ class Row:
     owner: Account | None = AccountValidator(default=None)
 ```
 
-Class access `User.name` is that descriptor, so `User.name.process_post_set`
+Class access `User.name` is that descriptor, so `User.name.post_set`
 also works after the class exists. Dataclass uses the descriptor as the
 field default; assigning it is treated as unset and applies `default` /
 `default_factory`. A shared descriptor (`aadhaar` on Person and Vendor)
-uses the class you accessed: `Person.aadhaar.process_*` registers under Person,
+uses the class you accessed: `Person.aadhaar.pre_validate` registers under Person,
 not the last `__set_name__`.
 
 ## KEEP: debug swallow, logger OFF, pre_set hook
@@ -167,19 +168,19 @@ not the last `__set_name__`.
   type check before alternatives. `&` / `AllOf` still TypeErrors on
   conflicting member annotations.
 
-**Only the descriptor `pre_set` hook return is stored.** That hook *is*
+**Only the before-store pipeline return is stored.** That pipeline *is*
 `pre_validate → validate → post_validate`. There is no `_processors["pre_set"]`
-bag and no `add_pre_set` — hang before-store work on `process_pre_validate`
+bag and no hang named `pre_set` — hang before-store work on `pre_validate`
 (transform; **return the value**), `add_validator` (check; return ignored),
 or `task_pre_validate` (background side effect; return ignored; setter
 does not wait). Persist/reserve that must fail-closed hangs on
-`process_post_set`. Welcome-email hangs on `task_post_set`.
+`post_set`. Welcome-email hangs on `task_post_set`.
 Tasks are sync or async; they run on a process-held pool, not the
 nest-safe processor worker. `from ux_valio import wait_tasks` waits for
 them (tests / shutdown). A free function on an unbound descriptor takes
 `namespace=Host` (the class), not a hand-built string key.
 
-`process_*` / `task_*` accept **sync or async** callables. `async def`
+`pre_validate` / `task_*` accept **sync or async** callables. `async def`
 registers. Coroutine **objects** at run are not a second reject path: same
 run rules as `async def`.
 
@@ -198,9 +199,9 @@ run rules as `async def`.
 ### Before-store DB check (Register)
 
 valio README taught this on a Field factory (`@user_field.add_pre_valiator` — typo
-for `process_pre_validate`). Hang the same processor on the **field
+for `pre_validate`). Hang the same processor on the **field
 name**. Do **not** invent `add_pre_set`. A uniqueness **task** is the wrong
-hook — return the value from `process_pre_validate`.
+hook — return the value from `pre_validate`.
 
 Class-body `username: str = username` is `NameError` only when an outer
 name collides with the field (the assignment makes `username` local).
@@ -217,7 +218,7 @@ DB = {"taken"}
 class Register:
     username: str = StringValidator(required=True, min_length=3)
 
-    @username.process_pre_validate
+    @username.pre_validate
     def username_not_taken(self, value: str) -> str:
         if value in DB:
             raise ValueError("username already registered")
@@ -230,14 +231,14 @@ classes named `User` in different modules do not share hooks — the old bare
 `__name__` key was a collision. A method decorator derives that key from the
 method (nested classes included). Lookup walks the instance MRO (base first),
 so a child dataclass runs parent field hooks. A free function has no owning
-class: on an **unbound** descriptor `process_*` without `namespace=` is
-`TypeError`; on a bound field (`Register.username.process_*`) the owner key is
+class: on an **unbound** descriptor `pre_validate` without `namespace=` is
+`TypeError`; on a bound field (`Register.username.pre_validate`) the owner key is
 the bound owner. `namespace=` is that owner key
 as-is; it fires only when that string equals the instance class’s
 `module.qualname` (or an MRO parent). Passing a class object as `namespace=` is `TypeError`
 (string keys only). Leftover teaching: `namespace="Register"` (bare
 `__name__`) is not rewritten to match lookup. A processor that forgets to
-return the value stores `None`; return the value from `process_pre_validate`.
+return the value stores `None`; return the value from `pre_validate`.
 
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
 `default=[]` is the same list on every instance. `default_factory=` is a
@@ -260,7 +261,7 @@ validation would not run. `@dataclass(frozen=True)` works: dataclass
 intercepts assign/delete with `FrozenInstanceError`; `__init__` still
 runs the field descriptor.
 
-`process_post_validate` may transform after checks. If the field has an
+`post_validate` may transform after checks. If the field has an
 annotation, the stored value must still match it — a post processor cannot
 smuggle a `str` onto `IntegerValidator`. Named facades (`EmailValidator`,
 `PaymentCardValidator`, `DateValidator`, …) re-check their extra on the
@@ -317,7 +318,7 @@ class Part:
 Runnable production skeletons live under `examples/` (`python examples/<file>.py`).
 Each file is a service that injects Protocol ports in the constructor, plus a
 dataclass callers can copy. `main()` is only the runnable runner.
-Hooks (`process_pre_validate` / `process_post_set`) fail closed into validation
+Hooks (`pre_validate` / `post_set`) fail closed into validation
 errors (uniqueness, password confirm, promo/inventory, payment gateway, KYC
 registry). Password hashing is an example `PasswordHasher` port (stdlib
 PBKDF2 demo); production replaces it with bcrypt/argon2id. In-memory fakes
@@ -435,7 +436,7 @@ it, then assign `password: str = password_field.validator`. That Field factory
 duplicated kwargs, dropped `gt`/`lt`/`eq`/`multiple_of`/`in_choice` from its
 signature, and is untested. ux-valio does not ship it. Move the kwargs onto
 `StringValidator` / `IntegerValidator` / `Validator` as the dataclass default,
-and hang `process_pre_validate` / `add_validator` on that descriptor. Star-import
+and hang `pre_validate` / `add_validator` on that descriptor. Star-import
 of valio's 306 names is gone; import the names in `__all__`.
 
 ## Public surface

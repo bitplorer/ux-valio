@@ -12,7 +12,7 @@ class Person(TypedDict):
     email: Annotated[str, EmailValidator()]
     age: int
 
-    @name.process_pre_validate
+    @name.pre_validate
     def strip_name(self, value: str) -> str:
         return value.strip()
 

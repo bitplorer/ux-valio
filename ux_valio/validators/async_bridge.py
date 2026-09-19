@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Nest-safe processor bridge and background task spawn.
 
-``process_*`` must finish before the next pipeline step. Async
+``pre_validate`` must finish before the next pipeline step. Async
 processors on the sync path: no running loop → TypeError; running loop →
 nest-safe worker. No ``asyncio.run`` in ``__set__``.
 

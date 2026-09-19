@@ -55,7 +55,7 @@ def test_callable_default_runs_only_for_none():
 
 
 def test_property_class_get_returns_the_descriptor():
-    """Class access is the descriptor so ``Cls.n.process_*`` hangs after bind.
+    """Class access is the descriptor so ``Cls.n.pre_validate`` hangs after bind.
 
     Dataclass ``getattr`` then sees the descriptor as the default; ``__set__``
     treats that identity as unset and applies ``default``.

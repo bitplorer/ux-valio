@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-- Hang API compact: ``process_pre_validate`` / ``task_post_set`` (the
+- Descriptor lifecycle is private (``_run_pre_set`` / ``_run_post_set``).
+  Hang API is the phase name: ``pre_validate``, ``post_set``, ``task_post_set``.
+  Process is the default kind (no ``process_`` prefix). ``add_validator``
+  unchanged.
+
+- Hang API compact: ``pre_validate`` / ``task_post_set`` (the
   decorator *is* the add; ``post_set`` stays the descriptor lifecycle).
   ``add_validator`` / ``wait_tasks`` unchanged.
 
@@ -74,11 +79,11 @@
   TYPE_CHECKING. Runtime bases are empty. `User(name=1)` still errors.
 - `task_*` is background: setter does not wait. Sync or async. Isolated
   pool (not nest-safe, not the caller's loop). Errors record on the host;
-  they do not fail the set. Persist/reserve hang on `process_post_set`.
+  they do not fail the set. Persist/reserve hang on `post_set`.
   `HookHost.wait_tasks()` waits for tests/shutdown.
 - Hook names are `process_{phase}` and `task_{phase}`. Process
   transforms (return is stored only inside `pre_set`). Task is background.
-  Persist hangs on `process_post_set`. Retired: `add_pre_validator`,
+  Persist hangs on `post_set`. Retired: `add_pre_validator`,
   `add_post_set`, `add_*_task` suffix.
 - `_Of.__init__` takes `debug=`, `default=`, `logger=` (same names as
   `Property`). No `kwargs.pop("debug")`. `_Opts` is a dataclass: `merge` /
@@ -145,7 +150,7 @@
   on the owning type.
 - Email identity peels `PatternType` the same way as findall (no
   `hasattr` dance).
-- Hang `add_*` on the field name: `@username.process_pre_validate` in the
+- Hang `add_*` on the field name: `@username.pre_validate` in the
   class body, no outer `username_field` twin, no Field mixin. Class
   access returns the descriptor so `Cls.field.add_*` works after bind.
   Dataclass default is that descriptor; `__set__` treats `value is self`
@@ -179,7 +184,7 @@
   TypeError on optional unset).
 - `__get__` `post_get` records a secondary error and does not replace an
   in-flight never-set `AttributeError`.
-- Annotation is a store invariant after `process_post_validate`. Named-facade
+- Annotation is a store invariant after `post_validate`. Named-facade
   extra is the same class of invariant (`_reject_store_identity`):
   post_validate cannot smuggle `"not-an-email"` onto `EmailValidator` or
   a `datetime` onto `DateValidator`. `AllOf` walks member extras; `AnyOf`

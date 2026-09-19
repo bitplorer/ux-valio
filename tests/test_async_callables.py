@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""async process_*/task_* register; sync-path run rules; no asyncio.run in __set__.
+"""async pre_validate/task_* register; sync-path run rules; no asyncio.run in __set__.
 
 No add_pre_set. asyncio.run in __set__ stays retired.
 """
@@ -53,9 +53,9 @@ def test_async_decorator_registers_pre_post_and_task():
     async def side(instance, value):
         return value
 
-    v.process_pre_validate(before, namespace="async.Host")
-    v.process_post_validate(after_validate, namespace="async.Host")
-    v.process_post_set(after_set, namespace="async.Host")
+    v.pre_validate(before, namespace="async.Host")
+    v.post_validate(after_validate, namespace="async.Host")
+    v.post_set(after_set, namespace="async.Host")
     v.task_pre_validate(side, namespace="async.Host")
 
     assert inspect.iscoroutinefunction(before)
@@ -74,7 +74,7 @@ def test_sync_path_without_loop_fail_closed_named_error():
     class Host:
         x: str = v
 
-    v.process_pre_validate(upper, namespace=Host)
+    v.pre_validate(upper, namespace=Host)
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
@@ -90,7 +90,7 @@ def test_sync_path_without_loop_does_not_store_coroutine():
     class Host:
         x: str = v
 
-    v.process_pre_validate(upper, namespace=Host)
+    v.pre_validate(upper, namespace=Host)
 
     with pytest.raises(TypeError, match="await from async context"):
         Host(x="ada")
@@ -106,7 +106,7 @@ def test_sync_path_without_loop_debug_falsy_swallows_unset():
     class Host:
         x: str = field
 
-    field.process_pre_validate(upper, namespace=Host)
+    field.pre_validate(upper, namespace=Host)
 
     assert Host(x="ada").x is None
     assert field.errors
@@ -158,7 +158,7 @@ def test_sync_path_with_running_loop_runs_async_processor():
     class Host:
         x: str = v
 
-    v.process_pre_validate(upper, namespace=Host)
+    v.pre_validate(upper, namespace=Host)
 
     host = _assign_on_running_loop(lambda: Host(x="ada"))
     assert host.x == "ADA"
@@ -202,7 +202,7 @@ def test_sync_path_with_running_loop_processors_then_tasks_once():
     class Host:
         x: str = v
 
-    v.process_pre_validate(proc, namespace=Host)
+    v.pre_validate(proc, namespace=Host)
     v.task_pre_validate(task, namespace=Host)
 
     host = _assign_on_running_loop(lambda: Host(x="raw"))
@@ -222,7 +222,7 @@ def test_async_post_set_runs_with_running_loop_return_ignored():
     class Host:
         x: str = v
 
-    v.process_post_set(rewrite, namespace=Host)
+    v.post_set(rewrite, namespace=Host)
 
     host = _assign_on_running_loop(lambda: Host(x="kept"))
     assert host.x == "kept"
@@ -243,7 +243,7 @@ def test_sync_wrap_returning_coroutine_registers_and_runs_with_loop():
     class Host:
         x: str = v
 
-    v.process_pre_validate(wrap, namespace=Host)
+    v.pre_validate(wrap, namespace=Host)
 
     host = _assign_on_running_loop(lambda: Host(x="ada"))
     assert host.x == "ADA"
@@ -262,7 +262,7 @@ def test_sync_wrap_returning_coroutine_no_loop_needs_helper_not_class_reject():
     class Host:
         x: str = v
 
-    v.process_pre_validate(wrap, namespace=Host)
+    v.pre_validate(wrap, namespace=Host)
 
     with pytest.raises(TypeError, match="running event loop"):
         Host(x="ada")
@@ -289,7 +289,7 @@ def test_nest_safe_bridge_does_not_construct_executor_per_call(monkeypatch):
     class Host:
         x: str = v
 
-    v.process_pre_validate(upper, namespace=Host)
+    v.pre_validate(upper, namespace=Host)
     host = _assign_on_running_loop(lambda: Host(x="ada"))
     host = _assign_on_running_loop(lambda: setattr(host, "x", "bob") or host)
     assert host.x == "BOB"
@@ -319,7 +319,7 @@ def test_nest_safe_bridge_reuses_module_held_executor(monkeypatch):
     class Host:
         x: str = v
 
-    v.process_pre_validate(tag, namespace=Host)
+    v.pre_validate(tag, namespace=Host)
     host = _assign_on_running_loop(lambda: Host(x="a"))
     host = _assign_on_running_loop(lambda: setattr(host, "x", "b") or host)
     assert host.x == "b-ok"
