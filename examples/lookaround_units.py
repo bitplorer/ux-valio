@@ -6,7 +6,7 @@ substring (KEEP). Inject ``Warehouse`` on ``ShippingService``.
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ux_valio import (
     Digit,
@@ -17,6 +17,7 @@ from ux_valio import (
     Pattern,
     StartsWith,
     StringValidator,
+    Validator,
 )
 
 mass_kg = (
@@ -28,6 +29,7 @@ usd_amount = IfPrecededBy(Pattern(r"USD")) & Digit(count_min=1)
 not_pounds = Digit(count_min=1) & IfNotFollowedBy(Pattern(r"lb"))
 
 
+@runtime_checkable
 class Warehouse(Protocol):
     """Stock check + reserve. Production: ``UPDATE sku SET qty = qty - 1 WHERE qty >= 1``."""
 
@@ -57,7 +59,11 @@ class InMemoryWarehouse:
 
 @dataclass
 class Shipment:
-    warehouse: Warehouse = field(repr=False, compare=False)
+    warehouse: Warehouse = field(
+        default=Validator[Warehouse](required=True),
+        repr=False,
+        compare=False,
+    )
     sku: str = StringValidator(min_length=1, required=True)
     mass: str = StringValidator(pattern=mass_kg, required=True)
     price: str = StringValidator(pattern=usd_amount, required=True)

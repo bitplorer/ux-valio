@@ -7,7 +7,7 @@ hangs on ``post_validate`` (after checksum). Persist on ``post_set``.
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ux_valio import (
     BICValidator,
@@ -16,9 +16,11 @@ from ux_valio import (
     IBANValidator,
     ISBNValidator,
     MACAddressValidator,
+    Validator,
 )
 
 
+@runtime_checkable
 class VendorRegistry(Protocol):
     """Already-onboarded GSTIN. Production: unique GSTIN in the vendor store."""
 
@@ -46,7 +48,11 @@ class InMemoryVendorRegistry:
 
 @dataclass
 class Vendor:
-    registry: VendorRegistry = field(repr=False, compare=False)
+    registry: VendorRegistry = field(
+        default=Validator[VendorRegistry](required=True),
+        repr=False,
+        compare=False,
+    )
     gstin: str = GSTINValidator(required=True)
     iban: str = IBANValidator(required=True)
     bic: str = BICValidator(required=True)

@@ -8,7 +8,7 @@ store (``repr=False``), not a column — one shared instance from
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
 from ux_valio import (
@@ -20,6 +20,7 @@ from ux_valio import (
 )
 
 
+@runtime_checkable
 class AccountDirectory(Protocol):
     """Username uniqueness. Production: unique index on ``username``."""
 
@@ -47,7 +48,11 @@ class InMemoryAccountDirectory:
 
 @dataclass
 class UserAccount:
-    directory: AccountDirectory = field(repr=False, compare=False)
+    directory: AccountDirectory = field(
+        default=Validator[AccountDirectory](required=True),
+        repr=False,
+        compare=False,
+    )
     username: str = StringValidator(required=True, min_length=3, max_length=32)
     display_name: str = StringValidator(max_length=80, default="")
     role: str = Validator(

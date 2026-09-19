@@ -14,13 +14,14 @@ warehouse unique Aadhaar/PAN. This file does not ship a DB driver.
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ux_valio import (
     AadhaarCardValidator,
     PANCardValidator,
     PhoneNumberValidator,
     ValidationErrors,
+    Validator,
 )
 
 HAS_PHONENUMBERS = False
@@ -40,6 +41,7 @@ VALID_AADHAAR = "234567890124"
 VALID_PAN = "AAAPA1111F"
 
 
+@runtime_checkable
 class IdentityRegistry(Protocol):
     """Already-registered identity. Production: unique Aadhaar/PAN in the KYC store."""
 
@@ -86,8 +88,13 @@ pan_field = PANCardValidator(required=True)
 class KycIdentity:
     """Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26. Always importable."""
 
-    registry: IdentityRegistry = field(repr=False, compare=False)
+    registry: IdentityRegistry = field(
+        default=Validator[IdentityRegistry](required=True),
+        repr=False,
+        compare=False,
+    )
     aadhaar: str = aadhaar_field
+
     pan: str = pan_field
 
     @aadhaar.post_validate
@@ -113,7 +120,11 @@ if HAS_PHONENUMBERS and _PHONE is not None:
     class KycRecord:
         """Production shape: identity plus ``PhoneNumberValidator(region='IN')``."""
 
-        registry: IdentityRegistry = field(repr=False, compare=False)
+        registry: IdentityRegistry = field(
+            default=Validator[IdentityRegistry](required=True),
+            repr=False,
+            compare=False,
+        )
         aadhaar: str = aadhaar_field
         pan: str = pan_field
         phone: str = _PHONE

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Examples: ports are ``Validator[UserStore](required=True)`` (with
+  ``@runtime_checkable`` Protocol) so the store is type-checked like
+  every other field. ``field(repr=False, compare=False)`` still hides it
+  from ``repr`` / ``eq``.
+
 - Examples: restore dataclass ports (`field(repr=False, compare=False)`,
   first in declaration order). ``object.__new__`` and ``init=False``
   handwritten ``__init__`` were not Pythonic.

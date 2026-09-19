@@ -5,8 +5,8 @@ Owner field annotation remains field default. The subscript fills annotation whe
 the class did not declare one. Unconstrained TypeVars are typing-only.
 """
 
-from dataclasses import dataclass
-from typing import Generic, TypeVar
+from dataclasses import dataclass, field
+from typing import Generic, Protocol, TypeVar, runtime_checkable
 
 import pytest
 
@@ -115,6 +115,33 @@ def test_custom_store_type_needs_no_mixin():
     assert row.owner.id == "a1"
     with pytest.raises(TypeError):
         Row(owner="a1")
+
+
+def test_runtime_checkable_protocol_port_via_subscript():
+    @runtime_checkable
+    class Store(Protocol):
+        def taken(self, name: str) -> bool: ...
+
+    class Memory:
+        def taken(self, name: str) -> bool:
+            return False
+
+    @dataclass
+    class Row:
+        users: Store = field(
+            default=Validator[Store](required=True),
+            repr=False,
+            compare=False,
+        )
+        name: str = Validator[str](required=True, min_length=1)
+
+    row = Row(users=Memory(), name="ada")
+    assert row.name == "ada"
+    assert "users=" not in repr(row)
+    with pytest.raises(TypeError):
+        Row(users="nope", name="ada")
+    with pytest.raises(ValueError):
+        Row(name="ada")
 
 
 def test_optional_custom_type_agrees_on_both_sides():

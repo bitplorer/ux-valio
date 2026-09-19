@@ -9,11 +9,12 @@ on ``FilingService``.
 import pathlib
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
-from ux_valio import DateValidator, IPv4Validator, PathValidator
+from ux_valio import DateValidator, IPv4Validator, PathValidator, Validator
 
 
+@runtime_checkable
 class Archive(Protocol):
     """Already-filed folder+host. Production: unique (folder, host) in the archive."""
 
@@ -41,7 +42,11 @@ class InMemoryArchive:
 
 @dataclass
 class FiledDocument:
-    archive: Archive = field(repr=False, compare=False)
+    archive: Archive = field(
+        default=Validator[Archive](required=True),
+        repr=False,
+        compare=False,
+    )
     opened_eu: date = DateValidator(required=True)
     opened_ind: date = DateValidator(required=True)
     folder: pathlib.Path = PathValidator(required=True, path_exists=True)

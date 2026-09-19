@@ -15,7 +15,7 @@ Inject ``UserStore`` and ``PasswordHasher`` on ``RegistrationService``;
 import hashlib
 import hmac
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ux_valio import (
     AllOf,
@@ -23,6 +23,7 @@ from ux_valio import (
     Pattern,
     SetOf,
     StringValidator,
+    Validator,
 )
 
 
@@ -35,6 +36,7 @@ class StoredUser:
         self.password_hash = password_hash
 
 
+@runtime_checkable
 class UserStore(Protocol):
     """Username uniqueness + hashed credential. Production: unique index."""
 
@@ -52,6 +54,7 @@ class UserStore(Protocol):
         ...
 
 
+@runtime_checkable
 class PasswordHasher(Protocol):
     """Password digest. Production: bcrypt / argon2id (unique per-row salt)."""
 
@@ -108,8 +111,16 @@ class Pbkdf2PasswordHasher:
 
 @dataclass
 class Registration:
-    users: UserStore = field(repr=False, compare=False)
-    hasher: PasswordHasher = field(repr=False, compare=False)
+    users: UserStore = field(
+        default=Validator[UserStore](required=True),
+        repr=False,
+        compare=False,
+    )
+    hasher: PasswordHasher = field(
+        default=Validator[PasswordHasher](required=True),
+        repr=False,
+        compare=False,
+    )
     username: str = StringValidator(required=True, min_length=3)
     password: str = AllOf(
         StringValidator(required=True, min_length=8, max_length=128),

@@ -19,7 +19,7 @@ row (or Redis), and Stripe/Razorpay. This file does not ship a DB driver.
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ux_valio import (
     CardExpiryValidator,
@@ -28,12 +28,14 @@ from ux_valio import (
     IntegerValidator,
     PaymentCardValidator,
     StringValidator,
+    Validator,
 )
 
 _PROMO_UNTIL = (date.today() + timedelta(days=30)).isoformat()
 _PROMO_ENDED = (date.today() - timedelta(days=1)).isoformat()
 
 
+@runtime_checkable
 class PromoCatalog(Protocol):
     """Offer lookup. Production: ``SELECT code FROM offers WHERE code=$1``."""
 
@@ -42,6 +44,7 @@ class PromoCatalog(Protocol):
         ...
 
 
+@runtime_checkable
 class Inventory(Protocol):
     """Stock check + reserve. Production: ``UPDATE sku SET qty = qty - $1 WHERE qty >= $1``."""
 
@@ -54,6 +57,7 @@ class Inventory(Protocol):
         ...
 
 
+@runtime_checkable
 class PaymentGateway(Protocol):
     """Authorize (no capture). Production: Stripe/Razorpay SDK; map decline → ``ValueError``."""
 
@@ -105,9 +109,21 @@ class StubPaymentGateway:
 
 @dataclass
 class Checkout:
-    promos: PromoCatalog = field(repr=False, compare=False)
-    inventory: Inventory = field(repr=False, compare=False)
-    gateway: PaymentGateway = field(repr=False, compare=False)
+    promos: PromoCatalog = field(
+        default=Validator[PromoCatalog](required=True),
+        repr=False,
+        compare=False,
+    )
+    inventory: Inventory = field(
+        default=Validator[Inventory](required=True),
+        repr=False,
+        compare=False,
+    )
+    gateway: PaymentGateway = field(
+        default=Validator[PaymentGateway](required=True),
+        repr=False,
+        compare=False,
+    )
     holder: str = StringValidator(
         required=True, min_length=2, max_length=80
     )

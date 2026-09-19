@@ -7,7 +7,7 @@ SKU. Names match valio@3415c03. Inject ``PartCatalog`` on ``CatalogService``.
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ux_valio import (
     Digit,
@@ -18,6 +18,7 @@ from ux_valio import (
     StartsWith,
     StringValidator,
     Word,
+    Validator,
 )
 
 sku_token = StartsWith(Pattern(r"INV-")) & Digit(count=4) & EndsWith(Pattern(r"Z"))
@@ -26,6 +27,7 @@ slug_token = Word(count_min=3)
 lot_token = NonWhiteSpace(count_min=4)
 
 
+@runtime_checkable
 class PartCatalog(Protocol):
     """SKU uniqueness. Production: unique index on ``sku``."""
 
@@ -53,7 +55,11 @@ class InMemoryPartCatalog:
 
 @dataclass
 class CatalogPart:
-    catalog: PartCatalog = field(repr=False, compare=False)
+    catalog: PartCatalog = field(
+        default=Validator[PartCatalog](required=True),
+        repr=False,
+        compare=False,
+    )
     sku: str = StringValidator(pattern=sku_token, required=True)
     tint: str = StringValidator(pattern=hex_pair, required=True)
     slug: str = StringValidator(pattern=slug_token, required=True)
