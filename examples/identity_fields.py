@@ -11,13 +11,18 @@ from dataclasses import dataclass
 from ux_valio import (
     BICValidator,
     CINValidator,
+    DINValidator,
     EANValidator,
+    FSSAIValidator,
     GSTINValidator,
     IBANValidator,
     ISBNValidator,
     ISINValidator,
+    IndianPassportValidator,
+    LLPINValidator,
     MACAddressValidator,
     TANValidator,
+    UdyamValidator,
     VINValidator,
     VoterIdValidator,
 )
@@ -28,7 +33,12 @@ class Counterparty:
     gstin: str = GSTINValidator()
     tan: str = TANValidator()
     cin: str = CINValidator()
+    din: str = DINValidator()
+    llpin: str = LLPINValidator()
+    udyam: str = UdyamValidator()
+    fssai: str = FSSAIValidator()
     epic: str = VoterIdValidator()
+    passport: str = IndianPassportValidator()
     iban: str = IBANValidator()
     bic: str = BICValidator()
     isin: str = ISINValidator()
@@ -43,7 +53,12 @@ def main() -> None:
         gstin="09 AAAPA1111F 1Z P",
         tan="dela12345a",
         cin="u12345mh2000ptc123456",
+        din="00123456",
+        llpin="aab-1234",
+        udyam="udyam-mh-00-0000001",
+        fssai="10012345678901",
         epic="abc1234567",
+        passport="a1234567",
         iban="GB82 WEST 1234 5698 7654 32",
         bic="deutdeff",
         isin="us 0378331005",

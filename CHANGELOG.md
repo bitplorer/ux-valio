@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- ``named/finance`` is a package: ``rail`` / ``market`` / ``card`` /
+  ``currency``. Layers do not import each other.
+
 - India layers: ``DINValidator``, ``LLPINValidator``, ``FSSAIValidator``,
   ``IndianPassportValidator``. Aadhaar rejects UIDAI-reserved first digit
   0/1 even when Verhoeff holds.
