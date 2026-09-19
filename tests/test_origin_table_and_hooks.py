@@ -28,15 +28,15 @@ def test_origin_table_owns_stdlib_generics():
 
 
 def test_add_hooks_are_declared_on_the_class():
-    """Public process_*/task_* are real methods, not setattr from a table. No process_pre_set."""
+    """Hang methods are declared, not setattr. Lifecycle is _run_*. No hang pre_set."""
     import inspect
 
-    src = inspect.getsource(HookHost.process_pre_validate)
-    assert "def process_pre_validate" in src
+    src = inspect.getsource(HookHost.pre_validate)
+    assert "def pre_validate" in src
     assert "pre_validate" in src
-    assert hasattr(HookHost, "process_pre_validate")
+    assert hasattr(HookHost, "pre_validate")
     assert hasattr(HookHost, "task_pre_validate")
-    assert hasattr(HookHost, "process_post_set")
+    assert hasattr(HookHost, "post_set")
     assert hasattr(HookHost, "task_post_set")
     assert hasattr(HookHost, "add_validator")
     assert hasattr(HookHost, "wait_tasks")
@@ -57,10 +57,17 @@ def test_add_hooks_are_declared_on_the_class():
     assert not hasattr(HookHost, "_add")
     assert not hasattr(HookHost, "_init_hooks")
     assert not hasattr(HookHost, "add_pre_set")
-    assert not hasattr(HookHost, "add_process_pre_validate")
+    assert not hasattr(HookHost, "add_pre_validate")
     assert not hasattr(HookHost, "add_task_post_set")
     assert not hasattr(HookHost, "process_pre_set")
+    assert not hasattr(HookHost, "process_pre_validate")
     assert not hasattr(HookHost, "task_pre_set")
+    from ux_valio.descriptor import Property
+
+    assert hasattr(Property, "_run_pre_set")
+    assert hasattr(Property, "_run_post_set")
+    assert not hasattr(Property, "pre_set")
+    assert not hasattr(Property, "post_set")
     assert not hasattr(HookHost, "_HOOK_ADDERS")
     assert not hasattr(HookHost, "_PROCESSOR_PHASES")
     assert not hasattr(HookHost, "_install_adders")

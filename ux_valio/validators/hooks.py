@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Processor and task registries.
 
-Hang ``process_*`` / ``task_*`` on the field default. Process
+Hang ``pre_validate`` / ``post_set`` / ``task_*`` on the field default. Process
 must finish. Task is background (email); persist/reserve that must
-fail-closed hangs on ``process_post_set``. No ``add_pre_set``.
+fail-closed hangs on ``post_set``. No ``add_pre_set``.
 """
 
 from __future__ import annotations
@@ -20,14 +20,13 @@ from ux_valio.errors import continue_or_raise, raise_collected
 class HookHost:
     """Processor and task registries on the validating descriptor.
 
-    Public hang API (kind, then phase): ``process_{phase}``,
-    ``task_{phase}``, ``add_validator``, ``wait_tasks``.
-    Process must finish; return is the pipeline value (stored only for
-    ``pre_validate`` / ``post_validate``). Task is background (email);
-    return ignored; setter does not wait. Persist/reserve that must
-    fail-closed hangs on ``process_post_set``. No ``process_pre_set``
-    — ``pre_set`` *is* the validate pipeline. Pipeline runners
-    (``_pre_validate``, …) are private override points, not the hang API.
+    Public hang API: ``pre_validate`` / ``post_set`` / … (process; return
+    is the pipeline value), ``task_{phase}`` (background), ``add_validator``,
+    ``wait_tasks``. Process is the default kind — no ``process_`` prefix.
+    ``post_set`` is hang, not the descriptor lifecycle (that is
+    ``_run_post_set``). No hang named ``pre_set`` — ``_run_pre_set`` *is*
+    ``pre_validate → validate → post_validate``. Pipeline runners
+    (``_pre_validate``, …) are private.
     """
 
     @staticmethod
@@ -87,7 +86,7 @@ class HookHost:
 
         TypedDict values are dicts, so instance MRO is ``dict``. When
         ``__set_name__`` bound this descriptor to a TypedDict, look up
-        that class (the class body that hung ``@name.process_*``).
+        that class (the class body that hung ``@name.pre_validate``).
         """
         cls = bound if bound is not None and is_typeddict(bound) else None
         if cls is None:
@@ -108,7 +107,7 @@ class HookHost:
         return tuple(keys)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        # Phases are these dict keys. No add_pre_set — ValidateProperty.pre_set
+        # Phases are these dict keys. No hang pre_set — ValidateProperty._run_pre_set
         # *is* pre_validate → validate → post_validate.
         self._custom_validators: dict[str, list[Callable[..., Any]]] = defaultdict(list)
         self._processors: dict[str, dict[str, list[Callable[..., Any]]]] = {
@@ -142,31 +141,31 @@ class HookHost:
         """Check during ``validate()``. Return ignored."""
         return self._register(self._custom_validators, func, namespace)
 
-    def process_pre_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
-        """Transform before validate. Return is stored (inside ``pre_set``)."""
+    def pre_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+        """Transform before validate. Return is stored (inside ``_run_pre_set``)."""
         return self._register(self._processors["pre_validate"], func, namespace)
 
-    def process_post_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
-        """Transform after validate. Return is stored (inside ``pre_set``)."""
+    def post_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+        """Transform after validate. Return is stored (inside ``_run_pre_set``)."""
         return self._register(self._processors["post_validate"], func, namespace)
 
-    def process_post_set(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def post_set(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after store. Return is not stored."""
         return self._register(self._processors["post_set"], func, namespace)
 
-    def process_pre_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def pre_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform before read. Return is not the stored value."""
         return self._register(self._processors["pre_get"], func, namespace)
 
-    def process_post_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def post_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after read. Return is not the stored value."""
         return self._register(self._processors["post_get"], func, namespace)
 
-    def process_pre_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def pre_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform before delete. Return is not stored."""
         return self._register(self._processors["pre_delete"], func, namespace)
 
-    def process_post_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def post_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after delete. Return is not stored."""
         return self._register(self._processors["post_delete"], func, namespace)
 
@@ -181,7 +180,7 @@ class HookHost:
     def task_post_set(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background after store (email). Return ignored. Setter does not wait.
 
-        Persist/reserve that must fail-closed hangs on ``process_post_set``.
+        Persist/reserve that must fail-closed hangs on ``post_set``.
         """
         return self._register(self._tasks["post_set"], func, namespace)
 

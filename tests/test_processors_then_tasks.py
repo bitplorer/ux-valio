@@ -2,7 +2,7 @@
 """Processors run then tasks once. Only the pre_set *hook* return is stored.
 
 There is no ``add_pre_set`` / ``_processors["pre_set"]`` bag. Hang before-store
-work on ``process_pre_validate`` (inside ``pre_set``). ``process_post_set`` runs after
+work on ``pre_validate`` (inside ``pre_set``). ``post_set`` runs after
 store and its return is ignored.
 """
 
@@ -34,7 +34,7 @@ def test_validator_runs_processing_then_task_once():
     class Host:
         x: str = v
 
-    _bind_phase(v, HookHost._owner_key(Host), log, "process_pre_validate", "task_pre_validate", "pre")
+    _bind_phase(v, HookHost._owner_key(Host), log, "pre_validate", "task_pre_validate", "pre")
 
     host = Host(x="raw")
     assert host.x == "raw-p"
@@ -52,13 +52,13 @@ def test_validator_all_phases_run_task_once_after_processing():
 
     ns = HookHost._owner_key(Host)
     phases = (
-        ("process_pre_validate", "task_pre_validate", "pre"),
-        ("process_post_validate", "task_post_validate", "post"),
-        ("process_post_set", "task_post_set", "set"),
-        ("process_pre_get", "task_pre_get", "pget"),
-        ("process_post_get", "task_post_get", "gget"),
-        ("process_pre_delete", "task_pre_delete", "pdel"),
-        ("process_post_delete", "task_post_delete", "gdel"),
+        ("pre_validate", "task_pre_validate", "pre"),
+        ("post_validate", "task_post_validate", "post"),
+        ("post_set", "task_post_set", "set"),
+        ("pre_get", "task_pre_get", "pget"),
+        ("post_get", "task_post_get", "gget"),
+        ("pre_delete", "task_pre_delete", "pdel"),
+        ("post_delete", "task_post_delete", "gdel"),
     )
     for add_name, task_add_name, label in phases:
         _bind_phase(v, ns, log, add_name, task_add_name, label)
@@ -102,7 +102,7 @@ def test_plain_validator_processing_without_tasks():
     class Plain:
         x: str = v
 
-    v.process_pre_validate(proc, namespace=Plain)
+    v.pre_validate(proc, namespace=Plain)
 
     assert Plain(x="raw").x == "RAW"
     assert log == [("proc", "raw")]
@@ -118,7 +118,7 @@ def test_only_pre_set_processor_return_is_stored():
     class Host:
         x: str = v
 
-    v.process_post_set(post_set_proc, namespace=Host)
+    v.post_set(post_set_proc, namespace=Host)
 
     assert Host(x="kept").x == "kept"
 
@@ -135,7 +135,7 @@ def test_get_processors_see_attribute_name_not_stored_value():
     class Host:
         x: str = v
 
-    v.process_pre_get(pget, namespace=Host)
+    v.pre_get(pget, namespace=Host)
 
     host = Host(x="stored")
     assert host.x == "stored"

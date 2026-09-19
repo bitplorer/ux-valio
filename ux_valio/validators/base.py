@@ -4,7 +4,7 @@
 ``ValidateProperty`` is the unit. Concern leaves and facades subclass it
 once — they do not multiple-inherit each other. ``&`` / ``|`` (and
 ``AllOf`` / ``AnyOf``) live here: they *are* those operators. ``Chain``
-is ``AllOf``. ``process_*`` / ``task_*`` live on ``ValidateProperty`` — hang on the
+is ``AllOf``. ``pre_validate`` / ``task_*`` live on ``ValidateProperty`` — hang on the
 field default, leaf or facade.
 
 ``leaves.py`` binds ``is_instance_of`` once for the store type door.
@@ -43,11 +43,11 @@ def _annotation_accepts(annotation: Any, value: Any) -> bool:
 
 
 class ValidateProperty(HookHost, Property[T], ABC):
-    """Descriptor that validates in ``pre_set`` before store.
+    """Descriptor that validates in ``_run_pre_set`` before store.
 
     ``ValidateProperty[int]`` / ``Validator[int]`` is the stored-type
     subscript. It fills ``annotation`` when the class did not declare one.
-    ``process_*`` / ``task_*`` and the processor registries come from ``HookHost``.
+    ``pre_validate`` / ``task_*`` and the processor registries come from ``HookHost``.
 
     Type checkers: construction is ``Any`` so ``name: str = StringValidator()``
     and ``owner: User = UserValidator()`` both assign. Runtime the object is
@@ -57,7 +57,7 @@ class ValidateProperty(HookHost, Property[T], ABC):
     if TYPE_CHECKING:
         def __new__(cls, *args: Any, **kwargs: Any) -> Any: ...
 
-    def pre_set(self, obj: Any, value: Any) -> Any:
+    def _run_pre_set(self, obj: Any, value: Any) -> Any:
         self._take_subscript_annotation()
         self._notify_pre_set(obj)
         value = self._pre_validate(obj, value)
@@ -106,20 +106,20 @@ class ValidateProperty(HookHost, Property[T], ABC):
             return
         extra(None, value)
 
-    def post_set(self, obj: Any, value: Any) -> Any:
+    def _run_post_set(self, obj: Any, value: Any) -> Any:
         self._notify_post_set(obj)
         return self._post_set(obj, value)
 
-    def pre_get(self, obj: Any, value: Any) -> Any:
+    def _run_pre_get(self, obj: Any, value: Any) -> Any:
         return self._pre_get(obj, value)
 
-    def post_get(self, obj: Any, value: Any) -> Any:
+    def _run_post_get(self, obj: Any, value: Any) -> Any:
         return self._post_get(obj, value)
 
-    def pre_delete(self, obj: Any, value: Any) -> Any:
+    def _run_pre_delete(self, obj: Any, value: Any) -> Any:
         return self._pre_delete(obj, value)
 
-    def post_delete(self, obj: Any, value: Any) -> Any:
+    def _run_post_delete(self, obj: Any, value: Any) -> Any:
         return self._post_delete(obj, value)
 
     def _notify_pre_set(self, obj: Any) -> None:

@@ -279,10 +279,10 @@ def _validate_typed_dict(owner: Any, value: Any, annotation: Any = None) -> None
             previous_name = extra.name
             extra.name = f"{prefix}.{key}" if prefix else key
             try:
-                new_item = extra.pre_set(value, item)
+                new_item = extra._run_pre_set(value, item)
                 if isinstance(value, MutableMapping):
                     value[key] = new_item
-                extra.post_set(value, new_item)
+                extra._run_post_set(value, new_item)
                 item = new_item
             except Exception as err:
                 continue_or_raise(collect, errors, err)

@@ -16,29 +16,29 @@ failure surfaces. ``collect_all=False`` is fail-fast. Do not overload
 explicit ``False`` does not TypeError.
 
 Class access (``obj is None``) returns the descriptor, so
-``Cls.field.process_pre_validate`` works after the class exists — hang
+``Cls.field.pre_validate`` works after the class exists — hang
 hooks on the field name, no outer ``username_field`` twin. Dataclass
 ``getattr`` then sees the descriptor as the field default; ``__set__``
 treats ``value is self`` as unset and applies ``default`` /
 ``default_factory``. Do not invent a Field mixin. Class access also
 records ``obj_type`` as ``_owner``, so a shared descriptor's
-``Person.aadhaar.process_*`` uses Person (not the last ``__set_name__``).
+``Person.aadhaar.pre_validate`` uses Person (not the last ``__set_name__``).
 
 ``@dataclass(frozen=True)`` works: dataclass ``__setattr__`` /
 ``__delattr__`` raise ``FrozenInstanceError`` before the descriptor
 mutates. ``@dataclass(slots=True)`` stays unsupported.
 
-Only the descriptor ``pre_set`` hook return is stored. That hook is the
-validate pipeline, not a ``_processors[\"pre_set\"]`` bag. Hang before-store
-work on ``process_pre_validate`` / ``add_validator``. Persist after store
-hangs on ``process_post_set``. Background email hangs on
+Only ``_run_pre_set`` return is stored. That method is the
+validate pipeline, not a ``_processors["pre_set"]`` bag. Hang before-store
+work on ``pre_validate`` / ``add_validator``. Persist after store
+hangs on ``post_set``. Background email hangs on
 ``task_post_set``.
-``post_set`` / get / delete return values are ignored. ``__get__`` /
+Hang ``post_set`` / get / delete return values are ignored. ``__get__`` /
 ``__delete__`` pass ``self.name`` into hooks, not the stored value.
 Never-set ``__get__`` / ``__delete__`` with ``debug=True`` raise a named
 ``AttributeError`` (``Cls.field is not set``), not a bare ``KeyError``.
 Debug-falsy still swallows and ``__get__`` reads back ``None``.
-``process_*`` / ``task_*`` may be async. No ``asyncio.run`` in ``__set__``.
+``pre_validate`` / ``task_*`` may be async. No ``asyncio.run`` in ``__set__``.
 
 ``post_get`` in ``__get__`` ``finally`` must not replace an in-flight
 exception: record it, keep the original raise / swallow.
@@ -397,22 +397,22 @@ class Property(Generic[_StoreT]):
         self.annotation = getattr(self, "annotation", None)
         self._owner: type | None = None
 
-    def pre_set(self, obj: Any, value: Any) -> Any:
+    def _run_pre_set(self, obj: Any, value: Any) -> Any:
         return value
 
-    def post_set(self, obj: Any, value: Any) -> Any:
+    def _run_post_set(self, obj: Any, value: Any) -> Any:
         return value
 
-    def pre_get(self, obj: Any, value: Any) -> Any:
+    def _run_pre_get(self, obj: Any, value: Any) -> Any:
         return value
 
-    def post_get(self, obj: Any, value: Any) -> Any:
+    def _run_post_get(self, obj: Any, value: Any) -> Any:
         return value
 
-    def pre_delete(self, obj: Any, value: Any) -> Any:
+    def _run_pre_delete(self, obj: Any, value: Any) -> Any:
         return value
 
-    def post_delete(self, obj: Any, value: Any) -> Any:
+    def _run_post_delete(self, obj: Any, value: Any) -> Any:
         return value
 
     def _bind_field_logger(self, owner: type, name: str) -> None:
@@ -601,11 +601,11 @@ class Property(Generic[_StoreT]):
                     value = self.default_factory()
                 elif self.default is not None:
                     value = self.default() if callable(self.default) else self.default
-            value = self.pre_set(obj, value)
+            value = self._run_pre_set(obj, value)
             self._store_on_instance(obj, value)
             self.errors.clear()
             self._emit_log("info", f"{type(obj).__name__}.{self.name}: set")
-            self.post_set(obj, value)
+            self._run_post_set(obj, value)
         except Exception as err:
             self._swallow_or_raise(err)
 
@@ -625,7 +625,7 @@ class Property(Generic[_StoreT]):
             return self
         in_flight: BaseException | None = None
         try:
-            self.pre_get(obj, self.name)
+            self._run_pre_get(obj, self.name)
             value = self._read_from_instance(obj)
             self._emit_log("info", f"{type(obj).__name__}.{self.name}: get")
             return value
@@ -635,7 +635,7 @@ class Property(Generic[_StoreT]):
             return None
         finally:
             try:
-                self.post_get(obj, self.name)
+                self._run_post_get(obj, self.name)
             except Exception as post_err:
                 if in_flight is not None:
                     # Keep the original raise / swallow. Do not replace it.
@@ -645,10 +645,10 @@ class Property(Generic[_StoreT]):
 
     def __delete__(self, obj: Any) -> None:
         try:
-            self.pre_delete(obj, self.name)
+            self._run_pre_delete(obj, self.name)
             self._drop_from_instance(obj)
             self._emit_log("info", f"{type(obj).__name__}.{self.name}: delete")
-            self.post_delete(obj, self.name)
+            self._run_post_delete(obj, self.name)
         except Exception as err:
             self._swallow_or_raise(err)
 
