@@ -15,7 +15,7 @@ from typing import Any, Callable, is_typeddict
 from ux_valio.validators.async_bridge import (
     invoke_callable,
     spawn_task,
-    wait_tasks as wait_outstanding,
+    wait_tasks as wait_tasks_impl,
 )
 
 
@@ -233,7 +233,7 @@ class HookHost:
     @staticmethod
     def wait_tasks(timeout: float | None = None) -> None:
         """Wait for background ``task_*`` work."""
-        wait_outstanding(timeout)
+        wait_tasks_impl(timeout)
 
     def _process_then_tasks(self, phase: str, instance: Any, value: Any) -> Any:
         if not self._hooks_hung:

@@ -389,6 +389,8 @@ class Property(Generic[_StoreT]):
         self.default = _opts.default.value
         self.default_factory = _opts.default_factory.value
         self.doc = _opts.doc.value
+        if isinstance(self.doc, str):
+            self.__doc__ = self.doc
         self.debug = _opts.debug.value
         self.logger = _opts.logger.value
         self.collect_all = _opts.collect_all.value

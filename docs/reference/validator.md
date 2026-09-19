@@ -89,9 +89,8 @@ A mismatch with the class attribute name TypeErrors at bind:
 ## `doc`
 
 A `str` stored on the descriptor for **your** help, OpenAPI, or admin
-UI. It is **not** `__doc__` on the class, and `help(User.name)` still
-shows `StringValidator`’s class docstring. Read it as
-`User.__dict__["name"].doc`.
+UI. It is also the descriptor’s `__doc__`, so `help(Profile.bio)` shows
+it. Read it as `Profile.__dict__["bio"].doc`.
 
 ```python
 from dataclasses import dataclass

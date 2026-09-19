@@ -50,6 +50,8 @@ def main() -> Profile:
     desc = Profile.__dict__["bio"]
     if desc.doc != "Public bio, 160 chars.":
         raise AssertionError(desc.doc)
+    if desc.__doc__ != desc.doc:
+        raise AssertionError(desc.__doc__)
     if desc.name != "bio":
         raise AssertionError(desc.name)
     if Profile.__dict__["rank"].logger is not False:

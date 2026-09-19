@@ -385,7 +385,6 @@ class ReassignValidator(ValidateProperty):
                 f"reassign expected type bool value, got {type(reassign).__name__} type instead"
             )
         self.reassign = reassign
-        self.number_of_assignment = 0
         self._assignment_counts: dict[int, int] = {}
         self._assignment_alive: dict[int, weakref.ref[Any]] = {}
         super().__init__(**kwargs)
@@ -414,7 +413,6 @@ class ReassignValidator(ValidateProperty):
             return
         oid = self._watch_assignment(obj)
         self._assignment_counts[oid] = self._assignment_counts.get(oid, 0) + 1
-        self.number_of_assignment += 1
 
     def _post_delete(self: Any, instance: Any, value: Any) -> Any:
         oid = id(instance)
@@ -472,13 +470,13 @@ class ChoiceValidator(ValidateProperty):
         super().__init__(**kwargs)
 
     @staticmethod
-    def _reject_non_container(label: str, bag: Any) -> None:
-        """Choice bags must support ``in``. ``None`` is unspecified."""
-        if bag is None:
+    def _reject_non_container(label: str, container: Any) -> None:
+        """Choice values must support ``in``. ``None`` is unspecified."""
+        if container is None:
             return
-        if not isinstance(bag, Container):
+        if not isinstance(container, Container):
             raise TypeError(
-                f"{label} expected a container, got {type(bag).__name__} type instead"
+                f"{label} expected a container, got {type(container).__name__} type instead"
             )
 
     def _validate_choice(self, instance: Any, value: Any) -> None:

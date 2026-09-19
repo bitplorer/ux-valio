@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from ux_valio import IntegerValidator, ReassignValidator, RequiredValidator, TypeValidator, Validator
+from ux_valio import IntegerValidator, ReassignValidator, RequiredValidator, StringValidator, TypeValidator, Validator
 
 
 def test_reassign_false_blocks_second_assign():
@@ -173,6 +173,21 @@ def test_assignment_counts_drop_when_instance_is_collected():
     gc.collect()
     assert oid not in field._assignment_counts
     assert oid not in field._assignment_alive
+
+
+def test_number_of_assignment_is_not_a_public_counter():
+    field = Validator(reassign=False, debug=True)
+    assert not hasattr(field, "number_of_assignment")
+
+
+def test_doc_kwarg_is_descriptor_docstring():
+    @dataclass
+    class Profile:
+        bio: str = StringValidator(max_length=160, doc="Public bio, 160 chars.")
+
+    desc = Profile.__dict__["bio"]
+    assert desc.doc == "Public bio, 160 chars."
+    assert desc.__doc__ == "Public bio, 160 chars."
 
 
 def test_post_get_does_not_replace_in_flight_never_set_error():
