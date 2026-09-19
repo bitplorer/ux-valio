@@ -39,11 +39,16 @@ class EmailValidator(StringValidator):
 
     ``PatternValidator`` findall still exists for ``pattern=`` on other
     fields; this facade's extra is fullmatch so a substring address is
-    rejected. No MX lookup.
+    rejected. Stores stripped lowercase (login uniqueness). No MX lookup.
     """
 
     def __init__(self, pattern: Any = _EMAIL_PATTERN, **kwargs: Any) -> None:
         super().__init__(pattern=pattern, **kwargs)
+
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
+        if isinstance(value, str):
+            value = value.strip().lower()
+        return super()._pre_validate(instance, value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:

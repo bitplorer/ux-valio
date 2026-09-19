@@ -500,7 +500,7 @@ row = Counterparty(
 | `CanadianSINValidator` | 9 digits | Luhn |
 | `MexicoRFCValidator` | 12 or 13 | SAT check digit |
 | `SemVerValidator` | `MAJOR.MINOR.PATCH` | SemVer 2 |
-| `EmailValidator` | given string | addr-spec **fullmatch** |
+| `EmailValidator` | lowercase | addr-spec **fullmatch** |
 | `URLValidator` | given string | scheme + netloc |
 | `ExpiryValidator` | field's store type | exclusive `expire_*` wall-clock |
 | `PhoneNumberValidator` | given string | `region=` required; `phonenumbers` extra |

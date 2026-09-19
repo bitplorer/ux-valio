@@ -165,6 +165,7 @@ def test_email_validator_accepts_identity_address():
         email: str = EmailValidator(debug=True)
 
     assert Contact(email="user@example.com").email == "user@example.com"
+    assert Contact(email="  User@Example.COM ").email == "user@example.com"
     with pytest.raises(ValueError):
         Contact(email="not-an-email")
 

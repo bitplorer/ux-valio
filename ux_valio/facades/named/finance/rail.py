@@ -43,8 +43,9 @@ class IBANValidator(StringValidator):
 
     Print groups (``GB82 WEST …``) strip; stores uppercase compact.
     Country length must match the ISO 13616 registry (GB is 22, DE is
-    22, NO is 15). Format-only and unknown-country are rejected. No
-    bank lookup. Pair with ``BICValidator``.
+    22, NO is 15). Check digits are ``02``–``98``. Format-only and
+    unknown-country are rejected. No bank lookup. Pair with
+    ``BICValidator``.
     """
 
     @staticmethod
@@ -58,6 +59,9 @@ class IBANValidator(StringValidator):
     @staticmethod
     def _is_valid_iban(value: Any) -> bool:
         if not isinstance(value, str) or _IBAN.fullmatch(value) is None:
+            return False
+        check = value[2:4]
+        if not check.isdigit() or not (2 <= int(check) <= 98):
             return False
         expected = _IBAN_LENGTH.get(value[:2])
         if expected is None or len(value) != expected:

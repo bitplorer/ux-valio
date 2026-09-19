@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- ``EmailValidator`` stores stripped lowercase (login uniqueness).
+  IBAN check digits must be ``02``–``98`` (ISO 13616).
+
 - Address / bank workflow: ``USStateValidator``, ``IndiaStateCodeValidator``,
   IBAN ISO 13616 **national length** (unknown country fail-closed). PIN
   moved ``india/bank`` → ``india/postal``. Checkout uses
