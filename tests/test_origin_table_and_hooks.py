@@ -145,41 +145,35 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
         Property,
         UPIIdValidator,
     )
-    import ux_valio.facades.named.aadhaar as aadhaar_mod
-    import ux_valio.facades.named.expiry as expiry_mod
-    import ux_valio.facades.named.gstin as gstin_mod
-    import ux_valio.facades.named.iban as iban_mod
-    import ux_valio.facades.named.ifsc as ifsc_mod
-    import ux_valio.facades.named.imei as imei_mod
-    import ux_valio.facades.named.pan as pan_mod
-    import ux_valio.facades.named.payment as payment_mod
-    import ux_valio.facades.named.phone as phone_mod
-    import ux_valio.facades.named.pincode as pincode_mod
-    import ux_valio.facades.named.upi as upi_mod
     import ux_valio.descriptor as descriptor_mod
+    import ux_valio.facades.named.contact as contact_mod
+    import ux_valio.facades.named.device as device_mod
+    import ux_valio.facades.named.expiry as expiry_mod
+    import ux_valio.facades.named.finance as finance_mod
+    import ux_valio.facades.named.india as india_mod
 
     assert hasattr(AadhaarCardValidator, "_is_valid_aadhaar")
-    assert not hasattr(aadhaar_mod, "_is_valid_aadhaar")
+    assert not hasattr(india_mod, "_is_valid_aadhaar")
     assert hasattr(PaymentCardValidator, "_is_valid_payment_card")
-    assert not hasattr(payment_mod, "_is_valid_payment_card")
+    assert not hasattr(finance_mod, "_is_valid_payment_card")
     assert hasattr(PANCardValidator, "_is_valid_pan")
-    assert not hasattr(pan_mod, "_is_valid_pan")
+    assert not hasattr(india_mod, "_is_valid_pan")
     assert hasattr(GSTINValidator, "_is_valid_gstin")
-    assert not hasattr(gstin_mod, "_is_valid_gstin")
+    assert not hasattr(india_mod, "_is_valid_gstin")
     assert hasattr(IFSCValidator, "_is_valid_ifsc")
-    assert not hasattr(ifsc_mod, "_is_valid_ifsc")
+    assert not hasattr(india_mod, "_is_valid_ifsc")
     assert hasattr(IBANValidator, "_is_valid_iban")
-    assert not hasattr(iban_mod, "_is_valid_iban")
+    assert not hasattr(finance_mod, "_is_valid_iban")
     assert hasattr(IMEIValidator, "_is_valid_imei")
-    assert not hasattr(imei_mod, "_is_valid_imei")
+    assert not hasattr(device_mod, "_is_valid_imei")
     assert hasattr(PinCodeValidator, "_is_valid_pincode")
-    assert not hasattr(pincode_mod, "_is_valid_pincode")
+    assert not hasattr(india_mod, "_is_valid_pincode")
     assert hasattr(UPIIdValidator, "_is_valid_upi_id")
-    assert not hasattr(upi_mod, "_is_valid_upi_id")
+    assert not hasattr(india_mod, "_is_valid_upi_id")
     assert hasattr(ExpiryValidator, "_parse_expiry_datetime")
     assert not hasattr(expiry_mod, "_parse_expiry_datetime")
     assert hasattr(PhoneNumberValidator, "_require_phonenumbers")
-    assert not hasattr(phone_mod, "_require_phonenumbers")
+    assert not hasattr(contact_mod, "_require_phonenumbers")
     assert hasattr(Property, "_slot_names")
     assert not hasattr(descriptor_mod, "_slot_names")
     assert not hasattr(hooks_mod, "_namespace")

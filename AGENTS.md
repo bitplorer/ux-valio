@@ -20,9 +20,13 @@ a parallel folder, not inside the layer they depend on.
   not `PathValidator` (`facades/typed.py`, pathlib).
 - `ux_valio/facades/` — field-default products, two layers:
   `typed.py` — primitives (`IntegerValidator`, `StringValidator`, …) :
-  `Validator`. `named/` — identity products (`PaymentCardValidator`,
-  `GSTINValidator`, `IFSCValidator`, …) : `StringValidator` (expiry :
-  `Validator`). `named` does not import sibling named modules. `typed`
+  `Validator`. `named/` — identity products, **sibling domain modules**
+  (parallel, do not import each other): `india` (Aadhaar/PAN/GSTIN/…),
+  `finance` (IBAN/BIC/card/currency), `catalog` (ISBN/EAN/GTIN/VIN),
+  `contact` (email/phone/URL/hostname), `device` (IMEI/MAC),
+  `portal` (slug/country/timezone/ULID), `expiry` (wall-clock).
+  Each domain module subclasses `StringValidator` (expiry : `Validator`).
+  `named` does not import sibling named modules. `typed`
   does not import `named`.
   Construction is `Any` to type checkers (`ValidateProperty.__new__`;
   mypy plugin `ux_valio.mypy_plugin`) so any store type works — no

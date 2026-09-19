@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Named facades group by use: sibling modules ``india`` / ``finance`` /
+  ``catalog`` / ``contact`` / ``device`` / ``portal`` / ``expiry``.
+  Public ``from ux_valio import GSTINValidator`` unchanged. Domain
+  modules do not import each other.
+
 - E-commerce / SaaS named facades: ``GTINValidator``, ``HostnameValidator``,
   ``SlugValidator``, ``CurrencyCodeValidator``, ``CountryCodeValidator``,
   ``TimezoneValidator``, ``ULIDValidator``, ``LEIValidator``,

@@ -201,22 +201,28 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert not (ROOT / "ux_valio" / "validators" / "path.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "compose.py").exists()
     assert (ROOT / "ux_valio" / "facades" / "typed.py").is_file()
-    assert (ROOT / "ux_valio" / "facades" / "named" / "aadhaar.py").is_file()
-    assert (ROOT / "ux_valio" / "facades" / "named" / "bic.py").is_file()
-    assert (ROOT / "ux_valio" / "facades" / "named" / "isbn.py").is_file()
-    assert (ROOT / "ux_valio" / "facades" / "named" / "gtin.py").is_file()
-    assert (ROOT / "ux_valio" / "facades" / "named" / "hostname.py").is_file()
+    named = ROOT / "ux_valio" / "facades" / "named"
+    assert (named / "india.py").is_file()
+    assert (named / "finance.py").is_file()
+    assert (named / "catalog.py").is_file()
+    assert (named / "contact.py").is_file()
+    assert (named / "device.py").is_file()
+    assert (named / "portal.py").is_file()
+    assert (named / "expiry.py").is_file()
+    assert not (named / "aadhaar.py").exists()
+    assert not (named / "email.py").exists()
+    assert not (named / "payment.py").exists()
     assert not (ROOT / "ux_valio" / "facades" / "aadhaar.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "typed.py").exists()
-    assert (ROOT / "ux_valio" / "facades" / "named" / "email.py").is_file()
     assert not hasattr(ux_valio.facades.typed, "EmailValidator")
     assert not hasattr(ux_valio.facades.typed, "URLValidator")
-    from ux_valio.facades.named.email import EmailValidator
-    from ux_valio.facades.named.url import URLValidator
+    from ux_valio.facades.named.contact import EmailValidator, URLValidator
+    from ux_valio.facades.named.india import GSTINValidator
     from ux_valio.facades.typed import StringValidator
 
     assert issubclass(EmailValidator, StringValidator)
     assert issubclass(URLValidator, StringValidator)
+    assert issubclass(GSTINValidator, StringValidator)
     from ux_valio.validators.facade import ValidationPath, Validator
     from ux_valio.facades.typed import (
         BooleanValidator,
