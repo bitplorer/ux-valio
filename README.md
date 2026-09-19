@@ -410,7 +410,9 @@ Same field-default pattern as `StringValidator`. Print grouping strips;
 the **stored value is the compact identity**. `None` skips. Stdlib only —
 no portal, no DNS, no BIN lookup. `help(GSTINValidator)` is the per-facade
 contract. Source lives in sibling domain modules under `facades/named/`
-(`india/` `{kyc,gst,registry,bank}`, `finance/` `{rail,market,card,currency}`,
+(`india/` `{kyc,gst,registry,bank}`, `us/` `{postal,bank,market}`,
+`uk/` `{postal,bank}`, `canada`, `mexico`,
+`finance/` `{rail,market,card,currency}` — ISO/international only,
 `catalog`, `contact`,
 `device`, `portal`, `expiry`) —
 `from ux_valio.facades.named.india.gst import GSTINValidator` is

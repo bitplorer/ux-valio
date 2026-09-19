@@ -3,14 +3,17 @@
 
 Sibling domain modules (parallel, do not import each other)::
 
-    india/    — KYC / GST / registry / bank  (folder of layers)
-    finance/  — rails / market / card / ISO currency (folder of layers)
-    catalog  — goods (ISBN, ISSN, EAN, GTIN, VIN)
-    address  — US ZIP / CA / UK postcode
-    contact  — how to reach (Email, Phone, URL, Hostname)
-    device   — hardware (IMEI, MAC)
-    portal   — SaaS (Slug, Country, Timezone, ULID, Locale, SemVer)
-    expiry   — wall-clock ``ExpiryValidator`` (not a string identity)
+    india/    — KYC / GST / registry / bank
+    us/       — postal / bank / market
+    uk/       — postal / bank
+    canada    — postal (one identity → one module)
+    mexico    — CLABE (one identity → one module)
+    finance/  — international rails / market / card / ISO currency
+    catalog   — goods (ISBN, ISSN, EAN, GTIN, VIN)
+    contact   — how to reach (Email, Phone, URL, Hostname)
+    device    — hardware (IMEI, MAC)
+    portal    — SaaS (Slug, Country, Timezone, ULID, Locale, SemVer)
+    expiry    — wall-clock ``ExpiryValidator`` (not a string identity)
 
 The taught usage is the field default — same shape as every other
 validator in this library::
@@ -38,11 +41,7 @@ from ``ux_valio``; domain imports are for source navigation
 (``from ux_valio.facades.named.india.gst import GSTINValidator``).
 """
 
-from ux_valio.facades.named.address import (
-    CAPostalCodeValidator,
-    UKPostcodeValidator,
-    USZipCodeValidator,
-)
+from ux_valio.facades.named.canada import CAPostalCodeValidator
 from ux_valio.facades.named.catalog import (
     EANValidator,
     GTINValidator,
@@ -59,17 +58,13 @@ from ux_valio.facades.named.contact import (
 from ux_valio.facades.named.device import IMEIValidator, MACAddressValidator
 from ux_valio.facades.named.expiry import ExpiryValidator
 from ux_valio.facades.named.finance import (
-    ABARoutingValidator,
     BICValidator,
-    CLABEValidator,
-    CUSIPValidator,
     CardExpiryValidator,
     CurrencyCodeValidator,
     IBANValidator,
     ISINValidator,
     LEIValidator,
     PaymentCardValidator,
-    UKSortCodeValidator,
 )
 from ux_valio.facades.named.india import (
     AadhaarCardValidator,
@@ -87,6 +82,13 @@ from ux_valio.facades.named.india import (
     UPIIdValidator,
     UdyamValidator,
     VoterIdValidator,
+)
+from ux_valio.facades.named.mexico import CLABEValidator
+from ux_valio.facades.named.uk import UKPostcodeValidator, UKSortCodeValidator
+from ux_valio.facades.named.us import (
+    ABARoutingValidator,
+    CUSIPValidator,
+    USZipCodeValidator,
 )
 from ux_valio.facades.named.portal import (
     CountryCodeValidator,

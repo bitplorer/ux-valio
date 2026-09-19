@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- National identities sit under the country, not ``address`` / ``finance``.
+  ``us/`` (ZIP, ABA, CUSIP), ``uk/`` (postcode, sort), ``canada``,
+  ``mexico``. ``finance`` is ISO only (IBAN/BIC/ISIN/LEI/card/currency).
+
 - Everyday identities every app reimplements: US/CA/UK postal, CLABE,
   UK sort, CUSIP, ISSN, locale, SemVer. Payment cards accept JCB and
   Diners. Unused ``re`` dropped from ``currency``.

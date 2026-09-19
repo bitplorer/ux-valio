@@ -1,16 +1,15 @@
 # SPDX-License-Identifier: MIT
-"""Money, securities, cards, ISO currency. Folder of domain layers.
+"""International money identity. Folder of domain layers.
 
-Sibling layers (do not import each other)::
+National rails live under the country package (``us.bank``, ``uk.bank``,
+``mexico``, ``india.bank``). Sibling layers here do not import each other::
 
-    rail      — IBAN, BIC, ABA, CLABE, UK sort
-    market    — ISIN, LEI, CUSIP
+    rail      — IBAN, BIC
+    market    — ISIN, LEI
     card      — PaymentCard, CardExpiry
     currency  — ISO 4217
 
-Parallel to ``named.india``. Public names still re-export from
-``ux_valio``; navigation is
-``from ux_valio.facades.named.finance.rail import IBANValidator``.
+Public names still re-export from ``ux_valio``.
 """
 
 from ux_valio.facades.named.finance.card import (
@@ -18,29 +17,15 @@ from ux_valio.facades.named.finance.card import (
     PaymentCardValidator,
 )
 from ux_valio.facades.named.finance.currency import CurrencyCodeValidator
-from ux_valio.facades.named.finance.market import (
-    CUSIPValidator,
-    ISINValidator,
-    LEIValidator,
-)
-from ux_valio.facades.named.finance.rail import (
-    ABARoutingValidator,
-    BICValidator,
-    CLABEValidator,
-    IBANValidator,
-    UKSortCodeValidator,
-)
+from ux_valio.facades.named.finance.market import ISINValidator, LEIValidator
+from ux_valio.facades.named.finance.rail import BICValidator, IBANValidator
 
 __all__ = [
-    "ABARoutingValidator",
     "BICValidator",
-    "CLABEValidator",
-    "CUSIPValidator",
     "CardExpiryValidator",
     "CurrencyCodeValidator",
     "IBANValidator",
     "ISINValidator",
     "LEIValidator",
     "PaymentCardValidator",
-    "UKSortCodeValidator",
 ]

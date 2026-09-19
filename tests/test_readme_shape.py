@@ -172,7 +172,8 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "HostnameValidator" in text
     assert "facades/named/" in text
     assert "named.india.gst" in text
-    assert "named.finance.rail" in text or "finance/" in text
+    assert "named.us.postal" in text or "us/" in text
+    assert "named.uk.postal" in text or "uk/" in text
     assert "UdyamValidator" in text
     assert "DINValidator" in text
     assert "FSSAIValidator" in text
