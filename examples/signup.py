@@ -1,20 +1,18 @@
 # SPDX-License-Identifier: MIT
-"""Complete signup + login: uniqueness, email, password, hash-on-create.
+"""Complete registration: signup + login.
 
-Omitted ``collect_all`` / ``debug`` are True: remaining concerns continue
-and failures re-raise. A single failure is that exception; two or more
-surface as ``ValidationErrors``. It is per-field, not per-dataclass: the
-first field that fails still stops later fields.
+One file for the account workflow. Username uniqueness after identity,
+password strength via ``AllOf`` (length + digit + letter — Pattern ``&``
+concatenates, it is not AND of independent findalls), confirm match on
+``post_validate``, hash-on-create on ``post_set``. Login verifies the hash.
 
-Password strength is length plus independent Pattern atoms (digit, letter)
-composed with ``AllOf`` — Pattern ``&`` concatenates, it is not AND of
-independent findalls. Confirmation match hangs on ``post_validate`` (after the confirm
-field’s own length/pattern). Username uniqueness also hangs on
-``post_validate`` so an invalid name never hits the store. Persist on
-``post_set``.
-``PasswordHasher`` hashes in the example port (stdlib ``pbkdf2_hmac``);
-the store keeps only the hash. Inject ports on ``SignupService``;
-``main()`` only runs the demo. Production: SQL unique index + bcrypt/argon2.
+Omitted ``collect_all`` / ``debug`` are True. A single failure is that
+exception; two or more on one field surface as ``ValidationErrors``.
+Per-field, not per-dataclass: the first field that fails still stops later
+fields. Team ``seats`` demos multi-concern ``IntegerValidator``.
+
+``PasswordHasher`` is the example port (stdlib ``pbkdf2_hmac``, fixed demo
+salt). Production: SQL unique index + bcrypt/argon2id (unique per-row salt).
 This file does not ship a DB driver or a crypto library in ``ux_valio``.
 """
 
@@ -22,6 +20,8 @@ import hashlib
 import hmac
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
+
+from uuid import UUID, uuid4
 
 from ux_valio import (
     AllOf,
@@ -31,6 +31,7 @@ from ux_valio import (
     Pattern,
     SetOf,
     StringValidator,
+    UUIDValidator,
     ValidationErrors,
     Validator,
 )
@@ -152,7 +153,13 @@ class SignupForm:
     email: str = EmailValidator(required=True)
     password: str = password_field
     password_confirm: str = confirm_field
+    display_name: str = StringValidator(max_length=80, default="")
+    role: str = Validator(
+        in_choice=["member", "moderator", "admin"],
+        default="member",
+    )
     seats: int = seats_field
+    account_id: UUID = UUIDValidator(default_factory=uuid4)
 
     @username.pre_validate
     def fold_username(self, value: str) -> str:
@@ -170,8 +177,8 @@ class SignupForm:
             raise ValueError("password confirmation does not match")
         return value
 
-    @seats.post_set
-    def persist_user(self, value: int) -> None:
+    @account_id.post_set
+    def persist_user(self, value: UUID) -> None:
         self.users.create(
             self.username, self.email, self.hasher.hash(self.password)
         )
@@ -207,24 +214,33 @@ class SignupService:
         self.users = users
         self.hasher = hasher
 
-    def submit(
+    def register(
         self,
         username: str,
         email: str,
         password: str,
         password_confirm: str,
         seats: int,
+        *,
+        display_name: str = "",
+        role: str = "member",
+        account_id: UUID | None = None,
     ) -> SignupForm:
-        """Submit the form. Multi-concern failures raise ``ValidationErrors``."""
-        return SignupForm(
-            users=self.users,
-            hasher=self.hasher,
-            username=username,
-            email=email,
-            password=password,
-            password_confirm=password_confirm,
-            seats=seats,
-        )
+        """Register. Multi-concern failures raise ``ValidationErrors``."""
+        kwargs: dict[str, object] = {
+            "users": self.users,
+            "hasher": self.hasher,
+            "username": username,
+            "email": email,
+            "password": password,
+            "password_confirm": password_confirm,
+            "display_name": display_name,
+            "role": role,
+            "seats": seats,
+        }
+        if account_id is not None:
+            kwargs["account_id"] = account_id
+        return SignupForm(**kwargs)
 
     def login(self, username: str, password: str) -> LoginForm:
         """Verify credentials. Unknown user or bad password raise ``ValueError``."""
@@ -247,7 +263,7 @@ def main() -> SignupForm:
     service = SignupService(
         InMemoryUserStore(taken={"taken", "ab"}), Pbkdf2PasswordHasher()
     )
-    ok = service.submit(
+    ok = service.register(
         username="ada",
         email="ada@example.com",
         password="Secret1a",
@@ -260,7 +276,8 @@ def main() -> SignupForm:
     except ValueError:
         pass
     try:
-        service.submit(
+        service.register(
+
             username="taken",
             email="ada@example.com",
             password="Secret1a",
@@ -270,7 +287,8 @@ def main() -> SignupForm:
     except (ValueError, ValidationErrors):
         pass
     try:
-        service.submit(
+        service.register(
+
             username="eve",
             email="ada@example.com",
             password="Secret1a",
@@ -280,7 +298,8 @@ def main() -> SignupForm:
     except ValueError:
         pass
     try:
-        service.submit(
+        service.register(
+
             username="neo",
             email="ada@example.com",
             password="Secret1a",

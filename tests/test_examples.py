@@ -12,18 +12,14 @@ from ux_valio import ValidationErrors
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DIR = ROOT / "examples"
 EXAMPLE_MODULES = (
-    "user_account",
-    "registration",
+    "signup",
     "checkout",
-    "indian_kyc",
-    "dates_paths",
-    "sku_codes",
-    "lookaround_units",
-    "compose_hooks",
-    "collect_all_form",
-    "typed_dict_schema",
-    "identity_fields",
-    "commerce_fields",
+    "kyc",
+    "vendor",
+    "storefront",
+    "catalog",
+    "invite",
+    "filing",
 )
 
 
@@ -43,7 +39,8 @@ def test_examples_readme_is_a_port_index():
     assert "Inventory" in text
     assert "PaymentGateway" in text
     assert "IdentityRegistry" in text
-    assert "StaffDirectory" in text
+    assert "PartCatalog" in text
+    assert "Warehouse" in text
     assert "InMemoryUserStore" in text
     assert "do not ship a DB driver" in text
     assert "constructor" in text
@@ -97,18 +94,14 @@ def test_examples_are_not_a_second_product_door():
 def test_service_examples_inject_ports_in_the_constructor():
     """Ports are constructor deps, not process-global bind_* holders."""
     for name in (
-        "collect_all_form",
-        "registration",
+        "signup",
         "checkout",
-        "indian_kyc",
-        "compose_hooks",
-        "user_account",
-        "identity_fields",
-        "commerce_fields",
-        "sku_codes",
-        "lookaround_units",
-        "dates_paths",
-        "typed_dict_schema",
+        "kyc",
+        "vendor",
+        "storefront",
+        "catalog",
+        "invite",
+        "filing",
     ):
         src = (EXAMPLE_DIR / f"{name}.py").read_text()
         assert "bind_" not in src
@@ -123,21 +116,23 @@ def test_service_examples_inject_ports_in_the_constructor():
 DEMO_PASSWORD = "Secret1a"
 
 
-def test_registration_port_is_validated():
-    from examples.registration import Registration
+def test_signup_port_is_validated():
+    from examples.signup import SignupForm
 
     with pytest.raises(TypeError, match="UserStore"):
-        Registration(
+        SignupForm(
             users="not-a-store",
             hasher=object(),
             username="ada",
+            email="ada@example.com",
             password="Secret1a",
             password_confirm="Secret1a",
+            seats=8,
         )
 
 
 def test_signup_username_conflict_is_a_validation_failure():
-    from examples.collect_all_form import (
+    from examples.signup import (
         InMemoryUserStore,
         Pbkdf2PasswordHasher,
         SignupService,
@@ -145,7 +140,7 @@ def test_signup_username_conflict_is_a_validation_failure():
 
     service = SignupService(InMemoryUserStore(taken={"ada"}), Pbkdf2PasswordHasher())
     with pytest.raises((ValueError, ValidationErrors), match="already"):
-        service.submit(
+        service.register(
             username="ada",
             email="ada@example.com",
             password=DEMO_PASSWORD,
@@ -155,7 +150,7 @@ def test_signup_username_conflict_is_a_validation_failure():
 
 
 def test_signup_short_name_collects_length_without_the_store():
-    from examples.collect_all_form import (
+    from examples.signup import (
         InMemoryUserStore,
         Pbkdf2PasswordHasher,
         SignupService,
@@ -164,7 +159,7 @@ def test_signup_short_name_collects_length_without_the_store():
 
     service = SignupService(InMemoryUserStore(), Pbkdf2PasswordHasher())
     with pytest.raises(ValueError) as err:
-        service.submit(
+        service.register(
             username="ab",
             email="ada@example.com",
             password=DEMO_PASSWORD,
@@ -175,7 +170,7 @@ def test_signup_short_name_collects_length_without_the_store():
 
 
 def test_signup_collect_all_surfaces_multiple_seat_concerns():
-    from examples.collect_all_form import (
+    from examples.signup import (
         InMemoryUserStore,
         Pbkdf2PasswordHasher,
         SignupService,
@@ -184,7 +179,7 @@ def test_signup_collect_all_surfaces_multiple_seat_concerns():
 
     service = SignupService(InMemoryUserStore(), Pbkdf2PasswordHasher())
     with pytest.raises(ValidationErrors) as err:
-        service.submit(
+        service.register(
             username="ada",
             email="ada@example.com",
             password=DEMO_PASSWORD,
@@ -196,7 +191,7 @@ def test_signup_collect_all_surfaces_multiple_seat_concerns():
 
 
 def test_signup_stores_hashed_password_not_plaintext():
-    from examples.collect_all_form import (
+    from examples.signup import (
         InMemoryUserStore,
         Pbkdf2PasswordHasher,
         SignupService,
@@ -204,7 +199,7 @@ def test_signup_stores_hashed_password_not_plaintext():
 
     users = InMemoryUserStore()
     hasher = Pbkdf2PasswordHasher()
-    SignupService(users, hasher).submit(
+    SignupService(users, hasher).register(
         username="ada",
         email="ada@example.com",
         password=DEMO_PASSWORD,
@@ -220,7 +215,7 @@ def test_signup_stores_hashed_password_not_plaintext():
 
 
 def test_signup_password_confirm_mismatch_is_a_validation_failure():
-    from examples.collect_all_form import (
+    from examples.signup import (
         InMemoryUserStore,
         Pbkdf2PasswordHasher,
         SignupService,
@@ -228,7 +223,7 @@ def test_signup_password_confirm_mismatch_is_a_validation_failure():
 
     users = InMemoryUserStore()
     with pytest.raises(ValueError, match="match"):
-        SignupService(users, Pbkdf2PasswordHasher()).submit(
+        SignupService(users, Pbkdf2PasswordHasher()).register(
             username="ada",
             email="ada@example.com",
             password=DEMO_PASSWORD,
@@ -239,7 +234,7 @@ def test_signup_password_confirm_mismatch_is_a_validation_failure():
 
 
 def test_signup_weak_password_is_a_validation_failure():
-    from examples.collect_all_form import (
+    from examples.signup import (
         InMemoryUserStore,
         Pbkdf2PasswordHasher,
         SignupService,
@@ -247,7 +242,7 @@ def test_signup_weak_password_is_a_validation_failure():
 
     service = SignupService(InMemoryUserStore(), Pbkdf2PasswordHasher())
     with pytest.raises((ValueError, ValidationErrors)):
-        service.submit(
+        service.register(
             username="ada",
             email="ada@example.com",
             password="short",
@@ -255,7 +250,7 @@ def test_signup_weak_password_is_a_validation_failure():
             seats=8,
         )
     with pytest.raises((ValueError, ValidationErrors)):
-        service.submit(
+        service.register(
             username="ada",
             email="ada@example.com",
             password="nodigitshere",
@@ -265,7 +260,7 @@ def test_signup_weak_password_is_a_validation_failure():
 
 
 def test_signup_login_verify_failure_is_a_clear_error():
-    from examples.collect_all_form import (
+    from examples.signup import (
         InMemoryUserStore,
         Pbkdf2PasswordHasher,
         SignupService,
@@ -274,7 +269,7 @@ def test_signup_login_verify_failure_is_a_clear_error():
     users = InMemoryUserStore()
     hasher = Pbkdf2PasswordHasher()
     service = SignupService(users, hasher)
-    service.submit(
+    service.register(
         username="ada",
         email="ada@example.com",
         password=DEMO_PASSWORD,
@@ -289,20 +284,24 @@ def test_signup_login_verify_failure_is_a_clear_error():
         service.login(username="missing", password=DEMO_PASSWORD)
 
 
-def test_registration_conflict_does_not_consume_the_name():
-    from examples.registration import (
+def test_signup_conflict_does_not_consume_the_name():
+    from examples.signup import (
         InMemoryUserStore,
         Pbkdf2PasswordHasher,
-        RegistrationService,
+        SignupService,
     )
 
     store = InMemoryUserStore(taken={"taken"})
-    service = RegistrationService(store, Pbkdf2PasswordHasher())
+    service = SignupService(store, Pbkdf2PasswordHasher())
     with pytest.raises(ValueError, match="already"):
-        service.register("taken", DEMO_PASSWORD, DEMO_PASSWORD)
+        service.register(
+            "taken", "ada@example.com", DEMO_PASSWORD, DEMO_PASSWORD, 8
+        )
     assert store.username_taken("taken")
     assert not store.username_taken("fresh")
-    row = service.register("fresh", DEMO_PASSWORD, DEMO_PASSWORD)
+    row = service.register(
+        "fresh", "fresh@example.com", DEMO_PASSWORD, DEMO_PASSWORD, 8
+    )
     assert row.username == "fresh"
     assert store.username_taken("fresh")
     stored = store.get("fresh")
@@ -310,17 +309,17 @@ def test_registration_conflict_does_not_consume_the_name():
     assert stored.password_hash != DEMO_PASSWORD
 
 
-def test_registration_invalid_name_does_not_commit():
-    from examples.registration import (
+def test_signup_invalid_name_does_not_commit():
+    from examples.signup import (
         InMemoryUserStore,
         Pbkdf2PasswordHasher,
-        RegistrationService,
+        SignupService,
     )
 
     store = InMemoryUserStore()
     with pytest.raises(ValueError):
-        RegistrationService(store, Pbkdf2PasswordHasher()).register(
-            "ab", DEMO_PASSWORD, DEMO_PASSWORD
+        SignupService(store, Pbkdf2PasswordHasher()).register(
+            "ab", "ada@example.com", DEMO_PASSWORD, DEMO_PASSWORD, 8
         )
     assert not store.username_taken("ab")
 
@@ -390,7 +389,7 @@ def test_checkout_stock_and_gateway_failures_are_validation_errors():
 
 
 def test_kyc_already_registered_identity_is_a_validation_failure():
-    from examples.indian_kyc import (
+    from examples.kyc import (
         VALID_AADHAAR,
         VALID_PAN,
         InMemoryIdentityRegistry,
@@ -420,41 +419,40 @@ def test_indian_kyc_imports_without_phonenumbers(monkeypatch):
         return real_import(name, globals, locals, fromlist, level)
 
     monkeypatch.setattr(builtins, "__import__", blocked)
-    sys.modules.pop("examples.indian_kyc", None)
-    module = importlib.import_module("examples.indian_kyc")
+    sys.modules.pop("examples.kyc", None)
+    module = importlib.import_module("examples.kyc")
     assert callable(module.main)
     assert module.HAS_PHONENUMBERS is False
     module.main()
-    sys.modules.pop("examples.indian_kyc", None)
-
-
-def test_staff_directory_conflict_hangs_on_compose_root():
-    from examples.compose_hooks import InMemoryStaffDirectory, StaffService
-
-    directory = InMemoryStaffDirectory(taken={"Ada"})
-    service = StaffService(directory)
-    with pytest.raises(ValueError, match="already|taken|directory"):
-        service.create(name="  Ada  ", tag="ops", note=7, title="Engineer")
-    row = service.create(name="  Grace  ", tag="ops", note=7, title="Engineer")
-    assert row.name == "Grace"
-    assert directory.name_taken("Grace")
+    sys.modules.pop("examples.kyc", None)
 
 
 def test_account_username_conflict_does_not_commit():
-    from examples.user_account import AccountService, InMemoryAccountDirectory
+    from examples.signup import InMemoryUserStore, Pbkdf2PasswordHasher, SignupService
 
-    directory = InMemoryAccountDirectory(taken={"ada"})
+    store = InMemoryUserStore(taken={"ada"})
     with pytest.raises(ValueError, match="already"):
-        AccountService(directory).open(username="Ada", email="ada@example.com")
-    assert not directory.username_taken("grace")
-    row = AccountService(InMemoryAccountDirectory()).open(
-        username="  Grace  ", email="grace@example.com"
+        SignupService(store, Pbkdf2PasswordHasher()).register(
+            username="Ada",
+            email="ada@example.com",
+            password=DEMO_PASSWORD,
+            password_confirm=DEMO_PASSWORD,
+            seats=8,
+        )
+    assert not store.username_taken("grace")
+    row = SignupService(InMemoryUserStore(), Pbkdf2PasswordHasher()).register(
+        username="  Grace  ",
+        email="grace@example.com",
+        password=DEMO_PASSWORD,
+        password_confirm=DEMO_PASSWORD,
+        seats=8,
     )
     assert row.username == "grace"
 
 
 def test_vendor_gstin_conflict_is_a_validation_failure():
-    from examples.identity_fields import InMemoryVendorRegistry, VendorService
+    from examples.vendor import InMemoryVendorRegistry, VendorService
+
 
     taken = VendorService(InMemoryVendorRegistry(gstins={"09AAAPA1111F1ZP"}))
     with pytest.raises(ValueError, match="already|GSTIN"):

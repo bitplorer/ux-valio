@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Examples: one file per workflow (``signup``, ``checkout``, ``kyc``,
+  ``vendor``, ``storefront``, ``catalog``, ``invite``, ``filing``). Dropped
+  overlapping registration / account / compose / sku / lookaround twins.
+
 - Examples: ports are ``Validator[UserStore](required=True)`` (with
   ``@runtime_checkable`` Protocol) so the store is type-checked like
   every other field. ``field(repr=False, compare=False)`` still hides it
