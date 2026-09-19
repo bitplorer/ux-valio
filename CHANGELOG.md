@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Handbook pages explain what / where / how with usage examples
+  (tutorial, hang, compose, TypedDict, pattern, typed, named, honesty).
+
 - Handbook: choices, performance, workflows, typing — every usage
   pattern and KEEP decision in Diátaxis, no second door.
 

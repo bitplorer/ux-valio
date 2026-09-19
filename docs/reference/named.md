@@ -1,9 +1,16 @@
 # Named identity facades
 
-Same field-default pattern as `StringValidator`. Print grouping strips;
-the **stored value is the compact identity**. `None` skips. Stdlib only —
-no portal, no DNS, no BIN lookup. `help(GSTINValidator)` is the per-facade
-contract. Source lives in sibling domain modules under `facades/named/`
+Same field-default pattern as `StringValidator`. Use a named facade when
+the string **is** an identity in the world (a GSTIN, an IBAN, a card
+number), not free text. Print grouping strips; the **stored value is the
+compact identity**. `None` skips. Stdlib only — no portal, no DNS, no
+BIN lookup. `help(GSTINValidator)` is the per-facade contract.
+
+**Where:** KYC forms, vendor onboarding, checkout, storefront publish,
+device inventory. Copy-paste: `examples/kyc.py`, `examples/vendor.py`,
+`examples/checkout.py`.
+
+Source lives in sibling domain modules under `facades/named/`
 (`india/` `{kyc,gst,registry,bank,postal}`, `us/` `{postal,bank,market,kyc}`,
 `uk/` `{postal,bank,kyc}`, `canada/` `{postal,kyc}`, `mexico/` `{bank,kyc}`,
 `finance/` `{rail,market,card,currency}` — ISO/international only,
@@ -27,6 +34,24 @@ class Counterparty:
     bic: str = BICValidator()
     isbn: str = ISBNValidator()
 ```
+
+`Counterparty(gstin="09 AAAPA1111F 1Z P", iban="GB82 WEST 1234 5698 7654 32", …)`
+stores compact forms. A Luhn/mod-97 miss raises `ValueError` before any
+hang you add.
+
+## How to pick one
+
+| I am collecting… | facade | example |
+|---|---|---|
+| Indian tax / KYC | `AadhaarCardValidator`, `PANCardValidator`, `GSTINValidator` | `examples/kyc.py` |
+| Indian bank rails | `IFSCValidator`, `UPIIdValidator` | payout form |
+| US / UK / CA / MX address or tax | ZIP, NINO, SIN, RFC, CLABE | shipping / W-8 |
+| International pay-in | `IBANValidator`, `BICValidator`, `PaymentCardValidator` | `examples/checkout.py` |
+| Catalog codes | `ISBNValidator`, `GTINValidator`, `EANValidator` | `examples/storefront.py` |
+| Login / contact | `EmailValidator`, `PhoneNumberValidator`, `HostnameValidator` | `examples/signup.py` |
+
+Uniqueness (“is this Aadhaar already registered?”) is **not** in the
+facade. Hang `post_validate` on a port, same as username.
 
 ## India
 
@@ -99,4 +124,11 @@ class Counterparty:
 | `ExpiryValidator` | field's store type | exclusive `expire_*` wall-clock |
 
 `PhoneNumberValidator` is a string facade. Pass `region="IN"` (required).
+The extra is `pip install ux-valio[phonenumbers]`. Without it the
+constructor still exists; assignment that needs the engine raises a
+clear import error. KYC identity still runs in `examples/kyc.py`.
+
 `ExpiryValidator(expire_before="2020-01-01")` — exactly one `expire_*`.
+That is a **wall-clock** bound on whatever the field stores (a promo
+code’s offer window), not card `MM/YY` (`CardExpiryValidator`).
+

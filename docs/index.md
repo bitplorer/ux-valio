@@ -20,6 +20,11 @@ runs your hangs, and stores on `instance.__dict__`. It is not a
 BaseModel, not Pydantic, not valio with a new name. Valio itself is
 not edited (frozen at `3415c03`). Python ≥ 3.14.
 
+Start at the [Tutorial](tutorial.md). Each later page answers **what
+it is**, **where you use it**, **how**, and shows a complete example.
+`help(GSTINValidator)` is the per-name contract once you know which
+facade you want.
+
 | If you want to… | Go here |
 |---|---|
 | Write the first field in five minutes | [Tutorial](tutorial.md) |

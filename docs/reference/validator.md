@@ -1,13 +1,21 @@
 # Validator
 
-`Validator` is the descriptor field default that composes concern
-leaves. `Validator[int]` declares the stored type. Named facades
-specialize it (`IntegerValidator` is `Validator[int]`).
+`Validator` is the descriptor you put on a field when there is **no**
+named facade for that type. `IntegerValidator` / `StringValidator` are
+the same object with `annotation` already set. `Validator[int]`
+declares the stored type. Named facades specialize it
+(`IntegerValidator` is `Validator[int]`).
+
+**Where:** a dataclass column, a TypedDict key, a plain-class attribute,
+or a Protocol port (`users: UserStore = Validator[UserStore](...)`).
 
 ```python
 n: int = IntegerValidator(min_value=0)
 rank: str = Validator(in_choice=["Male", "Female", "Trans"], default="Female")
 ```
+
+`rank` uses `Validator` because `in_choice` is a closed string list, not
+a new store type. `n` uses `IntegerValidator` because the store is `int`.
 
 Specified path units bind at construct (`_active_units`): type always;
 `min_value` / `pattern` / `reassign=False` / … only when that bound is

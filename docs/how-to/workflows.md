@@ -1,9 +1,16 @@
 # Workflows (copy-paste)
 
-One file per real-world case under [`examples/`](../../examples/).
+A workflow is a **form + ports + service**. The form is a dataclass.
+The ports are Protocol adapters (SQL, Redis, Stripe) injected in
+declaration order. The service is the composition root your HTTP handler
+calls. You copy **one file** from [`examples/`](../../examples/) and
+replace the in-memory fake.
+
 `python examples/<file>.py` runs the happy path and `_must_raise` on
-the conflict/identity failures. Replace the in-memory port with
-SQL/Redis/HTTP. Examples do not ship a DB driver.
+the conflict/identity failures. If a failure path is silently `except:
+pass`, a regression would print OK. Examples do not ship a DB driver.
+
+**When to copy which file**
 
 | workflow | file | you replace |
 |---|---|---|

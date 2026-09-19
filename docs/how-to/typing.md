@@ -1,6 +1,8 @@
 # Typing
 
-The taught annotation is the **store type**, not the validator:
+Type checkers look at the **left** of `=`. The taught annotation is the
+**store type**, not the validator class. You write `name: str`, not
+`name: StringValidator`.
 
 ```python
 name: str = StringValidator(max_length=50)
@@ -10,7 +12,11 @@ n: int = IntegerValidator(min_value=0)
 Runtime the instance sees `str` / `int`. Construction is `Any` to type
 checkers (`ValidateProperty.__new__`; mypy via
 `plugins = ["ux_valio.mypy_plugin"]`) so the assignment is legal. No
-per-type mixin (`AsStr`, `AsInt`, `AsUser`).
+per-type mixin (`AsStr`, `AsInt`, `AsUser`). Without this, mypy would
+say `StringValidator` is not a `str` and underline the field.
+
+**Where:** every dataclass / TypedDict / plain-class field. Enable the
+plugin in the project that *uses* ux-valio, not only in this repo.
 
 ## `Validator[T]`
 
