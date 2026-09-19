@@ -410,7 +410,7 @@ Same field-default pattern as `StringValidator`. Print grouping strips;
 the **stored value is the compact identity**. `None` skips. Stdlib only —
 no portal, no DNS, no BIN lookup. `help(GSTINValidator)` is the per-facade
 contract. Source lives in sibling domain modules under `facades/named/`
-(`india/` `{kyc,gst,registry,bank}`, `us/` `{postal,bank,market,kyc}`,
+(`india/` `{kyc,gst,registry,bank,postal}`, `us/` `{postal,bank,market,kyc}`,
 `uk/` `{postal,bank,kyc}`, `canada/` `{postal,kyc}`, `mexico/` `{bank,kyc}`,
 `finance/` `{rail,market,card,currency}` — ISO/international only,
 `catalog`, `contact`,
@@ -462,8 +462,10 @@ row = Counterparty(
 | `IndianPassportValidator` | 1 letter + 7 digits | MEA passport number |
 | `IFSCValidator` | 11 chars | `ABCD0XXXXXX` |
 | `PinCodeValidator` | 6 digits | India Post, first 1–9 |
+| `IndiaStateCodeValidator` | 2 letters | Udyam/RTO (``CG`` not ISO ``CT``) |
+| `USStateValidator` | 2 letters | USPS 50 + DC + AS/GU/MP/PR/VI |
 | `UPIIdValidator` | lowercase VPA | `local@handle` |
-| `IBANValidator` | 15–34 chars | ISO 13616 mod-97 |
+| `IBANValidator` | registry length | ISO 13616 length ∩ mod-97 |
 | `BICValidator` | 8 or 11 A–Z/digits | ISO 9362 / SWIFT |
 | `ISINValidator` | 12 chars | ISO 6166 ∩ Luhn |
 | `ISBNValidator` | 10 or 13 | ISBN-10 mod 11 / ISBN-13 978\|979 |
