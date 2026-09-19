@@ -39,14 +39,17 @@ def test_mypy_accepts_descriptor_field_annotation():
 
 
 def test_pyright_accepts_descriptor_field_annotation():
-    pyright = subprocess.run(
-        ["pyright", str(_SAMPLE)],
-        check=False,
-        capture_output=True,
-        text=True,
-        env=_env(),
-        cwd=_ROOT,
-    )
+    try:
+        pyright = subprocess.run(
+            ["pyright", str(_SAMPLE)],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=_env(),
+            cwd=_ROOT,
+        )
+    except FileNotFoundError:
+        pytest.skip("pyright not installed")
     if pyright.returncode == 127 or "not found" in (pyright.stderr or "").lower():
         pytest.skip("pyright not installed")
     assert pyright.returncode == 0, pyright.stdout + pyright.stderr
