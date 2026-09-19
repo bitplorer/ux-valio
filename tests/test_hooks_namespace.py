@@ -142,7 +142,7 @@ def test_child_instance_runs_parent_field_hooks():
     assert Parent(name="  bob  ").name == "bob"
 
 
-def test_no_asyncio_run_or_enable_async_in_door_a_tree():
+def test_no_asyncio_run_or_enable_async_in_descriptor_tree():
     """valio `_processing` L1835–1846 and `_after_processing_run_tasks` L807–811
     called asyncio.run from the setter pipeline. That is retired.
     ``enable_async`` stays not a door. ``asyncio.run`` / ``run_until_complete``

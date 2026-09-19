@@ -23,7 +23,7 @@ from typing import Annotated, Any, Literal, TypeVar, Union, get_args, get_origin
 from ux_valio.errors import continue_or_raise, raise_collected
 from ux_valio.pattern import PatternType
 from ux_valio.validators.base import ValidateProperty, _register_annotation_checker
-from ux_valio.validators.bounds import bound_value
+from ux_valio.validators.bounds import read_bound
 
 _TYPED_DICT_QUALIFIERS = tuple(
     qualifier
@@ -433,7 +433,7 @@ class MultipleValidator(ValidateProperty):
         super().__init__(**kwargs)
 
     def _validate_multiple_of(self, instance: Any, value: Any) -> None:
-        multiple_of = bound_value(self, "multiple_of")
+        multiple_of = read_bound(self, "multiple_of")
         if multiple_of is None or value is None:
             return
         if multiple_of == 0:

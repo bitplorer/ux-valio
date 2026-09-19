@@ -215,7 +215,7 @@ def test_typeddict_child_keeps_parent_required_keys():
     assert Box(row={"name": "Ada", "age": 1}).row["age"] == 1
 
 
-def test_typeddict_door_a_add_process_pre_validate():
+def test_typeddict_add_process_pre_validate():
     class Profile(TypedDict):
         name: str = StringValidator()
 
@@ -232,7 +232,7 @@ def test_typeddict_door_a_add_process_pre_validate():
     assert Box(person={"name": "  Ada  "}).person["name"] == "Ada"
 
 
-def test_typeddict_door_a_add_validator():
+def test_typeddict_add_validator():
     class Profile(TypedDict):
         name: str = StringValidator()
 

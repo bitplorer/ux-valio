@@ -25,15 +25,15 @@ from ux_valio.validators.length import LengthValidator
 from ux_valio.validators.value import ValueValidator
 
 T = TypeVar("T")
-Lookup = Callable[[Any, Any, Any], Any]
+ValidateStep = Callable[[Any, Any, Any], Any]
 
 
 class ValidationPath:
     """Ordered unique concern callables. A second ``validate()`` is a new pass."""
 
-    def __init__(self, units: Iterable[Lookup]) -> None:
+    def __init__(self, units: Iterable[ValidateStep]) -> None:
         units = tuple(units)
-        seen: set[Lookup] = set()
+        seen: set[ValidateStep] = set()
         for unit in units:
             if unit in seen:
                 raise ValueError(f"validation path double-call: {unit!r}")
@@ -47,7 +47,7 @@ class ValidationPath:
         value: Any,
         collect_all: bool = True,
     ) -> list[Any]:
-        ran: set[Lookup] = set()
+        ran: set[ValidateStep] = set()
         results: list[Any] = []
         errors: list[BaseException] = []
         for unit in self.units:

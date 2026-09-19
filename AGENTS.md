@@ -209,7 +209,7 @@ New private helpers are verbs that name the action:
 `_Opt.merge`, `_Opt.keeps_nesting`,
 `HookHost._has_hooks`, `HookHost.wait_tasks`, `HookHost._pre_validate`,
 `HookHost._notify_pre_set`, `HookHost._collect_owner_keys`, `HookHost._register`,
-`_bind_field_logger`, `_take_subscript_annotation`,
+`_bind_field_logger`, `_emit_log`, `_take_subscript_annotation`,
 `_is_unconstrained_typevar`,
 `HookHost._owner_key`, `HookHost._resolve_owner_key`,
 `HookHost._owning_class_qualname`,
@@ -219,7 +219,8 @@ New private helpers are verbs that name the action:
 `PaymentCardValidator._is_valid_payment_card`,
 `PANCardValidator._is_valid_pan`,
 `PhoneNumberValidator._require_phonenumbers`,
-`LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`.
+`LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`,
+`read_bound`, `ValidateStep`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
 `cache_task`, `_HOOK_ADDERS`, `_install_adders`, `_hook_adder`,
@@ -228,7 +229,7 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `post_set_processing`, `notify_pre_set`, `on_pre_set`,
 `add_pre_validate_process`, `_init_hooks`, `_load_compose_types`,
 `_register_compose_types`, `_Opt.read`, `_Of._bind_kwargs`,
-`_Of._merged_attr`).
+`_Of._merged_attr`, `Lookup`, `_log`, `bound_value`, `door_a`).
 Noun-only names that hide the action are not
 added. Names should fit any caller library — not a one-app
 nickname, not a slogan.

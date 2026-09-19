@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""descriptor honesty — generics, reuse, unknown kwargs. No add_pre_set."""
+"""Descriptor honesty — generics, reuse, unknown kwargs. No add_pre_set."""
 
 from dataclasses import dataclass
 
