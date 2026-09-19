@@ -53,7 +53,7 @@ A `TypedDict` is the schema (stdlib, no BaseModel). Extra keys fail-closed.
 `total=False` and PEP 655 `Required` / `NotRequired` are the TypedDict
 metaclass (`__required_keys__`) — hang extras with `Annotated`, or the same
 assignment as a dataclass (`name: str = StringValidator()`), then
-`@name.pre_validate` / `@name.add_validator` in the TypedDict
+`@name.pre_validate` / `@name.validator` in the TypedDict
 body. `self` in those hooks is the mapping. No Schema twin.
 
 ```python
@@ -68,6 +68,11 @@ class Person(TypedDict):
     @name.pre_validate
     def strip_name(self, value):
         return value.strip()
+
+    @name.validator
+    def no_digit(self, value):
+        if any(char.isdigit() for char in value):
+            raise ValueError("digits")
 
 @dataclass
 class Signup:
@@ -85,10 +90,31 @@ from ux_valio import LengthValidator, RequiredValidator
 tag: str = LengthValidator(min_length=3) & RequiredValidator(required=True)
 ```
 
-Hang `pre_validate` / `post_set` / `task_*` on the field name. The descriptor *is* the dataclass default —
+Hang `pre_validate` / `validator` / `post_set` / `task_*` on the field name. The descriptor *is* the dataclass default —
 no outer `username_field` twin, no Field mixin. Those methods live on
 `ValidateProperty` (leaf or facade). Do not invent `pre_set` as a hang —
 `_run_pre_set` *is* the validate pipeline.
+
+### Hang API
+
+Process is the default kind (pipeline must finish). `task_*` is background
+(setter does not wait). `validator` is a check during `validate()`
+(attrs `@x.validator`; return ignored). Sync or async.
+
+| hang | when | return |
+|---|---|---|
+| `pre_validate` | before validate | **stored** |
+| `post_validate` | after validate | **stored** |
+| `validator` | during `validate()` | ignored |
+| `post_set` | after store | ignored |
+| `pre_get` / `post_get` | around read | ignored (sees the field **name**) |
+| `pre_delete` / `post_delete` | around delete | ignored (sees the field **name**) |
+| `task_pre_validate` … `task_post_delete` | same phases, background | ignored |
+| `wait_tasks` | tests / shutdown | — |
+
+No hang named `pre_set`. Persist/reserve that must fail-closed hangs on
+`post_set`. Welcome-email hangs on `task_post_set`.
+`from ux_valio import wait_tasks`.
 
 `&` / `|` return `AllOf` / `AnyOf` from `ValidateProperty` — same module
 as the operators, no per-use import.
@@ -103,6 +129,11 @@ class User:
     @name.pre_validate
     def strip(self, value: str) -> str:
         return value.strip()
+
+    @name.validator
+    def not_blank(self, value: str) -> None:
+        if not value:
+            raise ValueError("blank")
 ```
 
 Runtime the instance sees `str`. Construction is `Any` to type checkers
@@ -135,7 +166,7 @@ field default; assigning it is treated as unset and applies `default` /
 uses the class you accessed: `Person.aadhaar.pre_validate` registers under Person,
 not the last `__set_name__`.
 
-## KEEP: debug swallow, logger OFF, pre_set hook
+## KEEP: debug swallow, logger OFF
 
 - Omitted `debug` is `True` (re-raise). `debug=False` swallows, appends to
   `errors`, and leaves the attribute unset so later reads are `None`.
@@ -171,7 +202,7 @@ not the last `__set_name__`.
 **Only the before-store pipeline return is stored.** That pipeline *is*
 `pre_validate → validate → post_validate`. There is no `_processors["pre_set"]`
 bag and no hang named `pre_set` — hang before-store work on `pre_validate`
-(transform; **return the value**), `add_validator` (check; return ignored),
+(transform; **return the value**), `validator` (check; return ignored),
 or `task_pre_validate` (background side effect; return ignored; setter
 does not wait). Persist/reserve that must fail-closed hangs on
 `post_set`. Welcome-email hangs on `task_post_set`.
@@ -233,11 +264,9 @@ method (nested classes included). Lookup walks the instance MRO (base first),
 so a child dataclass runs parent field hooks. A free function has no owning
 class: on an **unbound** descriptor `pre_validate` without `namespace=` is
 `TypeError`; on a bound field (`Register.username.pre_validate`) the owner key is
-the bound owner. `namespace=` is that owner key
-as-is; it fires only when that string equals the instance class’s
-`module.qualname` (or an MRO parent). Passing a class object as `namespace=` is `TypeError`
-(string keys only). Leftover teaching: `namespace="Register"` (bare
-`__name__`) is not rewritten to match lookup. A processor that forgets to
+the bound owner. `namespace=` is the owning class, or its
+`module.qualname` str — not a hand-built bare `__name__`.
+`namespace="Register"` is not rewritten to match lookup. A processor that forgets to
 return the value stores `None`; return the value from `pre_validate`.
 
 Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
@@ -268,7 +297,7 @@ smuggle a `str` onto `IntegerValidator`. Named facades (`EmailValidator`,
 to-store value: post_validate cannot turn a valid email into `"not-an-email"`.
 `AllOf` re-checks member named extras. `AnyOf` still has to match one
 alternative. Untyped `Validator()` does not gate. Path bounds (`min_length`,
-…) on AllOf / unnamed facades are not re-run. Custom `add_validator`
+…) on AllOf / unnamed facades are not re-run. Custom `validator`
 callables are not re-run.
 
 `__get__` `post_get` runs in `finally`. A failing post_get is recorded; it
@@ -382,7 +411,7 @@ Named typed facades (`DateValidator`, `PathValidator`, IP, `PaymentCardValidator
 `AadhaarCardValidator`, `PANCardValidator`, `ExpiryValidator`,
 `PhoneNumberValidator`) run their
 extra check from `validate()` after the inherited path. They do not
-register that check with `add_validator` on each assignment. That extra
+register that check with `validator` on each assignment. That extra
 check joins the collected bag instead of being skipped after an inherited
 failure (`collect_all=False` restores fail-fast).
 
@@ -420,7 +449,7 @@ Min/max length and value leaves (`MinLengthValidator`, `MaxLengthValidator`,
 `MinValueValidator`, `MaxValueValidator`) are public building blocks.
 
 `AttributeValidator` is **not** shipped. Check object attributes at the call
-site or with `add_validator`. RGB/HSL color validators are retired.
+site or with `validator`. RGB/HSL color validators are retired.
 `HexColorValidator` is not a public facade.
 
 Identity facades (stdlib only, no network): `AadhaarCardValidator`,
@@ -436,7 +465,7 @@ it, then assign `password: str = password_field.validator`. That Field factory
 duplicated kwargs, dropped `gt`/`lt`/`eq`/`multiple_of`/`in_choice` from its
 signature, and is untested. ux-valio does not ship it. Move the kwargs onto
 `StringValidator` / `IntegerValidator` / `Validator` as the dataclass default,
-and hang `pre_validate` / `add_validator` on that descriptor. Star-import
+and hang `pre_validate` / `validator` on that descriptor. Star-import
 of valio's 306 names is gone; import the names in `__all__`.
 
 ## Public surface

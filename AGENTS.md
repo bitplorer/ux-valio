@@ -58,7 +58,7 @@ a parallel folder, not inside the layer they depend on.
   facades do not multiple-inherit concern leaves;
   processors then tasks once (tasks spawn; setter does not wait);
   `_run_pre_set` IS the validate pipeline (no processor bag named `pre_set`);
-  Hang `pre_validate` / `post_set` / `task_*` on the field name (`@username.pre_validate` in the
+  Hang `pre_validate` / `post_set` / `validator` / `task_*` on the field name (`@username.pre_validate` in the
   class body). Those methods live on `ValidateProperty` (facade, leaf, or
   AllOf / AnyOf). Class access returns the descriptor (`Cls.field.pre_validate`
   after bind) and records that class as `_owner`, so a shared
@@ -98,7 +98,7 @@ a parallel folder, not inside the layer they depend on.
   ``NotRequired``), extra keys fail-closed, values via ``is_instance_of``.
   ``Annotated[T, SomeValidator()]`` or field-default assignment
   (`name: str = StringValidator()`) on a TypedDict key; hang
-  ``@name.pre_validate`` in that class body (``self`` is the mapping).
+  ``@name.pre_validate`` / ``@name.validator`` in that class body (``self`` is the mapping).
   No Schema / Field / BaseModel twin. Omitted ``NotRequired``
   keys skip extras. ``ReadOnly`` peels like the other qualifiers.
   Callable
@@ -139,7 +139,7 @@ a parallel folder, not inside the layer they depend on.
 - Validator objects compose with `&` / `|` or `AllOf` / `AnyOf`.
   That is object composition, not leaf multiple-inheritance.
 - `AttributeValidator` is not shipped. Object-attribute presence checks
-  belong at the call site or on `add_validator`.
+  belong at the call site or on `validator`.
 - `PaymentCardValidator` is brand ∩ Luhn (stdlib `re`; a Luhn-valid
   generator is not enough). Rupay identity is `60` + 14 digits except
   Discover overlap; do not resurrect a dead `6521` alternative.
@@ -156,7 +156,7 @@ a parallel folder, not inside the layer they depend on.
   `expire_before` is its own bound. `expire_*` are not
   kwargs on `Validator`. No `expiry` path unit.
 - Named typed facades call their extra check from `validate()` after the
-  inherited path; they do not `add_validator` themselves on each assignment.
+  inherited path; they do not hang ``validator`` themselves on each assignment.
   `collect_all=True` continues into that extra check. No NamedOnce Cap.
   `HexColorValidator` is not a public facade. `DateValidator` stores
   `datetime.date`; numeric EU `YYYY-MM-DD` / IND `DD-MM-YYYY` strings parse
@@ -192,7 +192,7 @@ a parallel folder, not inside the layer they depend on.
 
 ## Naming
 
-Public names KEEP (valio PatternTypes, `pre_validate` / `task_*` / `add_validator`, `AllOf`,
+Public names KEEP (valio PatternTypes, `pre_validate` / `task_*` / `validator`, `AllOf`,
 `Validator`, `Property`). Do not fashion-rename `Digit` / `SetOf` /
 `IfPrecededBy`. Modules are snake_case (`async_bridge`).
 Classes are CapWords. Methods/helpers are snake_case verbs. The public
@@ -228,7 +228,8 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `add_pre_validator`, `add_post_set`, `add_pre_validator_task`,
 `add_post_set_task`, `has_hooks`, `pre_validation_processing`,
 `post_set_processing`, `notify_pre_set`, `on_pre_set`,
-`add_pre_validate_process`, `add_pre_validate`, `process_pre_validate`, `add_task_post_set`, `_init_hooks`, `_load_compose_types`,
+`add_pre_validate_process`, `add_pre_validate`, `add_validator`, `process_pre_validate`, `add_task_post_set`, `_init_hooks`, `_load_compose_types`,
+
 `_register_compose_types`, `_Opt.read`, `_Of._bind_kwargs`,
 `_Of._merged_attr`, `Lookup`, `_log`, `bound_value`, `door_a`).
 Noun-only names that hide the action are not

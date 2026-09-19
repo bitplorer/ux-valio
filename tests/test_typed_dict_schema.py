@@ -232,11 +232,11 @@ def test_typeddict_pre_validate():
     assert Box(person={"name": "  Ada  "}).person["name"] == "Ada"
 
 
-def test_typeddict_add_validator():
+def test_typeddict_validator():
     class Profile(TypedDict):
         name: str = StringValidator()
 
-        @name.add_validator
+        @name.validator
         def no_digit(self, value):
             if any(char.isdigit() for char in value):
                 raise ValueError("name must not contain digits")

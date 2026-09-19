@@ -102,7 +102,7 @@ def test_class_access_add_after_bind_uses_owner_for_free_function():
 
 
 def test_shared_descriptor_class_access_uses_accessed_class():
-    """Sharing one descriptor: Person.aadhaar.add_* must not bag under Vendor."""
+    """Sharing one descriptor: Person.aadhaar.pre_validate must not bag under Vendor."""
     field = StringValidator(debug=True)
 
     @dataclass
@@ -187,13 +187,13 @@ def test_async_def_pre_validate_registers():
     assert "async.Host" in v._processors["pre_validate"]
 
 
-def test_async_def_add_validator_registers():
+def test_async_def_validator_registers():
     v = Validator(debug=True)
 
     async def check(instance, value):
         return value
 
-    v.add_validator(check, namespace="async.Host")
+    v.validator(check, namespace="async.Host")
     assert inspect.iscoroutinefunction(check)
     bagged = [fn for fns in v._custom_validators.values() for fn in fns]
     assert check in bagged
