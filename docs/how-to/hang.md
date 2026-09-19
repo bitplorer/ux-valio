@@ -36,6 +36,11 @@ No hang named `pre_set`. Persist/reserve that must fail-closed hangs on
   names never hit the database
 - `post_set` — persist / reserve (fail-closed)
 
+A processor that forgets to return the value stores `None`. `validator`
+is a check (attrs-shaped); its return is ignored on purpose so you do
+not think it can transform. Transform is `pre_validate` /
+`post_validate` only.
+
 ```python
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
@@ -85,6 +90,14 @@ field hooks. A free function on an **unbound** descriptor needs
 `namespace="Register"` is not rewritten to match lookup. A processor
 that forgets to return the value stores `None`.
 
+## Why this order exists
+
+Identity before I/O. A name that fails `min_length` must not query the
+users table. Persist after store so a failed later field does not
+consume the name — hang `post_set` on the **last** product field, or
+accept that an earlier field’s persist already ran. Tasks never decide
+the write: the setter does not wait for them.
+
 ## Sync and async
 
 `pre_validate` / `task_*` accept **sync or async** callables. `async def`
@@ -95,4 +108,5 @@ registers. On the sync descriptor path:
 - re-entering that worker is `TypeError` (would deadlock), not a hang
 
 `asyncio.run` is not used in `__set__`. `from ux_valio import wait_tasks`
-waits for tasks (tests / shutdown).
+waits for tasks (tests / shutdown). `enable_async` and `cache_task` are
+not doors (unknown-kwarg TypeError).

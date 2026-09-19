@@ -37,8 +37,8 @@ class User:
 
 Hang `@username.pre_validate` / `@name.validator` on the field name.
 `Chain` is `AllOf`. Full hang table, TypedDict schema, named identities
-(GSTIN, IBAN, ZIP, UnionPay, …), Pattern, and KEEP honesty live in the
-handbook.
+(GSTIN, IBAN, ZIP, UnionPay, …), Pattern, KEEP honesty, and the
+**why** of every default live in the handbook.
 
 ## Handbook
 
@@ -48,10 +48,14 @@ then `mkdocs serve`).
 | | |
 |---|---|
 | [docs/index.md](docs/index.md) | map |
-| [Tutorial](docs/tutorial.md) | five-minute field default |
+| [Tutorial](docs/tutorial.md) | first field, hang, compose |
 | [Hang API](docs/how-to/hang.md) | `pre_validate` / `task_*` / `wait_tasks` |
+| [Workflows](docs/how-to/workflows.md) | one file per real-world case |
+| [Typing](docs/how-to/typing.md) | `Validator[T]`, mypy plugin |
 | [Named identities](docs/reference/named.md) | compact identity catalog |
+| [Choices](docs/explanation/choices.md) | why these defaults, how they affect usage |
 | [Honesty](docs/explanation/honesty.md) | debug, logger `module.qualname.field`, slots |
+| [Performance](docs/explanation/performance.md) | specified path, what is hot |
 | [examples/](examples/) | production skeletons |
 
 Runnable production skeletons live under `examples/`
