@@ -6,17 +6,21 @@ Sibling layers (do not import each other)::
     postal — ZIP
     bank   — ABA routing
     market — CUSIP
+    kyc    — SSN, EIN
 
 Parallel to ``named.india`` / ``named.uk``. Public names re-export
 from ``ux_valio``.
 """
 
 from ux_valio.facades.named.us.bank import ABARoutingValidator
+from ux_valio.facades.named.us.kyc import EINValidator, SSNValidator
 from ux_valio.facades.named.us.market import CUSIPValidator
 from ux_valio.facades.named.us.postal import USZipCodeValidator
 
 __all__ = [
     "ABARoutingValidator",
     "CUSIPValidator",
+    "EINValidator",
+    "SSNValidator",
     "USZipCodeValidator",
 ]

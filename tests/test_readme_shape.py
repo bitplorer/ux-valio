@@ -181,5 +181,7 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "USZipCodeValidator" in text
     assert "CLABEValidator" in text
     assert "LocaleValidator" in text
+    assert "SSNValidator" in text
+    assert "MexicoRFCValidator" in text
     assert "UnionPay" in text
     assert "`PhoneNumberValidator` is a string facade" in text

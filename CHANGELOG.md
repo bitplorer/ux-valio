@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Onboarding KYC: ``SSNValidator``, ``EINValidator``, ``NINOValidator``,
+  ``CanadianSINValidator``, ``MexicoRFCValidator``. ``canada/`` and
+  ``mexico/`` are country folders (same rule as ``us`` / ``india``).
+  Cookie/password/SKU stay generic (``Enum`` / ``StringValidator`` +
+  Pattern). Contact import order residual fixed.
+
 - National identities sit under the country, not ``address`` / ``finance``.
   ``us/`` (ZIP, ABA, CUSIP), ``uk/`` (postcode, sort), ``canada``,
   ``mexico``. ``finance`` is ISO only (IBAN/BIC/ISIN/LEI/card/currency).
