@@ -3,10 +3,10 @@
 
 Facades prove the identity string (compact store, no portal). Uniqueness
 hangs on ``post_validate`` (after checksum). Persist on ``post_set``.
-``registry`` is the injected store, not a column.
+``registry`` is wired by ``VendorService`` before ``__init__``, not a field.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from ux_valio import (
@@ -44,9 +44,17 @@ class InMemoryVendorRegistry:
         self._gstins.add(gstin)
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class Vendor:
-    registry: VendorRegistry = field(repr=False, compare=False)
     gstin: str = GSTINValidator(required=True)
     iban: str = IBANValidator(required=True)
     bic: str = BICValidator(required=True)
@@ -81,8 +89,9 @@ class VendorService:
         isbn: str | None = None,
         mac: str | None = None,
     ) -> Vendor:
-        return Vendor(
-            registry=self.registry,
+        return _bind(
+            Vendor,
+            {"registry": self.registry},
             gstin=gstin,
             iban=iban,
             bic=bic,

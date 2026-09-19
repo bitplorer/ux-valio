@@ -6,7 +6,7 @@
 SKU. Names match valio@3415c03. Inject ``PartCatalog`` on ``CatalogService``.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from ux_valio import (
@@ -51,9 +51,17 @@ class InMemoryPartCatalog:
         self._skus.add(sku)
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class CatalogPart:
-    catalog: PartCatalog = field(repr=False, compare=False)
     sku: str = StringValidator(pattern=sku_token, required=True)
     tint: str = StringValidator(pattern=hex_pair, required=True)
     slug: str = StringValidator(pattern=slug_token, required=True)
@@ -77,8 +85,13 @@ class CatalogService:
         self.catalog = catalog
 
     def add(self, sku: str, tint: str, slug: str, lot: str) -> CatalogPart:
-        return CatalogPart(
-            catalog=self.catalog, sku=sku, tint=tint, slug=slug, lot=lot
+        return _bind(
+            CatalogPart,
+            {"catalog": self.catalog},
+            sku=sku,
+            tint=tint,
+            slug=slug,
+            lot=lot,
         )
 
 

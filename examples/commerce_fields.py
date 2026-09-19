@@ -5,7 +5,7 @@ Facades prove host/slug/GTIN/ZIP. Uniqueness hangs on ``post_validate``.
 ``catalog`` is the injected store, not a column.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from ux_valio import (
@@ -44,9 +44,17 @@ class InMemoryStoreCatalog:
         self._hosts.add(host.casefold())
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class Storefront:
-    catalog: StoreCatalog = field(repr=False, compare=False)
     public_id: str = ULIDValidator(required=True)
     host: str = HostnameValidator(required=True)
     slug: str = SlugValidator(required=True)
@@ -83,8 +91,9 @@ class StorefrontService:
         gtin: str | None = None,
         zip: str | None = None,
     ) -> Storefront:
-        return Storefront(
-            catalog=self.catalog,
+        return _bind(
+            Storefront,
+            {"catalog": self.catalog},
             public_id=public_id,
             host=host,
             slug=slug,

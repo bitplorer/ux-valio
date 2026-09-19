@@ -3,11 +3,11 @@
 
 Username uniqueness hangs on ``post_validate`` (after ``required`` /
 ``min_length``). Persist on ``post_set``. ``directory`` is the injected
-store (``repr=False``), not a column — one shared instance from
-``AccountService``.
+store — one shared instance from ``AccountService``, not an ``__init__``
+field.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID, uuid4
 
@@ -45,9 +45,17 @@ class InMemoryAccountDirectory:
         self._taken.add(username.casefold())
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class UserAccount:
-    directory: AccountDirectory = field(repr=False, compare=False)
     username: str = StringValidator(required=True, min_length=3, max_length=32)
     display_name: str = StringValidator(max_length=80, default="")
     role: str = Validator(
@@ -90,7 +98,6 @@ class AccountService:
         account_id: UUID | None = None,
     ) -> UserAccount:
         kwargs: dict[str, object] = {
-            "directory": self.directory,
             "username": username,
             "display_name": display_name,
             "role": role,
@@ -99,7 +106,7 @@ class AccountService:
         }
         if account_id is not None:
             kwargs["account_id"] = account_id
-        return UserAccount(**kwargs)
+        return _bind(UserAccount, {"directory": self.directory}, **kwargs)
 
 
 def main() -> UserAccount:

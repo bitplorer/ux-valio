@@ -7,7 +7,7 @@ Hang extras with ``Annotated`` or field-default assignment, then
 ``InviteService``.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Annotated, Protocol, TypedDict
 
 from ux_valio import EmailValidator, StringValidator, Validator
@@ -38,6 +38,15 @@ class InMemoryInviteLog:
         self._emails.add(email.casefold())
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 class Person(TypedDict):
     name: str = StringValidator(min_length=2, required=True)
     email: Annotated[str, EmailValidator(required=True)]
@@ -55,7 +64,6 @@ class Person(TypedDict):
 
 @dataclass
 class Invite:
-    log: InviteLog = field(repr=False, compare=False)
     person: Person = Validator()
 
     @person.post_validate
@@ -77,8 +85,9 @@ class InviteService:
         self.log = log
 
     def invite(self, name: str, email: str, age: int) -> Invite:
-        return Invite(
-            log=self.log,
+        return _bind(
+            Invite,
+            {"log": self.log},
             person={"name": name, "email": email, "age": age},
         )
 

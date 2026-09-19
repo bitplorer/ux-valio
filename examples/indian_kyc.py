@@ -13,7 +13,7 @@ the last identity field. ``registry`` is the injected store, not a column.
 warehouse unique Aadhaar/PAN. This file does not ship a DB driver.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from ux_valio import (
@@ -82,11 +82,19 @@ aadhaar_field = AadhaarCardValidator(required=True)
 pan_field = PANCardValidator(required=True)
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class KycIdentity:
     """Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26. Always importable."""
 
-    registry: IdentityRegistry = field(repr=False, compare=False)
     aadhaar: str = aadhaar_field
     pan: str = pan_field
 
@@ -113,7 +121,6 @@ if HAS_PHONENUMBERS and _PHONE is not None:
     class KycRecord:
         """Production shape: identity plus ``PhoneNumberValidator(region='IN')``."""
 
-        registry: IdentityRegistry = field(repr=False, compare=False)
         aadhaar: str = aadhaar_field
         pan: str = pan_field
         phone: str = _PHONE
@@ -149,10 +156,19 @@ class KycService:
     ) -> KycIdentity:
         """Accept a KYC row. Identity, registry, or phone failures raise."""
         if phone is not None and HAS_PHONENUMBERS and KycRecord is not KycIdentity:
-            return KycRecord(
-                registry=self.registry, aadhaar=aadhaar, pan=pan, phone=phone
+            return _bind(
+                KycRecord,
+                {"registry": self.registry},
+                aadhaar=aadhaar,
+                pan=pan,
+                phone=phone,
             )
-        return KycIdentity(registry=self.registry, aadhaar=aadhaar, pan=pan)
+        return _bind(
+            KycIdentity,
+            {"registry": self.registry},
+            aadhaar=aadhaar,
+            pan=pan,
+        )
 
 
 def main() -> KycIdentity:

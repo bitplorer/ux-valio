@@ -7,7 +7,7 @@ on ``FilingService``.
 """
 
 import pathlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Protocol
 
@@ -39,9 +39,17 @@ class InMemoryArchive:
         self._filed.add((str(folder), host))
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class FiledDocument:
-    archive: Archive = field(repr=False, compare=False)
     opened_eu: date = DateValidator(required=True)
     opened_ind: date = DateValidator(required=True)
     folder: pathlib.Path = PathValidator(required=True, path_exists=True)
@@ -71,8 +79,9 @@ class FilingService:
         folder: str | pathlib.Path,
         host: str,
     ) -> FiledDocument:
-        return FiledDocument(
-            archive=self.archive,
+        return _bind(
+            FiledDocument,
+            {"archive": self.archive},
             opened_eu=opened_eu,
             opened_ind=opened_ind,
             folder=folder,

@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+- Examples: ports are not dataclass ``__init__`` fields. Service does
+  ``__new__``, sets the store, then product ``__init__``.
+
 - Examples: store lookup hangs on ``post_validate`` (after identity);
-  persist on ``post_set``. Injected ports are ``field(repr=False)``
-  (shared store, not a column).
+  persist on ``post_set``.
 
 - Examples are service+port workflows (uniqueness / stock), not blank
   checks on top of ``required``. Docs compose hang is reserved-handle,

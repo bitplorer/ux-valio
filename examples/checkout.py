@@ -16,7 +16,7 @@ In-memory fakes keep it offline. Production plugs an offers table, a stock
 row (or Redis), and Stripe/Razorpay. This file does not ship a DB driver.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Protocol
@@ -103,11 +103,17 @@ class StubPaymentGateway:
         return f"auth-{number[-4:]}"
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class Checkout:
-    promos: PromoCatalog = field(repr=False, compare=False)
-    inventory: Inventory = field(repr=False, compare=False)
-    gateway: PaymentGateway = field(repr=False, compare=False)
     holder: str = StringValidator(
         required=True, min_length=2, max_length=80
     )
@@ -173,10 +179,13 @@ class CheckoutService:
         quantity: int = 1,
     ) -> Checkout:
         """Place a validated order. Invalid card, promo, stock, or gateway raise."""
-        return Checkout(
-            promos=self.promos,
-            inventory=self.inventory,
-            gateway=self.gateway,
+        return _bind(
+            Checkout,
+            {
+                "promos": self.promos,
+                "inventory": self.inventory,
+                "gateway": self.gateway,
+            },
             holder=holder,
             number=number,
             card_expiry=card_expiry,

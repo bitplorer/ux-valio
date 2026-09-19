@@ -5,8 +5,9 @@ Import names from `ux_valio`. There is no Field twin, Schema twin, Cap Host,
 or list/dict/set/tuple collection facade.
 
 Each file is a service-shaped module callers copy: a Protocol port, an
-in-memory fake, a validated dataclass, and a service that injects ports in the
-constructor. Hooks (`pre_validate` / `validator` / `post_set`) fail closed into
+in-memory fake, a validated dataclass, and a service that injects ports
+before product ``__init__`` (ports are not dataclass fields). The service
+constructor holds the ports. Hooks (`pre_validate` / `validator` / `post_set`) fail closed into
 `ValueError` / `ValidationErrors`. Omitted `debug` / `collect_all` are True.
 `main()` is
 only the runnable runner (wire the fake, show the conflict path). Replace

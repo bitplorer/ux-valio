@@ -14,7 +14,7 @@ Inject ``UserStore`` and ``PasswordHasher`` on ``RegistrationService``;
 
 import hashlib
 import hmac
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional, Protocol
 
 from ux_valio import (
@@ -104,10 +104,17 @@ class Pbkdf2PasswordHasher:
         return hmac.compare_digest(self.hash(plain), hashed)
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class Registration:
-    users: UserStore = field(repr=False, compare=False)
-    hasher: PasswordHasher = field(repr=False, compare=False)
     username: str = StringValidator(required=True, min_length=3)
     password: str = AllOf(
         StringValidator(required=True, min_length=8, max_length=128),
@@ -150,9 +157,9 @@ class RegistrationService:
         self, username: str, password: str, password_confirm: str
     ) -> Registration:
         """Reserve ``username`` with a hashed password. Failures raise ``ValueError``."""
-        return Registration(
-            users=self.users,
-            hasher=self.hasher,
+        return _bind(
+            Registration,
+            {"users": self.users, "hasher": self.hasher},
             username=username,
             password=password,
             password_confirm=password_confirm,
