@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 import types
+import typing
 import weakref
 from collections.abc import (
     Callable as AbcCallable,
@@ -23,6 +24,16 @@ from ux_valio.errors import continue_or_raise, raise_collected
 from ux_valio.pattern import PatternType
 from ux_valio.validators.base import ValidateProperty, _register_annotation_checker
 from ux_valio.validators.bounds import bound_value
+
+_TYPED_DICT_QUALIFIERS = tuple(
+    qualifier
+    for qualifier in (
+        getattr(typing, "Required", None),
+        getattr(typing, "NotRequired", None),
+        getattr(typing, "ReadOnly", None),
+    )
+    if qualifier is not None
+)
 
 
 def _peel_annotation(annotation: Any) -> Any:
@@ -174,7 +185,7 @@ def _unwrap_field_annotation(annotation: Any) -> tuple[Any, tuple[Any, ...]]:
             extras.extend(args[1:])
             continue
         name = getattr(origin, "__name__", "")
-        if name in {"Required", "NotRequired", "ReadOnly"}:
+        if origin in _TYPED_DICT_QUALIFIERS:
             args = get_args(annotation)
             annotation = args[0] if args else annotation
             continue
@@ -222,27 +233,24 @@ def _typed_dict_match(value: Any, annotation: Any) -> bool:
 
 
 def _typed_dict_key_validators(schema: Any, key: str, field_ann: Any) -> tuple[Any, ...]:
-    """Door A on the TypedDict class attr, then ``Annotated`` extras. One object once."""
+    """Class-body Door A default, then ``Annotated`` extras. One object once."""
     found: list[Any] = []
-    for cls in getattr(schema, "__mro__", (schema,)):
-        if cls is object or cls is dict:
-            continue
-        attr = getattr(cls, "__dict__", {}).get(key)
-        if isinstance(attr, ValidateProperty) and all(item is not attr for item in found):
-            found.append(attr)
+    attr = schema.__dict__.get(key)
+    if isinstance(attr, ValidateProperty):
+        found.append(attr)
     for extra in _unwrap_field_annotation(field_ann)[1]:
-        if isinstance(extra, ValidateProperty) and all(item is not extra for item in found):
+        if isinstance(extra, ValidateProperty) and extra is not attr:
             found.append(extra)
     return tuple(found)
 
 
-def _apply_typed_dict_extras(owner: Any, instance: Any, value: Any, annotation: Any = None) -> None:
+def _validate_typed_dict(owner: Any, value: Any, annotation: Any = None) -> None:
     """Run Door A key validators on a TypedDict mapping.
 
-    Same objects as dataclass field defaults: ``name: str = StringValidator()``
-    on the TypedDict, hang ``@name.add_process_pre_validate`` in that class
-    body. ``Annotated[T, SomeValidator()]`` still works. ``pre_set`` then
-    write-back then ``post_set``. ``self`` in those hooks is the mapping.
+    ``name: str = StringValidator()`` on the TypedDict is the same default
+    as a dataclass field: ``type`` calls ``__set_name__``, so ``_owner``
+    is that class. ``pre_set`` write-back then ``post_set``. ``self`` in
+    those hooks is the mapping.
     """
     if annotation is None:
         annotation = getattr(owner, "annotation", None)
@@ -267,9 +275,7 @@ def _apply_typed_dict_extras(owner: Any, instance: Any, value: Any, annotation: 
         item = value[key]
         for extra in _typed_dict_key_validators(annotation, key, field_ann):
             previous_name = extra.name
-            previous_schema = getattr(extra, "_hook_schema", None)
             extra.name = f"{prefix}.{key}" if prefix else key
-            extra._hook_schema = annotation
             try:
                 new_item = extra.pre_set(value, item)
                 if isinstance(value, MutableMapping):
@@ -280,12 +286,11 @@ def _apply_typed_dict_extras(owner: Any, instance: Any, value: Any, annotation: 
                 continue_or_raise(collect, errors, err)
             finally:
                 extra.name = previous_name
-                extra._hook_schema = previous_schema
         nested = _annotated_store_type(field_ann)
         if is_typeddict(nested):
             nested_value = value[key] if key in value else item
             try:
-                _apply_typed_dict_extras(owner, instance, nested_value, nested)
+                _validate_typed_dict(owner, nested_value, nested)
             except Exception as err:
                 continue_or_raise(collect, errors, err)
     raise_collected(errors, name=prefix)
