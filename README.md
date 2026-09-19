@@ -447,7 +447,7 @@ row = Counterparty(
 |---|---|---|
 | `AadhaarCardValidator` | 12 digits | Verhoeff |
 | `PANCardValidator` | 10 A–Z/digits | Luhn mod 26 |
-| `GSTINValidator` | 15 A–Z/digits | Luhn mod 36, state 01–38 |
+| `GSTINValidator` | 15 A–Z/digits | Luhn mod 36, state 01–38 / 97 / 99 |
 | `TANValidator` | 10 chars | ITD format |
 | `CINValidator` | 21 chars | MCA `L`/`U` + ROC + state + year |
 | `VoterIdValidator` | 3 letters + 7 digits | EPIC |
@@ -461,6 +461,7 @@ row = Counterparty(
 | `EANValidator` | 13 digits | GS1 check |
 | `GTINValidator` | 8/12/13/14 digits | GS1 (UPC-A / EAN-8 / GTIN-14) |
 | `HSNCodeValidator` | 4, 6, or 8 digits | GST HSN/SAC |
+| `UdyamValidator` | `UDYAM-XX-00-0000000` | MSME registration |
 | `HostnameValidator` | lowercase FQDN | RFC 1123; not a URL; not IPv4 |
 | `SlugValidator` | lowercase `foo-bar` | does not slugify spaces |
 | `CurrencyCodeValidator` | 3 letters | ISO 4217 |
@@ -473,7 +474,7 @@ row = Counterparty(
 | `VINValidator` | 17 chars | ISO 3779 check digit, no I/O/Q |
 | `MACAddressValidator` | 12 hex | 48-bit; colon/hyphen/Cisco ok |
 | `IMEIValidator` | 15 digits | Luhn |
-| `PaymentCardValidator` | compact digits | brand ∩ Luhn |
+| `PaymentCardValidator` | compact digits | brand ∩ Luhn (incl. UnionPay) |
 | `EmailValidator` | given string | addr-spec **fullmatch** |
 | `URLValidator` | given string | scheme + netloc |
 | `ExpiryValidator` | field's store type | exclusive `expire_*` wall-clock |
