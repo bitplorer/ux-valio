@@ -456,6 +456,17 @@ row = Counterparty(
 | `ISINValidator` | 12 chars | ISO 6166 ∩ Luhn |
 | `ISBNValidator` | 10 or 13 | ISBN-10 mod 11 / ISBN-13 978\|979 |
 | `EANValidator` | 13 digits | GS1 check |
+| `GTINValidator` | 8/12/13/14 digits | GS1 (UPC-A / EAN-8 / GTIN-14) |
+| `HSNCodeValidator` | 4, 6, or 8 digits | GST HSN/SAC |
+| `HostnameValidator` | lowercase FQDN | RFC 1123; not a URL; not IPv4 |
+| `SlugValidator` | lowercase `foo-bar` | does not slugify spaces |
+| `CurrencyCodeValidator` | 3 letters | ISO 4217 |
+| `CountryCodeValidator` | 2 letters | ISO 3166-1 alpha-2 |
+| `TimezoneValidator` | IANA key | `zoneinfo.available_timezones()` |
+| `ULIDValidator` | 26 chars | Crockford base32 |
+| `LEIValidator` | 20 chars | ISO 17442 mod-97 |
+| `CardExpiryValidator` | `MMYY` | card print form; not wall-clock |
+| `ABARoutingValidator` | 9 digits | ABA checksum |
 | `VINValidator` | 17 chars | ISO 3779 check digit, no I/O/Q |
 | `MACAddressValidator` | 12 hex | 48-bit; colon/hyphen/Cisco ok |
 | `IMEIValidator` | 15 digits | Luhn |

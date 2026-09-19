@@ -90,6 +90,17 @@ def test_min_max_leaves_are_exported():
         "TANValidator",
         "CINValidator",
         "VoterIdValidator",
+        "GTINValidator",
+        "HostnameValidator",
+        "SlugValidator",
+        "CurrencyCodeValidator",
+        "CountryCodeValidator",
+        "TimezoneValidator",
+        "ULIDValidator",
+        "LEIValidator",
+        "CardExpiryValidator",
+        "HSNCodeValidator",
+        "ABARoutingValidator",
         "Digit",
         "Word",
         "NonDigit",
@@ -193,6 +204,8 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert (ROOT / "ux_valio" / "facades" / "named" / "aadhaar.py").is_file()
     assert (ROOT / "ux_valio" / "facades" / "named" / "bic.py").is_file()
     assert (ROOT / "ux_valio" / "facades" / "named" / "isbn.py").is_file()
+    assert (ROOT / "ux_valio" / "facades" / "named" / "gtin.py").is_file()
+    assert (ROOT / "ux_valio" / "facades" / "named" / "hostname.py").is_file()
     assert not (ROOT / "ux_valio" / "facades" / "aadhaar.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "typed.py").exists()
     assert (ROOT / "ux_valio" / "facades" / "named" / "email.py").is_file()
