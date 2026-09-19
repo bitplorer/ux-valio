@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Named identity facades: class ``help()`` usage, README table (compact
+  store, checksum vs format), ``examples/identity_fields.py``.
+
 - Named identity facades: ``BICValidator`` (SWIFT), ``ISINValidator``,
   ``ISBNValidator``, ``EANValidator``, ``VINValidator``,
   ``MACAddressValidator``, ``TANValidator``, ``CINValidator``,

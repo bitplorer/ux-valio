@@ -10,7 +10,15 @@ from ux_valio.facades.typed import StringValidator
 
 
 class URLValidator(StringValidator):
-    """URL field default. Identity is scheme + netloc (stdlib ``urlparse``)."""
+    """URL identity: scheme + netloc (stdlib ``urlparse``).
+
+    Usage::
+
+        site: str = URLValidator()
+
+    ``https://example.com/path`` is accepted; ``example.com`` (no scheme)
+    is rejected. Stores the given string (not rewritten). No DNS lookup.
+    """
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:

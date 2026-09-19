@@ -1,7 +1,26 @@
 # SPDX-License-Identifier: MIT
 """Named identity facades. Parallel products on top of ``typed``.
 
-Each module subclasses ``StringValidator`` (or ``Validator`` for expiry).
+The taught usage is the field default — same shape as every other
+validator in this library::
+
+    gstin: str = GSTINValidator()
+    isbn: str = ISBNValidator()
+
+Every named facade:
+
+- subclasses ``StringValidator`` (``ExpiryValidator`` is the exception:
+  it gates wall-clock on whatever the field stores, so it is ``Validator``)
+- strips print grouping in ``_pre_validate`` and **stores the compact
+  identity** (uppercase / digits-only as the scheme requires)
+- runs its extra from ``validate()`` via ``_validate_named_facade`` —
+  it does **not** hang ``@field.validator`` on each assignment
+- ``None`` skips (optional field / ``default=None``)
+- fail-closed ``ValueError``; format-without-checksum is rejected when
+  the scheme has a check digit
+- stdlib only, **no portal / network**. ``PhoneNumberValidator`` uses
+  the optional ``phonenumbers`` extra and still does no carrier lookup.
+
 They import ``ux_valio.facades.typed`` or the validate door — never each
 other, and ``typed`` never imports this package.
 """

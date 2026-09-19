@@ -12,7 +12,15 @@ _ISIN = re.compile(r"[A-Z]{2}[A-Z0-9]{9}[0-9]")
 
 
 class ISINValidator(StringValidator):
-    """12-char ISIN ∩ Luhn after A=10…Z=35 expansion."""
+    """ISIN: ISO 6166, 12 chars ∩ Luhn after A=10…Z=35 expansion.
+
+    Usage::
+
+        isin: str = ISINValidator()
+
+    Print groups strip; stores uppercase compact (``US0378331005``).
+    Format-only is rejected. No exchange lookup.
+    """
 
     @staticmethod
     def _luhn_check_digit(body: str) -> str:

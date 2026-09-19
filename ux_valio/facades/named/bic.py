@@ -13,7 +13,15 @@ _BIC = re.compile(r"[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?")
 
 
 class BICValidator(StringValidator):
-    """SWIFT/BIC identity. Complements ``IBANValidator``."""
+    """SWIFT/BIC bank identifier (ISO 9362).
+
+    Usage::
+
+        swift: str = BICValidator()
+
+    8 characters (``DEUTDEFF``) or 11 (``DEUTDEFF500``). Spaces/hyphens
+    strip; stores uppercase. No SWIFT directory. Pair with ``IBANValidator``.
+    """
 
     @staticmethod
     def _is_valid_bic(value: Any) -> bool:

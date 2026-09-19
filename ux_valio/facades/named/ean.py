@@ -9,7 +9,16 @@ from ux_valio.facades.typed import StringValidator
 
 
 class EANValidator(StringValidator):
-    """13-digit EAN ∩ GS1 check. Complements ``ISBNValidator`` (978/979 subset)."""
+    """EAN-13: 13 digits ∩ GS1 check.
+
+    Usage::
+
+        ean: str = EANValidator()
+
+    Non-digits strip; stores 13-digit compact. Format-only is rejected.
+    978/979 book codes also pass — prefer ``ISBNValidator`` on book fields.
+    No GTIN registry.
+    """
 
     @staticmethod
     def _is_valid_ean(value: Any) -> bool:

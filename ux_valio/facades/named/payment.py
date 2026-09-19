@@ -22,7 +22,15 @@ _RUPAY = re.compile(r"6(?!(?:011|44[0-9]|5[0-9]{2}))0[0-9]{14}")
 
 
 class PaymentCardValidator(StringValidator):
-    """Visa / Mastercard / Amex / Discover / Rupay ∩ Luhn."""
+    """Visa / Mastercard / Amex / Discover / Rupay ∩ Luhn.
+
+    Usage::
+
+        number: str = PaymentCardValidator()
+
+    Print grouping spaces/hyphens strip; stores compact digits. A
+    Luhn-valid non-brand number is rejected. No network / BIN lookup.
+    """
 
     @staticmethod
     def _luhn_correctness(card_number: str) -> bool:
