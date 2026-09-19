@@ -149,6 +149,11 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
         return False
     if peeled is not annotation:
         return is_instance_of(value, peeled)
+    # Concrete classes (int, str, Enum) skip origin tables.
+    if isinstance(annotation, type) and get_origin(annotation) is None:
+        if is_typeddict(annotation):
+            return _typed_dict_match(value, annotation)
+        return _isinstance_closed(value, annotation)
     if isinstance(annotation, str):
         return False
     if isinstance(annotation, TypeVar):

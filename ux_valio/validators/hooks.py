@@ -128,6 +128,7 @@ class HookHost:
         self._tasks: dict[str, dict[str, list[Callable[..., Any]]]] = {
             phase: defaultdict(list) for phase in self._processors
         }
+        self._hooks_hung = False
         super().__init__(*args, **kwargs)
 
     def _register(
@@ -141,6 +142,7 @@ class HookHost:
             func, namespace, getattr(self, "_owner", None)
         )
         bucket[key].append(func)
+        self._hooks_hung = True
         return func
 
     def validator(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
@@ -208,6 +210,8 @@ class HookHost:
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
         hooks = self._processors[phase]
+        if not hooks:
+            return value
         for key in HookHost._collect_owner_keys(
             instance, getattr(self, "_owner", None)
         ):
@@ -217,6 +221,8 @@ class HookHost:
 
     def _run_tasks(self, phase: str, instance: Any, value: Any) -> Any:
         hooks = self._tasks[phase]
+        if not hooks:
+            return value
         for key in HookHost._collect_owner_keys(
             instance, getattr(self, "_owner", None)
         ):
@@ -230,6 +236,8 @@ class HookHost:
         wait_outstanding(timeout)
 
     def _process_then_tasks(self, phase: str, instance: Any, value: Any) -> Any:
+        if not self._hooks_hung:
+            return value
         value = self._run_processors(phase, instance, value)
         self._run_tasks(phase, instance, value)
         return value
@@ -256,6 +264,8 @@ class HookHost:
         return self._process_then_tasks("post_delete", instance, value)
 
     def _run_custom_validators(self, instance: Any, value: Any) -> None:
+        if not self._custom_validators:
+            return
         bound = getattr(self, "_owner", None)
         if instance is None and bound is None:
             return
