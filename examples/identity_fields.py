@@ -3,10 +3,10 @@
 
 Facades prove the identity string (compact store, no portal). Uniqueness
 hangs on ``post_validate`` (after checksum). Persist on ``post_set``.
-``registry`` is wired by ``VendorService`` before ``__init__``, not a field.
+``registry`` is the injected store, not a column.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -44,33 +44,15 @@ class InMemoryVendorRegistry:
         self._gstins.add(gstin)
 
 
-@dataclass(init=False)
+@dataclass
 class Vendor:
+    registry: VendorRegistry = field(repr=False, compare=False)
     gstin: str = GSTINValidator(required=True)
     iban: str = IBANValidator(required=True)
     bic: str = BICValidator(required=True)
     cin: str = CINValidator()
     isbn: str = ISBNValidator()
     mac: str = MACAddressValidator()
-
-    def __init__(
-        self,
-        gstin: str,
-        iban: str,
-        bic: str,
-        *,
-        registry: VendorRegistry,
-        cin: str | None = None,
-        isbn: str | None = None,
-        mac: str | None = None,
-    ) -> None:
-        self.registry = registry
-        self.gstin = gstin
-        self.iban = iban
-        self.bic = bic
-        self.cin = cin
-        self.isbn = isbn
-        self.mac = mac
 
     @gstin.post_validate
     def gstin_available(self, value: str) -> str:
@@ -100,10 +82,10 @@ class VendorService:
         mac: str | None = None,
     ) -> Vendor:
         return Vendor(
-            gstin,
-            iban,
-            bic,
             registry=self.registry,
+            gstin=gstin,
+            iban=iban,
+            bic=bic,
             cin=cin,
             isbn=isbn,
             mac=mac,

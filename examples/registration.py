@@ -14,8 +14,8 @@ Inject ``UserStore`` and ``PasswordHasher`` on ``RegistrationService``;
 
 import hashlib
 import hmac
-from dataclasses import dataclass
-from typing import Optional, Protocol
+from dataclasses import dataclass, field
+from typing import Protocol
 
 from ux_valio import (
     AllOf,
@@ -46,7 +46,8 @@ class UserStore(Protocol):
         """INSERT username and hash. Never persist plaintext."""
         ...
 
-    def get(self, username: str) -> Optional[StoredUser]:
+    def get(self, username: str) -> StoredUser | None:
+
         """Return the stored row, or None if missing."""
         ...
 
@@ -77,7 +78,8 @@ class InMemoryUserStore:
     def create(self, username: str, email: str, password_hash: str) -> None:
         self._users[username.casefold()] = StoredUser(username, email, password_hash)
 
-    def get(self, username: str) -> Optional[StoredUser]:
+    def get(self, username: str) -> StoredUser | None:
+
         return self._users.get(username.casefold())
 
 
@@ -104,8 +106,10 @@ class Pbkdf2PasswordHasher:
         return hmac.compare_digest(self.hash(plain), hashed)
 
 
-@dataclass(init=False)
+@dataclass
 class Registration:
+    users: UserStore = field(repr=False, compare=False)
+    hasher: PasswordHasher = field(repr=False, compare=False)
     username: str = StringValidator(required=True, min_length=3)
     password: str = AllOf(
         StringValidator(required=True, min_length=8, max_length=128),
@@ -115,21 +119,6 @@ class Registration:
     password_confirm: str = StringValidator(
         required=True, min_length=8, max_length=128
     )
-
-    def __init__(
-        self,
-        username: str,
-        password: str,
-        password_confirm: str,
-        *,
-        users: UserStore,
-        hasher: PasswordHasher,
-    ) -> None:
-        self.users = users
-        self.hasher = hasher
-        self.username = username
-        self.password = password
-        self.password_confirm = password_confirm
 
     @username.pre_validate
     def fold_username(self, value: str) -> str:
@@ -164,11 +153,11 @@ class RegistrationService:
     ) -> Registration:
         """Reserve ``username`` with a hashed password. Failures raise ``ValueError``."""
         return Registration(
-            username,
-            password,
-            password_confirm,
             users=self.users,
             hasher=self.hasher,
+            username=username,
+            password=password,
+            password_confirm=password_confirm,
         )
 
 

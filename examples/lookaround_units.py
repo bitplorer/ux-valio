@@ -5,7 +5,7 @@ Lookarounds are valio@3415c03 PatternTypes. Matching is ``findall``
 substring (KEEP). Inject ``Warehouse`` on ``ShippingService``.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -55,27 +55,13 @@ class InMemoryWarehouse:
         self._stock[sku] -= 1
 
 
-@dataclass(init=False)
+@dataclass
 class Shipment:
+    warehouse: Warehouse = field(repr=False, compare=False)
     sku: str = StringValidator(min_length=1, required=True)
     mass: str = StringValidator(pattern=mass_kg, required=True)
     price: str = StringValidator(pattern=usd_amount, required=True)
     quantity: str = StringValidator(pattern=not_pounds, required=True)
-
-    def __init__(
-        self,
-        sku: str,
-        mass: str,
-        price: str,
-        quantity: str,
-        *,
-        warehouse: Warehouse,
-    ) -> None:
-        self.warehouse = warehouse
-        self.sku = sku
-        self.mass = mass
-        self.price = price
-        self.quantity = quantity
 
     @quantity.post_validate
     def in_stock(self, value: str) -> str:
@@ -95,7 +81,11 @@ class ShippingService:
 
     def book(self, sku: str, mass: str, price: str, quantity: str) -> Shipment:
         return Shipment(
-            sku, mass, price, quantity, warehouse=self.warehouse
+            warehouse=self.warehouse,
+            sku=sku,
+            mass=mass,
+            price=price,
+            quantity=quantity,
         )
 
 

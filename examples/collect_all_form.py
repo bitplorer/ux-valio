@@ -20,7 +20,7 @@ This file does not ship a DB driver or a crypto library in ``ux_valio``.
 
 import hashlib
 import hmac
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -133,32 +133,15 @@ login_username_field = StringValidator(required=True, min_length=1)
 login_password_field = StringValidator(required=True, min_length=1)
 
 
-@dataclass(init=False)
+@dataclass
 class SignupForm:
+    users: UserStore = field(repr=False, compare=False)
+    hasher: PasswordHasher = field(repr=False, compare=False)
     username: str = username_field
     email: str = EmailValidator(required=True)
     password: str = password_field
     password_confirm: str = confirm_field
     seats: int = seats_field
-
-    def __init__(
-        self,
-        username: str,
-        email: str,
-        password: str,
-        password_confirm: str,
-        seats: int,
-        *,
-        users: UserStore,
-        hasher: PasswordHasher,
-    ) -> None:
-        self.users = users
-        self.hasher = hasher
-        self.username = username
-        self.email = email
-        self.password = password
-        self.password_confirm = password_confirm
-        self.seats = seats
 
     @username.pre_validate
     def fold_username(self, value: str) -> str:
@@ -183,18 +166,12 @@ class SignupForm:
         )
 
 
-@dataclass(init=False)
+@dataclass
 class LoginForm:
+    users: UserStore = field(repr=False, compare=False)
+    hasher: PasswordHasher = field(repr=False, compare=False)
     username: str = login_username_field
     password: str = login_password_field
-
-    def __init__(
-        self, username: str, password: str, *, users: UserStore, hasher: PasswordHasher
-    ) -> None:
-        self.users = users
-        self.hasher = hasher
-        self.username = username
-        self.password = password
 
     @password.post_validate
     def credentials_ok(self, value: str) -> str:
@@ -221,19 +198,22 @@ class SignupService:
     ) -> SignupForm:
         """Submit the form. Multi-concern failures raise ``ValidationErrors``."""
         return SignupForm(
-            username,
-            email,
-            password,
-            password_confirm,
-            seats,
             users=self.users,
             hasher=self.hasher,
+            username=username,
+            email=email,
+            password=password,
+            password_confirm=password_confirm,
+            seats=seats,
         )
 
     def login(self, username: str, password: str) -> LoginForm:
         """Verify credentials. Unknown user or bad password raise ``ValueError``."""
         return LoginForm(
-            username, password, users=self.users, hasher=self.hasher
+            users=self.users,
+            hasher=self.hasher,
+            username=username,
+            password=password,
         )
 
 

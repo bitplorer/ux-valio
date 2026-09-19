@@ -7,7 +7,7 @@ on ``FilingService``.
 """
 
 import pathlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Protocol
 
@@ -39,27 +39,13 @@ class InMemoryArchive:
         self._filed.add((str(folder), host))
 
 
-@dataclass(init=False)
+@dataclass
 class FiledDocument:
+    archive: Archive = field(repr=False, compare=False)
     opened_eu: date = DateValidator(required=True)
     opened_ind: date = DateValidator(required=True)
     folder: pathlib.Path = PathValidator(required=True, path_exists=True)
     host: str = IPv4Validator(required=True)
-
-    def __init__(
-        self,
-        opened_eu: str | date,
-        opened_ind: str | date,
-        folder: str | pathlib.Path,
-        host: str,
-        *,
-        archive: Archive,
-    ) -> None:
-        self.archive = archive
-        self.opened_eu = opened_eu
-        self.opened_ind = opened_ind
-        self.folder = folder
-        self.host = host
 
     @host.post_validate
     def not_already_filed(self, value: str) -> str:
@@ -86,7 +72,11 @@ class FilingService:
         host: str,
     ) -> FiledDocument:
         return FiledDocument(
-            opened_eu, opened_ind, folder, host, archive=self.archive
+            archive=self.archive,
+            opened_eu=opened_eu,
+            opened_ind=opened_ind,
+            folder=folder,
+            host=host,
         )
 
 

@@ -37,16 +37,13 @@ No hang named `pre_set`. Persist/reserve that must fail-closed hangs on
 - `post_set` — persist / reserve (fail-closed)
 
 ```python
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from ux_valio import StringValidator
 
-@dataclass(init=False)
+@dataclass
 class Register:
+    users: UserStore = field(repr=False, compare=False)
     username: str = StringValidator(required=True, min_length=3)
-
-    def __init__(self, username: str, *, users: UserStore) -> None:
-        self.users = users
-        self.username = username
 
     @username.pre_validate
     def fold(self, value: str) -> str:
@@ -63,10 +60,12 @@ class Register:
         self.users.commit(value)
 ```
 
-`InitVar` still is an `__init__` parameter, and `__post_init__` runs
-*after* field assignment — too late for uniqueness. Ports are
-keyword-only on an explicit `__init__` (`init=False`) so they are set
-**before** product fields. See `examples/registration.py`.
+`users` is a dataclass field so generated `__init__` assigns it **before**
+`username` (declaration order). `repr=False, compare=False` keeps it out
+of `repr` / `eq` — it is the injected store, not a product column.
+`InitVar` + `__post_init__` is too late (username already assigned).
+Hand-written `init=False` `__init__` duplicates every field. See
+`examples/registration.py`.
 
 Class access `User.name` is that descriptor, so `User.name.post_set`
 also works after the class exists. A shared descriptor (`aadhaar` on
