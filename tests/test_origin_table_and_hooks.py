@@ -28,16 +28,16 @@ def test_origin_table_owns_stdlib_generics():
 
 
 def test_add_hooks_are_declared_on_the_class():
-    """Public add_* are real methods, not setattr from a table. No add_pre_set."""
+    """Public process_*/task_* are real methods, not setattr from a table. No process_pre_set."""
     import inspect
 
-    src = inspect.getsource(HookHost.add_process_pre_validate)
-    assert "def add_process_pre_validate" in src
+    src = inspect.getsource(HookHost.process_pre_validate)
+    assert "def process_pre_validate" in src
     assert "pre_validate" in src
-    assert hasattr(HookHost, "add_process_pre_validate")
-    assert hasattr(HookHost, "add_task_pre_validate")
-    assert hasattr(HookHost, "add_process_post_set")
-    assert hasattr(HookHost, "add_task_post_set")
+    assert hasattr(HookHost, "process_pre_validate")
+    assert hasattr(HookHost, "task_pre_validate")
+    assert hasattr(HookHost, "process_post_set")
+    assert hasattr(HookHost, "task_post_set")
     assert hasattr(HookHost, "add_validator")
     assert hasattr(HookHost, "wait_tasks")
     assert hasattr(HookHost, "_register")
@@ -57,6 +57,10 @@ def test_add_hooks_are_declared_on_the_class():
     assert not hasattr(HookHost, "_add")
     assert not hasattr(HookHost, "_init_hooks")
     assert not hasattr(HookHost, "add_pre_set")
+    assert not hasattr(HookHost, "add_process_pre_validate")
+    assert not hasattr(HookHost, "add_task_post_set")
+    assert not hasattr(HookHost, "process_pre_set")
+    assert not hasattr(HookHost, "task_pre_set")
     assert not hasattr(HookHost, "_HOOK_ADDERS")
     assert not hasattr(HookHost, "_PROCESSOR_PHASES")
     assert not hasattr(HookHost, "_install_adders")

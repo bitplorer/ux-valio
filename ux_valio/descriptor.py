@@ -16,13 +16,13 @@ failure surfaces. ``collect_all=False`` is fail-fast. Do not overload
 explicit ``False`` does not TypeError.
 
 Class access (``obj is None``) returns the descriptor, so
-``Cls.field.add_process_pre_validate`` works after the class exists — hang
+``Cls.field.process_pre_validate`` works after the class exists — hang
 hooks on the field name, no outer ``username_field`` twin. Dataclass
 ``getattr`` then sees the descriptor as the field default; ``__set__``
 treats ``value is self`` as unset and applies ``default`` /
 ``default_factory``. Do not invent a Field mixin. Class access also
 records ``obj_type`` as ``_owner``, so a shared descriptor's
-``Person.aadhaar.add_*`` uses Person (not the last ``__set_name__``).
+``Person.aadhaar.process_*`` uses Person (not the last ``__set_name__``).
 
 ``@dataclass(frozen=True)`` works: dataclass ``__setattr__`` /
 ``__delattr__`` raise ``FrozenInstanceError`` before the descriptor
@@ -30,15 +30,15 @@ mutates. ``@dataclass(slots=True)`` stays unsupported.
 
 Only the descriptor ``pre_set`` hook return is stored. That hook is the
 validate pipeline, not a ``_processors[\"pre_set\"]`` bag. Hang before-store
-work on ``add_process_pre_validate`` / ``add_validator``. Persist after store
-hangs on ``add_process_post_set``. Background email hangs on
-``add_task_post_set``.
+work on ``process_pre_validate`` / ``add_validator``. Persist after store
+hangs on ``process_post_set``. Background email hangs on
+``task_post_set``.
 ``post_set`` / get / delete return values are ignored. ``__get__`` /
 ``__delete__`` pass ``self.name`` into hooks, not the stored value.
 Never-set ``__get__`` / ``__delete__`` with ``debug=True`` raise a named
 ``AttributeError`` (``Cls.field is not set``), not a bare ``KeyError``.
 Debug-falsy still swallows and ``__get__`` reads back ``None``.
-``add_*`` may be async. No ``asyncio.run`` in ``__set__``.
+``process_*`` / ``task_*`` may be async. No ``asyncio.run`` in ``__set__``.
 
 ``post_get`` in ``__get__`` ``finally`` must not replace an in-flight
 exception: record it, keep the original raise / swallow.

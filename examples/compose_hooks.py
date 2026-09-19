@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: MIT
 """Staff profile: ``&`` / ``|`` composition, compose-root hooks, directory port.
 
-Hang ``add_*`` on the field name (the compose root after ``&`` / ``AllOf``).
+Hang ``process_*`` / ``task_*`` on the field name (the compose root after ``&`` / ``AllOf``).
 ``|`` is OR (``AnyOf``); the root does not AND-run a type
 check before alternatives. ``Chain`` is ``AllOf``.
 
 Inject ``StaffDirectory`` on ``StaffService``; uniqueness hangs on the
-compose-root ``name`` via ``add_process_pre_validate``. ``main()`` only runs
+compose-root ``name`` via ``process_pre_validate``. ``main()`` only runs
 the demo. ``InMemoryStaffDirectory`` is the runnable fake; production plugs
 HRIS/LDAP. This file does not ship a DB driver.
 """
@@ -67,17 +67,17 @@ class StaffProfile:
         RequiredValidator(required=True),
     )
 
-    @name.add_process_pre_validate
+    @name.process_pre_validate
     def strip_name(self, value: str) -> str:
         return value.strip()
 
-    @name.add_process_pre_validate
+    @name.process_pre_validate
     def name_available(self, value: str) -> str:
         if self.directory.name_taken(value):
             raise ValueError(f"staff name {value!r} is already in the directory")
         return value
 
-    @name.add_process_post_set
+    @name.process_post_set
     def commit_name(self, value: str) -> None:
         self.directory.commit(value)
 

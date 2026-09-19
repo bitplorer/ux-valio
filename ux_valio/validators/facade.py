@@ -3,7 +3,7 @@
 
 Concern leaves own the validate methods. ``Validator`` does not inherit those
 leaves; it calls the same implementations, in order, on one path.
-Hang ``add_*`` here, or on a compose root after ``&`` / ``AllOf``.
+Hang ``process_*`` / ``task_*`` here, or on a compose root after ``&`` / ``AllOf``.
 """
 
 from __future__ import annotations

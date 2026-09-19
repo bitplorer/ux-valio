@@ -232,7 +232,7 @@ def test_allof_post_validate_cannot_store_member_facade_lie():
     class Contact:
         s: str = field
 
-    field.add_process_post_validate(smash, namespace=Contact)
+    field.process_post_validate(smash, namespace=Contact)
     with pytest.raises(ValueError, match="email"):
         Contact(s="ada@example.com")
 
@@ -250,7 +250,7 @@ def test_allof_post_validate_may_shorten_unnamed_length_member():
     class Tag:
         s: str = field
 
-    field.add_process_post_validate(shorten, namespace=Tag)
+    field.process_post_validate(shorten, namespace=Tag)
     assert Tag(s="abcd").s == "x"
 
 
@@ -267,7 +267,7 @@ def test_anyof_post_validate_must_still_match_one_alternative():
     class Either:
         s: str = field
 
-    field.add_process_post_validate(smash, namespace=Either)
+    field.process_post_validate(smash, namespace=Either)
     with pytest.raises(ValidationErrors) as caught:
         Either(s="ada@example.com")
     messages = " ".join(str(err) for err in caught.value.errors)
@@ -288,5 +288,5 @@ def test_anyof_post_validate_may_store_when_string_alternative_holds():
     class Either:
         s: str = field
 
-    field.add_process_post_validate(smash, namespace=Either)
+    field.process_post_validate(smash, namespace=Either)
     assert Either(s="ada@example.com").s == "not-an-email"

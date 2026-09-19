@@ -215,11 +215,11 @@ def test_typeddict_child_keeps_parent_required_keys():
     assert Box(row={"name": "Ada", "age": 1}).row["age"] == 1
 
 
-def test_typeddict_add_process_pre_validate():
+def test_typeddict_process_pre_validate():
     class Profile(TypedDict):
         name: str = StringValidator()
 
-        @name.add_process_pre_validate
+        @name.process_pre_validate
         def strip_name(self, value):
             return value.strip()
 

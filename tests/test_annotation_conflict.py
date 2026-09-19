@@ -49,7 +49,7 @@ def test_descriptor_class_annotation_peels_to_store_type():
     class User:
         name: StringValidator = StringValidator(debug=True)
 
-        @name.add_process_pre_validate
+        @name.process_pre_validate
         def strip(self, value: str) -> str:
             return value.strip()
 

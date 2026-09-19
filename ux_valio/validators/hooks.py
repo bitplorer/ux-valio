@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Processor and task registries.
 
-Hang ``add_process_*`` / ``add_task_*`` on the field default. Process
+Hang ``process_*`` / ``task_*`` on the field default. Process
 must finish. Task is background (email); persist/reserve that must
-fail-closed hangs on ``add_process_post_set``. No ``add_pre_set``.
+fail-closed hangs on ``process_post_set``. No ``add_pre_set``.
 """
 
 from __future__ import annotations
@@ -20,12 +20,12 @@ from ux_valio.errors import continue_or_raise, raise_collected
 class HookHost:
     """Processor and task registries on the validating descriptor.
 
-    Public hang API (kind, then phase): ``add_process_{phase}``,
-    ``add_task_{phase}``, ``add_validator``, ``wait_tasks``.
+    Public hang API (kind, then phase): ``process_{phase}``,
+    ``task_{phase}``, ``add_validator``, ``wait_tasks``.
     Process must finish; return is the pipeline value (stored only for
     ``pre_validate`` / ``post_validate``). Task is background (email);
     return ignored; setter does not wait. Persist/reserve that must
-    fail-closed hangs on ``add_process_post_set``. No ``add_process_pre_set``
+    fail-closed hangs on ``process_post_set``. No ``process_pre_set``
     — ``pre_set`` *is* the validate pipeline. Pipeline runners
     (``_pre_validate``, …) are private override points, not the hang API.
     """
@@ -87,7 +87,7 @@ class HookHost:
 
         TypedDict values are dicts, so instance MRO is ``dict``. When
         ``__set_name__`` bound this descriptor to a TypedDict, look up
-        that class (the class body that hung ``@name.add_*``).
+        that class (the class body that hung ``@name.process_*``).
         """
         cls = bound if bound is not None and is_typeddict(bound) else None
         if cls is None:
@@ -142,62 +142,62 @@ class HookHost:
         """Check during ``validate()``. Return ignored."""
         return self._register(self._custom_validators, func, namespace)
 
-    def add_process_pre_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def process_pre_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform before validate. Return is stored (inside ``pre_set``)."""
         return self._register(self._processors["pre_validate"], func, namespace)
 
-    def add_process_post_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def process_post_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after validate. Return is stored (inside ``pre_set``)."""
         return self._register(self._processors["post_validate"], func, namespace)
 
-    def add_process_post_set(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def process_post_set(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after store. Return is not stored."""
         return self._register(self._processors["post_set"], func, namespace)
 
-    def add_process_pre_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def process_pre_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform before read. Return is not the stored value."""
         return self._register(self._processors["pre_get"], func, namespace)
 
-    def add_process_post_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def process_post_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after read. Return is not the stored value."""
         return self._register(self._processors["post_get"], func, namespace)
 
-    def add_process_pre_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def process_pre_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform before delete. Return is not stored."""
         return self._register(self._processors["pre_delete"], func, namespace)
 
-    def add_process_post_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def process_post_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after delete. Return is not stored."""
         return self._register(self._processors["post_delete"], func, namespace)
 
-    def add_task_pre_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def task_pre_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect before validate. Return ignored. Setter does not wait."""
         return self._register(self._tasks["pre_validate"], func, namespace)
 
-    def add_task_post_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def task_post_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect after validate. Return ignored. Setter does not wait."""
         return self._register(self._tasks["post_validate"], func, namespace)
 
-    def add_task_post_set(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def task_post_set(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background after store (email). Return ignored. Setter does not wait.
 
-        Persist/reserve that must fail-closed hangs on ``add_process_post_set``.
+        Persist/reserve that must fail-closed hangs on ``process_post_set``.
         """
         return self._register(self._tasks["post_set"], func, namespace)
 
-    def add_task_pre_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def task_pre_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect before read. Return ignored. Setter does not wait."""
         return self._register(self._tasks["pre_get"], func, namespace)
 
-    def add_task_post_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def task_post_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect after read. Return ignored. Setter does not wait."""
         return self._register(self._tasks["post_get"], func, namespace)
 
-    def add_task_pre_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def task_pre_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect before delete. Return ignored. Setter does not wait."""
         return self._register(self._tasks["pre_delete"], func, namespace)
 
-    def add_task_post_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
+    def task_post_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect after delete. Return ignored. Setter does not wait."""
         return self._register(self._tasks["post_delete"], func, namespace)
 
@@ -221,7 +221,7 @@ class HookHost:
 
     @staticmethod
     def wait_tasks(timeout: float | None = None) -> None:
-        """Wait for background ``add_task_*`` work."""
+        """Wait for background ``task_*`` work."""
         wait_tasks(timeout)
 
     def _process_then_tasks(self, phase: str, instance: Any, value: Any) -> Any:
