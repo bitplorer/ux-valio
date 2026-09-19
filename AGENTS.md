@@ -164,7 +164,7 @@ a parallel folder, not inside the layer they depend on.
   Coercing facades (`DateValidator`, `DateTimeValidator`, `UUIDValidator`,
   `PathValidator`, `DecimalValidator`) declare `annotation = T | str` so
   the owner field may be `T`, `str`, or `T | str`. Input `str` is coerced
-  in `pre_validation_processing`; the stored value is `T` (named extra
+  in `_pre_validate`; the stored value is `T` (named extra
   re-checks that). `IntegerValidator` / `FloatValidator` do not coerce
   `str` — owner `int | str` still TypeErrors at bind.
   `DateTimeValidator` stores `datetime.datetime`; ISO strings parse via
@@ -206,7 +206,8 @@ New private helpers are verbs that name the action:
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,
 `_Of._flatten`, `_Opts.merge`, `_Opts.from_call`, `_Opts.overlay`,
 `_Opt.merge`, `_Opt.keeps_nesting`,
-`HookHost.has_hooks`, `HookHost.wait_tasks`, `HookHost._collect_owner_keys`, `HookHost._register`,
+`HookHost._has_hooks`, `HookHost.wait_tasks`, `HookHost._pre_validate`,
+`HookHost._notify_pre_set`, `HookHost._collect_owner_keys`, `HookHost._register`,
 `_bind_field_logger`, `_take_subscript_annotation`,
 `_is_unconstrained_typevar`,
 `HookHost._owner_key`, `HookHost._resolve_owner_key`,
@@ -222,7 +223,9 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
 `cache_task`, `_HOOK_ADDERS`, `_install_adders`, `_hook_adder`,
 `add_pre_validator`, `add_post_set`, `add_pre_validator_task`,
-`add_post_set_task`, `_init_hooks`, `_load_compose_types`,
+`add_post_set_task`, `has_hooks`, `pre_validation_processing`,
+`post_set_processing`, `notify_pre_set`, `on_pre_set`,
+`add_pre_validate_process`, `_init_hooks`, `_load_compose_types`,
 `_register_compose_types`, `_Opt.read`, `_Of._bind_kwargs`,
 `_Of._merged_attr`).
 Noun-only names that hide the action are not

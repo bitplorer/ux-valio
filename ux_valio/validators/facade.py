@@ -144,15 +144,15 @@ class Validator(ValidateProperty[T]):
 
     _watch_assignment = ReassignValidator._watch_assignment
 
-    def notify_pre_set(self, obj: Any) -> None:
-        ReassignValidator.notify_pre_set(self, obj)
+    def _notify_pre_set(self, obj: Any) -> None:
+        ReassignValidator._notify_pre_set(self, obj)
 
-    def notify_post_set(self, obj: Any) -> None:
-        ReassignValidator.notify_post_set(self, obj)
+    def _notify_post_set(self, obj: Any) -> None:
+        ReassignValidator._notify_post_set(self, obj)
 
-    def post_delete_processing(self, instance: Any, value: Any) -> Any:
-        ReassignValidator.post_delete_processing(self, instance, value)
-        return super().post_delete_processing(instance, value)
+    def _post_delete(self, instance: Any, value: Any) -> Any:
+        ReassignValidator._post_delete(self, instance, value)
+        return super()._post_delete(instance, value)
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         """Named-facade extra check after the inherited path. Default is none."""
