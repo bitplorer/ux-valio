@@ -80,12 +80,10 @@ class User:
         return value.strip()
 ```
 
-Runtime Door A is `name: str`. Type checkers treat a class constructor as
-that class, not the store type — the hole `dataclasses.field` solves by
-returning `T`. Named facades use the same kind of lie (`Any`, so `&` / `|`
-still type): mypy `plugins = ["ux_valio.mypy_plugin"]`, Pylance via
-`Validator.__new__`. Then `name: str = StringValidator()` assigns. `User(name=1)`
-still errors. `@name.add_*` may underline because the annotation is `str`.
+Runtime Door A is `name: str`. Named facades present as the store type to
+type checkers (`StringValidator <: str`), so both sides of the assignment
+are `str`. Mypy and Pylance need no plugin. `User(name=1)` still errors.
+`@name.add_*` may underline (the annotation is `str`).
 
 Class access `User.name` is that descriptor, so `User.name.add_process_post_set`
 also works after the class exists. Dataclass uses the descriptor as the

@@ -118,12 +118,12 @@ class ValidateProperty(HookHost, Property[T], ABC):
     def notify_post_set(self, obj: Any) -> None:
         """Lifecycle hook for composition; default no-op."""
 
-    def __and__(self, other: object) -> AllOf:
+    def __and__(self, other: object) -> Any:
         if not isinstance(other, ValidateProperty):
             return NotImplemented
         return AllOf(self, other)
 
-    def __or__(self, other: object) -> AnyOf:
+    def __or__(self, other: object) -> Any:
         if not isinstance(other, ValidateProperty):
             return NotImplemented
         return AnyOf(self, other)
