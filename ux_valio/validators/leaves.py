@@ -405,9 +405,13 @@ class ReassignValidator(ValidateProperty):
         return oid
 
     def _notify_pre_set(self: Any, obj: Any) -> None:
+        if getattr(self, "reassign", None) is not False:
+            return
         self._assignment_counts.setdefault(self._watch_assignment(obj), 0)
 
     def _notify_post_set(self: Any, obj: Any) -> None:
+        if getattr(self, "reassign", None) is not False:
+            return
         oid = self._watch_assignment(obj)
         self._assignment_counts[oid] = self._assignment_counts.get(oid, 0) + 1
         self.number_of_assignment += 1

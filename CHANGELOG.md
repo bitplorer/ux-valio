@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Hot path: ``ValidationPath.run`` no longer allocates ``ran``/``results``
+  per set (uniqueness is ``__init__``). Default-path fields run only
+  specified units (type always). Concrete ``int``/``str`` skip the
+  TypedDict walk. Assignment watch runs only when ``reassign=False``.
+
 - Hot path: skip empty hook MRO walks; ``is_instance_of`` fast-path for
   concrete types (``int`` / ``str`` / Enum). Empty ``_process_then_tasks``
   is a no-op when nothing is hung. Flag is ``_hooks_hung`` (not
