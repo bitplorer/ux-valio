@@ -69,7 +69,7 @@ class Register:
 `username` (declaration order). `Validator[UserStore]` type-checks the
 port (`@runtime_checkable` Protocol). `repr=False, compare=False` keeps
 it out of `repr` / `eq` — injected store, not a product column.
-`InitVar` + `__post_init__` is too late. See `examples/registration.py`.
+`InitVar` + `__post_init__` is too late. See `examples/signup.py`.
 
 Class access `User.name` is that descriptor, so `User.name.post_set`
 also works after the class exists. A shared descriptor (`aadhaar` on
