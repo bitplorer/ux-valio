@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: MIT
 """Typed Door A facades. No Field/Schema twin; no RGB/HSL; no HexColor public facade.
 
-``AsStr`` / ``AsInt`` / … are TYPE_CHECKING bases so ``name: str = StringValidator()``
-is str on both sides. Runtime they are one empty mixin.
+Construction is ``Any`` to type checkers (``ValidateProperty.__new__``), so
+``name: str = StringValidator()`` and a custom ``owner: User = UserValidator()``
+both assign. Runtime the object is still this descriptor. Set ``annotation``
+to the stored type — that is the type door, not a per-type mixin.
 """
 
 from __future__ import annotations
@@ -15,48 +17,11 @@ import pathlib
 import re
 import urllib.parse
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ux_valio.pattern import Pattern, PatternType
 from ux_valio.validators.facade import Validator
 from ux_valio.validators.leaves import PatternValidator
-
-if TYPE_CHECKING:
-    class _AsStore:
-        def __new__(cls, *args: Any, **kwargs: Any) -> Any: ...
-        def __init__(self, *args: Any, **kwargs: Any) -> None: ...
-
-    class AsStr(_AsStore, str):
-        pass
-
-    class AsInt(_AsStore, int):
-        pass
-
-    class AsBool(_AsStore, bool):  # type: ignore[misc]
-        pass
-
-    class AsFloat(_AsStore, float):
-        pass
-
-    class AsBytes(_AsStore, bytes):
-        pass
-
-    class AsDecimal(_AsStore, decimal.Decimal):
-        pass
-
-    class AsDate(_AsStore, datetime.date):
-        pass
-
-    class AsDateTime(_AsStore, datetime.datetime):
-        pass
-
-    class AsUUID(_AsStore, uuid.UUID):
-        pass
-else:
-    class _AsStore:
-        __slots__ = ()
-
-    AsStr = AsInt = AsBool = AsFloat = AsBytes = AsDecimal = AsDate = AsDateTime = AsUUID = _AsStore
 
 # Practical RFC 5322-ish addr-spec. EmailValidator fullmatch extra; engine KEEP.
 _EMAIL_PATTERN = Pattern(
@@ -73,23 +38,23 @@ _EMAIL_PATTERN = Pattern(
 )
 
 
-class IntegerValidator(Validator[int], AsInt):
+class IntegerValidator(Validator[int]):
     annotation = int
 
 
-class StringValidator(Validator[str], AsStr):
+class StringValidator(Validator[str]):
     annotation = str
 
 
-class BooleanValidator(Validator[bool], AsBool):  # type: ignore[misc]
+class BooleanValidator(Validator[bool]):
     annotation = bool
 
 
-class FloatValidator(Validator[float], AsFloat):
+class FloatValidator(Validator[float]):
     annotation = float
 
 
-class DecimalValidator(Validator[decimal.Decimal], AsDecimal):
+class DecimalValidator(Validator[decimal.Decimal]):
     annotation = decimal.Decimal | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:
@@ -101,7 +66,7 @@ class DecimalValidator(Validator[decimal.Decimal], AsDecimal):
         self._reject_unless_instance(value, decimal.Decimal)
 
 
-class BytesValidator(Validator[bytes], AsBytes):
+class BytesValidator(Validator[bytes]):
     annotation = bytes
 
 
@@ -109,7 +74,7 @@ _EU_DATE = re.compile(r"(\d{4})([-:/])(\d{1,2})\2(\d{1,2})")
 _IND_DATE = re.compile(r"(\d{1,2})([-:/])(\d{1,2})\2(\d{4})")
 
 
-class DateValidator(Validator[datetime.date], AsDate):
+class DateValidator(Validator[datetime.date]):
     annotation = datetime.date | str
 
     @staticmethod
@@ -149,7 +114,7 @@ class DateValidator(Validator[datetime.date], AsDate):
         self._reject_unless_instance(value, datetime.date)
 
 
-class DateTimeValidator(Validator[datetime.datetime], AsDateTime):
+class DateTimeValidator(Validator[datetime.datetime]):
     """Door A datetime facade. Stores ``datetime.datetime``. ISO via fromisoformat.
 
     Plain ``datetime.date`` is rejected (that is ``DateValidator``). Date-only
@@ -205,7 +170,7 @@ class URLValidator(StringValidator):
             raise ValueError(f"{self.name} is not a valid URL")
 
 
-class UUIDValidator(Validator[uuid.UUID], AsUUID):
+class UUIDValidator(Validator[uuid.UUID]):
     annotation = uuid.UUID | str
 
     def pre_validation_processing(self, instance: Any, value: Any) -> Any:

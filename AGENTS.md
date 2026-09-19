@@ -18,9 +18,10 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   `ValidationPath` on `Validator` in `facade.py`, not `PathValidator`
   (`typed.py`, pathlib).
   Primitive typed facades (`IntegerValidator` / `StringValidator` /
-  `BooleanValidator`) live in `typed.py` with the rest. TYPE_CHECKING
-  `AsStr` / `AsInt` mixins live there too (runtime one empty base) so
-  `name: str = StringValidator()` type-checks without a plugin.
+  `BooleanValidator`) live in `typed.py` with the rest.
+  Construction is `Any` to type checkers (`ValidateProperty.__new__`;
+  mypy plugin `ux_valio.mypy_plugin`) so any store type works — no
+  `AsStr` / `AsUser` mixin. Set `annotation` on the facade.
   `Validator[T]` is the stored-type subscript (one argument). It fills
   `annotation` when the class did not declare one. Named facades
   specialize it (`IntegerValidator` is `Validator[int]`). Unconstrained
@@ -81,8 +82,8 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   Unresolved owner `str` / `ForwardRef` annotations TypeError at bind
   (not copied, not eval'd). Owner annotation that is a Property class
   (`StringValidator` / `Validator[str]`) peels to the store type.
-  `name: str = StringValidator()` type-checks: named facades mix in a
-  TYPE_CHECKING store view (`StringValidator <: str`). No mypy plugin.
+  `name: str = StringValidator()` type-checks: construction is `Any`
+  (`ValidateProperty.__new__`, mypy plugin). No per-type mixin.
   `AnyOf` does not AND-gate root type; `AllOf`
   keeps annotation-conflict TypeError. Unknown path unit is `ValueError`.
   TypedDict membership stays fail-closed on the private helper. Callable
