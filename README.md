@@ -446,12 +446,17 @@ row = Counterparty(
 
 | facade | stores | identity |
 |---|---|---|
-| `AadhaarCardValidator` | 12 digits | Verhoeff |
+| `AadhaarCardValidator` | 12 digits | Verhoeff; first digit 2–9 |
 | `PANCardValidator` | 10 A–Z/digits | Luhn mod 26 |
 | `GSTINValidator` | 15 A–Z/digits | Luhn mod 36, state 01–38 / 97 / 99 |
 | `TANValidator` | 10 chars | ITD format |
 | `CINValidator` | 21 chars | MCA `L`/`U` + ROC + state + year |
+| `DINValidator` | 8 digits | MCA director id; leading zeros stay |
+| `LLPINValidator` | 7 chars | MCA `AAA1234` |
+| `UdyamValidator` | `UDYAM-XX-00-0000000` | MSME registration |
+| `FSSAIValidator` | 14 digits | licence `1` / registration `2` |
 | `VoterIdValidator` | 3 letters + 7 digits | EPIC |
+| `IndianPassportValidator` | 1 letter + 7 digits | MEA passport number |
 | `IFSCValidator` | 11 chars | `ABCD0XXXXXX` |
 | `PinCodeValidator` | 6 digits | India Post, first 1–9 |
 | `UPIIdValidator` | lowercase VPA | `local@handle` |
@@ -462,7 +467,6 @@ row = Counterparty(
 | `EANValidator` | 13 digits | GS1 check |
 | `GTINValidator` | 8/12/13/14 digits | GS1 (UPC-A / EAN-8 / GTIN-14) |
 | `HSNCodeValidator` | 4, 6, or 8 digits | GST HSN/SAC |
-| `UdyamValidator` | `UDYAM-XX-00-0000000` | MSME registration |
 | `HostnameValidator` | lowercase FQDN | RFC 1123; not a URL; not IPv4 |
 | `SlugValidator` | lowercase `foo-bar` | does not slugify spaces |
 | `CurrencyCodeValidator` | 3 letters | ISO 4217 |

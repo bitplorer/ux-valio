@@ -170,7 +170,9 @@ a parallel folder, not inside the layer they depend on.
   `CountryCodeValidator` (ISO 3166-1 alpha-2), `TimezoneValidator`
   (IANA / ``zoneinfo``), `ULIDValidator`, `LEIValidator`,
   `CardExpiryValidator` (MMYY print form, not ``ExpiryValidator``),
-  `HSNCodeValidator`, `ABARoutingValidator`, `UdyamValidator`.
+  `HSNCodeValidator`, `ABARoutingValidator`, `UdyamValidator`,
+  `DINValidator`, `LLPINValidator`, `FSSAIValidator`,
+  `IndianPassportValidator`. Aadhaar first digit is 2–9 (UIDAI).
   `GSTINValidator` state is ``01–38`` plus ``97`` / ``99``.
   `PaymentCardValidator` includes UnionPay (``62`` + 14–17 digits) without
   resurrecting Rupay ``6521``.

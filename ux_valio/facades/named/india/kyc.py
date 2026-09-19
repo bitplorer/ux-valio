@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""India person KYC (Aadhaar, PAN, EPIC).
+"""India person KYC (Aadhaar, PAN, EPIC, passport).
 
 Sibling of the other ``india`` layers — does not import them.
 Depends on typed. Public names re-export from ``ux_valio`` /
@@ -45,7 +45,8 @@ class AadhaarCardValidator(StringValidator):
         aadhaar: str = AadhaarCardValidator()
 
     Print form ``2345 6789 0124`` / hyphens strips; stores ``234567890124``.
-    Substring or wrong length is rejected. No UIDAI lookup.
+    First digit is 2–9 (UIDAI; 0 and 1 are reserved). Substring or
+    wrong length is rejected. No UIDAI lookup.
     """
 
     @staticmethod
@@ -64,7 +65,12 @@ class AadhaarCardValidator(StringValidator):
 
     @staticmethod
     def _is_valid_aadhaar(value: Any) -> bool:
-        if not isinstance(value, str) or len(value) != 12 or not value.isdigit():
+        if (
+            not isinstance(value, str)
+            or len(value) != 12
+            or not value.isdigit()
+            or value[0] in "01"
+        ):
             return False
         return AadhaarCardValidator._verhoeff_ok(value)
 
@@ -162,3 +168,33 @@ class VoterIdValidator(StringValidator):
             return
         if not type(self)._is_valid_voter_id(value):
             raise ValueError(f"{self.name} is not a valid voter ID")
+
+
+_PASSPORT = re.compile(r"[A-Z][0-9]{7}")
+
+
+class IndianPassportValidator(StringValidator):
+    """Indian passport number: 1 letter + 7 digits.
+
+    Usage::
+
+        passport: str = IndianPassportValidator()
+
+    Spaces/hyphens strip; stores uppercase compact (``A1234567``).
+    No MEA lookup.
+    """
+
+    @staticmethod
+    def _is_valid_passport(value: Any) -> bool:
+        return isinstance(value, str) and _PASSPORT.fullmatch(value) is not None
+
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
+        if isinstance(value, str):
+            value = "".join(value.split()).replace("-", "").upper()
+        return super()._pre_validate(instance, value)
+
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if not type(self)._is_valid_passport(value):
+            raise ValueError(f"{self.name} is not a valid Indian passport number")
