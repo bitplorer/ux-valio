@@ -44,16 +44,7 @@ class InMemoryVendorRegistry:
         self._gstins.add(gstin)
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class Vendor:
     gstin: str = GSTINValidator(required=True)
     iban: str = IBANValidator(required=True)
@@ -61,6 +52,25 @@ class Vendor:
     cin: str = CINValidator()
     isbn: str = ISBNValidator()
     mac: str = MACAddressValidator()
+
+    def __init__(
+        self,
+        gstin: str,
+        iban: str,
+        bic: str,
+        *,
+        registry: VendorRegistry,
+        cin: str | None = None,
+        isbn: str | None = None,
+        mac: str | None = None,
+    ) -> None:
+        self.registry = registry
+        self.gstin = gstin
+        self.iban = iban
+        self.bic = bic
+        self.cin = cin
+        self.isbn = isbn
+        self.mac = mac
 
     @gstin.post_validate
     def gstin_available(self, value: str) -> str:
@@ -89,12 +99,11 @@ class VendorService:
         isbn: str | None = None,
         mac: str | None = None,
     ) -> Vendor:
-        return _bind(
-            Vendor,
-            {"registry": self.registry},
-            gstin=gstin,
-            iban=iban,
-            bic=bic,
+        return Vendor(
+            gstin,
+            iban,
+            bic,
+            registry=self.registry,
             cin=cin,
             isbn=isbn,
             mac=mac,

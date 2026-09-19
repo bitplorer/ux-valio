@@ -55,21 +55,27 @@ class InMemoryWarehouse:
         self._stock[sku] -= 1
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class Shipment:
     sku: str = StringValidator(min_length=1, required=True)
     mass: str = StringValidator(pattern=mass_kg, required=True)
     price: str = StringValidator(pattern=usd_amount, required=True)
     quantity: str = StringValidator(pattern=not_pounds, required=True)
+
+    def __init__(
+        self,
+        sku: str,
+        mass: str,
+        price: str,
+        quantity: str,
+        *,
+        warehouse: Warehouse,
+    ) -> None:
+        self.warehouse = warehouse
+        self.sku = sku
+        self.mass = mass
+        self.price = price
+        self.quantity = quantity
 
     @quantity.post_validate
     def in_stock(self, value: str) -> str:
@@ -88,13 +94,8 @@ class ShippingService:
         self.warehouse = warehouse
 
     def book(self, sku: str, mass: str, price: str, quantity: str) -> Shipment:
-        return _bind(
-            Shipment,
-            {"warehouse": self.warehouse},
-            sku=sku,
-            mass=mass,
-            price=price,
-            quantity=quantity,
+        return Shipment(
+            sku, mass, price, quantity, warehouse=self.warehouse
         )
 
 

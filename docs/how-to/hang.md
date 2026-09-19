@@ -40,9 +40,13 @@ No hang named `pre_set`. Persist/reserve that must fail-closed hangs on
 from dataclasses import dataclass
 from ux_valio import StringValidator
 
-@dataclass
+@dataclass(init=False)
 class Register:
     username: str = StringValidator(required=True, min_length=3)
+
+    def __init__(self, username: str, *, users: UserStore) -> None:
+        self.users = users
+        self.username = username
 
     @username.pre_validate
     def fold(self, value: str) -> str:
@@ -59,10 +63,10 @@ class Register:
         self.users.commit(value)
 ```
 
-`self.users` is not a dataclass field and not an `__init__` parameter.
-`RegisterService` does `object.__new__(Register)`, sets `users`, then
-`Register.__init__(inst, username=...)`. One shared store from the
-service. See `examples/registration.py`.
+`InitVar` still is an `__init__` parameter, and `__post_init__` runs
+*after* field assignment — too late for uniqueness. Ports are
+keyword-only on an explicit `__init__` (`init=False`) so they are set
+**before** product fields. See `examples/registration.py`.
 
 Class access `User.name` is that descriptor, so `User.name.post_set`
 also works after the class exists. A shared descriptor (`aadhaar` on

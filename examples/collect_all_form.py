@@ -133,22 +133,32 @@ login_username_field = StringValidator(required=True, min_length=1)
 login_password_field = StringValidator(required=True, min_length=1)
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class SignupForm:
     username: str = username_field
     email: str = EmailValidator(required=True)
     password: str = password_field
     password_confirm: str = confirm_field
     seats: int = seats_field
+
+    def __init__(
+        self,
+        username: str,
+        email: str,
+        password: str,
+        password_confirm: str,
+        seats: int,
+        *,
+        users: UserStore,
+        hasher: PasswordHasher,
+    ) -> None:
+        self.users = users
+        self.hasher = hasher
+        self.username = username
+        self.email = email
+        self.password = password
+        self.password_confirm = password_confirm
+        self.seats = seats
 
     @username.pre_validate
     def fold_username(self, value: str) -> str:
@@ -173,10 +183,18 @@ class SignupForm:
         )
 
 
-@dataclass
+@dataclass(init=False)
 class LoginForm:
     username: str = login_username_field
     password: str = login_password_field
+
+    def __init__(
+        self, username: str, password: str, *, users: UserStore, hasher: PasswordHasher
+    ) -> None:
+        self.users = users
+        self.hasher = hasher
+        self.username = username
+        self.password = password
 
     @password.post_validate
     def credentials_ok(self, value: str) -> str:
@@ -202,23 +220,20 @@ class SignupService:
         seats: int,
     ) -> SignupForm:
         """Submit the form. Multi-concern failures raise ``ValidationErrors``."""
-        return _bind(
-            SignupForm,
-            {"users": self.users, "hasher": self.hasher},
-            username=username,
-            email=email,
-            password=password,
-            password_confirm=password_confirm,
-            seats=seats,
+        return SignupForm(
+            username,
+            email,
+            password,
+            password_confirm,
+            seats,
+            users=self.users,
+            hasher=self.hasher,
         )
 
     def login(self, username: str, password: str) -> LoginForm:
         """Verify credentials. Unknown user or bad password raise ``ValueError``."""
-        return _bind(
-            LoginForm,
-            {"users": self.users, "hasher": self.hasher},
-            username=username,
-            password=password,
+        return LoginForm(
+            username, password, users=self.users, hasher=self.hasher
         )
 
 

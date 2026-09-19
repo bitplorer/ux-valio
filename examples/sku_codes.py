@@ -51,21 +51,21 @@ class InMemoryPartCatalog:
         self._skus.add(sku)
 
 
-def _bind(cls, ports, **fields):
-    """Wire service ports onto a new instance, then product ``__init__``."""
-    inst = object.__new__(cls)
-    for name, port in ports.items():
-        object.__setattr__(inst, name, port)
-    cls.__init__(inst, **fields)
-    return inst
-
-
-@dataclass
+@dataclass(init=False)
 class CatalogPart:
     sku: str = StringValidator(pattern=sku_token, required=True)
     tint: str = StringValidator(pattern=hex_pair, required=True)
     slug: str = StringValidator(pattern=slug_token, required=True)
     lot: str = StringValidator(pattern=lot_token, required=True)
+
+    def __init__(
+        self, sku: str, tint: str, slug: str, lot: str, *, catalog: PartCatalog
+    ) -> None:
+        self.catalog = catalog
+        self.sku = sku
+        self.tint = tint
+        self.slug = slug
+        self.lot = lot
 
     @sku.post_validate
     def sku_available(self, value: str) -> str:
@@ -85,14 +85,7 @@ class CatalogService:
         self.catalog = catalog
 
     def add(self, sku: str, tint: str, slug: str, lot: str) -> CatalogPart:
-        return _bind(
-            CatalogPart,
-            {"catalog": self.catalog},
-            sku=sku,
-            tint=tint,
-            slug=slug,
-            lot=lot,
-        )
+        return CatalogPart(sku, tint, slug, lot, catalog=self.catalog)
 
 
 def main() -> CatalogPart:
