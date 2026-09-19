@@ -410,9 +410,10 @@ Same field-default pattern as `StringValidator`. Print grouping strips;
 the **stored value is the compact identity**. `None` skips. Stdlib only —
 no portal, no DNS, no BIN lookup. `help(GSTINValidator)` is the per-facade
 contract. Source lives in sibling domain modules under `facades/named/`
-(`india`, `finance`, `catalog`, `contact`, `device`, `portal`, `expiry`) —
-`from ux_valio.facades.named.india import GSTINValidator` is navigation;
-the taught import is still `from ux_valio import GSTINValidator`.
+(`india/` `{kyc,gst,registry,bank}`, `finance`, `catalog`, `contact`,
+`device`, `portal`, `expiry`) —
+`from ux_valio.facades.named.india.gst import GSTINValidator` is
+navigation; the taught import is still `from ux_valio import GSTINValidator`.
 
 ```python
 from dataclasses import dataclass

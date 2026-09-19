@@ -203,7 +203,13 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert not (ROOT / "ux_valio" / "validators" / "compose.py").exists()
     assert (ROOT / "ux_valio" / "facades" / "typed.py").is_file()
     named = ROOT / "ux_valio" / "facades" / "named"
-    assert (named / "india.py").is_file()
+    india = named / "india"
+    assert india.is_dir()
+    assert (india / "kyc.py").is_file()
+    assert (india / "gst.py").is_file()
+    assert (india / "registry.py").is_file()
+    assert (india / "bank.py").is_file()
+    assert not (named / "india.py").exists()
     assert (named / "finance.py").is_file()
     assert (named / "catalog.py").is_file()
     assert (named / "contact.py").is_file()
@@ -218,7 +224,7 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert not hasattr(ux_valio.facades.typed, "EmailValidator")
     assert not hasattr(ux_valio.facades.typed, "URLValidator")
     from ux_valio.facades.named.contact import EmailValidator, URLValidator
-    from ux_valio.facades.named.india import GSTINValidator
+    from ux_valio.facades.named.india.gst import GSTINValidator
     from ux_valio.facades.typed import StringValidator
 
     assert issubclass(EmailValidator, StringValidator)
@@ -277,7 +283,7 @@ def test_named_facades_do_not_import_each_other():
 
     hits = []
     named = ROOT / "ux_valio" / "facades" / "named"
-    for path in named.glob("*.py"):
+    for path in named.rglob("*.py"):
         if path.name == "__init__.py":
             continue
         stem = path.stem
@@ -289,5 +295,5 @@ def test_named_facades_do_not_import_each_other():
                     mod.startswith("ux_valio.facades.named.")
                     and not mod.endswith(stem)
                 ):
-                    hits.append(f"{path.name}: {mod}")
+                    hits.append(f"{path.relative_to(named)}: {mod}")
     assert hits == []

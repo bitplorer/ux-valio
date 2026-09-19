@@ -21,7 +21,8 @@ a parallel folder, not inside the layer they depend on.
 - `ux_valio/facades/` — field-default products, two layers:
   `typed.py` — primitives (`IntegerValidator`, `StringValidator`, …) :
   `Validator`. `named/` — identity products, **sibling domain modules**
-  (parallel, do not import each other): `india` (Aadhaar/PAN/GSTIN/…),
+  (parallel, do not import each other): `india/` is a folder of layers
+  (`kyc`, `gst`, `registry`, `bank` — they do not import each other);
   `finance` (IBAN/BIC/card/currency), `catalog` (ISBN/EAN/GTIN/VIN),
   `contact` (email/phone/URL/hostname), `device` (IMEI/MAC),
   `portal` (slug/country/timezone/ULID), `expiry` (wall-clock).
