@@ -29,10 +29,10 @@ lot_token = NonWhiteSpace(count_min=4)
 
 @dataclass
 class CatalogPart:
-    sku: str = StringValidator(pattern=sku_token, debug=True, required=True)
-    tint: str = StringValidator(pattern=hex_pair, debug=True, required=True)
-    slug: str = StringValidator(pattern=slug_token, debug=True, required=True)
-    lot: str = StringValidator(pattern=lot_token, debug=True, required=True)
+    sku: str = StringValidator(pattern=sku_token, required=True)
+    tint: str = StringValidator(pattern=hex_pair, required=True)
+    slug: str = StringValidator(pattern=slug_token, required=True)
+    lot: str = StringValidator(pattern=lot_token, required=True)
 
 
 def add_part(sku: str, tint: str, slug: str, lot: str) -> CatalogPart:

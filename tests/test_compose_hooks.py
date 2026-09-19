@@ -167,11 +167,18 @@ def test_explicit_collect_all_false_does_not_lose_to_true():
         )
 
 
-def test_unspecified_collect_all_false_keeps_explicit_true():
+def test_unspecified_collect_all_keeps_explicit_true():
     field = LengthValidator(min_length=1, collect_all=True) & RequiredValidator(
         required=True
     )
     assert field.collect_all is True
+
+
+def test_unspecified_collect_all_keeps_explicit_false():
+    field = LengthValidator(min_length=1) & RequiredValidator(
+        required=True, collect_all=False
+    )
+    assert field.collect_all is False
 
 
 def test_explicit_logger_false_does_not_lose_to_true():

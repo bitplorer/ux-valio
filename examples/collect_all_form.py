@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: MIT
 """Complete signup + login: uniqueness, email, password, hash-on-create.
 
-Default Door A is fail-fast. ``collect_all=True`` with ``debug=True`` surfaces
-``ValidationErrors`` for every concern on that descriptor. It is per-field, not
-per-dataclass: the first field that fails still stops later fields.
+Omitted ``collect_all`` / ``debug`` are True: remaining concerns continue
+and failures re-raise. A single failure is that exception; two or more
+surface as ``ValidationErrors``. It is per-field, not per-dataclass: the
+first field that fails still stops later fields.
 
 Password strength is length plus independent Pattern atoms (digit, letter)
 composed with ``AllOf`` — Pattern ``&`` concatenates, it is not AND of
@@ -113,36 +114,20 @@ class Pbkdf2PasswordHasher:
 # Pattern ``&`` concatenates. Independent "has a digit" / "has a letter"
 # concerns are separate StringValidators under AllOf (findall substring).
 password_field = AllOf(
-    StringValidator(
-        debug=True, required=True, min_length=8, max_length=128, collect_all=True
-    ),
-    StringValidator(pattern=Digit(count_min=1), debug=True, collect_all=True),
-    StringValidator(
-        pattern=SetOf(Pattern(r"A-Za-z"), count_min=1),
-        debug=True,
-        collect_all=True,
-    ),
+    StringValidator(required=True, min_length=8, max_length=128),
+    StringValidator(pattern=Digit(count_min=1)),
+    StringValidator(pattern=SetOf(Pattern(r"A-Za-z"), count_min=1)),
 )
-username_field = StringValidator(
-    debug=True,
-    required=True,
-    min_length=3,
-    max_length=32,
-    collect_all=True,
-)
-confirm_field = StringValidator(
-    debug=True, required=True, min_length=8, max_length=128, collect_all=True
-)
+username_field = StringValidator(required=True, min_length=3, max_length=32)
+confirm_field = StringValidator(required=True, min_length=8, max_length=128)
 seats_field = IntegerValidator(
     min_value=0,
     max_value=10,
     multiple_of=2,
-    collect_all=True,
-    debug=True,
     required=True,
 )
-login_username_field = StringValidator(debug=True, required=True, min_length=1)
-login_password_field = StringValidator(debug=True, required=True, min_length=1)
+login_username_field = StringValidator(required=True, min_length=1)
+login_password_field = StringValidator(required=True, min_length=1)
 
 
 @dataclass
@@ -150,7 +135,7 @@ class SignupForm:
     users: UserStore
     hasher: PasswordHasher
     username: str = username_field
-    email: str = EmailValidator(debug=True, required=True, collect_all=True)
+    email: str = EmailValidator(required=True)
     password: str = password_field
     password_confirm: str = confirm_field
     seats: int = seats_field
@@ -225,9 +210,11 @@ class SignupService:
         )
 
 
-def form_messages(err: ValidationErrors) -> list[str]:
+def form_messages(err: Exception) -> list[str]:
     """Map collected failures to caller-facing strings."""
-    return [str(item) for item in err.errors]
+    if isinstance(err, ValidationErrors):
+        return [str(item) for item in err.errors]
+    return [str(err)]
 
 
 def main() -> SignupForm:

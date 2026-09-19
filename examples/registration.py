@@ -108,14 +108,14 @@ class Pbkdf2PasswordHasher:
 class Registration:
     users: UserStore
     hasher: PasswordHasher
-    username: str = StringValidator(debug=True, required=True, min_length=3)
+    username: str = StringValidator(required=True, min_length=3)
     password: str = AllOf(
-        StringValidator(debug=True, required=True, min_length=8, max_length=128),
-        StringValidator(pattern=Digit(count_min=1), debug=True),
-        StringValidator(pattern=SetOf(Pattern(r"A-Za-z"), count_min=1), debug=True),
+        StringValidator(required=True, min_length=8, max_length=128),
+        StringValidator(pattern=Digit(count_min=1)),
+        StringValidator(pattern=SetOf(Pattern(r"A-Za-z"), count_min=1)),
     )
     password_confirm: str = StringValidator(
-        debug=True, required=True, min_length=8, max_length=128
+        required=True, min_length=8, max_length=128
     )
 
     @username.add_process_pre_validate

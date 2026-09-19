@@ -140,7 +140,7 @@ def test_signup_short_name_collects_length_without_the_store():
     )
 
     service = SignupService(InMemoryUserStore(), Pbkdf2PasswordHasher())
-    with pytest.raises(ValidationErrors) as err:
+    with pytest.raises(ValueError) as err:
         service.submit(
             username="ab",
             email="ada@example.com",

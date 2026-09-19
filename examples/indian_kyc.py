@@ -2,8 +2,8 @@
 """India KYC intake: Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26, IN phone.
 
 ``region=`` is required on ``PhoneNumberValidator`` (leftover: valio defaulted
-to ``instance.region`` or ``"IN"``). ``collect_all=True`` continues each field's
-inherited path into the named facade check. The engine is optional extra
+to ``instance.region`` or ``"IN"``). Omitted ``collect_all`` continues each
+field's inherited path into the named facade check. The engine is optional extra
 ``phonenumbers``; there is no network lookup. This module still imports and
 runs identity checks when the extra is missing.
 
@@ -28,9 +28,7 @@ _PHONE = None
 try:
     from phonenumbers import PhoneNumberFormat, example_number, format_number
 
-    _PHONE = PhoneNumberValidator(
-        region="IN", debug=True, required=True, collect_all=True
-    )
+    _PHONE = PhoneNumberValidator(region="IN", required=True)
 except ImportError:
     pass
 else:
@@ -79,8 +77,8 @@ class InMemoryIdentityRegistry:
         self.pans.add(pan)
 
 
-aadhaar_field = AadhaarCardValidator(debug=True, required=True, collect_all=True)
-pan_field = PANCardValidator(debug=True, required=True, collect_all=True)
+aadhaar_field = AadhaarCardValidator(required=True)
+pan_field = PANCardValidator(required=True)
 
 
 @dataclass

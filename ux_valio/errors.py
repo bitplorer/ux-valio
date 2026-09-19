@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: MIT
-"""Collected validation failures from collect_all=True.
+"""Collected validation failures from collect_all.
 
 Shared by the store door (``descriptor``) and the validate door. Lives at
 the package root so ``descriptor`` does not import ``validators``.
-Default Door A stays fail-fast. collect_all is not debug-swallow.
+Omitted ``collect_all`` is True (continue remaining concerns).
+``collect_all=False`` is fail-fast. collect_all is not debug-swallow.
 """
 
 from __future__ import annotations
@@ -38,8 +39,11 @@ def continue_or_raise(
 
 
 def raise_collected(errors: list[BaseException], name: Any = None) -> None:
-    if errors:
-        raise ValidationErrors(errors, name=name)
+    if not errors:
+        return
+    if len(errors) == 1:
+        raise errors[0]
+    raise ValidationErrors(errors, name=name)
 
 
 def run_steps(steps: Any, collect_all: bool, name: Any = None) -> None:

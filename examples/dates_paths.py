@@ -16,10 +16,10 @@ from ux_valio import DateValidator, IPv4Validator, PathValidator
 
 @dataclass
 class FiledDocument:
-    opened_eu: date = DateValidator(debug=True, required=True)
-    opened_ind: date = DateValidator(debug=True, required=True)
-    folder: pathlib.Path = PathValidator(debug=True, required=True, path_exists=True)
-    host: str = IPv4Validator(debug=True, required=True)
+    opened_eu: date = DateValidator(required=True)
+    opened_ind: date = DateValidator(required=True)
+    folder: pathlib.Path = PathValidator(required=True, path_exists=True)
+    host: str = IPv4Validator(required=True)
 
 
 def file_document(

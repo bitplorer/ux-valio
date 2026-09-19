@@ -18,6 +18,7 @@ from ux_valio import (
     RequiredValidator,
     StringValidator,
     ValidateProperty,
+    ValidationErrors,
     Validator,
 )
 
@@ -93,8 +94,11 @@ def test_anyof_pattern_alternatives():
 
     assert Pet(value="a cat here").value == "a cat here"
     assert Pet(value="doggo").value == "doggo"
-    with pytest.raises(ValueError, match="none of the alternatives"):
+    with pytest.raises(ValidationErrors) as caught:
         Pet(value="bird")
+    messages = " ".join(str(err) for err in caught.value.errors)
+    assert "cat" in messages
+    assert "dog" in messages
 
 
 def test_compose_facade_with_leaf():
@@ -181,8 +185,11 @@ def test_anyof_union_owner_binds_without_and_gate():
 
     assert Either(n=1).n == 1
     assert Either(n="a").n == "a"
-    with pytest.raises(ValueError, match="none of the alternatives"):
+    with pytest.raises(ValidationErrors) as caught:
         Either(n=1.5)
+    messages = " ".join(str(err) for err in caught.value.errors)
+    assert "int" in messages
+    assert "str" in messages
 
 
 def test_allof_conflicting_typed_facades_still_typeerror():
@@ -261,8 +268,11 @@ def test_anyof_post_validate_must_still_match_one_alternative():
         s: str = field
 
     field.add_process_post_validate(smash, namespace=HookHost._owner_key(Either))
-    with pytest.raises(ValueError, match="none of the alternatives"):
+    with pytest.raises(ValidationErrors) as caught:
         Either(s="ada@example.com")
+    messages = " ".join(str(err) for err in caught.value.errors)
+    assert "email" in messages
+    assert "payment card" in messages
 
 
 def test_anyof_post_validate_may_store_when_string_alternative_holds():

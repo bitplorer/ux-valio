@@ -3,7 +3,7 @@
 The validator **is** the dataclass field default:
 
 ```python
-name: str = StringValidator(debug=True, max_length=50)
+name: str = StringValidator(max_length=50)
 ```
 
 Greenfield reimplementation of
@@ -33,9 +33,9 @@ from ux_valio import IntegerValidator, StringValidator, Validator
 
 @dataclass
 class User:
-    name: str = StringValidator(debug=True, max_length=50, required=True)
+    name: str = StringValidator(max_length=50, required=True)
     rank: str = Validator(in_choice=["Male", "Female", "Trans"], default="Female")
-    n: int = IntegerValidator(min_value=0, max_value=10, multiple_of=2, debug=True)
+    n: int = IntegerValidator(min_value=0, max_value=10, multiple_of=2)
 ```
 
 `Validator[int]` is the same door with the stored type on the descriptor.
@@ -47,7 +47,7 @@ typing-only; runtime cannot specialize one descriptor per `Box[int]` /
 
 ```python
 class Stats:
-    n = Validator[int](min_value=0, debug=True)
+    n = Validator[int](min_value=0)
 ```
 
 Concern leaves (`LengthValidator`, `RequiredValidator`, …) are the **advanced**
@@ -58,7 +58,7 @@ third AND. Facades do not multiple-inherit leaves.
 ```python
 from ux_valio import LengthValidator, RequiredValidator
 
-tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(required=True)
+tag: str = LengthValidator(min_length=3) & RequiredValidator(required=True)
 ```
 
 Hang `add_*` on the field name. The descriptor *is* the dataclass default —
@@ -71,7 +71,7 @@ as the operators, no per-use import.
 ```python
 @dataclass
 class User:
-    name: str = StringValidator(debug=True, max_length=50) & RequiredValidator(
+    name: str = StringValidator(max_length=50) & RequiredValidator(
         required=True
     )
 
@@ -94,29 +94,26 @@ not the last `__set_name__`.
 
 ## KEEP: debug swallow, logger OFF, pre_set hook
 
-- `debug=True` re-raises on a failed set/get/delete.
-- Never-set `__get__` or `__delete__` with `debug=True` raises a named
+- Omitted `debug` is `True` (re-raise). `debug=False` swallows, appends to
+  `errors`, and leaves the attribute unset so later reads are `None`.
+  Never-set `__get__` / `__delete__` with debug on raises a named
   `AttributeError` (`Cls.field is not set`), not a bare `KeyError`.
-- `debug` falsy (including the default `None`) swallows the exception, appends
-  it to `errors`, and leaves the attribute unset so later reads are `None`.
-  This swallow is KEEP. The product does not fail-closed-by-default.
-- `collect_all=False` by default (fail-fast). `collect_all=True` continues
-  remaining concerns and surfaces every failure as `ValidationErrors` (when
-  `debug=True`) or as multiple entries on `errors` (when `debug` is falsy).
-  Do not overload `debug` into collect-all.
+  This swallow is KEEP. Pass `debug=False` to opt in.
+- Omitted `collect_all` is `True`: remaining concerns continue. One failure
+  re-raises as itself; two or more surface as `ValidationErrors` (debug on)
+  or as multiple entries on `errors` (debug off). `collect_all=False` is
+  fail-fast. Do not overload `debug` into collect-all.
 
   ```python
-  n: int = IntegerValidator(
-      min_value=0, max_value=10, multiple_of=2, collect_all=True, debug=True
-  )
+  n: int = IntegerValidator(min_value=0, max_value=10, multiple_of=2)
   ```
 - Composing members that specify different `debug`, `default`, or
   `default_factory` values raises `TypeError`. A right-hand `debug=True`
   is not discarded into swallow.
   Explicit `collect_all=False` / `logger=False` is specified: it TypeErrors
-  against explicit `True`. An omitted `collect_all` / `logger` (runtime
-  default False / OFF) still collapses to a specified `True`. `debug` stays
-  fail-closed (`None` is unspecified).
+  against explicit `True`. An omitted `collect_all` / `logger` /
+  `debug` stays unspecified (resolved True / OFF / True) so it still
+  collapses to a specified `True`.
 - `logger` defaults **OFF** (`False`). `logger=True` binds a stdlib
   `logging.Logger` at `__set_name__` named `module.qualname.field`.
   No files, no `logs/` directory — valio wrote files; pass your own
@@ -174,7 +171,7 @@ DB = {"taken"}
 
 @dataclass
 class Register:
-    username: str = StringValidator(debug=True, required=True, min_length=3)
+    username: str = StringValidator(required=True, min_length=3)
 
     @username.add_process_pre_validate
     def username_not_taken(self, value: str) -> str:
@@ -269,8 +266,8 @@ hex_pair = SetOf(Pattern(r"0-9a-f"), count=2)
 
 @dataclass
 class Part:
-    sku: str = PatternValidator(pattern=sku, debug=True)
-    tint: str = PatternValidator(pattern=hex_pair, debug=True)
+    sku: str = PatternValidator(pattern=sku)
+    tint: str = PatternValidator(pattern=hex_pair)
 ```
 
 Runnable production skeletons live under `examples/` (`python examples/<file>.py`).
@@ -280,8 +277,9 @@ Hooks (`add_process_pre_validate` / `add_process_post_set`) fail closed into val
 errors (uniqueness, password confirm, promo/inventory, payment gateway, KYC
 registry). Password hashing is an example `PasswordHasher` port (stdlib
 PBKDF2 demo); production replaces it with bcrypt/argon2id. In-memory fakes
-keep the demos offline; examples do not ship a DB driver. `debug=True` is
-fail-closed; signup uses `collect_all=True` and `ValidationErrors`.
+keep the demos offline; examples do not ship a DB driver. Omitted `debug` /
+`collect_all` are True; signup surfaces `ValidationErrors` when a field
+fails more than one concern.
 
 Owner annotations that are still strings or `ForwardRef` (including
 `from __future__ import annotations`) fail at class body with `TypeError`.
@@ -339,9 +337,9 @@ Named typed facades (`DateValidator`, `PathValidator`, IP, `PaymentCardValidator
 `AadhaarCardValidator`, `PANCardValidator`, `ExpiryValidator`,
 `PhoneNumberValidator`) run their
 extra check from `validate()` after the inherited path. They do not
-register that check with `add_validator` on each assignment. With
-`collect_all=True`, that extra check joins the collected bag instead of
-being skipped after an inherited failure.
+register that check with `add_validator` on each assignment. That extra
+check joins the collected bag instead of being skipped after an inherited
+failure (`collect_all=False` restores fail-fast).
 
 ```python
 from dataclasses import dataclass
@@ -355,13 +353,13 @@ from ux_valio import (
 
 @dataclass
 class Card:
-    number: str = PaymentCardValidator(debug=True)
-    aadhaar: str = AadhaarCardValidator(debug=True)
-    pan: str = PANCardValidator(debug=True)
+    number: str = PaymentCardValidator()
+    aadhaar: str = AadhaarCardValidator()
+    pan: str = PANCardValidator()
     # expire_before is its own bound; do not also pass expire_after.
-    until: str = ExpiryValidator(expire_before="2020-01-01", debug=True)
+    until: str = ExpiryValidator(expire_before="2020-01-01")
     # leftover: valio defaulted to instance.region or "IN"; pass region=.
-    phone: str = PhoneNumberValidator(region="IN", debug=True)
+    phone: str = PhoneNumberValidator(region="IN")
 ```
 
 `PhoneNumberValidator` is a string facade. `region=` is the taught

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Omitted `collect_all` and `debug` are True. Pass `False` to opt out.
+  Specified-theory is unchanged: omitted stays unspecified so compose with
+  explicit `False` does not TypeError. One collected failure re-raises as
+  itself; two or more are `ValidationErrors`. Logger stays OFF. `required`
+  stays opt-in.
+
 - `name: str = StringValidator()` type-checks without a plugin. Named
   facades present as the store type (`StringValidator <: str`) under
   TYPE_CHECKING. Runtime bases are empty. `User(name=1)` still errors.

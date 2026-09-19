@@ -45,7 +45,7 @@ class ValidationPath:
         owner: Any,
         instance: Any,
         value: Any,
-        collect_all: bool = False,
+        collect_all: bool = True,
     ) -> list[Any]:
         ran: set[Lookup] = set()
         results: list[Any] = []

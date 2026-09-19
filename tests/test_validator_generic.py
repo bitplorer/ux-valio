@@ -10,7 +10,7 @@ from typing import Generic, TypeVar
 
 import pytest
 
-from ux_valio import IntegerValidator, Validator
+from ux_valio import IntegerValidator, ValidationErrors, Validator
 
 
 def test_validator_int_subscript_types_a_plain_class():
@@ -20,7 +20,7 @@ def test_validator_int_subscript_types_a_plain_class():
     stats = Stats()
     stats.n = 3
     assert stats.n == 3
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, ValidationErrors)):
         stats.n = "x"
     assert Stats.__dict__["n"].annotation is int
 
@@ -39,7 +39,7 @@ def test_validator_int_agrees_with_owner_int():
         n: int = Validator[int](min_value=0, debug=True)
 
     assert User(n=2).n == 2
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, ValidationErrors)):
         User(n="x")
 
 

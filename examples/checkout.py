@@ -113,18 +113,18 @@ class Checkout:
     inventory: Inventory
     gateway: PaymentGateway
     holder: str = StringValidator(
-        debug=True, required=True, min_length=2, max_length=80
+        required=True, min_length=2, max_length=80
     )
-    number: str = PaymentCardValidator(debug=True, required=True)
+    number: str = PaymentCardValidator(required=True)
     card_expiry: str = StringValidator(
-        pattern=_CARD_EXPIRY, debug=True, required=True
+        pattern=_CARD_EXPIRY, required=True
     )
-    sku: str = StringValidator(debug=True, required=True, min_length=1, max_length=32)
+    sku: str = StringValidator(required=True, min_length=1, max_length=32)
     amount: Decimal = DecimalValidator(
-        min_value=Decimal("0.01"), debug=True, required=True
+        min_value=Decimal("0.01"), required=True
     )
-    promo_code: str = ExpiryValidator(expire_after=_PROMO_UNTIL, debug=True, required=True)
-    quantity: int = IntegerValidator(min_value=1, debug=True, required=True)
+    promo_code: str = ExpiryValidator(expire_after=_PROMO_UNTIL, required=True)
+    quantity: int = IntegerValidator(min_value=1, required=True)
 
     @promo_code.add_process_pre_validate
     def promo_known(self, value: str) -> str:
@@ -150,7 +150,7 @@ class ExpiredHold:
     """Offer whose ``expire_after`` bound is already in the past."""
 
     promo_code: str = ExpiryValidator(
-        expire_after=_PROMO_ENDED, debug=True, required=True
+        expire_after=_PROMO_ENDED, required=True
     )
 
 

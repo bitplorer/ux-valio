@@ -52,18 +52,18 @@ class InMemoryStaffDirectory:
 @dataclass
 class StaffProfile:
     directory: StaffDirectory
-    name: str = StringValidator(debug=True, max_length=50) & RequiredValidator(
+    name: str = StringValidator(max_length=50) & RequiredValidator(
         required=True
     )
-    tag: str = LengthValidator(min_length=3, debug=True) & RequiredValidator(
+    tag: str = LengthValidator(min_length=3) & RequiredValidator(
         required=True
     )
     note: object = AnyOf(
-        IntegerValidator(min_value=0, debug=True),
-        StringValidator(min_length=1, debug=True),
+        IntegerValidator(min_value=0),
+        StringValidator(min_length=1),
     )
     title: str = AllOf(
-        StringValidator(debug=True, min_length=2, max_length=40),
+        StringValidator(min_length=2, max_length=40),
         RequiredValidator(required=True),
     )
 

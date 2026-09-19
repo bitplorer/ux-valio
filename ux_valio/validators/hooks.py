@@ -235,7 +235,7 @@ class HookHost:
         if instance is None:
             return
         errors: list[BaseException] = []
-        collect_all = getattr(self, "collect_all", False)
+        collect_all = getattr(self, "collect_all", True)
         name = getattr(self, "name", None)
         for key in type(self)._collect_owner_keys(instance):
             for func in self._custom_validators.get(key, ()):
