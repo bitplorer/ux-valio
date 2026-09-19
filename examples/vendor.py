@@ -98,6 +98,14 @@ class VendorService:
         )
 
 
+def _must_raise(fn, *types: type[BaseException]) -> None:
+    try:
+        fn()
+    except types:
+        return
+    raise AssertionError(f"expected {types}")
+
+
 def main() -> Vendor:
     taken = VendorService(
         InMemoryVendorRegistry(gstins={"09AAAPA1111F1ZP"})
@@ -110,14 +118,22 @@ def main() -> Vendor:
         isbn="978-0-306-40615-7",
         mac="aa:bb:cc:dd:ee:ff",
     )
-    try:
-        taken.onboard(
+    _must_raise(
+        lambda: taken.onboard(
             gstin="09AAAPA1111F1ZP",
             iban="GB82 WEST 1234 5698 7654 32",
             bic="DEUTDEFF",
-        )
-    except ValueError:
-        pass
+        ),
+        ValueError,
+    )
+    _must_raise(
+        lambda: VendorService(InMemoryVendorRegistry()).onboard(
+            gstin="09AAAPA1111F1ZQ",
+            iban="GB82 WEST 1234 5698 7654 32",
+            bic="DEUTDEFF",
+        ),
+        ValueError,
+    )
     return row
 
 

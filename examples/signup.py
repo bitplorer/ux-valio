@@ -20,7 +20,6 @@ import hashlib
 import hmac
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
-
 from uuid import UUID, uuid4
 
 from ux_valio import (
@@ -199,6 +198,10 @@ class LoginForm:
     username: str = login_username_field
     password: str = login_password_field
 
+    @username.pre_validate
+    def fold_login_username(self, value: str) -> str:
+        return value.strip().casefold()
+
     @password.post_validate
     def credentials_ok(self, value: str) -> str:
         row = self.users.get(self.username)
@@ -259,6 +262,14 @@ def form_messages(err: Exception) -> list[str]:
     return [str(err)]
 
 
+def _must_raise(fn, *types: type[BaseException]) -> None:
+    try:
+        fn()
+    except types:
+        return
+    raise AssertionError(f"expected {types}")
+
+
 def main() -> SignupForm:
     service = SignupService(
         InMemoryUserStore(taken={"taken", "ab"}), Pbkdf2PasswordHasher()
@@ -269,45 +280,44 @@ def main() -> SignupForm:
         password="Secret1a",
         password_confirm="Secret1a",
         seats=8,
+        display_name="Ada Lovelace",
+        role="admin",
     )
-    service.login(username="ada", password="Secret1a")
-    try:
-        service.login(username="ada", password="Wrong1a")
-    except ValueError:
-        pass
-    try:
-        service.register(
-
+    service.login(username="Ada", password="Secret1a")
+    _must_raise(
+        lambda: service.login(username="ada", password="Wrong1a"), ValueError
+    )
+    _must_raise(
+        lambda: service.register(
             username="taken",
             email="ada@example.com",
             password="Secret1a",
             password_confirm="Secret1a",
             seats=8,
-        )
-    except (ValueError, ValidationErrors):
-        pass
-    try:
-        service.register(
-
+        ),
+        ValueError,
+        ValidationErrors,
+    )
+    _must_raise(
+        lambda: service.register(
             username="eve",
             email="ada@example.com",
             password="Secret1a",
             password_confirm="Secret1b",
             seats=8,
-        )
-    except ValueError:
-        pass
-    try:
-        service.register(
-
+        ),
+        ValueError,
+    )
+    _must_raise(
+        lambda: service.register(
             username="neo",
             email="ada@example.com",
             password="Secret1a",
             password_confirm="Secret1a",
             seats=-3,
-        )
-    except ValidationErrors as err:
-        form_messages(err)
+        ),
+        ValidationErrors,
+    )
     return ok
 
 

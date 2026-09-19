@@ -166,26 +166,41 @@ class KycService:
         return KycIdentity(registry=self.registry, aadhaar=aadhaar, pan=pan)
 
 
+def _must_raise(fn, *types: type[BaseException]) -> None:
+    try:
+        fn()
+    except types:
+        return
+    raise AssertionError(f"expected {types}")
+
+
 def main() -> KycIdentity:
     service = KycService(InMemoryIdentityRegistry())
     if HAS_PHONENUMBERS and IN_NATIONAL:
         row = service.submit(VALID_AADHAAR, VALID_PAN, IN_NATIONAL)
     else:
         row = service.submit(VALID_AADHAAR, VALID_PAN)
-    try:
-        KycService(
+    _must_raise(
+        lambda: KycService(
             InMemoryIdentityRegistry(aadhaars={VALID_AADHAAR}, pans=set())
-        ).submit(VALID_AADHAAR, VALID_PAN, phone=None)
-    except (ValueError, ValidationErrors):
-        pass
-    try:
-        KycService(InMemoryIdentityRegistry()).submit("123456789012", VALID_PAN)
-    except (ValueError, ValidationErrors):
-        pass
-    try:
-        KycService(InMemoryIdentityRegistry()).submit(VALID_AADHAAR, "AAAPA1111G")
-    except (ValueError, ValidationErrors):
-        pass
+        ).submit(VALID_AADHAAR, VALID_PAN, phone=None),
+        ValueError,
+        ValidationErrors,
+    )
+    _must_raise(
+        lambda: KycService(InMemoryIdentityRegistry()).submit(
+            "123456789012", VALID_PAN
+        ),
+        ValueError,
+        ValidationErrors,
+    )
+    _must_raise(
+        lambda: KycService(InMemoryIdentityRegistry()).submit(
+            VALID_AADHAAR, "AAAPA1111G"
+        ),
+        ValueError,
+        ValidationErrors,
+    )
     return row
 
 

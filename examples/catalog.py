@@ -164,6 +164,14 @@ class CatalogService:
         )
 
 
+def _must_raise(fn, *types: type[BaseException]) -> None:
+    try:
+        fn()
+    except types:
+        return
+    raise AssertionError(f"expected {types}")
+
+
 def main() -> CatalogLine:
     taken = CatalogService(
         InMemoryPartCatalog(skus={"INV-0042Z"}),
@@ -181,48 +189,30 @@ def main() -> CatalogLine:
         price="USD40",
         quantity="8",
     )
-    try:
-        taken.add(
-            sku="INV-0042Z",
-            tint="aF",
-            slug="widget",
-            lot="A1-9",
-            mass="12kg",
-            price="USD40",
-            quantity="8",
-        )
-    except ValueError:
-        pass
-    try:
-        CatalogService(
+    payload = dict(
+        sku="INV-0042Z",
+        tint="aF",
+        slug="widget",
+        lot="A1-9",
+        mass="12kg",
+        price="USD40",
+        quantity="8",
+    )
+    _must_raise(lambda: taken.add(**payload), ValueError)
+    _must_raise(
+        lambda: CatalogService(
             InMemoryPartCatalog(),
             InMemoryWarehouse(stock={"INV-0042Z": 0}),
-        ).add(
-            sku="INV-0042Z",
-            tint="aF",
-            slug="widget",
-            lot="A1-9",
-            mass="12kg",
-            price="USD40",
-            quantity="8",
-        )
-    except ValueError:
-        pass
-    try:
-        CatalogService(
+        ).add(**payload),
+        ValueError,
+    )
+    _must_raise(
+        lambda: CatalogService(
             InMemoryPartCatalog(),
             InMemoryWarehouse(stock={"INV-0042Z": 2}),
-        ).add(
-            sku="xINV-0042Z",
-            tint="aF",
-            slug="widget",
-            lot="A1-9",
-            mass="12kg",
-            price="USD40",
-            quantity="8",
-        )
-    except ValueError:
-        pass
+        ).add(**{**payload, "sku": "xINV-0042Z"}),
+        ValueError,
+    )
     return line
 
 

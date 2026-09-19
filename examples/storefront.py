@@ -101,6 +101,14 @@ class StorefrontService:
         )
 
 
+def _must_raise(fn, *types: type[BaseException]) -> None:
+    try:
+        fn()
+    except types:
+        return
+    raise AssertionError(f"expected {types}")
+
+
 def main() -> Storefront:
     taken = StorefrontService(InMemoryStoreCatalog(hosts={"shop.example.com"}))
     row = StorefrontService(InMemoryStoreCatalog()).publish(
@@ -112,16 +120,26 @@ def main() -> Storefront:
         gtin="036000291452",
         zip="90210-1234",
     )
-    try:
-        taken.publish(
+    _must_raise(
+        lambda: taken.publish(
             public_id="01ARZ3NDEKTSV4RRFFQ69G5FAV",
             host="shop.example.com",
             slug="taken",
             currency="USD",
             tz="UTC",
-        )
-    except ValueError:
-        pass
+        ),
+        ValueError,
+    )
+    _must_raise(
+        lambda: StorefrontService(InMemoryStoreCatalog()).publish(
+            public_id="01ARZ3NDEKTSV4RRFFQ69G5FAV",
+            host="not a host",
+            slug="ok-slug",
+            currency="USD",
+            tz="UTC",
+        ),
+        ValueError,
+    )
     return row
 
 
