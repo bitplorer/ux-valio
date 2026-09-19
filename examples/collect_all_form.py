@@ -20,7 +20,7 @@ This file does not ship a DB driver or a crypto library in ``ux_valio``.
 
 import hashlib
 import hmac
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from ux_valio import (
@@ -133,10 +133,17 @@ login_username_field = StringValidator(required=True, min_length=1)
 login_password_field = StringValidator(required=True, min_length=1)
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class SignupForm:
-    users: UserStore = field(repr=False, compare=False)
-    hasher: PasswordHasher = field(repr=False, compare=False)
     username: str = username_field
     email: str = EmailValidator(required=True)
     password: str = password_field
@@ -168,8 +175,6 @@ class SignupForm:
 
 @dataclass
 class LoginForm:
-    users: UserStore = field(repr=False, compare=False)
-    hasher: PasswordHasher = field(repr=False, compare=False)
     username: str = login_username_field
     password: str = login_password_field
 
@@ -197,9 +202,9 @@ class SignupService:
         seats: int,
     ) -> SignupForm:
         """Submit the form. Multi-concern failures raise ``ValidationErrors``."""
-        return SignupForm(
-            users=self.users,
-            hasher=self.hasher,
+        return _bind(
+            SignupForm,
+            {"users": self.users, "hasher": self.hasher},
             username=username,
             email=email,
             password=password,
@@ -209,9 +214,9 @@ class SignupService:
 
     def login(self, username: str, password: str) -> LoginForm:
         """Verify credentials. Unknown user or bad password raise ``ValueError``."""
-        return LoginForm(
-            users=self.users,
-            hasher=self.hasher,
+        return _bind(
+            LoginForm,
+            {"users": self.users, "hasher": self.hasher},
             username=username,
             password=password,
         )

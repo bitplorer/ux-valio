@@ -9,7 +9,7 @@ Inject ``StaffDirectory`` on ``StaffService``. Production plugs HRIS/LDAP.
 This file does not ship a DB driver.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from ux_valio import (
@@ -47,9 +47,17 @@ class InMemoryStaffDirectory:
         self._taken[name.casefold()] = name
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class StaffProfile:
-    directory: StaffDirectory = field(repr=False, compare=False)
     name: str = StringValidator(max_length=50) & RequiredValidator(
         required=True
     )
@@ -90,8 +98,13 @@ class StaffService:
         self, name: str, tag: str, note: int | str, title: str
     ) -> StaffProfile:
         """Create a staff profile. Compose, hook, and directory failures raise."""
-        return StaffProfile(
-            directory=self.directory, name=name, tag=tag, note=note, title=title
+        return _bind(
+            StaffProfile,
+            {"directory": self.directory},
+            name=name,
+            tag=tag,
+            note=note,
+            title=title,
         )
 
 

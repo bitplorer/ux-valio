@@ -37,12 +37,11 @@ No hang named `pre_set`. Persist/reserve that must fail-closed hangs on
 - `post_set` — persist / reserve (fail-closed)
 
 ```python
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from ux_valio import StringValidator
 
 @dataclass
 class Register:
-    users: UserStore = field(repr=False, compare=False)
     username: str = StringValidator(required=True, min_length=3)
 
     @username.pre_validate
@@ -60,10 +59,10 @@ class Register:
         self.users.commit(value)
 ```
 
-`users` is the injected store (one shared instance from the service),
-not a product column. `required` / `min_length` already reject `None`
-and short strings — do not hang `if not value`. See
-`examples/registration.py`.
+`self.users` is not a dataclass field and not an `__init__` parameter.
+`RegisterService` does `object.__new__(Register)`, sets `users`, then
+`Register.__init__(inst, username=...)`. One shared store from the
+service. See `examples/registration.py`.
 
 Class access `User.name` is that descriptor, so `User.name.post_set`
 also works after the class exists. A shared descriptor (`aadhaar` on

@@ -5,7 +5,7 @@ Lookarounds are valio@3415c03 PatternTypes. Matching is ``findall``
 substring (KEEP). Inject ``Warehouse`` on ``ShippingService``.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from ux_valio import (
@@ -55,9 +55,17 @@ class InMemoryWarehouse:
         self._stock[sku] -= 1
 
 
+def _bind(cls, ports, **fields):
+    """Wire service ports onto a new instance, then product ``__init__``."""
+    inst = object.__new__(cls)
+    for name, port in ports.items():
+        object.__setattr__(inst, name, port)
+    cls.__init__(inst, **fields)
+    return inst
+
+
 @dataclass
 class Shipment:
-    warehouse: Warehouse = field(repr=False, compare=False)
     sku: str = StringValidator(min_length=1, required=True)
     mass: str = StringValidator(pattern=mass_kg, required=True)
     price: str = StringValidator(pattern=usd_amount, required=True)
@@ -80,8 +88,9 @@ class ShippingService:
         self.warehouse = warehouse
 
     def book(self, sku: str, mass: str, price: str, quantity: str) -> Shipment:
-        return Shipment(
-            warehouse=self.warehouse,
+        return _bind(
+            Shipment,
+            {"warehouse": self.warehouse},
             sku=sku,
             mass=mass,
             price=price,
