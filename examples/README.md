@@ -31,6 +31,7 @@ hasher to `ux_valio`.
 | Catalog line (SKU + units + stock) | `catalog.py` | `PartCatalog`, `Warehouse` | `InMemoryPartCatalog`, `InMemoryWarehouse` | unique SKU + stock row |
 | Invite (TypedDict schema) | `invite.py` | `InviteLog` | `InMemoryInviteLog` | unique invite email |
 | File a document | `filing.py` | `Archive` | `InMemoryArchive` | unique (folder, host) |
+| Field-level logging | `field_logging.py` | — | stdlib `logging` | your `Logger` / `FileHandler` |
 
 ```console
 python examples/signup.py
@@ -41,6 +42,7 @@ python examples/storefront.py
 python examples/catalog.py
 python examples/invite.py
 python examples/filing.py
+python examples/field_logging.py
 ```
 
 `kyc.py` uses optional extra `phonenumbers` for the IN phone door

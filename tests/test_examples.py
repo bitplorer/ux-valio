@@ -20,6 +20,7 @@ EXAMPLE_MODULES = (
     "catalog",
     "invite",
     "filing",
+    "field_logging",
 )
 
 

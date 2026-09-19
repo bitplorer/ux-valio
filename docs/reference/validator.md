@@ -34,7 +34,7 @@ keeps its declared units. An unknown validation-path unit raises
 | `default_factory` | unset | zero-arg callable per None assignment; `not a Field twin` |
 | `debug` | `True` | re-raise; `False` swallows |
 | `collect_all` | `True` | continue remaining concerns |
-| `logger` | `False` | `True` → `module.qualname.field` |
+| `logger` | `False` | `True` → `module.qualname.field`; or pass a `logging.Logger`. [how-to](../how-to/logging.md) |
 | `min_length` / `max_length` | unset | sized values |
 | `min_value` / `max_value` | unset | inclusive |
 | `gt` / `lt` | unset | exclusive |
