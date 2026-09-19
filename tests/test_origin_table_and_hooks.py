@@ -96,6 +96,18 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
     assert hasattr(HookHost, "_has_hooks")
     assert not hasattr(HookHost, "_bag_key")
     assert not hasattr(HookHost, "bags_used")
+    from ux_valio.descriptor import Property
+    from ux_valio.validators import bounds as bounds_mod
+    from ux_valio.validators import facade as facade_mod
+
+    assert hasattr(Property, "_emit_log")
+    assert not hasattr(Property, "_log")
+    assert hasattr(facade_mod, "ValidateStep")
+    assert not hasattr(facade_mod, "Lookup")
+    assert hasattr(bounds_mod, "read_bound")
+    assert not hasattr(bounds_mod, "bound_value")
+    assert not (ROOT / "tests" / "test_door_a_readme.py").exists()
+    assert (ROOT / "tests" / "test_readme_shape.py").is_file()
     assert not hasattr(hooks_mod, "_collect_owner_keys")
     assert not hasattr(hooks_mod, "_owner_key")
     assert not hasattr(hooks_mod, "_resolve_owner_key")

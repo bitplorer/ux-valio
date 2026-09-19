@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""field default README shape and Surface Lock."""
+"""README shape and public-surface lock."""
 
 from dataclasses import dataclass
 

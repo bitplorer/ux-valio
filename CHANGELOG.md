@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Intentful names: ``ValidateStep`` (was ``Lookup``), ``_emit_log``,
+  ``read_bound``. Test files drop leftover ``door_a`` filenames.
+
 - Docs and module comments name the field default
   (``name: str = StringValidator()``), not "Door A".
 

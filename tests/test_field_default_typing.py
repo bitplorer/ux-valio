@@ -9,9 +9,9 @@ import sys
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_STR = Path(__file__).resolve().parent / "typing" / "door_a_str.py"
-_DESC = Path(__file__).resolve().parent / "typing" / "door_a_user.py"
-_CUSTOM = Path(__file__).resolve().parent / "typing" / "door_a_custom.py"
+_STR = Path(__file__).resolve().parent / "typing" / "field_str.py"
+_DESC = Path(__file__).resolve().parent / "typing" / "field_user.py"
+_CUSTOM = Path(__file__).resolve().parent / "typing" / "field_custom.py"
 
 
 def _env() -> dict[str, str]:

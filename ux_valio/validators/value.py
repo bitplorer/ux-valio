@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ux_valio.validators.base import ValidateProperty
-from ux_valio.validators.bounds import bound_value, reject_exclusive, reject_inverted, specified
+from ux_valio.validators.bounds import read_bound, reject_exclusive, reject_inverted, specified
 
 
 class MinValueValidator(ValidateProperty):
@@ -26,8 +26,8 @@ class MinValueValidator(ValidateProperty):
     def _validate_min_value(self: Any, instance: Any, value: Any) -> None:
         if value is None:
             return
-        min_value = bound_value(self, "min_value")
-        gt = bound_value(self, "gt")
+        min_value = read_bound(self, "min_value")
+        gt = read_bound(self, "gt")
         if min_value is not None and value < min_value:
             raise ValueError(
                 f"{self.name} expect the minimum value of {min_value}, got {value} instead"
@@ -58,8 +58,8 @@ class MaxValueValidator(ValidateProperty):
     def _validate_max_value(self: Any, instance: Any, value: Any) -> None:
         if value is None:
             return
-        max_value = bound_value(self, "max_value")
-        lt = bound_value(self, "lt")
+        max_value = read_bound(self, "max_value")
+        lt = read_bound(self, "lt")
         if max_value is not None and value > max_value:
             raise ValueError(
                 f"{self.name} expect the maximum value of {max_value}, got {value} instead"
@@ -132,7 +132,7 @@ class ValueValidator(ValidateProperty):
         MaxValueValidator._validate_max_value(self, instance, value)
 
     def _validate_eq_value(self, instance: Any, value: Any) -> None:
-        of_value = bound_value(self, "value")
+        of_value = read_bound(self, "value")
         if of_value is not None and value is not None and value != of_value:
             raise ValueError(
                 f"{self.name} expect the value {of_value}, got {value} as value instead"
