@@ -24,9 +24,9 @@ a parallel folder, not inside the layer they depend on.
   (parallel, do not import each other): `india/` is a folder of layers
   (`kyc`, `gst`, `registry`, `bank` — they do not import each other);
   `finance/` is the same shape (`rail`, `market`, `card`, `currency`);
-  `catalog` (ISBN/EAN/GTIN/VIN),
+  `catalog` (ISBN/ISSN/EAN/GTIN/VIN), `address` (US ZIP / CA / UK),
   `contact` (email/phone/URL/hostname), `device` (IMEI/MAC),
-  `portal` (slug/country/timezone/ULID), `expiry` (wall-clock).
+  `portal` (slug/country/timezone/ULID/locale/semver), `expiry` (wall-clock).
   Each domain module subclasses `StringValidator` (expiry : `Validator`).
   `named` does not import sibling named modules. `typed`
   does not import `named`.

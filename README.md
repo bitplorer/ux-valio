@@ -480,7 +480,17 @@ row = Counterparty(
 | `VINValidator` | 17 chars | ISO 3779 check digit, no I/O/Q |
 | `MACAddressValidator` | 12 hex | 48-bit; colon/hyphen/Cisco ok |
 | `IMEIValidator` | 15 digits | Luhn |
-| `PaymentCardValidator` | compact digits | brand ∩ Luhn (incl. UnionPay) |
+| `PaymentCardValidator` | compact digits | brand ∩ Luhn (incl. UnionPay / JCB / Diners) |
+| `IBANValidator` | 15–34 chars | ISO 13616 mod-97 |
+| `CLABEValidator` | 18 digits | Banxico check |
+| `UKSortCodeValidator` | 6 digits | UK sort code |
+| `CUSIPValidator` | 9 chars | US security check digit |
+| `ISSNValidator` | 8 chars | mod-11, trailing X |
+| `USZipCodeValidator` | 5 or 9 digits | US ZIP / ZIP+4 |
+| `CAPostalCodeValidator` | `A1A 1A1` | Canada Post |
+| `UKPostcodeValidator` | outward inward | Royal Mail |
+| `LocaleValidator` | `en` / `en-IN` | ISO 639-1 + 3166-1 |
+| `SemVerValidator` | `MAJOR.MINOR.PATCH` | SemVer 2 |
 | `EmailValidator` | given string | addr-spec **fullmatch** |
 | `URLValidator` | given string | scheme + netloc |
 | `ExpiryValidator` | field's store type | exclusive `expire_*` wall-clock |

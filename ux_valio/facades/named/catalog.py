@@ -8,7 +8,9 @@ Does not import sibling named domain modules. Depends on typed
 
 from __future__ import annotations
 
+import re
 from typing import Any
+
 from ux_valio.facades.typed import StringValidator
 
 class ISBNValidator(StringValidator):
@@ -172,3 +174,38 @@ class VINValidator(StringValidator):
             return
         if not type(self)._is_valid_vin(value):
             raise ValueError(f"{self.name} is not a valid VIN")
+
+
+_ISSN = re.compile(r"[0-9]{7}[0-9X]")
+
+
+class ISSNValidator(StringValidator):
+    """ISSN: 8 chars ∩ mod-11 (trailing ``X``). Complements ISBN.
+
+    Usage::
+
+        issn: str = ISSNValidator()
+
+    ``0378-5955`` → ``03785955``. Format-only is rejected. No ISSN
+    registry lookup.
+    """
+
+    @staticmethod
+    def _is_valid_issn(value: Any) -> bool:
+        if not isinstance(value, str) or _ISSN.fullmatch(value) is None:
+            return False
+        total = sum(int(value[index]) * (8 - index) for index in range(7))
+        check = 11 - (total % 11)
+        expect = "0" if check == 11 else ("X" if check == 10 else str(check))
+        return value[7] == expect
+
+    def _pre_validate(self, instance: Any, value: Any) -> Any:
+        if isinstance(value, str):
+            value = "".join(value.split()).replace("-", "").upper()
+        return super()._pre_validate(instance, value)
+
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if not type(self)._is_valid_issn(value):
+            raise ValueError(f"{self.name} is not a valid ISSN")

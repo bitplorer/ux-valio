@@ -16,9 +16,12 @@ from ux_valio import (
     HSNCodeValidator,
     HostnameValidator,
     LEIValidator,
+    LocaleValidator,
+    SemVerValidator,
     SlugValidator,
     TimezoneValidator,
     ULIDValidator,
+    USZipCodeValidator,
 )
 
 
@@ -35,6 +38,9 @@ class Storefront:
     exp: str = CardExpiryValidator()
     routing: str = ABARoutingValidator()
     lei: str = LEIValidator()
+    zip: str = USZipCodeValidator()
+    locale: str = LocaleValidator()
+    version: str = SemVerValidator()
 
 
 def main() -> None:
@@ -50,6 +56,9 @@ def main() -> None:
         exp="12/25",
         routing="021000021",
         lei="5493001KJTIIGC8Y1R12",
+        zip="90210-1234",
+        locale="en_IN",
+        version="1.2.3",
     )
     print(row.host, row.slug, row.currency, row.exp)
 

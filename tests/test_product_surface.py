@@ -95,6 +95,15 @@ def test_min_max_leaves_are_exported():
         "LLPINValidator",
         "FSSAIValidator",
         "IndianPassportValidator",
+        "USZipCodeValidator",
+        "CAPostalCodeValidator",
+        "UKPostcodeValidator",
+        "CLABEValidator",
+        "CUSIPValidator",
+        "UKSortCodeValidator",
+        "ISSNValidator",
+        "LocaleValidator",
+        "SemVerValidator",
         "GTINValidator",
         "HostnameValidator",
         "SlugValidator",
@@ -222,6 +231,7 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert (finance / "currency.py").is_file()
     assert not (named / "finance.py").exists()
     assert (named / "catalog.py").is_file()
+    assert (named / "address.py").is_file()
     assert (named / "contact.py").is_file()
     assert (named / "device.py").is_file()
     assert (named / "portal.py").is_file()
