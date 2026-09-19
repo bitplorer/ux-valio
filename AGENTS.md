@@ -95,7 +95,8 @@ a parallel folder, not inside the layer they depend on.
   collected failure re-raises as itself; two or more are `ValidationErrors`.
   `collect_all=False` is fail-fast. Omitted `debug` is True (re-raise);
   `debug=False` swallows. Do not overload `debug` into
-  collect-all. Hang `pre_validate` on the field default. Compose merge fail-closed: conflicting
+  collect-all. Specified default-path units bind at construct
+  (`_active_units`; type always). Hang `pre_validate` on the field default. Compose merge fail-closed: conflicting
   specified `debug` / `default` / `default_factory` / `collect_all` /
   `logger` is TypeError.
   Explicit `False` is specified. Omitted `collect_all` / `logger` / `debug`

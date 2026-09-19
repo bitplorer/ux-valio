@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Docs: typed facades ``Usage::``; specified-path construct bind;
+  IBAN ``02``–``98`` in the named table; examples index complete;
+  user-facing ``bag`` wording dropped from README.
+
 - Note: ``docs/host-peer-plan.md`` — host decides / peer applies (optional
   native apply later; instance stays Python). Not implemented.
 

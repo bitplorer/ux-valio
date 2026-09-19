@@ -110,6 +110,14 @@ class Validator(ValidateProperty[T]):
 
     ``Validator[int]`` declares the stored type (one argument). Named
     facades specialize it (``IntegerValidator`` is ``Validator[int]``).
+
+    Usage::
+
+        n: int = IntegerValidator(min_value=0)
+
+    Specified concerns bind once (``_active_units``). Type always runs;
+    ``min_value`` / ``pattern`` / ``reassign=False`` only when passed at
+    construct.
     """
 
     validation_path = ValidationPath(DEFAULT_PATH_UNITS)
