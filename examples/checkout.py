@@ -16,7 +16,7 @@ In-memory fakes keep it offline. Production plugs an offers table, a stock
 row (or Redis), and Stripe/Razorpay. This file does not ship a DB driver.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Protocol
@@ -103,8 +103,11 @@ class StubPaymentGateway:
         return f"auth-{number[-4:]}"
 
 
-@dataclass(init=False)
+@dataclass
 class Checkout:
+    promos: PromoCatalog = field(repr=False, compare=False)
+    inventory: Inventory = field(repr=False, compare=False)
+    gateway: PaymentGateway = field(repr=False, compare=False)
     holder: str = StringValidator(
         required=True, min_length=2, max_length=80
     )
@@ -116,31 +119,6 @@ class Checkout:
     )
     promo_code: str = ExpiryValidator(expire_after=_PROMO_UNTIL, required=True)
     quantity: int = IntegerValidator(min_value=1, required=True)
-
-    def __init__(
-        self,
-        holder: str,
-        number: str,
-        card_expiry: str,
-        amount: Decimal,
-        promo_code: str,
-        sku: str,
-        quantity: int,
-        *,
-        promos: PromoCatalog,
-        inventory: Inventory,
-        gateway: PaymentGateway,
-    ) -> None:
-        self.promos = promos
-        self.inventory = inventory
-        self.gateway = gateway
-        self.holder = holder
-        self.number = number
-        self.card_expiry = card_expiry
-        self.sku = sku
-        self.amount = amount
-        self.promo_code = promo_code
-        self.quantity = quantity
 
     @promo_code.post_validate
     def promo_known(self, value: str) -> str:
@@ -196,16 +174,16 @@ class CheckoutService:
     ) -> Checkout:
         """Place a validated order. Invalid card, promo, stock, or gateway raise."""
         return Checkout(
-            holder,
-            number,
-            card_expiry,
-            amount,
-            promo_code,
-            sku,
-            quantity,
             promos=self.promos,
             inventory=self.inventory,
             gateway=self.gateway,
+            holder=holder,
+            number=number,
+            card_expiry=card_expiry,
+            sku=sku,
+            amount=amount,
+            promo_code=promo_code,
+            quantity=quantity,
         )
 
 

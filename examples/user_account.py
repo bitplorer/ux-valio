@@ -3,11 +3,11 @@
 
 Username uniqueness hangs on ``post_validate`` (after ``required`` /
 ``min_length``). Persist on ``post_set``. ``directory`` is the injected
-store — one shared instance from ``AccountService``, not an ``__init__``
-field.
+store (``repr=False``), not a column — one shared instance from
+``AccountService``.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 from uuid import UUID, uuid4
 
@@ -45,8 +45,9 @@ class InMemoryAccountDirectory:
         self._taken.add(username.casefold())
 
 
-@dataclass(init=False)
+@dataclass
 class UserAccount:
+    directory: AccountDirectory = field(repr=False, compare=False)
     username: str = StringValidator(required=True, min_length=3, max_length=32)
     display_name: str = StringValidator(max_length=80, default="")
     role: str = Validator(
@@ -56,25 +57,6 @@ class UserAccount:
     reputation: int = IntegerValidator(min_value=0, max_value=10_000, default=0)
     email: str = EmailValidator(required=True)
     account_id: UUID = UUIDValidator(default_factory=uuid4)
-
-    def __init__(
-        self,
-        username: str,
-        email: str,
-        *,
-        directory: AccountDirectory,
-        display_name: str = "",
-        role: str = "member",
-        reputation: int = 0,
-        account_id: UUID | None = None,
-    ) -> None:
-        self.directory = directory
-        self.username = username
-        self.display_name = display_name
-        self.role = role
-        self.reputation = reputation
-        self.email = email
-        self.account_id = account_id
 
     @username.pre_validate
     def fold_username(self, value: str) -> str:
@@ -107,15 +89,17 @@ class AccountService:
         reputation: int = 0,
         account_id: UUID | None = None,
     ) -> UserAccount:
-        return UserAccount(
-            username,
-            email,
-            directory=self.directory,
-            display_name=display_name,
-            role=role,
-            reputation=reputation,
-            account_id=account_id,
-        )
+        kwargs: dict[str, object] = {
+            "directory": self.directory,
+            "username": username,
+            "display_name": display_name,
+            "role": role,
+            "reputation": reputation,
+            "email": email,
+        }
+        if account_id is not None:
+            kwargs["account_id"] = account_id
+        return UserAccount(**kwargs)
 
 
 def main() -> UserAccount:

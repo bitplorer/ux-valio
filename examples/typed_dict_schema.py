@@ -7,7 +7,7 @@ Hang extras with ``Annotated`` or field-default assignment, then
 ``InviteService``.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Protocol, TypedDict
 
 from ux_valio import EmailValidator, StringValidator, Validator
@@ -53,13 +53,10 @@ class Person(TypedDict):
             raise ValueError("name must not contain digits")
 
 
-@dataclass(init=False)
+@dataclass
 class Invite:
+    log: InviteLog = field(repr=False, compare=False)
     person: Person = Validator()
-
-    def __init__(self, person: Person, *, log: InviteLog) -> None:
-        self.log = log
-        self.person = person
 
     @person.post_validate
     def email_free(self, value: Person) -> Person:
@@ -81,7 +78,8 @@ class InviteService:
 
     def invite(self, name: str, email: str, age: int) -> Invite:
         return Invite(
-            {"name": name, "email": email, "age": age}, log=self.log
+            log=self.log,
+            person={"name": name, "email": email, "age": age},
         )
 
 

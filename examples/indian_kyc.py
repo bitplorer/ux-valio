@@ -13,7 +13,7 @@ the last identity field. ``registry`` is the injected store, not a column.
 warehouse unique Aadhaar/PAN. This file does not ship a DB driver.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -82,19 +82,13 @@ aadhaar_field = AadhaarCardValidator(required=True)
 pan_field = PANCardValidator(required=True)
 
 
-@dataclass(init=False)
+@dataclass
 class KycIdentity:
     """Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26. Always importable."""
 
+    registry: IdentityRegistry = field(repr=False, compare=False)
     aadhaar: str = aadhaar_field
     pan: str = pan_field
-
-    def __init__(
-        self, aadhaar: str, pan: str, *, registry: IdentityRegistry
-    ) -> None:
-        self.registry = registry
-        self.aadhaar = aadhaar
-        self.pan = pan
 
     @aadhaar.post_validate
     def aadhaar_free(self, value: str) -> str:
@@ -115,26 +109,14 @@ class KycIdentity:
 
 if HAS_PHONENUMBERS and _PHONE is not None:
 
-    @dataclass(init=False)
+    @dataclass
     class KycRecord:
         """Production shape: identity plus ``PhoneNumberValidator(region='IN')``."""
 
+        registry: IdentityRegistry = field(repr=False, compare=False)
         aadhaar: str = aadhaar_field
         pan: str = pan_field
         phone: str = _PHONE
-
-        def __init__(
-            self,
-            aadhaar: str,
-            pan: str,
-            phone: str,
-            *,
-            registry: IdentityRegistry,
-        ) -> None:
-            self.registry = registry
-            self.aadhaar = aadhaar
-            self.pan = pan
-            self.phone = phone
 
         @aadhaar.post_validate
         def aadhaar_free(self, value: str) -> str:
@@ -168,9 +150,9 @@ class KycService:
         """Accept a KYC row. Identity, registry, or phone failures raise."""
         if phone is not None and HAS_PHONENUMBERS and KycRecord is not KycIdentity:
             return KycRecord(
-                aadhaar, pan, phone, registry=self.registry
+                registry=self.registry, aadhaar=aadhaar, pan=pan, phone=phone
             )
-        return KycIdentity(aadhaar, pan, registry=self.registry)
+        return KycIdentity(registry=self.registry, aadhaar=aadhaar, pan=pan)
 
 
 def main() -> KycIdentity:

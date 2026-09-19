@@ -5,7 +5,7 @@ Facades prove host/slug/GTIN/ZIP. Uniqueness hangs on ``post_validate``.
 ``catalog`` is the injected store, not a column.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -44,8 +44,9 @@ class InMemoryStoreCatalog:
         self._hosts.add(host.casefold())
 
 
-@dataclass(init=False)
+@dataclass
 class Storefront:
+    catalog: StoreCatalog = field(repr=False, compare=False)
     public_id: str = ULIDValidator(required=True)
     host: str = HostnameValidator(required=True)
     slug: str = SlugValidator(required=True)
@@ -53,27 +54,6 @@ class Storefront:
     currency: str = CurrencyCodeValidator(required=True)
     tz: str = TimezoneValidator(required=True)
     zip: str = USZipCodeValidator()
-
-    def __init__(
-        self,
-        public_id: str,
-        host: str,
-        slug: str,
-        currency: str,
-        tz: str,
-        *,
-        catalog: StoreCatalog,
-        gtin: str | None = None,
-        zip: str | None = None,
-    ) -> None:
-        self.catalog = catalog
-        self.public_id = public_id
-        self.host = host
-        self.slug = slug
-        self.gtin = gtin
-        self.currency = currency
-        self.tz = tz
-        self.zip = zip
 
     @host.post_validate
     def host_available(self, value: str) -> str:
@@ -104,12 +84,12 @@ class StorefrontService:
         zip: str | None = None,
     ) -> Storefront:
         return Storefront(
-            public_id,
-            host,
-            slug,
-            currency,
-            tz,
             catalog=self.catalog,
+            public_id=public_id,
+            host=host,
+            slug=slug,
+            currency=currency,
+            tz=tz,
             gtin=gtin,
             zip=zip,
         )
