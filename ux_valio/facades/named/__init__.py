@@ -4,10 +4,10 @@
 Sibling domain modules (parallel, do not import each other)::
 
     india/    — KYC / GST / registry / bank
-    us/       — postal / bank / market
-    uk/       — postal / bank
-    canada    — postal (one identity → one module)
-    mexico    — CLABE (one identity → one module)
+    us/       — postal / bank / market / kyc
+    uk/       — postal / bank / kyc
+    canada/   — postal / kyc
+    mexico/   — bank / kyc
     finance/  — international rails / market / card / ISO currency
     catalog   — goods (ISBN, ISSN, EAN, GTIN, VIN)
     contact   — how to reach (Email, Phone, URL, Hostname)
@@ -41,7 +41,10 @@ from ``ux_valio``; domain imports are for source navigation
 (``from ux_valio.facades.named.india.gst import GSTINValidator``).
 """
 
-from ux_valio.facades.named.canada import CAPostalCodeValidator
+from ux_valio.facades.named.canada import (
+    CAPostalCodeValidator,
+    CanadianSINValidator,
+)
 from ux_valio.facades.named.catalog import (
     EANValidator,
     GTINValidator,
@@ -83,11 +86,17 @@ from ux_valio.facades.named.india import (
     UdyamValidator,
     VoterIdValidator,
 )
-from ux_valio.facades.named.mexico import CLABEValidator
-from ux_valio.facades.named.uk import UKPostcodeValidator, UKSortCodeValidator
+from ux_valio.facades.named.mexico import CLABEValidator, MexicoRFCValidator
+from ux_valio.facades.named.uk import (
+    NINOValidator,
+    UKPostcodeValidator,
+    UKSortCodeValidator,
+)
 from ux_valio.facades.named.us import (
     ABARoutingValidator,
     CUSIPValidator,
+    EINValidator,
+    SSNValidator,
     USZipCodeValidator,
 )
 from ux_valio.facades.named.portal import (
@@ -100,51 +109,56 @@ from ux_valio.facades.named.portal import (
 )
 
 __all__ = [
-    "ABARoutingValidator",
     "AadhaarCardValidator",
+    "ABARoutingValidator",
     "BICValidator",
+    "CanadianSINValidator",
     "CAPostalCodeValidator",
+    "CardExpiryValidator",
     "CINValidator",
     "CLABEValidator",
-    "CUSIPValidator",
-    "CardExpiryValidator",
     "CountryCodeValidator",
     "CurrencyCodeValidator",
+    "CUSIPValidator",
     "DINValidator",
     "EANValidator",
+    "EINValidator",
     "EmailValidator",
     "ExpiryValidator",
     "FSSAIValidator",
     "GSTINValidator",
     "GTINValidator",
-    "HSNCodeValidator",
     "HostnameValidator",
+    "HSNCodeValidator",
     "IBANValidator",
     "IFSCValidator",
     "IMEIValidator",
+    "IndianPassportValidator",
     "ISBNValidator",
     "ISINValidator",
     "ISSNValidator",
-    "IndianPassportValidator",
     "LEIValidator",
     "LLPINValidator",
     "LocaleValidator",
     "MACAddressValidator",
+    "MexicoRFCValidator",
+    "NINOValidator",
     "PANCardValidator",
     "PaymentCardValidator",
     "PhoneNumberValidator",
     "PinCodeValidator",
     "SemVerValidator",
     "SlugValidator",
+    "SSNValidator",
     "TANValidator",
     "TimezoneValidator",
+    "UdyamValidator",
     "UKPostcodeValidator",
     "UKSortCodeValidator",
     "ULIDValidator",
     "UPIIdValidator",
     "URLValidator",
     "USZipCodeValidator",
-    "UdyamValidator",
     "VINValidator",
     "VoterIdValidator",
 ]

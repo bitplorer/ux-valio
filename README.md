@@ -410,8 +410,8 @@ Same field-default pattern as `StringValidator`. Print grouping strips;
 the **stored value is the compact identity**. `None` skips. Stdlib only —
 no portal, no DNS, no BIN lookup. `help(GSTINValidator)` is the per-facade
 contract. Source lives in sibling domain modules under `facades/named/`
-(`india/` `{kyc,gst,registry,bank}`, `us/` `{postal,bank,market}`,
-`uk/` `{postal,bank}`, `canada`, `mexico`,
+(`india/` `{kyc,gst,registry,bank}`, `us/` `{postal,bank,market,kyc}`,
+`uk/` `{postal,bank,kyc}`, `canada/` `{postal,kyc}`, `mexico/` `{bank,kyc}`,
 `finance/` `{rail,market,card,currency}` — ISO/international only,
 `catalog`, `contact`,
 `device`, `portal`, `expiry`) —
@@ -492,6 +492,11 @@ row = Counterparty(
 | `CAPostalCodeValidator` | `A1A 1A1` | Canada Post |
 | `UKPostcodeValidator` | outward inward | Royal Mail |
 | `LocaleValidator` | `en` / `en-IN` | ISO 639-1 + 3166-1 |
+| `SSNValidator` | 9 digits | SSA area/group/serial |
+| `EINValidator` | 9 digits | US EIN |
+| `NINOValidator` | 9 chars | HMRC NINO |
+| `CanadianSINValidator` | 9 digits | Luhn |
+| `MexicoRFCValidator` | 12 or 13 | SAT check digit |
 | `SemVerValidator` | `MAJOR.MINOR.PATCH` | SemVer 2 |
 | `EmailValidator` | given string | addr-spec **fullmatch** |
 | `URLValidator` | given string | scheme + netloc |

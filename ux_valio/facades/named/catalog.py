@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Goods identity (ISBN/EAN/GTIN/VIN). Parallel to finance/india.
+"""Goods identity (ISBN/ISSN/EAN/GTIN/VIN). Parallel to finance/india.
 
 Does not import sibling named domain modules. Depends on typed
 (or the validate door). Public names still re-export from

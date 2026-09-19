@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Canada postal identity.
 
-Does not import sibling named domain modules. Depends on typed.
-Public names re-export from ``ux_valio`` / ``ux_valio.facades.named``.
+Sibling of the other ``canada`` layers — does not import them.
+Depends on typed. Public names re-export from ``ux_valio`` /
+``ux_valio.facades.named.canada``.
 """
 
 from __future__ import annotations

@@ -104,6 +104,11 @@ def test_min_max_leaves_are_exported():
         "ISSNValidator",
         "LocaleValidator",
         "SemVerValidator",
+        "SSNValidator",
+        "EINValidator",
+        "NINOValidator",
+        "CanadianSINValidator",
+        "MexicoRFCValidator",
         "GTINValidator",
         "HostnameValidator",
         "SlugValidator",
@@ -239,8 +244,16 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert uk.is_dir()
     assert (uk / "postal.py").is_file()
     assert (uk / "bank.py").is_file()
-    assert (named / "canada.py").is_file()
-    assert (named / "mexico.py").is_file()
+    canada = named / "canada"
+    assert canada.is_dir()
+    assert (canada / "postal.py").is_file()
+    assert (canada / "kyc.py").is_file()
+    mexico = named / "mexico"
+    assert mexico.is_dir()
+    assert (mexico / "bank.py").is_file()
+    assert (mexico / "kyc.py").is_file()
+    assert not (named / "canada.py").exists()
+    assert not (named / "mexico.py").exists()
     assert not (named / "address.py").exists()
     assert (named / "catalog.py").is_file()
     assert (named / "contact.py").is_file()

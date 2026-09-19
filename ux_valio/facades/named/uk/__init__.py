@@ -5,15 +5,18 @@ Sibling layers (do not import each other)::
 
     postal — Royal Mail postcode
     bank   — sort code
+    kyc    — NINO
 
 Parallel to ``named.india`` / ``named.us``. Public names re-export
 from ``ux_valio``.
 """
 
 from ux_valio.facades.named.uk.bank import UKSortCodeValidator
+from ux_valio.facades.named.uk.kyc import NINOValidator
 from ux_valio.facades.named.uk.postal import UKPostcodeValidator
 
 __all__ = [
+    "NINOValidator",
     "UKPostcodeValidator",
     "UKSortCodeValidator",
 ]

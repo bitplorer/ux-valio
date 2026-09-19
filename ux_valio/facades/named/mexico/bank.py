@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Mexico bank rail (CLABE).
 
-Does not import sibling named domain modules. Depends on typed.
-Public names re-export from ``ux_valio`` / ``ux_valio.facades.named``.
+Sibling of the other ``mexico`` layers — does not import them.
+Depends on typed. Public names re-export from ``ux_valio`` /
+``ux_valio.facades.named.mexico``.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from ux_valio.facades.typed import StringValidator
+
 
 _CLABE_WEIGHTS = (3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7)
 

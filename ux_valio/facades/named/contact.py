@@ -8,12 +8,13 @@ Does not import sibling named domain modules. Depends on typed
 
 from __future__ import annotations
 
+import re
+import urllib.parse
 from typing import Any
+
 from ux_valio.facades.typed import StringValidator
 from ux_valio.pattern import Pattern, PatternType
 from ux_valio.validators.leaves import PatternValidator
-import urllib.parse
-import re
 
 _EMAIL_PATTERN = Pattern(
     r"(?:[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*|"
