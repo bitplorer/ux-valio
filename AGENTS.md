@@ -23,7 +23,8 @@ a parallel folder, not inside the layer they depend on.
   `Validator`. `named/` — identity products, **sibling domain modules**
   (parallel, do not import each other): `india/` is a folder of layers
   (`kyc`, `gst`, `registry`, `bank` — they do not import each other);
-  `finance` (IBAN/BIC/card/currency), `catalog` (ISBN/EAN/GTIN/VIN),
+  `finance/` is the same shape (`rail`, `market`, `card`, `currency`);
+  `catalog` (ISBN/EAN/GTIN/VIN),
   `contact` (email/phone/URL/hostname), `device` (IMEI/MAC),
   `portal` (slug/country/timezone/ULID), `expiry` (wall-clock).
   Each domain module subclasses `StringValidator` (expiry : `Validator`).

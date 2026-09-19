@@ -3,8 +3,8 @@
 
 Sibling domain modules (parallel, do not import each other)::
 
-    india/   — KYC / GST / registry / bank  (folder of layers)
-    finance  — money / cards / ISO currency (IBAN, BIC, PaymentCard, …)
+    india/    — KYC / GST / registry / bank  (folder of layers)
+    finance/  — rails / market / card / ISO currency (folder of layers)
     catalog  — goods (ISBN, EAN, GTIN, VIN)
     contact  — how to reach (Email, Phone, URL, Hostname)
     device   — hardware (IMEI, MAC)
