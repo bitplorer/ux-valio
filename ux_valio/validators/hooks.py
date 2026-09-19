@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from types import SimpleNamespace
-from typing import Any, Callable
+from typing import Any, Callable, is_typeddict
 
 from ux_valio.validators.async_bridge import invoke_callable, spawn_task, wait_tasks
 
@@ -78,47 +78,29 @@ class HookHost:
         )
 
     @staticmethod
-    def _collect_owner_keys(instance: Any) -> tuple[str, ...]:
-        """Owner keys from base to derived. Inherited hooks fire on a child."""
+    def _collect_owner_keys(instance: Any, bound: type | None = None) -> tuple[str, ...]:
+        """Owner keys from base to derived. Inherited hooks fire on a child.
+
+        TypedDict values are dicts, so instance MRO is ``dict``. When
+        ``__set_name__`` bound this descriptor to a TypedDict, look up
+        that class (the class body that hung ``@name.add_*``).
+        """
+        cls = bound if bound is not None and is_typeddict(bound) else None
+        if cls is None:
+            if instance is None:
+                return ()
+            cls = instance.__class__
         keys: list[str] = []
         seen: set[str] = set()
-        for cls in instance.__class__.__mro__:
-            if cls is object:
+        for item in cls.__mro__:
+            if item is object:
                 continue
-            key = HookHost._owner_key(cls)
+            key = HookHost._owner_key(item)
             if key in seen:
                 continue
             seen.add(key)
             keys.append(key)
         keys.reverse()
-        return tuple(keys)
-
-    def _iter_owner_keys(self, instance: Any) -> tuple[str, ...]:
-        """Owner keys for this run. ``_hook_schema`` is a TypedDict class.
-
-        TypedDict values are dicts at runtime, so instance MRO is ``dict``.
-        Hooks hung on the TypedDict (``@name.add_*`` in that class body) live
-        under the schema's ``module.qualname``.
-        """
-        seen: set[str] = set()
-        keys: list[str] = []
-        schema = getattr(self, "_hook_schema", None)
-        if schema is not None:
-            for cls in getattr(schema, "__mro__", ()):
-                if cls is object or cls is dict:
-                    continue
-                key = HookHost._owner_key(cls)
-                if key in seen:
-                    continue
-                seen.add(key)
-                keys.append(key)
-            keys.reverse()
-        if instance is not None:
-            for key in HookHost._collect_owner_keys(instance):
-                if key in seen:
-                    continue
-                seen.add(key)
-                keys.append(key)
         return tuple(keys)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -216,14 +198,18 @@ class HookHost:
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
         hooks = self._processors[phase]
-        for key in self._iter_owner_keys(instance):
+        for key in HookHost._collect_owner_keys(
+            instance, getattr(self, "_owner", None)
+        ):
             for func in hooks.get(key, ()):
                 value = invoke_callable(func, instance, value)
         return value
 
     def _run_tasks(self, phase: str, instance: Any, value: Any) -> Any:
         hooks = self._tasks[phase]
-        for key in self._iter_owner_keys(instance):
+        for key in HookHost._collect_owner_keys(
+            instance, getattr(self, "_owner", None)
+        ):
             for func in hooks.get(key, ()):
                 spawn_task(self, func, instance, value)
         return value
@@ -260,12 +246,13 @@ class HookHost:
         return self._process_then_tasks("post_delete", instance, value)
 
     def _run_custom_validators(self, instance: Any, value: Any) -> None:
-        if instance is None and getattr(self, "_hook_schema", None) is None:
+        bound = getattr(self, "_owner", None)
+        if instance is None and bound is None:
             return
         errors: list[BaseException] = []
         collect_all = getattr(self, "collect_all", True)
         name = getattr(self, "name", None)
-        for key in self._iter_owner_keys(instance):
+        for key in HookHost._collect_owner_keys(instance, bound):
             for func in self._custom_validators.get(key, ()):
                 try:
                     invoke_callable(func, instance, value)

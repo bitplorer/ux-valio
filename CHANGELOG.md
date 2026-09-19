@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- TypedDict hook lookup uses ``__set_name__`` ``_owner`` (no ``_hook_schema``
+  sticky state). Qualifiers peel by identity. ``_validate_typed_dict``.
+
 - TypedDict keys accept Door A assignment (``name: str = StringValidator()``)
   and ``@name.add_process_*`` / ``@name.add_validator`` in that class body.
   ``self`` is the mapping. ``pre_set`` write-back then ``post_set``.
