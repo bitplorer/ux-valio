@@ -53,6 +53,8 @@ then `mkdocs serve`).
 | [Field logging](docs/how-to/logging.md) | `logger=True` → `module.qualname.field` |
 | [Workflows](docs/how-to/workflows.md) | one file per real-world case |
 | [Typing](docs/how-to/typing.md) | `Validator[T]`, mypy plugin |
+| [Validator kwargs](docs/reference/validator.md) | `doc`, `default`, `default_factory`, `reassign`, … |
+
 | [Named identities](docs/reference/named.md) | compact identity catalog |
 | [Choices](docs/explanation/choices.md) | why these defaults, how they affect usage |
 | [Honesty](docs/explanation/honesty.md) | debug, logger `module.qualname.field`, slots |

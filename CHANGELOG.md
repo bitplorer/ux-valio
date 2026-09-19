@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Validator constructor kwargs documented one-by-one with examples
+  (``doc``, ``default``, ``default_factory``, ``reassign``, bounds, …).
+  Live check: ``examples/validator_kwargs.py``.
+
 - Field-level logging: how-to + ``examples/field_logging.py``
   (``logger=True`` / custom ``Logger`` / OFF).
 

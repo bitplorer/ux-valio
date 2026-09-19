@@ -34,7 +34,9 @@ facade you want.
 | Copy a production workflow | [Workflows](how-to/workflows.md) |
 | Log one field (`logger=True`) | [Field-level logging](how-to/logging.md) |
 | Keep mypy/Pylance quiet | [Typing](how-to/typing.md) |
-| Know every kwarg / leaf | [Validator](reference/validator.md) |
+| Know every constructor kwarg (`doc`, `default`, `reassign`, …) | [Validator](reference/validator.md) |
+
+
 | `int` / `str` / `date` / `UUID` / … | [Typed facades](reference/typed.md) |
 | GSTIN, IBAN, ZIP, cards, … | [Named identities](reference/named.md) |
 | `Digit` / `StartsWith` / `SetOf` | [Pattern](reference/pattern.md) |
