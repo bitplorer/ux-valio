@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: MIT
+"""IFSC Door A facade. 11-char RBI identity. No RBI directory lookup."""
+
+from __future__ import annotations
+
+import re
+from typing import Any
+
+from ux_valio.facades.typed import StringValidator
+
+# Four-letter bank, then 0, then six alphanumeric branch.
+_IFSC = re.compile(r"[A-Z]{4}0[A-Z0-9]{6}")
+
+
+class IFSCValidator(StringValidator):
+    """Door A string facade: Indian Financial System Code identity."""
+
+    @staticmethod
+    def _is_valid_ifsc(value: Any) -> bool:
+        return isinstance(value, str) and _IFSC.fullmatch(value) is not None
+
+    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+        if isinstance(value, str):
+            value = "".join(value.split()).replace("-", "").upper()
+        return super().pre_validation_processing(instance, value)
+
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if not type(self)._is_valid_ifsc(value):
+            raise ValueError(f"{self.name} is not a valid IFSC")

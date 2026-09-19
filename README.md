@@ -396,6 +396,12 @@ Min/max length and value leaves (`MinLengthValidator`, `MaxLengthValidator`,
 site or with `add_validator`. RGB/HSL color validators are retired.
 `HexColorValidator` is not a public facade.
 
+Identity facades (stdlib only, no network): `AadhaarCardValidator`,
+`PANCardValidator`, `GSTINValidator` (Luhn mod 36), `IFSCValidator`,
+`PinCodeValidator` (India PIN), `UPIIdValidator`, `IBANValidator` (mod-97),
+`IMEIValidator` (Luhn), `PaymentCardValidator`, `ExpiryValidator`.
+`PhoneNumberValidator` stays the `phonenumbers` extra.
+
 ## Migration (Door B → Door A)
 
 Valio README taught a second door: construct a `*Field`, hang decorators on

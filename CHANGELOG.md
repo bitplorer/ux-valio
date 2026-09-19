@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Named identity facades: ``GSTINValidator``, ``IFSCValidator``,
+  ``PinCodeValidator``, ``UPIIdValidator``, ``IBANValidator``,
+  ``IMEIValidator``. Format ∩ checksum where one exists; no network.
+
 - Package layers: ``errors`` / ``descriptor`` / ``pattern`` / ``validators``
   (the door) / ``facades`` (named products, sibling of the door). The door
   does not import facades.

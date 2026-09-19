@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: MIT
+"""India PIN Door A facade. 6-digit India Post identity. No locality lookup."""
+
+from __future__ import annotations
+
+import re
+from typing import Any
+
+from ux_valio.facades.typed import StringValidator
+
+# First digit 1–9 (no 0-prefix). Compact 6 digits.
+_PIN = re.compile(r"[1-9][0-9]{5}")
+
+
+class PinCodeValidator(StringValidator):
+    """Door A string facade: Indian PIN code identity."""
+
+    @staticmethod
+    def _is_valid_pincode(value: Any) -> bool:
+        return isinstance(value, str) and _PIN.fullmatch(value) is not None
+
+    def pre_validation_processing(self, instance: Any, value: Any) -> Any:
+        if isinstance(value, str):
+            value = "".join(ch for ch in value if ch.isdigit())
+        return super().pre_validation_processing(instance, value)
+
+    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if value is None:
+            return
+        if not type(self)._is_valid_pincode(value):
+            raise ValueError(f"{self.name} is not a valid Indian PIN code")
