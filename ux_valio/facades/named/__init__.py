@@ -47,26 +47,48 @@ from ux_valio.facades.named.upi import UPIIdValidator
 from ux_valio.facades.named.url import URLValidator
 from ux_valio.facades.named.vin import VINValidator
 from ux_valio.facades.named.voter import VoterIdValidator
+from ux_valio.facades.named.aba import ABARoutingValidator
+from ux_valio.facades.named.card_expiry import CardExpiryValidator
+from ux_valio.facades.named.country import CountryCodeValidator
+from ux_valio.facades.named.currency import CurrencyCodeValidator
+from ux_valio.facades.named.gtin import GTINValidator
+from ux_valio.facades.named.hostname import HostnameValidator
+from ux_valio.facades.named.hsn import HSNCodeValidator
+from ux_valio.facades.named.lei import LEIValidator
+from ux_valio.facades.named.slug import SlugValidator
+from ux_valio.facades.named.timezone import TimezoneValidator
+from ux_valio.facades.named.ulid import ULIDValidator
 
 __all__ = [
+    "ABARoutingValidator",
     "AadhaarCardValidator",
     "BICValidator",
     "CINValidator",
+    "CardExpiryValidator",
+    "CountryCodeValidator",
+    "CurrencyCodeValidator",
     "EANValidator",
     "EmailValidator",
     "ExpiryValidator",
     "GSTINValidator",
+    "GTINValidator",
+    "HSNCodeValidator",
+    "HostnameValidator",
     "IBANValidator",
     "IFSCValidator",
     "IMEIValidator",
     "ISBNValidator",
     "ISINValidator",
+    "LEIValidator",
     "MACAddressValidator",
     "PANCardValidator",
     "PaymentCardValidator",
     "PhoneNumberValidator",
     "PinCodeValidator",
+    "SlugValidator",
     "TANValidator",
+    "TimezoneValidator",
+    "ULIDValidator",
     "UPIIdValidator",
     "URLValidator",
     "VINValidator",

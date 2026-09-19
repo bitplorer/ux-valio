@@ -160,6 +160,12 @@ a parallel folder, not inside the layer they depend on.
   `EANValidator` is 13-digit GS1. `VINValidator` is ISO 3779 (no I/O/Q).
   `MACAddressValidator` stores 12 uppercase hex digits. `TANValidator` /
   `CINValidator` / `VoterIdValidator` are format identities (no portal).
+  E-commerce / SaaS: `GTINValidator` (8/12/13/14), `HostnameValidator`,
+  `SlugValidator` (does not slugify), `CurrencyCodeValidator` (ISO 4217),
+  `CountryCodeValidator` (ISO 3166-1 alpha-2), `TimezoneValidator`
+  (IANA / ``zoneinfo``), `ULIDValidator`, `LEIValidator`,
+  `CardExpiryValidator` (MMYY print form, not ``ExpiryValidator``),
+  `HSNCodeValidator`, `ABARoutingValidator`.
   All stdlib, no network.
 - Named typed facades call their extra check from `validate()` after the
   inherited path; they do not hang ``validator`` themselves on each assignment.

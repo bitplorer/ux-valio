@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- E-commerce / SaaS named facades: ``GTINValidator``, ``HostnameValidator``,
+  ``SlugValidator``, ``CurrencyCodeValidator``, ``CountryCodeValidator``,
+  ``TimezoneValidator``, ``ULIDValidator``, ``LEIValidator``,
+  ``CardExpiryValidator``, ``HSNCodeValidator``, ``ABARoutingValidator``.
+
 - Named identity facades: class ``help()`` usage, README table (compact
   store, checksum vs format), ``examples/identity_fields.py``.
 

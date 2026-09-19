@@ -23,6 +23,7 @@ EXAMPLE_MODULES = (
     "collect_all_form",
     "typed_dict_schema",
     "identity_fields",
+    "commerce_fields",
 )
 
 
