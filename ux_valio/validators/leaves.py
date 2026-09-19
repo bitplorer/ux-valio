@@ -159,11 +159,26 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
     return _isinstance_closed(value, target)
 
 
+def _unwrap_field_annotation(annotation: Any) -> tuple[Any, tuple[Any, ...]]:
+    """Peel ``Annotated`` / ``Required`` / ``NotRequired``. Keep validator extras."""
+    extras: list[Any] = []
+    while True:
+        origin = get_origin(annotation)
+        if origin is Annotated:
+            args = get_args(annotation)
+            annotation = args[0] if args else annotation
+            extras.extend(args[1:])
+            continue
+        name = getattr(origin, "__name__", "")
+        if name in {"Required", "NotRequired"}:
+            args = get_args(annotation)
+            annotation = args[0] if args else annotation
+            continue
+        return annotation, tuple(extras)
+
+
 def _annotated_store_type(annotation: Any) -> Any:
-    if get_origin(annotation) is Annotated:
-        args = get_args(annotation)
-        return args[0] if args else annotation
-    return annotation
+    return _unwrap_field_annotation(annotation)[0]
 
 
 def _typed_dict_match(value: Any, annotation: Any) -> bool:
@@ -229,11 +244,7 @@ def _apply_typed_dict_extras(owner: Any, instance: Any, value: Any, annotation: 
             continue
         item = value[key]
         extras: tuple[Any, ...] = ()
-        store = field_ann
-        if get_origin(field_ann) is Annotated:
-            args = get_args(field_ann)
-            store = args[0] if args else field_ann
-            extras = args[1:]
+        store, extras = _unwrap_field_annotation(field_ann)
         for extra in extras:
             if not isinstance(extra, ValidateProperty):
                 continue
