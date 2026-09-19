@@ -13,7 +13,7 @@ field default, leaf or facade.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar, get_origin, is_typeddict
 
 from ux_valio.descriptor import Property, _Opts, _UNSET, is_subclass_of
 from ux_valio.errors import ValidationErrors, raise_collected, run_steps
@@ -76,6 +76,12 @@ class ValidateProperty(HookHost, Property[T], ABC):
             raise TypeError(
                 f"{self.name} expect {annotation} type, got {type(value).__name__} type instead"
             )
+        if (
+            isinstance(annotation, type)
+            and get_origin(annotation) is None
+            and not is_typeddict(annotation)
+        ):
+            return
         from ux_valio.validators.leaves import _validate_typed_dict
 
         _validate_typed_dict(self, value)

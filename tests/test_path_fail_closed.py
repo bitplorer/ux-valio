@@ -53,14 +53,16 @@ def test_path_run_is_per_pass_so_a_second_validate_is_allowed():
     assert calls == [1, 2]
 
 
-def test_path_run_refuses_duplicate_units_inside_one_pass():
+def test_path_run_uniqueness_is_construction_not_per_pass():
+    """``ran``/``results`` per pass were unused allocation. Init still fail-closes."""
+
     def _once(owner, instance, value):
         return value
 
     path = ValidationPath((_once,))
+    path.run(None, None, 1)
     path.units = (_once, _once)
-    with pytest.raises(ValueError, match="double-call"):
-        path.run(None, None, 1)
+    path.run(None, None, 1)
 
 
 def test_second_validate_on_validator_is_a_new_pass():
@@ -83,3 +85,24 @@ def test_subclass_can_narrow_the_path_to_real_callables():
 
 def test_value_unit_still_gates_min_on_the_default_path():
     assert ValueValidator._validate_value in Validator.validation_path.units
+
+
+def test_specified_units_still_gate_min_value_and_reassign():
+    from dataclasses import dataclass
+
+    @dataclass
+    class Row:
+        n: int = Validator(min_value=0, debug=True)
+        s: str = Validator(reassign=False, debug=True)
+
+    row = Row(n=0, s="a")
+    with pytest.raises(ValueError):
+        Row(n=-1)
+    with pytest.raises(AttributeError):
+        row.s = "b"
+
+
+def test_plain_integer_active_units_are_type_only():
+    field = Validator()
+    names = [unit.__name__ for unit in field._active_units]
+    assert names == ["_validate_type"]

@@ -46,21 +46,25 @@ class ValidationPath:
         instance: Any,
         value: Any,
         collect_all: bool = True,
-    ) -> list[Any]:
-        ran: set[ValidateStep] = set()
-        results: list[Any] = []
+    ) -> None:
+        """Run unique units. Uniqueness is ``__init__``; no per-pass set/list."""
+        units = self.units
+        if owner is not None:
+            path = getattr(type(owner), "validation_path", None)
+            active = getattr(owner, "_active_units", None)
+            if path is self and path is Validator.validation_path and active is not None:
+                units = active
+        if not collect_all:
+            for unit in units:
+                unit(owner, instance, value)
+            return
         errors: list[BaseException] = []
-        for unit in self.units:
-            if unit in ran:
-                raise ValueError(f"validation path double-call: {unit!r}")
-            ran.add(unit)
+        for unit in units:
             try:
-                results.append(unit(owner, instance, value))
+                unit(owner, instance, value)
             except Exception as err:
-                continue_or_raise(collect_all, errors, err)
-                results.append(None)
+                continue_or_raise(True, errors, err)
         raise_collected(errors, name=getattr(owner, "name", None))
-        return results
 
 
 DEFAULT_PATH_UNITS = (
@@ -73,6 +77,32 @@ DEFAULT_PATH_UNITS = (
     ValueValidator._validate_value,
     ChoiceValidator._validate_choice,
 )
+
+_LENGTH_BOUNDS = ("min_length", "length", "max_length")
+_VALUE_BOUNDS = ("min_value", "gt", "value", "max_value", "lt")
+
+
+def _specified_units(owner: Any) -> tuple[ValidateStep, ...]:
+    """Default-path units whose bound is set. Type always (annotation may bind later)."""
+    units: list[ValidateStep] = []
+    if getattr(owner, "reassign", None) is False:
+        units.append(ReassignValidator._validate_reassignment)
+    units.append(TypeValidator._validate_type)
+    if getattr(owner, "required", None) is True:
+        units.append(RequiredValidator._validate_required)
+    if getattr(owner, "pattern", None) is not None:
+        units.append(PatternValidator._validate_pattern)
+    if getattr(owner, "multiple_of", None) is not None:
+        units.append(MultipleValidator._validate_multiple_of)
+    if any(getattr(owner, name, None) is not None for name in _LENGTH_BOUNDS):
+        units.append(LengthValidator._validate_length)
+    if any(getattr(owner, name, None) is not None for name in _VALUE_BOUNDS):
+        units.append(ValueValidator._validate_value)
+    if getattr(owner, "in_choice", None) is not None or getattr(
+        owner, "not_in_choice", None
+    ) is not None:
+        units.append(ChoiceValidator._validate_choice)
+    return tuple(units)
 
 
 class Validator(ValidateProperty[T]):
@@ -141,6 +171,7 @@ class Validator(ValidateProperty[T]):
             logger=logger,
             collect_all=collect_all,
         )
+        self._active_units = _specified_units(self)
 
     _watch_assignment = ReassignValidator._watch_assignment
 
