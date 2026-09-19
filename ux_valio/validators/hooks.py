@@ -12,7 +12,12 @@ from collections import defaultdict
 from types import SimpleNamespace
 from typing import Any, Callable, is_typeddict
 
-from ux_valio.validators.async_bridge import invoke_callable, spawn_task, wait_tasks
+from ux_valio.validators.async_bridge import (
+    invoke_callable,
+    spawn_task,
+    wait_tasks as wait_outstanding,
+)
+
 
 from ux_valio.errors import continue_or_raise, raise_collected
 
@@ -221,7 +226,7 @@ class HookHost:
     @staticmethod
     def wait_tasks(timeout: float | None = None) -> None:
         """Wait for background ``task_*`` work."""
-        wait_tasks(timeout)
+        wait_outstanding(timeout)
 
     def _process_then_tasks(self, phase: str, instance: Any, value: Any) -> Any:
         value = self._run_processors(phase, instance, value)

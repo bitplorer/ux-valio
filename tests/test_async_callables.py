@@ -347,3 +347,67 @@ def test_nested_nest_safe_bridge_is_typeerror_not_deadlock():
 
     with pytest.raises(TypeError, match="deadlock"):
         nest_safe_bridge(outer())
+
+
+def test_async_add_validator_no_loop_fail_closed():
+    v = Validator(debug=True)
+
+    async def unique(instance, value):
+        return value
+
+    @dataclass
+    class Host:
+        x: str = v
+
+    v.add_validator(unique, namespace=Host)
+    with pytest.raises(TypeError, match="running event loop"):
+        Host(x="ada")
+
+
+def test_async_add_validator_runs_with_running_loop():
+    seen = []
+    v = Validator(debug=True)
+
+    async def unique(instance, value):
+        await asyncio.sleep(0)
+        seen.append(value)
+
+    @dataclass
+    class Host:
+        x: str = v
+
+    v.add_validator(unique, namespace=Host)
+    host = _assign_on_running_loop(lambda: Host(x="ada"))
+    assert host.x == "ada"
+    assert seen == ["ada"]
+
+
+def test_async_get_and_delete_phases_run_with_running_loop():
+    log = []
+    v = Validator(debug=True)
+
+    async def on_get(instance, value):
+        await asyncio.sleep(0)
+        log.append(("get", value))
+        return value
+
+    async def on_del(instance, value):
+        await asyncio.sleep(0)
+        log.append(("del", value))
+
+    @dataclass
+    class Host:
+        x: str = v
+
+    v.pre_get(on_get, namespace=Host)
+    v.task_post_delete(on_del, namespace=Host)
+
+    def work():
+        host = Host(x="ada")
+        assert host.x == "ada"
+        del host.x
+        return host
+
+    _assign_on_running_loop(work)
+    HookHost.wait_tasks(timeout=2)
+    assert log == [("get", "x"), ("del", "x")]
