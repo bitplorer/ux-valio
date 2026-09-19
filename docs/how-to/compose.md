@@ -6,26 +6,31 @@ Concern leaves (`LengthValidator`, `RequiredValidator`, …) are the
 is `AllOf` — an alias, not a third AND. Facades do not multiple-inherit
 leaves.
 
+`required=True` rejects `None`. `min_length=1` rejects `""`. Do not hang
+`if not value` on top of either — that repeats the door. Hang a rule the
+leaves do not already own (reserved name, uniqueness, strip).
+
 ```python
 from dataclasses import dataclass
 from ux_valio import LengthValidator, RequiredValidator, StringValidator
 
+# Two leaves, one descriptor. None vs empty string are different doors.
 tag: str = LengthValidator(min_length=3) & RequiredValidator(required=True)
 
+RESERVED = {"admin", "root", "system"}
+
 @dataclass
-class User:
-    name: str = StringValidator(max_length=50) & RequiredValidator(
-        required=True
-    )
+class Handle:
+    handle: str = StringValidator(min_length=3, max_length=20, required=True)
 
-    @name.pre_validate
-    def strip(self, value: str) -> str:
-        return value.strip()
+    @handle.pre_validate
+    def fold(self, value: str) -> str:
+        return value.strip().casefold()
 
-    @name.validator
-    def not_blank(self, value: str) -> None:
-        if not value:
-            raise ValueError("blank")
+    @handle.validator
+    def not_reserved(self, value: str) -> None:
+        if value in RESERVED:
+            raise ValueError("reserved handle")
 ```
 
 `&` / `|` return `AllOf` / `AnyOf` from `ValidateProperty` — same

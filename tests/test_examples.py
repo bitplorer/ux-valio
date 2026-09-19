@@ -102,6 +102,13 @@ def test_service_examples_inject_ports_in_the_constructor():
         "checkout",
         "indian_kyc",
         "compose_hooks",
+        "user_account",
+        "identity_fields",
+        "commerce_fields",
+        "sku_codes",
+        "lookaround_units",
+        "dates_paths",
+        "typed_dict_schema",
     ):
         src = (EXAMPLE_DIR / f"{name}.py").read_text()
         assert "bind_" not in src
@@ -418,3 +425,28 @@ def test_staff_directory_conflict_hangs_on_compose_root():
     row = service.create(name="  Grace  ", tag="ops", note=7, title="Engineer")
     assert row.name == "Grace"
     assert directory.name_taken("Grace")
+
+
+def test_account_username_conflict_does_not_commit():
+    from examples.user_account import AccountService, InMemoryAccountDirectory
+
+    directory = InMemoryAccountDirectory(taken={"ada"})
+    with pytest.raises(ValueError, match="already"):
+        AccountService(directory).open(username="Ada", email="ada@example.com")
+    assert not directory.username_taken("grace")
+    row = AccountService(InMemoryAccountDirectory()).open(
+        username="  Grace  ", email="grace@example.com"
+    )
+    assert row.username == "grace"
+
+
+def test_vendor_gstin_conflict_is_a_validation_failure():
+    from examples.identity_fields import InMemoryVendorRegistry, VendorService
+
+    taken = VendorService(InMemoryVendorRegistry(gstins={"09AAAPA1111F1ZP"}))
+    with pytest.raises(ValueError, match="already|GSTIN"):
+        taken.onboard(
+            gstin="09AAAPA1111F1ZP",
+            iban="GB82 WEST 1234 5698 7654 32",
+            bic="DEUTDEFF",
+        )

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Examples are service+port workflows (uniqueness / stock), not blank
+  checks on top of ``required``. Docs compose hang is reserved-handle,
+  not ``if not value``.
+
 - Handbook: ``docs/`` is Diátaxis (tutorial / how-to / reference /
   explanation). README is the PyPI front door. Optional
   ``mkdocs serve`` (``ux-valio[docs]``). Host-peer note lives under
