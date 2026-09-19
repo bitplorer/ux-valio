@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Drop unused ``number_of_assignment`` counter (valio leftover; reassign
+  uses ``_assignment_counts``). ``doc=`` is the descriptor ``__doc__``.
+  Choice helper parameter is ``container``, not ``bag``.
+
 - Drop unused ``Chain`` alias (it was ``AllOf``). Compose with ``AllOf``
   / ``&``. Not in ``__all__``.
 

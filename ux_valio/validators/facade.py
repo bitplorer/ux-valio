@@ -160,7 +160,6 @@ class Validator(ValidateProperty[T]):
         self._compiled = None
         self._compiled_source = object()
         self.reassign = reassign
-        self.number_of_assignment = 0
         self._assignment_counts: dict[int, int] = {}
         self._assignment_alive: dict[int, Any] = {}
         self.multiple_of = multiple_of

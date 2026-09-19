@@ -232,7 +232,7 @@ Public names KEEP (valio PatternTypes, `pre_validate` / `task_*` / `validator`, 
 `IfPrecededBy`. Modules are snake_case (`async_bridge`).
 Classes are CapWords. Methods/helpers are snake_case verbs. The public
 stored-type param is `Validator[T]`; `Property` uses `_StoreT`.
-`in_choice` / `not_in_choice` / `number_of_assignment` are valio names
+`in_choice` / `not_in_choice` are valio names
 on the facade — do not fashion-rename them.
 
 New private helpers are verbs that name the action:
