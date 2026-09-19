@@ -8,11 +8,12 @@ Hang extras with ``Annotated`` or field-default assignment, then
 """
 
 from dataclasses import dataclass, field
-from typing import Annotated, Protocol, TypedDict
+from typing import Annotated, Protocol, TypedDict, runtime_checkable
 
 from ux_valio import EmailValidator, StringValidator, Validator
 
 
+@runtime_checkable
 class InviteLog(Protocol):
     """Email uniqueness. Production: unique index on invite email."""
 
@@ -55,7 +56,11 @@ class Person(TypedDict):
 
 @dataclass
 class Invite:
-    log: InviteLog = field(repr=False, compare=False)
+    log: InviteLog = field(
+        default=Validator[InviteLog](required=True),
+        repr=False,
+        compare=False,
+    )
     person: Person = Validator()
 
     @person.post_validate

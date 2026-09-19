@@ -123,6 +123,19 @@ def test_service_examples_inject_ports_in_the_constructor():
 DEMO_PASSWORD = "Secret1a"
 
 
+def test_registration_port_is_validated():
+    from examples.registration import Registration
+
+    with pytest.raises(TypeError, match="UserStore"):
+        Registration(
+            users="not-a-store",
+            hasher=object(),
+            username="ada",
+            password="Secret1a",
+            password_confirm="Secret1a",
+        )
+
+
 def test_signup_username_conflict_is_a_validation_failure():
     from examples.collect_all_form import (
         InMemoryUserStore,

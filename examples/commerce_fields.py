@@ -6,7 +6,7 @@ Facades prove host/slug/GTIN/ZIP. Uniqueness hangs on ``post_validate``.
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ux_valio import (
     CurrencyCodeValidator,
@@ -16,9 +16,11 @@ from ux_valio import (
     TimezoneValidator,
     ULIDValidator,
     USZipCodeValidator,
+    Validator,
 )
 
 
+@runtime_checkable
 class StoreCatalog(Protocol):
     """Host uniqueness. Production: unique index on tenant host."""
 
@@ -46,7 +48,11 @@ class InMemoryStoreCatalog:
 
 @dataclass
 class Storefront:
-    catalog: StoreCatalog = field(repr=False, compare=False)
+    catalog: StoreCatalog = field(
+        default=Validator[StoreCatalog](required=True),
+        repr=False,
+        compare=False,
+    )
     public_id: str = ULIDValidator(required=True)
     host: str = HostnameValidator(required=True)
     slug: str = SlugValidator(required=True)

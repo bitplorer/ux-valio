@@ -10,7 +10,7 @@ This file does not ship a DB driver.
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ux_valio import (
     AllOf,
@@ -19,9 +19,11 @@ from ux_valio import (
     LengthValidator,
     RequiredValidator,
     StringValidator,
+    Validator,
 )
 
 
+@runtime_checkable
 class StaffDirectory(Protocol):
     """Display-name uniqueness. Production: HRIS/LDAP unique CN / email local-part."""
 
@@ -49,7 +51,11 @@ class InMemoryStaffDirectory:
 
 @dataclass
 class StaffProfile:
-    directory: StaffDirectory = field(repr=False, compare=False)
+    directory: StaffDirectory = field(
+        default=Validator[StaffDirectory](required=True),
+        repr=False,
+        compare=False,
+    )
     name: str = StringValidator(max_length=50) & RequiredValidator(
         required=True
     )

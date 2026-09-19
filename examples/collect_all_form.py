@@ -21,7 +21,7 @@ This file does not ship a DB driver or a crypto library in ``ux_valio``.
 import hashlib
 import hmac
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ux_valio import (
     AllOf,
@@ -32,6 +32,7 @@ from ux_valio import (
     SetOf,
     StringValidator,
     ValidationErrors,
+    Validator,
 )
 
 
@@ -44,6 +45,7 @@ class StoredUser:
         self.password_hash = password_hash
 
 
+@runtime_checkable
 class UserStore(Protocol):
     """Account uniqueness + hashed credential. Production: users table / unique index."""
 
@@ -60,6 +62,7 @@ class UserStore(Protocol):
         ...
 
 
+@runtime_checkable
 class PasswordHasher(Protocol):
     """Password digest. Production: bcrypt / argon2id (unique per-row salt)."""
 
@@ -135,8 +138,16 @@ login_password_field = StringValidator(required=True, min_length=1)
 
 @dataclass
 class SignupForm:
-    users: UserStore = field(repr=False, compare=False)
-    hasher: PasswordHasher = field(repr=False, compare=False)
+    users: UserStore = field(
+        default=Validator[UserStore](required=True),
+        repr=False,
+        compare=False,
+    )
+    hasher: PasswordHasher = field(
+        default=Validator[PasswordHasher](required=True),
+        repr=False,
+        compare=False,
+    )
     username: str = username_field
     email: str = EmailValidator(required=True)
     password: str = password_field
@@ -168,8 +179,16 @@ class SignupForm:
 
 @dataclass
 class LoginForm:
-    users: UserStore = field(repr=False, compare=False)
-    hasher: PasswordHasher = field(repr=False, compare=False)
+    users: UserStore = field(
+        default=Validator[UserStore](required=True),
+        repr=False,
+        compare=False,
+    )
+    hasher: PasswordHasher = field(
+        default=Validator[PasswordHasher](required=True),
+        repr=False,
+        compare=False,
+    )
     username: str = login_username_field
     password: str = login_password_field
 
