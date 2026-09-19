@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Payment card Luhn runs once, then brand match (Diners was 8× Luhn).
+  IANA timezones load on first ``TimezoneValidator`` check, not import.
+  ``portal.py`` stdlib imports first.
+
 - ``ITINValidator`` (the SSN docstring hole). RFC check-digit ``ValueError``
   is fail-closed. README duplicate IBAN row dropped. CURP not added
   (published check digits disagree).

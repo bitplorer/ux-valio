@@ -25,6 +25,18 @@ _JCB = re.compile(r"(?:352[8-9]|35[3-8][0-9])[0-9]{12}")
 _DINERS = re.compile(r"3(?:0[0-5]|[68][0-9])[0-9]{11}")
 
 
+_BRANDS = (
+    _VISA,
+    _MASTERCARD,
+    _AMEX,
+    _DISCOVER,
+    _RUPAY,
+    _UNIONPAY,
+    _JCB,
+    _DINERS,
+)
+
+
 class PaymentCardValidator(StringValidator):
     """Visa / Mastercard / Amex / Discover / Rupay / UnionPay / JCB / Diners ∩ Luhn.
 
@@ -40,12 +52,10 @@ class PaymentCardValidator(StringValidator):
     def _luhn_correctness(card_number: str) -> bool:
         if not card_number.isdigit():
             return False
-        digits = list(card_number)
-        digits.reverse()
         total = 0
         odd = True
-        for digit in digits:
-            n = int(digit)
+        for char in reversed(card_number):
+            n = int(char)
             if odd := not odd:
                 n *= 2
                 if n > 9:
@@ -54,28 +64,13 @@ class PaymentCardValidator(StringValidator):
         return total % 10 == 0
 
     @staticmethod
-    def _is_card_of(pattern: re.Pattern[str], card_number: str) -> bool:
-        return (
-            PaymentCardValidator._luhn_correctness(card_number)
-            and pattern.fullmatch(card_number) is not None
-        )
-
-    @staticmethod
     def _is_valid_payment_card(card_number: str) -> bool:
         """True only when Luhn holds **and** the number matches a known brand."""
         if not isinstance(card_number, str):
             return False
-        is_card = PaymentCardValidator._is_card_of
-        return (
-            is_card(_VISA, card_number)
-            or is_card(_MASTERCARD, card_number)
-            or is_card(_AMEX, card_number)
-            or is_card(_DISCOVER, card_number)
-            or is_card(_RUPAY, card_number)
-            or is_card(_UNIONPAY, card_number)
-            or is_card(_JCB, card_number)
-            or is_card(_DINERS, card_number)
-        )
+        if not PaymentCardValidator._luhn_correctness(card_number):
+            return False
+        return any(brand.fullmatch(card_number) for brand in _BRANDS)
 
     def _pre_validate(self, instance: Any, value: Any) -> Any:
         """Printed cards group digits. Store the compact brand∩Luhn identity."""

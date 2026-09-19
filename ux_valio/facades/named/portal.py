@@ -9,9 +9,11 @@ Does not import sibling named domain modules. Depends on typed
 from __future__ import annotations
 
 import re
+from functools import cache
 from typing import Any
-from ux_valio.facades.typed import StringValidator
 from zoneinfo import available_timezones
+
+from ux_valio.facades.typed import StringValidator
 
 _SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 
@@ -86,7 +88,10 @@ class CountryCodeValidator(StringValidator):
         if not type(self)._is_valid_country(value):
             raise ValueError(f"{self.name} is not a valid ISO 3166-1 alpha-2 country code")
 
-_ZONES = available_timezones()
+@cache
+def _zones() -> frozenset[str]:
+    """IANA keys. Built on first TimezoneValidator check, not import."""
+    return frozenset(available_timezones())
 
 
 class TimezoneValidator(StringValidator):
@@ -102,7 +107,7 @@ class TimezoneValidator(StringValidator):
 
     @staticmethod
     def _is_valid_timezone(value: Any) -> bool:
-        return isinstance(value, str) and value in _ZONES
+        return isinstance(value, str) and value in _zones()
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:
