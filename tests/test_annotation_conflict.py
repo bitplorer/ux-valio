@@ -38,6 +38,41 @@ def test_string_validator_on_int_field_raises_at_class_body():
             n: int = StringValidator(debug=True)
 
 
+def test_descriptor_class_annotation_peels_to_store_type():
+    """Type checkers want ``name: StringValidator = StringValidator()``.
+
+    Runtime peels the facade class to its store type (``str``) so it
+    agrees with ``StringValidator.annotation``.
+    """
+
+    @dataclass
+    class User:
+        name: StringValidator = StringValidator(debug=True)
+
+        @name.add_process_pre_validate
+        def strip(self, value: str) -> str:
+            return value.strip()
+
+    user = User(name=" ada ")
+    assert user.name == "ada"
+    assert User.name.annotation is str
+
+
+def test_validator_subscript_annotation_peels_to_store_type():
+    @dataclass
+    class User:
+        name: Validator[str] = StringValidator(debug=True)
+
+    assert User(name="ada").name == "ada"
+
+
+def test_integer_validator_class_annotation_on_string_field_still_conflicts():
+    with pytest.raises(TypeError, match="did not match"):
+        @dataclass
+        class Bad:
+            n: IntegerValidator = StringValidator(debug=True)
+
+
 def test_conflict_raises_even_when_debug_is_falsy():
     field = IntegerValidator(debug=False)
     with pytest.raises(TypeError, match="annotation did not match"):

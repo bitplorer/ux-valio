@@ -74,7 +74,9 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   Explicit `False` is specified. Omitted `collect_all` / `logger` still
   collapse to a specified `True`. `Chain` is `AllOf`.
   Unresolved owner `str` / `ForwardRef` annotations TypeError at bind
-  (not copied, not eval'd). `AnyOf` does not AND-gate root type; `AllOf`
+  (not copied, not eval'd). Owner annotation that is a Property class
+  (`StringValidator` / `Validator[str]`) peels to the store type.
+  `AnyOf` does not AND-gate root type; `AllOf`
   keeps annotation-conflict TypeError. Unknown path unit is `ValueError`.
   TypedDict membership stays fail-closed on the private helper. Callable
   origin is checked; signature is not. Generic subclass instance params

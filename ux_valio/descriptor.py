@@ -74,7 +74,10 @@ from __future__ import annotations
 import logging
 import types
 from dataclasses import dataclass, fields
-from typing import Any, ForwardRef, Generic, TypeVar, Union, get_args, get_origin, overload
+from typing import TYPE_CHECKING, Any, ForwardRef, Generic, TypeVar, Union, get_args, get_origin, overload
+
+if TYPE_CHECKING:
+    from typing import Self
 
 from ux_valio.errors import ValidationErrors
 
@@ -305,6 +308,29 @@ def _is_unconstrained_typevar(annotation: Any) -> bool:
     )
 
 
+def _owner_store_annotation(annotation: Any) -> tuple[bool, Any]:
+    """If the class annotation is a Property (or ``Property[T]``), peel to T.
+
+    ``name: str = StringValidator()`` keeps ``str``.
+    ``name: StringValidator = StringValidator()`` peels to ``str`` so type
+    checkers can name the descriptor while the store type stays ``str``.
+    ``AllOf`` has no class ``annotation`` — treat as no owner store type.
+    """
+    origin = get_origin(annotation)
+    cls = origin if origin is not None else annotation
+    if not isinstance(cls, type):
+        return False, annotation
+    try:
+        if not issubclass(cls, Property):
+            return False, annotation
+    except TypeError:
+        return False, annotation
+    args = get_args(annotation)
+    if len(args) == 1:
+        return True, args[0]
+    return True, getattr(cls, "annotation", None)
+
+
 
 class Property(Generic[_StoreT]):
     """Data descriptor used as a dataclass field default.
@@ -497,6 +523,9 @@ class Property(Generic[_StoreT]):
             )
         if owner_annotation is not None and _is_unconstrained_typevar(owner_annotation):
             owner_annotation = None
+        is_property_field, store = _owner_store_annotation(owner_annotation)
+        if is_property_field:
+            owner_annotation = store
         if self.annotation is None:
             if owner_annotation is not None:
                 self.annotation = owner_annotation
@@ -564,7 +593,7 @@ class Property(Generic[_StoreT]):
         return AttributeError(f"{type(obj).__name__}.{self.name} is not set")
 
     @overload
-    def __get__(self, obj: None, obj_type: type | None = None) -> Property[_StoreT]: ...
+    def __get__(self, obj: None, obj_type: type | None = None) -> Self: ...
 
     @overload
     def __get__(self, obj: object, obj_type: type | None = None) -> _StoreT: ...
