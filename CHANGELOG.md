@@ -2,11 +2,16 @@
 
 ## Unreleased
 
+- Handbook: ``docs/`` is Diátaxis (tutorial / how-to / reference /
+  explanation). README is the PyPI front door. Optional
+  ``mkdocs serve`` (``ux-valio[docs]``). Host-peer note lives under
+  ``docs/explanation/``.
+
 - Docs: typed facades ``Usage::``; specified-path construct bind;
   IBAN ``02``–``98`` in the named table; examples index complete;
   user-facing ``bag`` wording dropped from README.
 
-- Note: ``docs/host-peer-plan.md`` — host decides / peer applies (optional
+- Note: ``docs/explanation/host-peer-plan.md`` — host decides / peer applies (optional
   native apply later; instance stays Python). Not implemented.
 
 - Hot path: ``ValidationPath.run`` no longer allocates ``ran``/``results``

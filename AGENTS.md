@@ -1,5 +1,8 @@
 # AGENTS.md
 
+Handbook is `docs/` (Diátaxis: tutorial, how-to, reference, explanation).
+README is the PyPI front door. Optional `mkdocs serve` (`ux-valio[docs]`).
+
 Field default only: `field: T = SomeValidator(...)`.
 
 Layout is an **import graph** (layers) plus **sibling packages** (parallel
@@ -52,7 +55,7 @@ a parallel folder, not inside the layer they depend on.
   Result type, RGB/HSL, or star-import barrel.
 - Optional native apply (PyO3 peer, host decides / peer applies) is
   **not** a second door. Soul of the instance stays Python. See
-  `docs/host-peer-plan.md`. Do not add a Schema/Field twin to get it.
+  `docs/explanation/host-peer-plan.md`. Do not add a Schema/Field twin to get it.
   Do not implement the peer unless that note's switch test holds.
 - No `asyncio.run` in `__set__`. Nested loops use the nest-safe worker
   bridge only.

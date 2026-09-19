@@ -135,7 +135,10 @@ def test_no_field_schema_cap_on_package():
 def test_readme_teaches_facade_primary_and_chain_is_allof():
     from pathlib import Path
 
-    text = Path(__file__).resolve().parents[1].joinpath("README.md").read_text()
+    root = Path(__file__).resolve().parents[1]
+    text = root.joinpath("README.md").read_text()
+    for path in (root / "docs").rglob("*.md"):
+        text += "\n" + path.read_text()
     assert "Do not use bare `Property` as the field default" in text
     assert "`Chain` is `AllOf`" in text
     assert "findall substring" in text
@@ -157,7 +160,7 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "@username.pre_validate" in text
     assert "@name.pre_validate" in text
     assert "@name.validator" in text
-    assert "### Hang API" in text
+    assert "Hang API" in text
     assert "FrozenInstanceError" in text
     assert "Person.aadhaar.pre_validate" in text
     assert "namespace=" in text
@@ -188,3 +191,16 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "MexicoRFCValidator" in text
     assert "UnionPay" in text
     assert "`PhoneNumberValidator` is a string facade" in text
+
+
+def test_handbook_names_every_public_export():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    text = "".join(path.read_text() for path in (root / "docs").rglob("*.md"))
+    missing = [
+        name
+        for name in ux_valio.__all__
+        if name != "__version__" and name not in text
+    ]
+    assert missing == []

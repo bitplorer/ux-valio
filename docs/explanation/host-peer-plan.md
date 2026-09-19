@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: MIT
 # Host decides, peer applies
 
 Future performance note. Not an implementation. Not a pydantic clone.
