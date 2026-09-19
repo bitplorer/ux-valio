@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- TypedDict is the schema on the type door (required keys, no extras).
+  ``Annotated[T, SomeValidator()]`` on a key runs that Door A validator.
+  No ``TypedDictValidator`` / Schema twin.
+- ``EmailValidator`` and ``URLValidator`` move to ``facades.named``
+  (string identity, not primitive store types). ``ExpiryValidator`` stays
+  named (timeline extra, not a type).
+
 - Facades import layers: ``typed`` (primitives) under ``named`` (identity
   products). ``typed`` does not import ``named``; named modules do not
   import each other.

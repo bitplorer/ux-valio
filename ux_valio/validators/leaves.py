@@ -17,8 +17,9 @@ from collections.abc import (
     Sequence,
     Set as AbstractSet,
 )
-from typing import Annotated, Any, Literal, TypeVar, Union, get_args, get_origin
+from typing import Annotated, Any, Literal, TypeVar, Union, get_args, get_origin, get_type_hints, is_typeddict
 
+from ux_valio.errors import continue_or_raise, raise_collected
 from ux_valio.pattern import PatternType
 from ux_valio.validators.base import ValidateProperty, _register_annotation_checker
 from ux_valio.validators.bounds import bound_value
@@ -153,7 +154,115 @@ def is_instance_of(value: Any, annotation: Any) -> bool:
         if origin in group:
             return isinstance(value, origin) and matcher(value, args)
     target = origin if origin is not None else annotation
+    if is_typeddict(target):
+        return _typed_dict_match(value, target)
     return _isinstance_closed(value, target)
+
+
+def _unwrap_field_annotation(annotation: Any) -> tuple[Any, tuple[Any, ...]]:
+    """Peel ``Annotated`` / ``Required`` / ``NotRequired``. Keep validator extras."""
+    extras: list[Any] = []
+    while True:
+        origin = get_origin(annotation)
+        if origin is Annotated:
+            args = get_args(annotation)
+            annotation = args[0] if args else annotation
+            extras.extend(args[1:])
+            continue
+        name = getattr(origin, "__name__", "")
+        if name in {"Required", "NotRequired"}:
+            args = get_args(annotation)
+            annotation = args[0] if args else annotation
+            continue
+        return annotation, tuple(extras)
+
+
+def _annotated_store_type(annotation: Any) -> Any:
+    return _unwrap_field_annotation(annotation)[0]
+
+
+def _typed_dict_match(value: Any, annotation: Any) -> bool:
+    """Mapping vs TypedDict: required keys, no extras, value types.
+
+    Extra keys fail-closed (schema). ``NotRequired`` / ``total=False`` keys
+    may be omitted. Nested TypedDict recurses through ``is_instance_of``.
+    """
+    if not isinstance(value, Mapping) or isinstance(value, (str, bytes)):
+        return False
+    try:
+        hints = get_type_hints(annotation, include_extras=True)
+    except Exception:
+        return False
+    required = getattr(annotation, "__required_keys__", frozenset(hints))
+    keys = frozenset(value)
+    if not required <= keys:
+        return False
+    extra = keys - frozenset(hints)
+    extra_items = getattr(annotation, "__extra_items__", None)
+    closed = getattr(annotation, "__closed__", None)
+    if extra:
+        if extra_items is not None and extra_items is not type(None):
+            if not all(is_instance_of(value[key], extra_items) for key in extra):
+                return False
+        elif closed is False:
+            pass
+        else:
+            return False
+    for key, field_ann in hints.items():
+        if key not in value:
+            continue
+        if not is_instance_of(value[key], _annotated_store_type(field_ann)):
+            return False
+    return True
+
+
+def _apply_typed_dict_extras(owner: Any, instance: Any, value: Any, annotation: Any = None) -> None:
+    """Run ``Annotated[..., SomeValidator()]`` extras on TypedDict keys.
+
+    No Schema twin: the TypedDict *is* the schema. Inner validators are the
+    same Door A objects hung as annotation metadata.
+    """
+    if annotation is None:
+        annotation = getattr(owner, "annotation", None)
+    if annotation is None or value is None:
+        return
+    peeled = _peel_annotation(annotation)
+    if peeled is _PeelFail:
+        return
+    annotation = _annotated_store_type(peeled)
+    if not is_typeddict(annotation) or not isinstance(value, Mapping):
+        return
+    try:
+        hints = get_type_hints(annotation, include_extras=True)
+    except Exception:
+        return
+    errors: list[BaseException] = []
+    collect = getattr(owner, "collect_all", True)
+    prefix = getattr(owner, "name", None)
+    for key, field_ann in hints.items():
+        if key not in value:
+            continue
+        item = value[key]
+        extras: tuple[Any, ...] = ()
+        store, extras = _unwrap_field_annotation(field_ann)
+        for extra in extras:
+            if not isinstance(extra, ValidateProperty):
+                continue
+            previous = extra.name
+            extra.name = f"{prefix}.{key}" if prefix else key
+            try:
+                extra.validate(instance, item)
+            except Exception as err:
+                continue_or_raise(collect, errors, err)
+            finally:
+                extra.name = previous
+        nested = _annotated_store_type(store)
+        if is_typeddict(nested):
+            try:
+                _apply_typed_dict_extras(owner, instance, item, nested)
+            except Exception as err:
+                continue_or_raise(collect, errors, err)
+    raise_collected(errors, name=prefix)
 
 
 class TypeValidator(ValidateProperty):

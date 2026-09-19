@@ -182,6 +182,15 @@ def test_errors_live_at_package_root_path_lives_on_facade():
     assert (ROOT / "ux_valio" / "facades" / "named" / "aadhaar.py").is_file()
     assert not (ROOT / "ux_valio" / "facades" / "aadhaar.py").exists()
     assert not (ROOT / "ux_valio" / "validators" / "typed.py").exists()
+    assert (ROOT / "ux_valio" / "facades" / "named" / "email.py").is_file()
+    assert not hasattr(ux_valio.facades.typed, "EmailValidator")
+    assert not hasattr(ux_valio.facades.typed, "URLValidator")
+    from ux_valio.facades.named.email import EmailValidator
+    from ux_valio.facades.named.url import URLValidator
+    from ux_valio.facades.typed import StringValidator
+
+    assert issubclass(EmailValidator, StringValidator)
+    assert issubclass(URLValidator, StringValidator)
     from ux_valio.validators.facade import ValidationPath, Validator
     from ux_valio.facades.typed import (
         BooleanValidator,

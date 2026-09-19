@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Typed Door A facades. No Field/Schema twin; no RGB/HSL; no HexColor public facade.
 
-Construction is ``Any`` to type checkers (``ValidateProperty.__new__``), so
-``name: str = StringValidator()`` and a custom ``owner: User = UserValidator()``
-both assign. Runtime the object is still this descriptor. Set ``annotation``
-to the stored type — that is the type door, not a per-type mixin.
+Primitives and stdlib store types live here. String identities (email, URL,
+GSTIN, …) live in ``facades.named``. Construction is ``Any`` to type checkers
+(``ValidateProperty.__new__``), so ``name: str = StringValidator()`` assigns.
 """
 
 from __future__ import annotations
@@ -15,27 +14,10 @@ import enum
 import ipaddress
 import pathlib
 import re
-import urllib.parse
 import uuid
 from typing import Any
 
-from ux_valio.pattern import Pattern, PatternType
 from ux_valio.validators.facade import Validator
-from ux_valio.validators.leaves import PatternValidator
-
-# Practical RFC 5322-ish addr-spec. EmailValidator fullmatch extra; engine KEEP.
-_EMAIL_PATTERN = Pattern(
-    r"(?:[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*|"
-    r'"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|'
-    r'\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")'
-    r"@(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+"
-    r"[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?|"
-    r"\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}"
-    r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-zA-Z0-9-]*[a-zA-Z0-9]:"
-    r"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|"
-    r'\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])',
-    alias="local@example.com",
-)
 
 
 class IntegerValidator(Validator[int]):
@@ -131,43 +113,6 @@ class DateTimeValidator(Validator[datetime.datetime]):
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._reject_unless_instance(value, datetime.datetime)
-
-
-class EmailValidator(StringValidator):
-    """Door A email facade. Identity of the whole string, not findall substring.
-
-    PatternValidator still matches with findall. This facade adds a fullmatch
-    extra so the name EmailValidator is true.
-    """
-
-    def __init__(self, pattern: Any = _EMAIL_PATTERN, **kwargs: Any) -> None:
-        super().__init__(pattern=pattern, **kwargs)
-
-    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if not isinstance(value, str):
-            raise ValueError(f"{self.name} is not a valid email address")
-        pattern = self.pattern
-        source = pattern.pattern if isinstance(pattern, PatternType) else pattern
-        if not isinstance(source, str):
-            raise ValueError(f"{self.name} is not a valid email address")
-        compiled = PatternValidator._compiled_finder(self, source)
-        if compiled.fullmatch(value) is None:
-            raise ValueError(f"{self.name} is not a valid email address")
-
-
-class URLValidator(StringValidator):
-    """Door A URL facade. Identity is scheme + netloc (stdlib ``urlparse``)."""
-
-    def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
-        if value is None:
-            return
-        if not isinstance(value, str):
-            raise ValueError(f"{self.name} is not a valid URL")
-        parsed = urllib.parse.urlparse(value)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError(f"{self.name} is not a valid URL")
 
 
 class UUIDValidator(Validator[uuid.UUID]):

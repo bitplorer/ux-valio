@@ -76,6 +76,9 @@ class ValidateProperty(HookHost, Property[T], ABC):
             raise TypeError(
                 f"{self.name} expect {annotation} type, got {type(value).__name__} type instead"
             )
+        from ux_valio.validators.leaves import _apply_typed_dict_extras
+
+        _apply_typed_dict_extras(self, instance, value)
 
     def _reject_store_type_mismatch(self, value: Any) -> None:
         """Annotation is a store invariant: post_validate cannot smuggle a bad type.

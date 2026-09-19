@@ -7,6 +7,7 @@ other, and ``typed`` never imports this package.
 """
 
 from ux_valio.facades.named.aadhaar import AadhaarCardValidator
+from ux_valio.facades.named.email import EmailValidator
 from ux_valio.facades.named.expiry import ExpiryValidator
 from ux_valio.facades.named.gstin import GSTINValidator
 from ux_valio.facades.named.iban import IBANValidator
@@ -17,9 +18,11 @@ from ux_valio.facades.named.payment import PaymentCardValidator
 from ux_valio.facades.named.phone import PhoneNumberValidator
 from ux_valio.facades.named.pincode import PinCodeValidator
 from ux_valio.facades.named.upi import UPIIdValidator
+from ux_valio.facades.named.url import URLValidator
 
 __all__ = [
     "AadhaarCardValidator",
+    "EmailValidator",
     "ExpiryValidator",
     "GSTINValidator",
     "IBANValidator",
@@ -30,4 +33,5 @@ __all__ = [
     "PhoneNumberValidator",
     "PinCodeValidator",
     "UPIIdValidator",
+    "URLValidator",
 ]

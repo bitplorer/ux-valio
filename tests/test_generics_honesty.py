@@ -311,22 +311,26 @@ def test_is_instance_of_docstring_does_not_teach_permissive_args():
     assert "TypeError" not in doc or "False" in doc
 
 
-def test_typeddict_stays_fail_closed_private_helper_only():
+def test_typeddict_membership_is_schema_not_a_public_helper():
     from typing import TypedDict
 
     class Movie(TypedDict):
         title: str
         year: int
 
-    assert is_instance_of({"title": "x", "year": 1}, Movie) is False
+    assert is_instance_of({"title": "x", "year": 1}, Movie) is True
     assert is_instance_of({"title": "x"}, Movie) is False
+    assert is_instance_of({"title": "x", "year": 1, "extra": True}, Movie) is False
     field = _bound(Movie)
+    field.validate(None, {"title": "x", "year": 1})
     with pytest.raises(TypeError):
-        field.validate(None, {"title": "x", "year": 1})
+        field.validate(None, {"title": "x"})
     import ux_valio
 
     assert not hasattr(ux_valio, "check_typeddict")
     assert "check_typeddict" not in ux_valio.__all__
+    assert "TypedDictValidator" not in ux_valio.__all__
+    assert not hasattr(ux_valio, "TypedDictValidator")
 
 
 def test_pep695_typealias_unwraps_value_when_present():

@@ -9,6 +9,7 @@ The validate door does not import this package.
 
 from ux_valio.facades.named import (
     AadhaarCardValidator,
+    EmailValidator,
     ExpiryValidator,
     GSTINValidator,
     IBANValidator,
@@ -19,6 +20,7 @@ from ux_valio.facades.named import (
     PhoneNumberValidator,
     PinCodeValidator,
     UPIIdValidator,
+    URLValidator,
 )
 from ux_valio.facades.typed import (
     BooleanValidator,
@@ -26,7 +28,6 @@ from ux_valio.facades.typed import (
     DateTimeValidator,
     DateValidator,
     DecimalValidator,
-    EmailValidator,
     EnumValidator,
     FloatValidator,
     IntegerEnumValidator,
@@ -37,7 +38,6 @@ from ux_valio.facades.typed import (
     PathValidator,
     StringEnumValidator,
     StringValidator,
-    URLValidator,
     UUIDValidator,
 )
 
