@@ -2,13 +2,11 @@
 """Vendor onboarding: GSTIN + IBAN identities, registry uniqueness.
 
 Facades prove the identity string (compact store, no portal). Uniqueness
-hangs on ``pre_validate``; persist on ``post_set``. Inject
-``VendorRegistry`` on ``VendorService``. Extra named identities
-(CIN, ISBN, MAC, …) ride on the same row. ``help(GSTINValidator)`` is
-the per-type contract.
+hangs on ``post_validate`` (after checksum). Persist on ``post_set``.
+``registry`` is the injected store, not a column.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -48,7 +46,7 @@ class InMemoryVendorRegistry:
 
 @dataclass
 class Vendor:
-    registry: VendorRegistry
+    registry: VendorRegistry = field(repr=False, compare=False)
     gstin: str = GSTINValidator(required=True)
     iban: str = IBANValidator(required=True)
     bic: str = BICValidator(required=True)
@@ -56,15 +54,15 @@ class Vendor:
     isbn: str = ISBNValidator()
     mac: str = MACAddressValidator()
 
-    @gstin.pre_validate
+    @gstin.post_validate
     def gstin_available(self, value: str) -> str:
         if self.registry.gstin_taken(value):
             raise ValueError(f"GSTIN {value!r} is already onboarded")
         return value
 
-    @gstin.post_set
+    @bic.post_set
     def commit_gstin(self, value: str) -> None:
-        self.registry.commit(value)
+        self.registry.commit(self.gstin)
 
 
 class VendorService:

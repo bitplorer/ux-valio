@@ -38,7 +38,7 @@ _username_field = StringValidator(debug=True, required=True, min_length=3)
 class _Register:
     username: str = _username_field
 
-    @_username_field.pre_validate
+    @_username_field.post_validate
     def username_not_taken(self, value: str) -> str:
         if value in _taken:
             raise ValueError("username already registered")
@@ -59,11 +59,11 @@ def test_no_add_pre_set_still_absent():
     assert "pre_set" not in Facade()._tasks
 
 
-def test_register_db_check_is_pre_validate_on_username_field():
-    """Before-store uniqueness hangs on pre_validate.
+def test_register_db_check_is_post_validate_on_username_field():
+    """Uniqueness hangs on post_validate (after identity).
 
     Taught field default: hang on the field name in the class body
-    (``@username.pre_validate``). No outer ``username_field`` twin.
+    (``@username.post_validate``). No outer ``username_field`` twin.
     Method decorator keys by owning-class ``module.qualname``.
     Free functions on an unbound descriptor need ``namespace=``.
     """
@@ -78,10 +78,14 @@ def test_class_body_hangs_add_on_the_field_name():
         username: str = StringValidator(debug=True, required=True, min_length=3)
 
         @username.pre_validate
+        def fold(self, value: str) -> str:
+            return value.strip()
+
+        @username.post_validate
         def username_not_taken(self, value: str) -> str:
             if value == "taken":
                 raise ValueError("username already registered")
-            return value.strip()
+            return value
 
     assert Register.username is Register.__dict__["username"]
     assert Register(username="  ada  ").username == "ada"

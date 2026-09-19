@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Reserve a unique username with password hash before store.
 
-Hang uniqueness on ``pre_validate`` (return the value). Confirm match
-on the same hook. Persist the hashed password on ``post_set`` of the
-last field so a failed set does not consume the name and persist fail-closed.
-``task_post_set`` is background (welcome email), not persist. Do not invent
-``add_pre_set``.
+``pre_validate`` transforms (strip). Identity (length / pattern) runs on
+the path. Uniqueness hangs on ``post_validate`` so an invalid name never
+hits the store. Persist the hashed password on ``post_set`` of the last
+field so a failed set does not consume the name. ``task_post_set`` is
+background (welcome email), not persist. Do not invent ``add_pre_set``.
 
 Inject ``UserStore`` and ``PasswordHasher`` on ``RegistrationService``;
 ``main()`` only runs the demo. Full collect_all signup + login lives in
@@ -14,7 +14,7 @@ Inject ``UserStore`` and ``PasswordHasher`` on ``RegistrationService``;
 
 import hashlib
 import hmac
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Protocol
 
 from ux_valio import (
@@ -106,8 +106,8 @@ class Pbkdf2PasswordHasher:
 
 @dataclass
 class Registration:
-    users: UserStore
-    hasher: PasswordHasher
+    users: UserStore = field(repr=False, compare=False)
+    hasher: PasswordHasher = field(repr=False, compare=False)
     username: str = StringValidator(required=True, min_length=3)
     password: str = AllOf(
         StringValidator(required=True, min_length=8, max_length=128),
@@ -119,12 +119,16 @@ class Registration:
     )
 
     @username.pre_validate
+    def fold_username(self, value: str) -> str:
+        return value.strip().casefold()
+
+    @username.post_validate
     def username_available(self, value: str) -> str:
         if self.users.username_taken(value):
             raise ValueError(f"username {value!r} is already registered")
         return value
 
-    @password_confirm.pre_validate
+    @password_confirm.post_validate
     def passwords_match(self, value: str) -> str:
         if value != self.password:
             raise ValueError("password confirmation does not match")

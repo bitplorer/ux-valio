@@ -1,17 +1,15 @@
 # SPDX-License-Identifier: MIT
 """Staff profile: ``&`` / ``|`` composition, compose-root hooks, directory port.
 
-Hang ``pre_validate`` / ``task_*`` on the field name (the compose root after ``&`` / ``AllOf``).
-``|`` is OR (``AnyOf``); the root does not AND-run a type
-check before alternatives. ``Chain`` is ``AllOf``.
+Hang strip on ``pre_validate``, uniqueness on ``post_validate`` (after
+length/required), persist on ``post_set``. ``directory`` is the injected
+store, not a column. ``|`` is OR (``AnyOf``). ``Chain`` is ``AllOf``.
 
-Inject ``StaffDirectory`` on ``StaffService``; uniqueness hangs on the
-compose-root ``name`` via ``pre_validate``. ``main()`` only runs
-the demo. ``InMemoryStaffDirectory`` is the runnable fake; production plugs
-HRIS/LDAP. This file does not ship a DB driver.
+Inject ``StaffDirectory`` on ``StaffService``. Production plugs HRIS/LDAP.
+This file does not ship a DB driver.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -51,7 +49,7 @@ class InMemoryStaffDirectory:
 
 @dataclass
 class StaffProfile:
-    directory: StaffDirectory
+    directory: StaffDirectory = field(repr=False, compare=False)
     name: str = StringValidator(max_length=50) & RequiredValidator(
         required=True
     )
@@ -71,15 +69,15 @@ class StaffProfile:
     def strip_name(self, value: str) -> str:
         return value.strip()
 
-    @name.pre_validate
+    @name.post_validate
     def name_available(self, value: str) -> str:
         if self.directory.name_taken(value):
             raise ValueError(f"staff name {value!r} is already in the directory")
         return value
 
-    @name.post_set
+    @title.post_set
     def commit_name(self, value: str) -> None:
-        self.directory.commit(value)
+        self.directory.commit(self.name)
 
 
 class StaffService:

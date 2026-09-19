@@ -8,7 +8,10 @@ first field that fails still stops later fields.
 
 Password strength is length plus independent Pattern atoms (digit, letter)
 composed with ``AllOf`` — Pattern ``&`` concatenates, it is not AND of
-independent findalls. Confirmation match hangs on ``pre_validate``.
+independent findalls. Confirmation match hangs on ``post_validate`` (after the confirm
+field’s own length/pattern). Username uniqueness also hangs on
+``post_validate`` so an invalid name never hits the store. Persist on
+``post_set``.
 ``PasswordHasher`` hashes in the example port (stdlib ``pbkdf2_hmac``);
 the store keeps only the hash. Inject ports on ``SignupService``;
 ``main()`` only runs the demo. Production: SQL unique index + bcrypt/argon2.
@@ -17,7 +20,7 @@ This file does not ship a DB driver or a crypto library in ``ux_valio``.
 
 import hashlib
 import hmac
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -132,8 +135,8 @@ login_password_field = StringValidator(required=True, min_length=1)
 
 @dataclass
 class SignupForm:
-    users: UserStore
-    hasher: PasswordHasher
+    users: UserStore = field(repr=False, compare=False)
+    hasher: PasswordHasher = field(repr=False, compare=False)
     username: str = username_field
     email: str = EmailValidator(required=True)
     password: str = password_field
@@ -141,12 +144,16 @@ class SignupForm:
     seats: int = seats_field
 
     @username.pre_validate
+    def fold_username(self, value: str) -> str:
+        return value.strip().casefold()
+
+    @username.post_validate
     def username_available(self, value: str) -> str:
         if self.users.username_taken(value):
             raise ValueError(f"username {value!r} is already registered")
         return value
 
-    @password_confirm.pre_validate
+    @password_confirm.post_validate
     def passwords_match(self, value: str) -> str:
         if value != self.password:
             raise ValueError("password confirmation does not match")
@@ -161,12 +168,12 @@ class SignupForm:
 
 @dataclass
 class LoginForm:
-    users: UserStore
-    hasher: PasswordHasher
+    users: UserStore = field(repr=False, compare=False)
+    hasher: PasswordHasher = field(repr=False, compare=False)
     username: str = login_username_field
     password: str = login_password_field
 
-    @password.pre_validate
+    @password.post_validate
     def credentials_ok(self, value: str) -> str:
         row = self.users.get(self.username)
         if row is None or not self.hasher.verify(value, row.password_hash):

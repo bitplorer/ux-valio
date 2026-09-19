@@ -6,7 +6,7 @@
 SKU. Names match valio@3415c03. Inject ``PartCatalog`` on ``CatalogService``.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -53,21 +53,21 @@ class InMemoryPartCatalog:
 
 @dataclass
 class CatalogPart:
-    catalog: PartCatalog
+    catalog: PartCatalog = field(repr=False, compare=False)
     sku: str = StringValidator(pattern=sku_token, required=True)
     tint: str = StringValidator(pattern=hex_pair, required=True)
     slug: str = StringValidator(pattern=slug_token, required=True)
     lot: str = StringValidator(pattern=lot_token, required=True)
 
-    @sku.pre_validate
+    @sku.post_validate
     def sku_available(self, value: str) -> str:
         if self.catalog.sku_taken(value):
             raise ValueError(f"SKU {value!r} is already catalogued")
         return value
 
-    @sku.post_set
+    @lot.post_set
     def commit_sku(self, value: str) -> None:
-        self.catalog.commit(value)
+        self.catalog.commit(self.sku)
 
 
 class CatalogService:

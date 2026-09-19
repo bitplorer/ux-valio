@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Publish a storefront: host + slug uniqueness, catalog identities.
 
-Facades prove host/slug/GTIN/ZIP. Uniqueness hangs on ``pre_validate``.
-Inject ``StoreCatalog`` on ``StorefrontService``.
+Facades prove host/slug/GTIN/ZIP. Uniqueness hangs on ``post_validate``.
+``catalog`` is the injected store, not a column.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ux_valio import (
@@ -46,7 +46,7 @@ class InMemoryStoreCatalog:
 
 @dataclass
 class Storefront:
-    catalog: StoreCatalog
+    catalog: StoreCatalog = field(repr=False, compare=False)
     public_id: str = ULIDValidator(required=True)
     host: str = HostnameValidator(required=True)
     slug: str = SlugValidator(required=True)
@@ -55,15 +55,15 @@ class Storefront:
     tz: str = TimezoneValidator(required=True)
     zip: str = USZipCodeValidator()
 
-    @host.pre_validate
+    @host.post_validate
     def host_available(self, value: str) -> str:
         if self.catalog.host_taken(value):
             raise ValueError(f"host {value!r} is already published")
         return value
 
-    @host.post_set
+    @tz.post_set
     def commit_host(self, value: str) -> None:
-        self.catalog.commit(value)
+        self.catalog.commit(self.host)
 
 
 class StorefrontService:
