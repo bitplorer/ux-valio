@@ -16,6 +16,30 @@ pass them at construct. A subclass that replaces `validation_path`
 keeps its declared units. An unknown validation-path unit raises
 `ValueError`, not `KeyError`.
 
+## Constructor
+
+| kwarg | omitted | meaning |
+|---|---|---|
+| `annotation` | from `Validator[T]` or owner | type door |
+| `required` | `False` | `None` rejected when True |
+| `default` | unset | used when assigned `None`; falsy `0`/`False`/`""` stay |
+| `default_factory` | unset | zero-arg callable per None assignment; `not a Field twin` |
+| `debug` | `True` | re-raise; `False` swallows |
+| `collect_all` | `True` | continue remaining concerns |
+| `logger` | `False` | `True` → `module.qualname.field` |
+| `min_length` / `max_length` | unset | sized values |
+| `min_value` / `max_value` | unset | inclusive |
+| `gt` / `lt` | unset | exclusive |
+| `multiple_of` | unset | remainder; `0` accepts only `0` |
+| `pattern` | unset | `PatternType` / compiled / str |
+| `in_choice` / `not_in_choice` | unset | skip `None`; must be a `Container` at construct |
+| `reassign` | `True` | `False` rejects a second set |
+| `name` | from `__set_name__` | field name for errors |
+
+`default=` and `default_factory=` together is `TypeError`.
+`default_factory=` is a zero-arg callable invoked on each None
+assignment (dataclass-shaped, still the descriptor — not a Field twin).
+
 ## Leaves
 
 Min/max length and value leaves (`MinLengthValidator`,

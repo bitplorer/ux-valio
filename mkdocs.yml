@@ -12,9 +12,11 @@ theme:
     - navigation.sections
     - navigation.indexes
     - content.code.copy
+    - toc.follow
 markdown_extensions:
   - tables
   - fenced_code
+  - admonition
   - toc:
       permalink: true
 nav:
@@ -24,6 +26,8 @@ nav:
       - Hang hooks: how-to/hang.md
       - Compose: how-to/compose.md
       - TypedDict schema: how-to/typed-dict.md
+      - Workflows: how-to/workflows.md
+      - Typing: how-to/typing.md
   - Reference:
       - Validator: reference/validator.md
       - Typed facades: reference/typed.md
@@ -31,7 +35,9 @@ nav:
       - Pattern: reference/pattern.md
       - Public API: reference/api.md
   - Explanation:
+      - Choices: explanation/choices.md
       - Honesty: explanation/honesty.md
       - Layering: explanation/layering.md
+      - Performance: explanation/performance.md
       - Host / peer: explanation/host-peer-plan.md
 docs_dir: docs

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Handbook: choices, performance, workflows, typing — every usage
+  pattern and KEEP decision in Diátaxis, no second door.
+
 - Examples: ``main()`` live-checks conflict/identity failures via
   ``_must_raise`` (no silent ``except: pass``).
 

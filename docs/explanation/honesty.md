@@ -1,5 +1,9 @@
 # Honesty (KEEP)
 
+These are the runtime contracts. The *why* lives in
+[choices](choices.md). Performance of the specified path lives in
+[performance](performance.md).
+
 Omitted `debug` is `True` (re-raise). `debug=False` swallows, appends to
 `errors`, and leaves the attribute unset so later reads are `None`.
 Never-set `__get__` / `__delete__` with debug on raises a named
