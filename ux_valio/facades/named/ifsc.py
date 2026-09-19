@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""IFSC Door A facade. 11-char RBI identity. No RBI directory lookup."""
+"""IFSC. 11-char RBI identity. No RBI directory lookup."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ _IFSC = re.compile(r"[A-Z]{4}0[A-Z0-9]{6}")
 
 
 class IFSCValidator(StringValidator):
-    """Door A string facade: Indian Financial System Code identity."""
+    """Indian Financial System Code identity."""
 
     @staticmethod
     def _is_valid_ifsc(value: Any) -> bool:

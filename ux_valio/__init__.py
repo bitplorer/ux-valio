@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""ux-valio Door A public surface.
+"""ux-valio public surface.
 
 Explicit ``__all__``. No star-import barrel, no Field, no Schema, no Cap.
 ``AttributeValidator`` is not exported — object-attribute presence checks

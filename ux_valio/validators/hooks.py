@@ -27,7 +27,7 @@ class HookHost:
     return ignored; setter does not wait. Persist/reserve that must
     fail-closed hangs on ``add_process_post_set``. No ``add_process_pre_set``
     — ``pre_set`` *is* the validate pipeline. Pipeline runners
-    (``_pre_validate``, …) are private override points, not Door A.
+    (``_pre_validate``, …) are private override points, not the hang API.
     """
 
     @staticmethod

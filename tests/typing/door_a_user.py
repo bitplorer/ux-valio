@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""mypy/pyright Door A: annotate the descriptor; instance is str."""
+"""mypy/pyright: annotate the descriptor; instance is str."""
 
 from dataclasses import dataclass
 

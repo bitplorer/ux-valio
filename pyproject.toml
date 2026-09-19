@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "ux-valio"
 version = "0.2.0"
-description = "Door A descriptor-on-dataclass validation. Greenfield reimplementation of valio."
+description = "Dataclass field-default validation via descriptors. Greenfield reimplementation of valio."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.14"

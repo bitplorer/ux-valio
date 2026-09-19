@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Door A only: `field: T = SomeValidator(...)`.
+Field default only: `field: T = SomeValidator(...)`.
 
 Layout is an **import graph** (layers) plus **sibling packages** (parallel
 subsystems). Lower layers never import higher. Parallel products sit in
@@ -18,7 +18,7 @@ a parallel folder, not inside the layer they depend on.
   `Validator`. Does not import `facades`.
   Facade unit list is `ValidationPath` on `Validator` in `facade.py`,
   not `PathValidator` (`facades/typed.py`, pathlib).
-- `ux_valio/facades/` — Door A products, two layers:
+- `ux_valio/facades/` — field-default products, two layers:
   `typed.py` — primitives (`IntegerValidator`, `StringValidator`, …) :
   `Validator`. `named/` — identity products (`PaymentCardValidator`,
   `GSTINValidator`, `IFSCValidator`, …) : `StringValidator` (expiry :
@@ -96,7 +96,7 @@ a parallel folder, not inside the layer they depend on.
   keeps annotation-conflict TypeError. Unknown path unit is `ValueError`.
   TypedDict is the schema: ``__required_keys__`` (``total=`` / ``Required`` /
   ``NotRequired``), extra keys fail-closed, values via ``is_instance_of``.
-  ``Annotated[T, SomeValidator()]`` or Door A assignment
+  ``Annotated[T, SomeValidator()]`` or field-default assignment
   (`name: str = StringValidator()`) on a TypedDict key; hang
   ``@name.add_*`` in that class body (``self`` is the mapping).
   No Schema / Field / BaseModel twin. Omitted ``NotRequired``
@@ -126,7 +126,7 @@ a parallel folder, not inside the layer they depend on.
   matches one alternative (`_match_one_alternative`; member custom
   skipped). Custom validators on the compose root and AllOf path bounds
   are not re-run.
-  Door A stores on `instance.__dict__`. Explicit `__slots__` that include
+  The descriptor stores on `instance.__dict__`. Explicit `__slots__` that include
   the field TypeError at bind. A slots-only class (no `__dict__` in the
   MRO) TypeErrors at bind even when the field name is not a slot.
   Look at `owner.__dict__["__slots__"]`, not inherited `getattr`.
@@ -151,7 +151,7 @@ a parallel folder, not inside the layer they depend on.
   case-fold to A–Z; grouping spaces/hyphens strip. `PaymentCardValidator`
   is brand ∩ Luhn; printed grouping spaces/hyphens strip to the compact
   number. `ExpiryValidator`
-  is a Door A facade with exclusive `expire_after` / `expire_on` /
+  is a field-default facade with exclusive `expire_after` / `expire_on` /
   `expire_before`. `expire_on` is valid only on that calendar day.
   `expire_before` is its own bound. `expire_*` are not
   kwargs on `Validator`. No `expiry` path unit.
@@ -170,11 +170,11 @@ a parallel folder, not inside the layer they depend on.
   `str` — owner `int | str` still TypeErrors at bind.
   `DateTimeValidator` stores `datetime.datetime`; ISO strings parse via
   `datetime.fromisoformat`; plain `datetime.date` is rejected.
-  `URLValidator` is a Door A string facade: scheme + netloc
+  `URLValidator` is a string field default: scheme + netloc
   (stdlib `urllib.parse.urlparse`). Pattern `&` / `|` is fail-closed on missing or mixed
   `str`/`bytes` fragments; inverted `count_min` / `count_max` is
   constructor `ValueError`; bytes patterns keep bytes identity.
-- `PhoneNumberValidator` is a Door A facade. Taught kwarg is `region=`
+- `PhoneNumberValidator` is a field-default facade. Taught kwarg is `region=`
   (required; leftover: valio defaulted to `instance.region` or `"IN"`).
   Engine is optional extra `phonenumbers`; no network. `region` is not a
   kwarg on `Validator`.
@@ -192,7 +192,7 @@ a parallel folder, not inside the layer they depend on.
 
 ## Naming
 
-Public Door A names KEEP (valio PatternTypes, `add_*`, `AllOf`,
+Public names KEEP (valio PatternTypes, `add_*`, `AllOf`,
 `Validator`, `Property`). Do not fashion-rename `Digit` / `SetOf` /
 `IfPrecededBy`. Modules are snake_case (`async_bridge`).
 Classes are CapWords. Methods/helpers are snake_case verbs. The public
@@ -230,7 +230,7 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_register_compose_types`, `_Opt.read`, `_Of._bind_kwargs`,
 `_Of._merged_attr`).
 Noun-only names that hide the action are not
-added. Names should fit any Door A caller library — not a one-app
+added. Names should fit any caller library — not a one-app
 nickname, not a slogan.
 
 AllOf / AnyOf live next to ``&`` / ``|`` on ``ValidateProperty``. Hook ``add_*``

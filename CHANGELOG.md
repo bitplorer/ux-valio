@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Docs and module comments name the field default
+  (``name: str = StringValidator()``), not "Door A".
+
 - ``namespace=`` accepts the owning class (not only a ``module.qualname``
   str). ``wait_tasks`` is on the package root. ``TypeAliasType`` peels by
   identity.
@@ -13,7 +16,7 @@
 - TypedDict hook lookup uses ``__set_name__`` ``_owner`` (no ``_hook_schema``
   sticky state). Qualifiers peel by identity. ``_validate_typed_dict``.
 
-- TypedDict keys accept Door A assignment (``name: str = StringValidator()``)
+- TypedDict keys accept field-default assignment (``name: str = StringValidator()``)
   and ``@name.add_process_*`` / ``@name.add_validator`` in that class body.
   ``self`` is the mapping. ``pre_set`` write-back then ``post_set``.
 
@@ -22,7 +25,7 @@
   an omitted ``NotRequired`` key do not run.
 
 - TypedDict is the schema on the type door (required keys, no extras).
-  ``Annotated[T, SomeValidator()]`` on a key runs that Door A validator.
+  ``Annotated[T, SomeValidator()]`` on a key runs that field default validator.
   No ``TypedDictValidator`` / Schema twin.
 - ``EmailValidator`` and ``URLValidator`` move to ``facades.named``
   (string identity, not primitive store types). ``ExpiryValidator`` stays
@@ -92,7 +95,7 @@
   No `_HOOK_ADDERS` table / `_install_adders` setattr. Phases are the
   `_processors` dict keys.
 - Owner key is `module.qualname` (`HookHost._owner_key`). Runtime errors
-  name the field / `__dict__` / bind, not "Door A". `has_hooks` replaces
+  name the field / `__dict__` / bind, not "field default". `has_hooks` replaces
   `bags_used`.
 - Dropped `cache_task=` (valio leftover: id(tasks) cache, stored never
   consulted). Unknown-kwarg TypeError, same as `enable_async`.
@@ -175,7 +178,7 @@
   a `datetime` onto `DateValidator`. `AllOf` walks member extras; `AnyOf`
   still matches one alternative. Path bounds on AllOf / unnamed facades
   and custom validators are not re-run.
-- Explicit `__slots__` on a Door A field TypeError at bind. A slots-only
+- Explicit `__slots__` on a descriptor field TypeError at bind. A slots-only
   class TypeErrors at bind even when the field name is not a slot.
   Get/delete use `_require_instance_dict`. Inherited `getattr(..., "__slots__")`
   no longer false-positives a child that still has `__dict__`.
@@ -203,18 +206,18 @@
   PatternValidator findall is unchanged.
 - `PaymentCardValidator` Mastercard IIN includes 2221–2720.
 - `examples/` are copyable production skeletons: Protocol ports, in-memory
-  fakes, Door A dataclasses, and a service that injects ports in the
+  fakes, validated dataclasses, and a service that injects ports in the
   constructor. Signup (`collect_all_form.py`) is complete auth. Hasher stays
   in the example (`Pbkdf2PasswordHasher`). Examples do not ship a DB driver.
 - Pattern atom names KEEP the valio@3415c03 PatternType surface.
   `Contained` / `IfContained` are KEEP-absent.
 - CI: pytest on push/PR (Python 3.14).
-- Taught Door A path is a facade or `Validator` (not bare `Property`);
+- Taught field-default path is a facade or `Validator` (not bare `Property`);
   leaf `&` is advanced; `Chain` is `AllOf`.
 
 ## 0.1.0
 
-- Door A descriptor-on-dataclass validation.
+- field-default descriptor-on-dataclass validation.
 - Validators live in `ux_valio/validators/` with leaf-owned length/value
   methods (not a free-function owned API).
 - Validator objects compose with `&` / `|` and `AllOf` / `AnyOf` / `Chain`.

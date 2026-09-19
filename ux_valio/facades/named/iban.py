@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""IBAN Door A facade. ISO 13616 identity ∩ mod-97. No bank lookup."""
+"""IBAN. ISO 13616 identity ∩ mod-97. No bank lookup."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ _IBAN = re.compile(r"[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}")
 
 
 class IBANValidator(StringValidator):
-    """Door A string facade: IBAN length 15–34 ∩ rearrange-and-mod-97 == 1."""
+    """IBAN length 15–34 ∩ rearrange-and-mod-97 == 1."""
 
     @staticmethod
     def _mod97(text: str) -> bool:

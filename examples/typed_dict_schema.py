@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""TypedDict schema: Door A assignment + Annotated extras. No BaseModel."""
+"""TypedDict schema: field-default assignment + Annotated extras. No BaseModel."""
 
 from dataclasses import dataclass
 from typing import Annotated, TypedDict

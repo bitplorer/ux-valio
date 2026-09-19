@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""URL Door A facade. scheme + netloc identity. Not a primitive type."""
+"""URL. scheme + netloc identity. Not a primitive type."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from ux_valio.facades.typed import StringValidator
 
 
 class URLValidator(StringValidator):
-    """Door A URL facade. Identity is scheme + netloc (stdlib ``urlparse``)."""
+    """URL field default. Identity is scheme + netloc (stdlib ``urlparse``)."""
 
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         if value is None:

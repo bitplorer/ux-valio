@@ -62,7 +62,7 @@ def test_no_add_pre_set_still_absent():
 def test_register_db_check_is_add_process_pre_validate_on_username_field():
     """Before-store uniqueness hangs on add_process_pre_validate.
 
-    Taught Door A: hang on the field name in the class body
+    Taught field default: hang on the field name in the class body
     (``@username.add_process_pre_validate``). No outer ``username_field`` twin.
     Method decorator keys by owning-class ``module.qualname``.
     Free functions on an unbound descriptor need ``namespace=``.
@@ -161,10 +161,10 @@ def test_no_asyncio_run_or_enable_async_in_door_a_tree():
 
 
 def test_same_name_descriptor_and_field_is_nameerror():
-    """Door A cannot bind ``username: str = username``.
+    """field default cannot bind ``username: str = username``.
 
     Assignment of ``username`` in the class body makes that name local, so the
-    RHS does not see the outer descriptor. valio README avoided this via Door B
+    RHS does not see the outer descriptor. valio README avoided this via valio Field factory
     (``user_field`` vs ``user: User = user_field.validator``, README L65–127).
     """
     username = StringValidator(debug=True)

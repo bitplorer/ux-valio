@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Payment-card Door A facade. Brand ∩ Luhn via stdlib ``re`` (no pyparsing)."""
+"""Payment-card. Brand ∩ Luhn via stdlib ``re`` (no pyparsing)."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ _RUPAY = re.compile(r"6(?!(?:011|44[0-9]|5[0-9]{2}))0[0-9]{14}")
 
 
 class PaymentCardValidator(StringValidator):
-    """Door A string facade: Visa / Mastercard / Amex / Discover / Rupay ∩ Luhn."""
+    """Visa / Mastercard / Amex / Discover / Rupay ∩ Luhn."""
 
     @staticmethod
     def _luhn_correctness(card_number: str) -> bool:

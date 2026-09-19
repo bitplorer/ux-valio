@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""TypedDict is the schema. No BaseModel / Schema twin. Door A hangs on keys."""
+"""TypedDict is the schema. No BaseModel / Schema twin. field-default hangs on keys."""
 
 from dataclasses import dataclass
 from typing import Annotated, TypedDict

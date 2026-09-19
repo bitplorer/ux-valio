@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Email Door A facade. Addr-spec identity (fullmatch). Not a primitive type."""
+"""Email. Addr-spec identity (fullmatch). Not a primitive type."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ _EMAIL_PATTERN = Pattern(
 
 
 class EmailValidator(StringValidator):
-    """Door A email facade. Identity of the whole string, not findall substring."""
+    """Identity of the whole string, not findall substring."""
 
     def __init__(self, pattern: Any = _EMAIL_PATTERN, **kwargs: Any) -> None:
         super().__init__(pattern=pattern, **kwargs)

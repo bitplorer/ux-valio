@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Aadhaar Door A facade. 12-digit identity ∩ Verhoeff (stdlib tables, no network)."""
+"""Aadhaar. 12-digit identity ∩ Verhoeff (stdlib tables, no network)."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ _PERM = [
 
 
 class AadhaarCardValidator(StringValidator):
-    """Door A string facade: 12 digits ∩ Verhoeff checksum."""
+    """12 digits ∩ Verhoeff checksum."""
 
     @staticmethod
     def _verhoeff_ok(digits: str) -> bool:

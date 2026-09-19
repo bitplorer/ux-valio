@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""IMEI Door A facade. 15-digit identity ∩ Luhn. No GSMA lookup."""
+"""IMEI. 15-digit identity ∩ Luhn. No GSMA lookup."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from ux_valio.facades.typed import StringValidator
 
 
 class IMEIValidator(StringValidator):
-    """Door A string facade: 15 digits ∩ Luhn checksum."""
+    """15 digits ∩ Luhn checksum."""
 
     @staticmethod
     def _luhn_ok(digits: str) -> bool:

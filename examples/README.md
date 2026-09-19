@@ -1,11 +1,11 @@
-# Door A examples
+# Examples
 
 Copy-pasteable production skeletons: `field: T = SomeValidator(...)`.
 Import names from `ux_valio`. There is no Field twin, Schema twin, Cap Host,
 or list/dict/set/tuple collection facade.
 
 Each file is a service-shaped module callers copy: a Protocol port, an
-in-memory fake, a Door A dataclass, and a service that injects ports in the
+in-memory fake, a validated dataclass, and a service that injects ports in the
 constructor. Hooks (`add_process_pre_validate` / `add_process_post_set`) fail closed into
 `ValueError` / `ValidationErrors`. Omitted `debug` / `collect_all` are True.
 `main()` is
@@ -25,10 +25,10 @@ hash — never plaintext. Do not add a hasher to `ux_valio`.
 | Paid checkout (card ∩ Luhn, card `MM/YY` Pattern, promo window) | `checkout.py` | `PromoCatalog`, `Inventory`, `PaymentGateway` | `InMemoryPromoCatalog`, `InMemoryInventory`, `StubPaymentGateway` | offers table, stock row or Redis, Stripe/Razorpay (decline → `ValueError`) |
 | India KYC (Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26, `region="IN"`) | `indian_kyc.py` | `IdentityRegistry` | `InMemoryIdentityRegistry` | KYC warehouse unique Aadhaar/PAN |
 | Staff profile (`&` / `\|`, `AllOf` / `AnyOf`, compose-root `add_*`) | `compose_hooks.py` | `StaffDirectory` | `InMemoryStaffDirectory` | HRIS/LDAP unique display name |
-| TypedDict schema (`Annotated` hangs Door A extras, no BaseModel) | `typed_dict_schema.py` | — | — | copy the TypedDict; extras are the same validators as field defaults |
+| TypedDict schema (`Annotated` hangs validator extras, no BaseModel) | `typed_dict_schema.py` | — | — | copy the TypedDict; extras are the same validators as field defaults |
 | Filed document (EU/IND `DateValidator`, `PathValidator`, IPv4) | `dates_paths.py` | — | — | copy the dataclass; `path_exists=True` is the filesystem door |
 | Catalog SKU (`Pattern`, `StartsWith`, `EndsWith`, `SetOf`, stdlib atoms) | `sku_codes.py` | — | — | copy the Pattern algebra; names KEEP |
-| Warehouse units (`IfPrecededBy` / `IfFollowedBy` on Door A fields) | `lookaround_units.py` | — | — | copy the lookaround units |
+| Warehouse units (`IfPrecededBy` / `IfFollowedBy` on descriptor fields) | `lookaround_units.py` | — | — | copy the lookaround units |
 
 ```console
 python examples/user_account.py
