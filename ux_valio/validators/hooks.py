@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
-"""Processor and task registries for Validator and compose roots.
+"""Processor and task registries.
 
-Hang ``add_*`` on the descriptor that is the field default. There is no
-``add_pre_set`` / ``_processors["pre_set"]`` registry.
+Hang ``add_process_*`` / ``add_task_*`` on the field default. There is no
+``add_pre_set`` / ``_processors["pre_set"]`` registry. Tasks are same-thread
+side effects, not background jobs.
 """
 
 from __future__ import annotations
@@ -16,11 +17,14 @@ from ux_valio.errors import continue_or_raise, raise_collected
 
 
 class HookHost:
-    """Processor, task, and custom-validator registries on the facade / compose root.
+    """Processor and task registries on the validating descriptor.
 
-    Public ``add_*`` methods live here. There is no ``add_pre_set`` registry.
-    Register and lookup share one owner key: ``module.qualname`` of the
-    class that owns the hook. Instance registries are created in ``__init__``.
+    ``add_process_{phase}`` — transform; return is the pipeline value.
+    Stored only for ``pre_validate`` / ``post_validate`` (inside ``pre_set``).
+    ``add_task_{phase}`` — side effect in this thread; return ignored.
+    Not a background job, not another thread. ``add_validator`` — check
+    during ``validate()``; return ignored. No ``add_process_pre_set`` —
+    ``pre_set`` *is* the validate pipeline.
     """
 
     @staticmethod
@@ -118,48 +122,63 @@ class HookHost:
         return func
 
     def add_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Check during ``validate()``. Return ignored."""
         return self._register(self._custom_validators, func, namespace)
 
-    def add_pre_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_process_pre_validate(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Transform before validate. Return is stored (inside ``pre_set``)."""
         return self._register(self._processors["pre_validate"], func, namespace)
 
-    def add_post_validator(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_process_post_validate(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Transform after validate. Return is stored (inside ``pre_set``)."""
         return self._register(self._processors["post_validate"], func, namespace)
 
-    def add_post_set(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_process_post_set(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Transform after store. Return is not stored."""
         return self._register(self._processors["post_set"], func, namespace)
 
-    def add_pre_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_process_pre_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Transform before read. Return is not the stored value."""
         return self._register(self._processors["pre_get"], func, namespace)
 
-    def add_post_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_process_post_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Transform after read. Return is not the stored value."""
         return self._register(self._processors["post_get"], func, namespace)
 
-    def add_pre_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_process_pre_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Transform before delete. Return is not stored."""
         return self._register(self._processors["pre_delete"], func, namespace)
 
-    def add_post_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_process_post_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Transform after delete. Return is not stored."""
         return self._register(self._processors["post_delete"], func, namespace)
 
-    def add_pre_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_task_pre_validate(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Side effect before validate. Same thread. Return ignored."""
         return self._register(self._tasks["pre_validate"], func, namespace)
 
-    def add_post_validator_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_task_post_validate(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Side effect after validate. Same thread. Return ignored."""
         return self._register(self._tasks["post_validate"], func, namespace)
 
-    def add_post_set_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_task_post_set(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Side effect after store. Same thread. Return ignored. Not a background job."""
         return self._register(self._tasks["post_set"], func, namespace)
 
-    def add_pre_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_task_pre_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Side effect before read. Same thread. Return ignored."""
         return self._register(self._tasks["pre_get"], func, namespace)
 
-    def add_post_get_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_task_post_get(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Side effect after read. Same thread. Return ignored."""
         return self._register(self._tasks["post_get"], func, namespace)
 
-    def add_pre_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_task_pre_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Side effect before delete. Same thread. Return ignored."""
         return self._register(self._tasks["pre_delete"], func, namespace)
 
-    def add_post_delete_task(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+    def add_task_post_delete(self, func: Callable[..., Any], namespace: str | None = None) -> Callable[..., Any]:
+        """Side effect after delete. Same thread. Return ignored."""
         return self._register(self._tasks["post_delete"], func, namespace)
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:

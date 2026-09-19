@@ -6,7 +6,7 @@ or list/dict/set/tuple collection facade.
 
 Each file is a service-shaped module callers copy: a Protocol port, an
 in-memory fake, a Door A dataclass, and a service that injects ports in the
-constructor. Hooks (`add_pre_validator` / `add_post_set`) fail closed into
+constructor. Hooks (`add_process_pre_validate` / `add_task_post_set`) fail closed into
 `ValueError` / `ValidationErrors`. `debug=True` is fail-closed. `main()` is
 only the runnable runner (wire the fake, show the conflict path). Replace
 the fake with a SQL/Redis/HTTP adapter that satisfies the Protocol. Examples
@@ -20,7 +20,7 @@ hash — never plaintext. Do not add a hasher to `ux_valio`.
 | Scenario | File | Port to replace | Fake | Production plug |
 | --- | --- | --- | --- | --- |
 | Signup + login (password strength, confirm, hash-on-create, `collect_all`) | `collect_all_form.py` | `UserStore`, `PasswordHasher` | `InMemoryUserStore`, `Pbkdf2PasswordHasher` | SQL unique index; bcrypt/argon2id (unique per-row salt) |
-| Username reservation (`add_pre_validator` + hashed persist) | `registration.py` | `UserStore`, `PasswordHasher` | `InMemoryUserStore`, `Pbkdf2PasswordHasher` | same unique index + hasher as signup |
+| Username reservation (`add_process_pre_validate` + `add_task_post_set` persist) | `registration.py` | `UserStore`, `PasswordHasher` | `InMemoryUserStore`, `Pbkdf2PasswordHasher` | same unique index + hasher as signup |
 | Paid checkout (card ∩ Luhn, card `MM/YY` Pattern, promo window) | `checkout.py` | `PromoCatalog`, `Inventory`, `PaymentGateway` | `InMemoryPromoCatalog`, `InMemoryInventory`, `StubPaymentGateway` | offers table, stock row or Redis, Stripe/Razorpay (decline → `ValueError`) |
 | India KYC (Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26, `region="IN"`) | `indian_kyc.py` | `IdentityRegistry` | `InMemoryIdentityRegistry` | KYC warehouse unique Aadhaar/PAN |
 | Staff profile (`&` / `\|`, `AllOf` / `AnyOf`, compose-root `add_*`) | `compose_hooks.py` | `StaffDirectory` | `InMemoryStaffDirectory` | HRIS/LDAP unique display name |

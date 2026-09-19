@@ -48,7 +48,7 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   facades do not multiple-inherit concern leaves;
   path fail-closed; processors then tasks once;
   `pre_set` hook IS the validate pipeline (no processor bag named `pre_set`);
-  Hang `add_*` on the field name (`@username.add_pre_validator` in the
+  Hang `add_*` on the field name (`@username.add_process_pre_validate` in the
   class body). `add_*` lives on `ValidateProperty` (facade, leaf, or
   AllOf / AnyOf). Class access returns the descriptor (`Cls.field.add_*`
   after bind) and records that class as `_owner`, so a shared
@@ -93,7 +93,7 @@ Layout (core at the root, validate door inherits, named facades are parallel):
   the findall path (``PatternValidator._compiled_finder``).
   `post_get` in `__get__` `finally` records a secondary error and does
   not replace an in-flight exception.
-  Annotation is a store invariant: `add_post_validator` may transform,
+  Annotation is a store invariant: `add_process_post_validate` may transform,
   then `_reject_store_type_mismatch` TypeErrors a value that would not
   pass the type door. Named-facade extra is the same class of invariant
   (`_reject_store_identity` re-runs `_validate_named_facade` on the
@@ -197,8 +197,10 @@ New private helpers are verbs that name the action:
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
 `cache_task`, `_HOOK_ADDERS`, `_install_adders`, `_hook_adder`,
-`_init_hooks`, `_load_compose_types`, `_register_compose_types`,
-`_Opt.read`, `_Of._bind_kwargs`, `_Of._merged_attr`).
+`add_pre_validator`, `add_post_set`, `add_pre_validator_task`,
+`add_post_set_task`, `_init_hooks`, `_load_compose_types`,
+`_register_compose_types`, `_Opt.read`, `_Of._bind_kwargs`,
+`_Of._merged_attr`).
 Noun-only names that hide the action are not
 added. Names should fit any Door A caller library — not a one-app
 nickname, not a slogan.

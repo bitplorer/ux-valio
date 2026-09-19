@@ -154,8 +154,8 @@ def test_readme_teaches_facade_primary_and_chain_is_allof():
     assert "DateTimeValidator" in text
     assert "URLValidator" in text
     assert "module.qualname.field" in text
-    assert "@username.add_pre_validator" in text
-    assert "@name.add_pre_validator" in text
+    assert "@username.add_process_pre_validate" in text
+    assert "@name.add_process_pre_validate" in text
     assert "FrozenInstanceError" in text
     assert "Person.aadhaar.add_*" in text
     assert "uuid.UUID | str" in text

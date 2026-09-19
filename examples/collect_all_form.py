@@ -7,7 +7,7 @@ per-dataclass: the first field that fails still stops later fields.
 
 Password strength is length plus independent Pattern atoms (digit, letter)
 composed with ``AllOf`` — Pattern ``&`` concatenates, it is not AND of
-independent findalls. Confirmation match hangs on ``add_pre_validator``.
+independent findalls. Confirmation match hangs on ``add_process_pre_validate``.
 ``PasswordHasher`` hashes in the example port (stdlib ``pbkdf2_hmac``);
 the store keeps only the hash. Inject ports on ``SignupService``;
 ``main()`` only runs the demo. Production: SQL unique index + bcrypt/argon2.
@@ -155,19 +155,19 @@ class SignupForm:
     password_confirm: str = confirm_field
     seats: int = seats_field
 
-    @username.add_pre_validator
+    @username.add_process_pre_validate
     def username_available(self, value: str) -> str:
         if self.users.username_taken(value):
             raise ValueError(f"username {value!r} is already registered")
         return value
 
-    @password_confirm.add_pre_validator
+    @password_confirm.add_process_pre_validate
     def passwords_match(self, value: str) -> str:
         if value != self.password:
             raise ValueError("password confirmation does not match")
         return value
 
-    @seats.add_post_set
+    @seats.add_task_post_set
     def persist_user(self, value: int) -> None:
         self.users.create(
             self.username, self.email, self.hasher.hash(self.password)
@@ -181,7 +181,7 @@ class LoginForm:
     username: str = login_username_field
     password: str = login_password_field
 
-    @password.add_pre_validator
+    @password.add_process_pre_validate
     def credentials_ok(self, value: str) -> str:
         row = self.users.get(self.username)
         if row is None or not self.hasher.verify(value, row.password_hash):

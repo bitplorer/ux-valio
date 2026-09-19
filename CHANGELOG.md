@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Hook names are `add_process_{phase}` and `add_task_{phase}`. Process
+  transforms (return is stored only inside `pre_set`). Task is a
+  same-thread side effect, not a background job. Persist hangs on
+  `add_task_post_set`. Retired: `add_pre_validator`, `add_post_set`,
+  `add_*_task` suffix.
 - `_Of.__init__` takes `debug=`, `default=`, `logger=` (same names as
   `Property`). No `kwargs.pop("debug")`. `_Opts` is a dataclass: `merge` /
   `overlay` / `keeps_nesting` follow its fields. `_Opts.from_call` is the
@@ -67,7 +72,7 @@
   on the owning type.
 - Email identity peels `PatternType` the same way as findall (no
   `hasattr` dance).
-- Hang `add_*` on the field name: `@username.add_pre_validator` in the
+- Hang `add_*` on the field name: `@username.add_process_pre_validate` in the
   class body, no outer `username_field` twin, no Field mixin. Class
   access returns the descriptor so `Cls.field.add_*` works after bind.
   Dataclass default is that descriptor; `__set__` treats `value is self`
@@ -101,7 +106,7 @@
   TypeError on optional unset).
 - `__get__` `post_get` records a secondary error and does not replace an
   in-flight never-set `AttributeError`.
-- Annotation is a store invariant after `add_post_validator`. Named-facade
+- Annotation is a store invariant after `add_process_post_validate`. Named-facade
   extra is the same class of invariant (`_reject_store_identity`):
   post_validate cannot smuggle `"not-an-email"` onto `EmailValidator` or
   a `datetime` onto `DateValidator`. `AllOf` walks member extras; `AnyOf`
