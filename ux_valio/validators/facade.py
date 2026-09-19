@@ -8,7 +8,7 @@ Hang ``add_*`` here, or on a compose root after ``&`` / ``AllOf``.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Iterable, TypeVar
 
 from ux_valio.descriptor import _UNSET
 from ux_valio.errors import continue_or_raise, raise_collected, run_steps
@@ -81,6 +81,9 @@ class Validator(ValidateProperty[T]):
     ``Validator[int]`` declares the stored type (one argument). Named
     facades specialize it (``IntegerValidator`` is ``Validator[int]``).
     """
+
+    if TYPE_CHECKING:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any: ...
 
     validation_path = ValidationPath(DEFAULT_PATH_UNITS)
 
