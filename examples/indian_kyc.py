@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: MIT
 """India KYC intake: Aadhaar ∩ Verhoeff, PAN ∩ Luhn mod 26, IN phone.
 
-``region=`` is required on ``PhoneNumberValidator`` (leftover: valio defaulted
-to ``instance.region`` or ``"IN"``). Omitted ``collect_all`` continues each
+``region=`` is required on ``PhoneNumberValidator``. Omitted ``collect_all`` continues each
 field's inherited path into the named facade check. The engine is optional extra
 ``phonenumbers``; there is no network lookup. This module still imports and
 runs identity checks when the extra is missing.

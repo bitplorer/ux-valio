@@ -116,6 +116,12 @@ No hang named `pre_set`. Persist/reserve that must fail-closed hangs on
 `post_set`. Welcome-email hangs on `task_post_set`.
 `from ux_valio import wait_tasks`.
 
+Specified path units bind at construct (`_active_units`): type always;
+`min_value` / `pattern` / `reassign=False` / … only when that bound is
+set. Mutating those kwargs after `__init__` does not rebuild the path —
+pass them at construct. A subclass that replaces `validation_path`
+keeps its declared units.
+
 `&` / `|` return `AllOf` / `AnyOf` from `ValidateProperty` — same module
 as the operators, no per-use import.
 
@@ -200,8 +206,8 @@ not the last `__set_name__`.
   conflicting member annotations.
 
 **Only the before-store pipeline return is stored.** That pipeline *is*
-`pre_validate → validate → post_validate`. There is no `_processors["pre_set"]`
-bag and no hang named `pre_set` — hang before-store work on `pre_validate`
+`pre_validate → validate → post_validate`. There is no hang named
+`pre_set` — hang before-store work on `pre_validate`
 (transform; **return the value**), `validator` (check; return ignored),
 or `task_pre_validate` (background side effect; return ignored; setter
 does not wait). Persist/reserve that must fail-closed hangs on
@@ -273,9 +279,8 @@ Assigned `0` / `False` / `""` are not replaced by `default`. `None` is.
 `default=[]` is the same list on every instance. `default_factory=` is a
 zero-arg callable invoked on each None assignment (dataclass-shaped, still
 the descriptor — not a Field twin). Setting both is `TypeError`.
-Leftover: a callable `default=` is still invoked, so `default=list` already
-built a new list; prefer `default_factory=list` when the intent is
-per-instance.
+A callable `default=` is still invoked (`default=list` already built a
+new list); prefer `default_factory=list` when the intent is per-instance.
 Bound `0` is specified: `min_value`/`max_value` inclusive, `gt`/`lt`
 exclusive, `multiple_of` is remainder, `multiple_of=0` accepts only `0`.
 `in_choice` / `not_in_choice` skip `None` (optional unset). A string used
@@ -395,14 +400,15 @@ annotation may be `uuid.UUID`, `str`, or `uuid.UUID | str`),
 owner may be `Path`, `str`, or the union; `path_exists=True` requires
 the path to exist), `DecimalValidator` (coerces Decimal strings; rejects
 float),
-`IPv4Validator` / `IPv6Validator` / `IPAddressValidator`,
+`IPv4Validator` / `IPv6Validator` / `IPAddressValidator` (store the given
+string; stdlib `ipaddress` parse),
 `EnumValidator` / `IntegerEnumValidator` / `StringEnumValidator`.
 
 Named identity facades (`PaymentCardValidator`, `AadhaarCardValidator`,
 `PANCardValidator`, `ExpiryValidator`, `PhoneNumberValidator`, …) run
-their extra from `validate()` after the inherited path. They do not
+that extra from `validate()` after the inherited path. They do not
 register that check with `validator` on each assignment. That extra
-check joins the collected bag (`collect_all=False` restores fail-fast).
+check joins collected errors (`collect_all=False` restores fail-fast).
 
 ## Named identity facades
 
@@ -465,7 +471,7 @@ row = Counterparty(
 | `IndiaStateCodeValidator` | 2 letters | Udyam/RTO (``CG`` not ISO ``CT``) |
 | `USStateValidator` | 2 letters | USPS 50 + DC + AS/GU/MP/PR/VI |
 | `UPIIdValidator` | lowercase VPA | `local@handle` |
-| `IBANValidator` | registry length | ISO 13616 length ∩ mod-97 |
+| `IBANValidator` | registry length | ISO 13616 length ∩ mod-97; check digits `02`–`98` |
 | `BICValidator` | 8 or 11 A–Z/digits | ISO 9362 / SWIFT |
 | `ISINValidator` | 12 chars | ISO 6166 ∩ Luhn |
 | `ISBNValidator` | 10 or 13 | ISBN-10 mod 11 / ISBN-13 978\|979 |
