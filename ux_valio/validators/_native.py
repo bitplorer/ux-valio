@@ -102,17 +102,17 @@ def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
             f"{owner.name} expect the maximum value of {max_value}, "
             f"got {value} instead"
         )
-    if fail == kinds.Gt:
+    if fail == kinds.GreaterThan:
         gt = owner.gt
         raise ValueError(
             f"{owner.name} expect a value greater than {gt}, got {value} instead"
         )
-    if fail == kinds.Lt:
+    if fail == kinds.LessThan:
         lt = owner.lt
         raise ValueError(
             f"{owner.name} expect a value less than {lt}, got {value} instead"
         )
-    if fail == kinds.Eq:
+    if fail == kinds.Equal:
         of_value = owner.value
         raise ValueError(
             f"{owner.name} expect the value {of_value}, got {value} as value instead"

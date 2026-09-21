@@ -17,8 +17,8 @@ At construct (`Validator.__init__` / `__set_name__`):
   that path
 - Pattern `re.compile` on the finder
 - with `ux-valio[native]`, a closed Integer bound plan (MinValue /
-  MaxValue / Gt / Lt / Eq / range; one owned Rust `Plan`) — otherwise
-  the interpreter still walks `_active_units`
+  MaxValue / GreaterThan / LessThan / Equal / range; one owned Rust
+  `Plan`) — otherwise the interpreter still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply` for
 the closed native plan), then process hangs, then store on
@@ -58,9 +58,9 @@ One crossing per set, or none.
 ## Switch test (measured)
 
 Bar: FAIL (KEEP Python) unless host ns/op ≥ **3×** native ns/op for
-each closed Integer bound family (`MinValue` / `MaxValue` / `Gt` /
-`Lt` / `Eq` / min+max range) setattr vs one-shot native
-`apply(plan, i64)`.
+each closed Integer bound family (`MinValue` / `MaxValue` /
+`GreaterThan` / `LessThan` / `Equal` / min+max range) setattr vs
+one-shot native `apply(plan, i64)`.
 
 ```console
 python benches/measure_host_peer.py
@@ -70,8 +70,8 @@ Recorded 2026-09-21 on CPython 3.14.7 / rustc 1.83 / Linux x86_64:
 host **3389–3515 ns/op**, native **46.2–46.5 ns/op**, ratio **73–76×**
 for the first MinValue switch test. Bound-family re-run on a later
 pod: host **2299–2415 ns/op**, native **93.6–99.4 ns/op**, ratio
-**24.3–24.7×** for MinValue / MaxValue / Gt / Lt / Eq / min+max
-range — all **PASS** the 3× bar. Honesty: that ratio is descriptor
+**24.3–24.7×** for MinValue / MaxValue / GreaterThan / LessThan /
+Equal / min+max range — all **PASS** the 3× bar. Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end
 after host store/raise. CI without Rust skips

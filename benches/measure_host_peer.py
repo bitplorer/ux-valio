@@ -8,7 +8,8 @@ Hot path B: ``compile(...)`` once, then ``apply(plan, i64)`` on the
 ``ux-valio[native]`` peer. That is plan apply only — not a claim that
 product setattr is 70× after host store/raise. Not Cap Door B.
 
-Families: MinValue, MaxValue, Gt, Lt, Eq, min+max range. Switch bar:
+Families: MinValue, MaxValue, GreaterThan, LessThan, Equal, min+max
+range. Switch bar:
 FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. At least
 one family besides MinValue must meet the bar, or SKIP honestly.
 
@@ -76,37 +77,37 @@ FAMILIES = (
         label="Integer + MaxValue(10)",
     ),
     PlanFamily(
-        name="Gt",
+        name="GreaterThan",
         field_kwargs={"gt": 0},
         compile_kwargs={"gt": 0},
         values=PASSING_1_8,
         seed=1,
         smoke_ok=1,
         smoke_miss=0,
-        smoke_kind="Gt",
-        label="Integer + Gt(0)",
+        smoke_kind="GreaterThan",
+        label="Integer + GreaterThan(0)",
     ),
     PlanFamily(
-        name="Lt",
+        name="LessThan",
         field_kwargs={"lt": 10},
         compile_kwargs={"lt": 10},
         values=PASSING_0_7,
         seed=0,
         smoke_ok=9,
         smoke_miss=10,
-        smoke_kind="Lt",
-        label="Integer + Lt(10)",
+        smoke_kind="LessThan",
+        label="Integer + LessThan(10)",
     ),
     PlanFamily(
-        name="Eq",
+        name="Equal",
         field_kwargs={"eq": 7},
         compile_kwargs={"eq": 7},
         values=PASSING_EQ,
         seed=7,
         smoke_ok=7,
         smoke_miss=8,
-        smoke_kind="Eq",
-        label="Integer + Eq(7)",
+        smoke_kind="Equal",
+        label="Integer + Equal(7)",
     ),
     PlanFamily(
         name="Range",
@@ -301,7 +302,7 @@ def _report_header(skip_reason: str | None) -> None:
     print(f"machine:  {platform.machine()}  {platform.processor() or '-'}")
     print(f"python:   {sys.version.split()[0]}  ({sys.executable})")
     print(f"rustc:    {rustc}")
-    print("plan:     Integer bound units (MinValue/MaxValue/Gt/Lt/Eq/range)")
+    print("plan:     Integer bound units (MinValue/MaxValue/GreaterThan/LessThan/Equal/range)")
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
     if skip_reason:
@@ -371,7 +372,7 @@ def measure(iters: int, warmup: int, peer: Any, IntegerValidator: Any) -> int:
     if not new_passed:
         print(
             "SUMMARY: SKIP honestly — MinValue met the bar but no new "
-            "family (Max/Gt/Lt/Eq/Range) did"
+            "family (MaxValue/GreaterThan/LessThan/Equal/Range) did"
         )
         return 0
     print(

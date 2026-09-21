@@ -11,6 +11,7 @@ at bind (KEEP).
 """
 
 import ast
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -144,6 +145,32 @@ def test_plan_shape_is_owned_unit_list():
     rust = (ROOT / "native" / "src" / "lib.rs").read_text()
     assert "units: [Unit; 2]" not in rust
     assert "Vec<Unit>" in rust
+
+
+def test_native_unit_names_are_full_words():
+    """Rust variants are parallel full words; host kwargs stay min_value/gt/…."""
+    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    assert re.search(r"\bMinValue\(i64\)", rust)
+    assert re.search(r"\bMaxValue\(i64\)", rust)
+    assert re.search(r"\bGreaterThan\(i64\)", rust)
+    assert re.search(r"\bLessThan\(i64\)", rust)
+    assert re.search(r"\bEqual\(i64\)", rust)
+    assert not re.search(r"\bGt\(i64\)", rust)
+    assert not re.search(r"\bLt\(i64\)", rust)
+    assert not re.search(r"\bEq\(i64\)", rust)
+    assert re.search(r"^\s+GreaterThan =", rust, re.M)
+    assert re.search(r"^\s+LessThan =", rust, re.M)
+    assert re.search(r"^\s+Equal =", rust, re.M)
+    assert not re.search(r"^\s+Gt =", rust, re.M)
+    assert not re.search(r"^\s+Lt =", rust, re.M)
+    assert not re.search(r"^\s+Eq =", rust, re.M)
+    native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
+    assert re.search(r"\bkinds\.GreaterThan\b", native_py)
+    assert re.search(r"\bkinds\.LessThan\b", native_py)
+    assert re.search(r"\bkinds\.Equal\b", native_py)
+    assert not re.search(r"\bkinds\.Gt\b", native_py)
+    assert not re.search(r"\bkinds\.Lt\b", native_py)
+    assert not re.search(r"\bkinds\.Eq\b", native_py)
 
 
 _BOUND_CASES = (
@@ -424,6 +451,18 @@ def test_native_custom_validator_still_runs():
     assert Box(n=2).n == 2
     with pytest.raises(ValueError, match="odd"):
         Box(n=1)
+
+
+@needs_native
+def test_failkind_exposes_full_word_names():
+    import ux_valio_native as peer
+
+    assert hasattr(peer.FailKind, "GreaterThan")
+    assert hasattr(peer.FailKind, "LessThan")
+    assert hasattr(peer.FailKind, "Equal")
+    assert not hasattr(peer.FailKind, "Gt")
+    assert not hasattr(peer.FailKind, "Lt")
+    assert not hasattr(peer.FailKind, "Eq")
 
 
 def test_host_bridge_drops_i64_bit_length_precheck():

@@ -3,9 +3,11 @@
 ## Unreleased
 
 - Native Integer bound units: closed ``ux-valio[native]`` plans now
-  cover ``MinValue`` / ``MaxValue`` / ``Gt`` / ``Lt`` / ``Eq`` (i64)
-  and min+max / exclusive pairs. Plan shape is an owned unit list
-  (not fixed ``[Unit; 2]``). Unclosed paths (``required``,
+  cover ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
+  ``Equal`` (i64) and min+max / exclusive pairs. Rust variants are
+  full words; compile maps host kwargs (``min_value`` / ``gt`` /
+  ``max_value`` / ``lt`` / ``eq``). Plan shape is an owned unit list
+  (not a fixed two-slot array). Unclosed paths (``required``,
   ``multiple_of``, length, pattern, choice, Float, named identity)
   stay on the host. OverflowError at i64 extract still falls through
   to host ``ValueValidator``. Measure each family

@@ -56,7 +56,7 @@ it. With ``ux-valio[native]``, a **closed** subset is the same tuple as
 a native enum, built **once** at ``__init__`` / ``__set_name__``.
 
 Shipped closed plans: ``Integer`` plus specified i64 bound units —
-``MinValue`` / ``MaxValue`` / ``Gt`` / ``Lt`` / ``Eq``, including
+``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` / ``Equal``, including
 min+max range and exclusive ``gt``+``lt`` as the host encodes them.
 ``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
 ``eq=7``, and ``min_value=0, max_value=10`` all compile when the
@@ -131,8 +131,8 @@ The harness lives in-tree. It installs/uses ``ux-valio`` from the repo
 root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with a
 closed ``IntegerValidator`` bound plan. Hot path B is ``compile(...)``
 once then ``apply(plan, i64)`` on the product peer (``native/``: owned
-unit list of ``Integer`` plus ``MinValue`` / ``MaxValue`` / ``Gt`` /
-``Lt`` / ``Eq``). B is **not** product setattr (no store, no
+unit list of ``Integer`` plus ``MinValue`` / ``MaxValue`` /
+``GreaterThan`` / ``LessThan`` / ``Equal``). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
 family; the bar is **≥ 3×** for each, and at least one family besides
 MinValue must meet it (or SKIP honestly).
@@ -196,9 +196,9 @@ a release cdylib. Host units were ``_validate_type`` then
 |---|---|---|---|
 | MinValue(0) | 2341 | 95.0 | **24.6×** |
 | MaxValue(10) | 2299 | 94.4 | **24.4×** |
-| Gt(0) | 2303 | 94.7 | **24.3×** |
-| Lt(10) | 2312 | 94.5 | **24.5×** |
-| Eq(7) | 2315 | 93.6 | **24.7×** |
+| GreaterThan (host ``gt=0``) | 2303 | 94.7 | **24.3×** |
+| LessThan (host ``lt=10``) | 2312 | 94.5 | **24.5×** |
+| Equal (host ``eq=7``) | 2315 | 93.6 | **24.7×** |
 | MinValue(0)+MaxValue(10) | 2415 | 99.4 | **24.3×** |
 
 **Verdict: PASS.** Every family, including new ones besides MinValue,

@@ -61,7 +61,8 @@ a parallel folder, not inside the layer they depend on.
   than native Integer bound apply). Optional extra
   ``ux-valio[native]`` (sibling crate ``native/``, module
   ``ux_valio_native``) binds closed Integer bound plans at construct:
-  ``MinValue`` / ``MaxValue`` / ``Gt`` / ``Lt`` / ``Eq`` and min+max
+  ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
+  ``Equal`` and min+max
   range, compile once, one FFI ``apply`` per set. Stdlib Python apply stays the
   default without the extra. Do not add a Schema/Field twin to get it.
   Cap / cek-runtime / Cap Door B stay out of this repo. Do not claim
