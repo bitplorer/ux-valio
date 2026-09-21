@@ -3,7 +3,7 @@
 Stdlib Python is the apply path by default. The taught API does not
 change for speed. An optional native peer is mapped in
 [host / peer](host-peer-plan.md). ``ux-valio[native]`` may bind a
-closed ``Integer`` + ``MinValue(i64)`` plan at construct. Cap Door B
+closed Integer bound plan at construct. Cap Door B
 is not on this path.
 
 ## What is already compiled
@@ -16,9 +16,10 @@ At construct (`Validator.__init__` / `__set_name__`):
 - named-facade extra (GSTIN checksum, Luhn, …) as one function after
   that path
 - Pattern `re.compile` on the finder
-- with `ux-valio[native]`, a closed Integer + MinValue plan (one
-  owned Rust `Plan`) — otherwise the interpreter still walks
-  `_active_units`
+- with `ux-valio[native]`, a closed Integer bound plan (MinValue /
+  MaxValue / GreaterThan / LessThan / Equal / range; type is FFI
+  `i64` extract, not an open type check). Otherwise the interpreter
+  still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply` for
 the closed native plan), then process hangs, then store on
@@ -58,21 +59,23 @@ One crossing per set, or none.
 ## Switch test (measured)
 
 Bar: FAIL (KEEP Python) unless host ns/op ≥ **3×** native ns/op for
-`IntegerValidator(min_value=0)` setattr vs one-shot native
-`apply(Integer, MinValue(0))`.
+each closed Integer bound family (`MinValue` / `MaxValue` /
+`GreaterThan` / `LessThan` / `Equal` / min+max range) setattr vs
+one-shot native `apply(plan, i64)`.
 
 ```console
 python benches/measure_host_peer.py
 ```
 
 Recorded 2026-09-21 on CPython 3.14.7 / rustc 1.83 / Linux x86_64:
-host **3389–3515 ns/op**, native **46.2–46.5 ns/op**, ratio **73–76×**.
-A rename-only re-run (plan units ``Integer`` + ``MinValue(0)``) stayed
-**75×**. **PASS — native extra bound for this closed plan.** Honesty:
-that ratio is descriptor setattr vs **plan apply only** on the measure
-stub (no GIL detach). Do not claim the product extra is 70× end-to-end
-after host store/raise. Product ``apply`` uses ``Python::detach``; a
-local re-run still PASSes the 3× bar. CI without Rust skips
+host **3389–3515 ns/op**, native **46.2–46.5 ns/op**, ratio **73–76×**
+for the first MinValue switch test. Bound-family re-run on a later
+pod: host **2299–2415 ns/op**, native **93.6–99.4 ns/op**, ratio
+**24.3–24.7×** for MinValue / MaxValue / GreaterThan / LessThan /
+Equal / min+max range — all **PASS** the 3× bar. Honesty: that ratio is descriptor
+setattr vs **plan apply only** (product ``apply`` uses
+``Python::detach``). Do not claim the product extra is 70× end-to-end
+after host store/raise. CI without Rust skips
 (`python benches/measure_host_peer.py --ci`). Full notes, install, and
 rejected shapes: [host / peer](host-peer-plan.md).
 

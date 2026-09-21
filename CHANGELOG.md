@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Native Integer bound units: closed ``ux-valio[native]`` plans now
+  cover ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
+  ``Equal`` (i64) and min+max / exclusive pairs. Rust variants are
+  full words; compile maps host kwargs (``min_value`` / ``gt`` /
+  ``max_value`` / ``lt`` / ``eq``). Plan shape is an owned unit list
+  (not a fixed two-slot array). Unclosed paths (``required``,
+  ``multiple_of``, length, pattern, choice, Float, named identity)
+  stay on the host. OverflowError at i64 extract still falls through
+  to host ``ValueValidator``. Measure each family
+  (``python benches/measure_host_peer.py``); do not claim 70× product
+  setattr. ``MultipleOf``, Float, Decimal, length, pattern, and open
+  TypeValidator (Union / TypedDict / Annotated) stay HOLD. Closed
+  Integer type door is FFI ``i64`` extract; ``bool`` / ``None`` /
+  ``collect_all`` stay host-first.
+
 - Native tip polish after the ``[native]`` extra: PyO3 ``i64`` extract is
   the range oracle (no host ``bit_length`` / ``_I64_BITS`` gate).
   ``OverflowError`` at extract falls through to host ``ValueValidator``

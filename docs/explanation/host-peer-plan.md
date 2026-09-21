@@ -18,7 +18,7 @@ to call, *which* plan, and *how* to raise.
 ```text
 bind / __init__     host compiles specified theory → plan
 set                 host hands (plan, value) once
-                    peer applies  (int?  ≥ min?)
+                    peer applies  (i64 extract; bound units)
                     host stores on instance.__dict__
                     host runs hooks, named extras, debug-swallow
 ```
@@ -55,11 +55,24 @@ That tuple **is** the plan. Without the extra, the interpreter applies
 it. With ``ux-valio[native]``, a **closed** subset is the same tuple as
 a native enum, built **once** at ``__init__`` / ``__set_name__``.
 
-Shipped closed plan: ``Integer`` + ``MinValue(i64)`` — the path
-``IntegerValidator(min_value=0)`` (and any other i64 ``min_value``).
-Unclosed paths (``max_value``, ``required``, ``gt``, named identity,
-Email, …) stay on the host. Email / named identity were already
+Shipped closed plans: ``Integer`` plus specified i64 bound units —
+``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` / ``Equal``, including
+min+max range and exclusive ``gt``+``lt`` as the host encodes them.
+``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
+``eq=7``, and ``min_value=0, max_value=10`` all compile when the
+annotation is ``int`` and only those bound units are active. Unclosed
+paths (``required``, ``multiple_of``, length, pattern, choice, named
+identity, Email, Float, a non-``int`` bound, Union / TypedDict /
+Annotated) stay on the host. Email / named identity were already
 competitive in Python — do not start there.
+
+Closed Integer **type door** is the FFI ``i64`` extract. Bound units
+run after extract. Host ``isinstance`` is first so Python ``True`` is
+``int`` (load-bearing); ``None`` and ``collect_all`` type miss stay
+host-first. KEEP ``TypeError`` wording is host-formatted (not a
+``FailKind.NotInteger``; open TypeValidator is not reflected into
+Rust). Bound misses use the ``FailKind`` map. Float (``f64`` extract)
+is a later tip.
 
 ## What never leaves the host
 
@@ -124,11 +137,14 @@ the door risk.
 ### How to run
 
 The harness lives in-tree. It installs/uses ``ux-valio`` from the repo
-root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with
-``IntegerValidator(min_value=0)``. Hot path B is ``compile(0)`` once then
-``apply(plan, i64)`` on the product peer (``native/``: ``Integer`` +
-``MinValue(0)`` only). B is **not** product setattr (no store, no
-hooks, no host raise).
+root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with a
+closed ``IntegerValidator`` bound plan. Hot path B is ``compile(...)``
+once then ``apply(plan, i64)`` on the product peer (``native/``: owned
+unit list of ``Integer`` plus ``MinValue`` / ``MaxValue`` /
+``GreaterThan`` / ``LessThan`` / ``Equal``). B is **not** product setattr (no store, no
+hooks, no host raise). The harness prints one host-vs-apply ratio per
+family; the bar is **≥ 3×** for each, and at least one family besides
+MinValue must meet it (or SKIP honestly).
 
 ```console
 python -m pip install -e .
@@ -172,8 +188,29 @@ Rename-only re-run on the same box (plan units ``Integer`` +
 ``MinValue(0)``, same apply): host 3491–3672 ns/op, native 46.8–49.0
 ns/op, ratio **75×**. Same PASS.
 
-**Verdict: PASS (native extra shipped for this closed plan).** Host
+**Verdict: PASS (native extra shipped for closed Integer bound plans).** Host
 stayed several times slower than the one-shot native apply (bar 3×).
-This extra binds that plan at construct. Cap Door B, JSON-per-set,
+This extra binds those plans at construct. Cap Door B, JSON-per-set,
 migrating ``self`` into Rust, a Field/Schema twin, a mega shared plan
 crate, and email/named identity as a first target stay rejected.
+
+### Measured (2026-09-21) Integer bound families
+
+Same class of box, one run, 400000 iters after 20000 warmup, values as
+each family allows, CPython 3.14.7, rustc 1.83.0, Linux x86_64. Peer is
+a release cdylib. Host units were ``_validate_type`` then
+``_validate_value``. B is plan apply only (``Python::detach``).
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| MinValue(0) | 2341 | 95.0 | **24.6×** |
+| MaxValue(10) | 2299 | 94.4 | **24.4×** |
+| GreaterThan (host ``gt=0``) | 2303 | 94.7 | **24.3×** |
+| LessThan (host ``lt=10``) | 2312 | 94.5 | **24.5×** |
+| Equal (host ``eq=7``) | 2315 | 93.6 | **24.7×** |
+| MinValue(0)+MaxValue(10) | 2415 | 99.4 | **24.3×** |
+
+**Verdict: PASS.** Every family, including new ones besides MinValue,
+cleared the 3× bar. Native apply here is ~95 ns/op (GIL released),
+slower than the first stub’s 46 ns/op and still not a 70× product
+setattr claim.

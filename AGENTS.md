@@ -58,10 +58,13 @@ a parallel folder, not inside the layer they depend on.
   `docs/explanation/host-peer-plan.md`. Measure tip:
   `python benches/measure_host_peer.py` (CI ``--ci`` skips without Rust).
   The recorded switch test PASSed (host setattr several times slower
-  than native ``Integer`` + ``MinValue(0)``). Optional extra
+  than native Integer bound apply). Optional extra
   ``ux-valio[native]`` (sibling crate ``native/``, module
-  ``ux_valio_native``) binds that closed plan at construct: compile
-  once, one FFI ``apply`` per set. Stdlib Python apply stays the
+  ``ux_valio_native``) binds closed Integer bound plans at construct:
+  ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
+  ``Equal`` and min+max range, compile once, one FFI ``apply`` per
+  set. Type door is FFI ``i64`` extract; open TypeValidator / Float
+  stay on the host. Stdlib Python apply stays the
   default without the extra. Do not add a Schema/Field twin to get it.
   Cap / cek-runtime / Cap Door B stay out of this repo. Do not claim
   the switch-test ratio as end-to-end product setattr.
@@ -265,9 +268,10 @@ New private helpers are verbs that name the action:
 `PhoneNumberValidator._require_phonenumbers`,
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`,
 `read_bound`, `ValidateStep`,
-`bind_native_plan`, `apply_native_integer_min_value`,
-`_load_native_peer`, `_closed_integer_min_value`,
+`bind_native_plan`, `apply_native_integer_bounds`,
+`_load_native_peer`, `_closed_integer_bounds`,
 `_clear_native`, `_apply_host_value_after_i64_overflow`,
+`_raise_native_bound_miss`, `_raise_host_integer_type_miss`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
@@ -276,7 +280,7 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `add_post_set_task`, `has_hooks`, `pre_validation_processing`,
 `post_set_processing`, `notify_pre_set`, `on_pre_set`,
 `add_pre_validate_process`, `add_pre_validate`, `add_validator`, `process_pre_validate`, `add_task_post_set`, `_init_hooks`, `_load_compose_types`,
-
+`apply_native_integer_min_value`, `_closed_integer_min_value`,
 `_register_compose_types`, `_Opt.read`, `_Of._bind_kwargs`,
 `_Of._merged_attr`, `Lookup`, `_log`, `bound_value`, `door_a`).
 Noun-only names that hide the action are not

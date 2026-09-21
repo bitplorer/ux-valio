@@ -146,4 +146,5 @@ collection facades, `enable_async`, `cache_task`, `add_pre_set`. List
 membership is `list[T]` on the type door. Object attributes: check at the
 call site or hang `validator`. Optional `ux-valio[native]` is not a second
 door: L1 stays `IntegerValidator`; the extra is compile-once + one FFI
-apply for Integer + MinValue only.
+apply for closed Integer bound units (min/max/gt/lt/eq). Float, length,
+pattern, and named identity stay on the host.
