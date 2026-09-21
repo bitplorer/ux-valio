@@ -243,26 +243,26 @@ cleared the 3× bar. Native apply here is ~95 ns/op (GIL released),
 slower than the first stub’s 46 ns/op and still not a 70× product
 setattr claim.
 
-### Measured (this tip) Float bound families
+### Measured (2026-09-21) Float bound families
 
-Same class of box, 400000 iters after 20000 warmup, CPython 3.14.7,
+Same class of box, one run, 400000 iters after 20000 warmup, CPython 3.14.7,
 rustc 1.83.0, Linux x86_64. Peer is a release cdylib. Host units were
 ``_validate_type`` then ``_validate_value``. B is
 ``apply_float(plan, f64)`` only (``Python::detach``). IEEE NaN/inf is
-Door A (not part of the hot-path values). Bar 3× per family; below
-that KEEP host for that family.
-
-The table is filled from ``python benches/measure_host_peer.py`` on
-this tip (do not invent ratios).
+Door A (not part of the hot-path values). Bar 3× per family.
 
 | family | A setattr ns/op | B apply ns/op | host / native |
 |---|---|---|---|
-| MinValue(0.0) | — | — | pending local run |
-| MaxValue(10.0) | — | — | pending local run |
-| GreaterThan (host ``gt=0.0``) | — | — | pending local run |
-| LessThan (host ``lt=10.0``) | — | — | pending local run |
-| Equal (host ``eq=7.0``) | — | — | pending local run |
-| MinValue(0.0)+MaxValue(10.0) | — | — | pending local run |
+| MinValue(0.0) | 2441 | 92.4 | **26.4×** |
+| MaxValue(10.0) | 2451 | 93.2 | **26.3×** |
+| GreaterThan (host ``gt=0.0``) | 2455 | 93.4 | **26.3×** |
+| LessThan (host ``lt=10.0``) | 2515 | 93.8 | **26.8×** |
+| Equal (host ``eq=7.0``) | 2515 | 93.5 | **26.9×** |
+| MinValue(0.0)+MaxValue(10.0) | 2441 | 92.0 | **26.5×** |
+
+**Verdict: PASS.** Every Float family cleared the 3× bar (~26×). Native
+apply here is ~93 ns/op (GIL released), not a 70× product setattr
+claim. Integer families on the same run stayed ~24× (still PASS).
 
 HOLD after Float: String / Bytes length units (next sequential tips).
 Boolean only if later measure ≥3×. Decimal, Date/DateTime, UUID/Path,

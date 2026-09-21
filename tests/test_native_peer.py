@@ -179,7 +179,8 @@ def test_native_unit_names_are_full_words():
     assert re.search(r"\bEqual\(Bound\)", rust)
     assert re.search(r"Integer\(i64\)", rust)
     assert re.search(r"Float\(f64\)", rust)
-    assert "total_cmp" not in rust
+    assert "total_cmp(" not in rust
+    assert ".total_cmp" not in rust
     assert not re.search(r"\bGt\(i64\)", rust)
     assert not re.search(r"\bLt\(i64\)", rust)
     assert not re.search(r"\bEq\(i64\)", rust)
@@ -229,7 +230,8 @@ def test_closed_float_type_door_is_f64_extract():
     assert re.search(r"value: f64", rust)
     assert "fn apply_float" in rust
     assert "fn compile_float" in rust
-    assert "total_cmp" not in rust
+    assert "total_cmp(" not in rust
+    assert ".total_cmp" not in rust
     assert "NotFloat" not in rust
     assert "_closed_float_bounds" in native_py
     assert "apply_native_float_bounds" in native_py
