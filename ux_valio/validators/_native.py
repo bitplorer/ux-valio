@@ -3,12 +3,14 @@
 
 Bind-time choice: when ``ux_valio_native`` is importable and the specified
 path is a closed Integer or Float bound plan (``int`` / ``float``
-annotation + only ``ValueValidator`` bounds: min/max/gt/lt/eq), compile
-a plan once. Type door is host-first ``isinstance`` then FFI extract
-(``i64`` / ``f64``); bound units run after extract. Open TypeValidator /
-Union / TypedDict / Annotated stay on the host. Missing or failed extra
-→ host ``_active_units`` path. No import on the hot path after that
-choice. Not Cap Door B.
+annotation + only ``ValueValidator`` bounds: min/max/gt/lt/eq) or a
+closed String length plan (``str`` annotation + only ``LengthValidator``
+``min_length`` / ``max_length`` / ``length``), compile a plan once.
+Type door is host-first ``isinstance`` then FFI extract (``i64`` /
+``f64`` / ``&str``); bound / length units run after extract. Open
+TypeValidator / Union / TypedDict / Annotated / pattern / Bytes stay
+on the host. Missing or failed extra → host ``_active_units`` path.
+No import on the hot path after that choice. Not Cap Door B.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from typing import Any
 
 from ux_valio.errors import raise_collected
 from ux_valio.validators.leaves import TypeValidator
+from ux_valio.validators.length import LengthValidator
 from ux_valio.validators.value import ValueValidator
 
 _peer: Any | None = None
@@ -29,6 +32,13 @@ _HOST_BOUND_TO_COMPILE = (
     ("max_value", "max_value"),
     ("lt", "lt"),
     ("value", "eq"),
+)
+
+# L1 kwargs stay min_length / max_length / length.
+_HOST_LENGTH_TO_COMPILE = (
+    ("min_length", "min_length"),
+    ("max_length", "max_length"),
+    ("length", "length"),
 )
 
 
@@ -88,6 +98,33 @@ def _closed_float_bounds(owner: Any) -> dict[str, float] | None:
     return _closed_value_bounds(owner, float, float)
 
 
+def _closed_string_length(owner: Any) -> dict[str, int] | None:
+    """Compile kwargs when the specified path is String + LengthValidator.
+
+    Annotation must be ``str``. Bounds must be ``int`` (not ``bool`` /
+    ``float``). Bytes / list / pattern / required stay on the host.
+    """
+    if getattr(owner, "annotation", None) is not str:
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (
+        TypeValidator._validate_type,
+        LengthValidator._validate_length,
+    ):
+        return None
+    bounds: dict[str, int] = {}
+    for host_name, compile_name in _HOST_LENGTH_TO_COMPILE:
+        raw = getattr(owner, host_name, None)
+        if raw is None:
+            continue
+        if type(raw) is not int:
+            return None
+        bounds[compile_name] = raw
+    if not bounds:
+        return None
+    return bounds
+
+
 def _clear_native(owner: Any) -> None:
     """One host-fallback clear for the bind-time native bundle."""
     owner._native_plan = None
@@ -113,6 +150,16 @@ def _apply_host_value_after_f64_overflow(owner: Any, value: Any) -> None:
     ``ValueValidator`` (Door A KEEP wording).
     """
     ValueValidator._validate_value(owner, None, value)
+
+
+def _apply_host_length_after_str_extract(owner: Any, value: Any) -> None:
+    """UTF-8 extract failed before native length apply.
+
+    OverflowError / UnicodeEncodeError is a bridge signal, not a public
+    validation miss and not an L1 "overflow" message. Fall through to
+    host ``LengthValidator`` (Door A KEEP wording, ``len(str)``).
+    """
+    LengthValidator._validate_length(owner, None, value)
 
 
 def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
@@ -145,6 +192,24 @@ def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
         raise ValueError(
             f"{owner.name} expect the value {of_value}, got {value} as value instead"
         )
+    if fail == kinds.MinLength:
+        min_length = owner.min_length
+        raise ValueError(
+            f"{owner.name} expect the value of minimum length {min_length}, "
+            f"got length {len(value)} value instead"
+        )
+    if fail == kinds.MaxLength:
+        max_length = owner.max_length
+        raise ValueError(
+            f"{owner.name} expect the value of maximum length {max_length}, "
+            f"got length {len(value)} value instead"
+        )
+    if fail == kinds.Length:
+        length = owner.length
+        raise ValueError(
+            f"{owner.name} expect the value of length {length}, "
+            f"got length {len(value)} value instead"
+        )
     raise RuntimeError(
         f"ux_valio_native apply returned unexpected fail kind {fail!r}"
     )
@@ -159,7 +224,7 @@ def _raise_host_integer_type_miss(owner: Any, value: Any) -> None:
     continues into host ``ValueValidator``. Open TypeValidator stays
     on the host — not a native FailKind.
     """
-    _raise_host_closed_type_miss(owner, value)
+    _raise_host_closed_type_miss(owner, value, ValueValidator._validate_value)
 
 
 def _raise_host_float_type_miss(owner: Any, value: Any) -> None:
@@ -170,11 +235,21 @@ def _raise_host_float_type_miss(owner: Any, value: Any) -> None:
     ``collect_all`` continues into host ``ValueValidator``. NaN / ±inf
     are ``float`` and reach apply.
     """
-    _raise_host_closed_type_miss(owner, value)
+    _raise_host_closed_type_miss(owner, value, ValueValidator._validate_value)
 
 
-def _raise_host_closed_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording for a closed Integer or Float plan."""
+def _raise_host_string_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed String type door is host-first.
+
+    FFI type is the later ``&str`` extract. Python ``bytes`` / ``int``
+    are not ``str`` (KEEP). ``None`` is skipped by the caller.
+    ``collect_all`` continues into host ``LengthValidator``.
+    """
+    _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
+
+
+def _raise_host_closed_type_miss(owner: Any, value: Any, continue_unit: Any) -> None:
+    """KEEP TypeError wording for a closed Integer, Float, or String plan."""
     err = TypeError(
         f"{owner.name} expect {owner.annotation} type, "
         f"got {type(value).__name__} type instead"
@@ -183,7 +258,7 @@ def _raise_host_closed_type_miss(owner: Any, value: Any) -> None:
         raise err
     errors: list[BaseException] = [err]
     try:
-        ValueValidator._validate_value(owner, None, value)
+        continue_unit(owner, None, value)
     except Exception as second:
         errors.append(second)
     raise_collected(errors, name=owner.name)
@@ -214,16 +289,26 @@ def bind_native_plan(owner: Any) -> None:
         _bind_compiled_plan(owner, peer, peer.compile, int_bounds)
         return
     float_bounds = _closed_float_bounds(owner)
-    if float_bounds is None:
+    if float_bounds is not None:
+        peer = _load_native_peer()
+        if peer is None:
+            _clear_native(owner)
+            return
+        owner._native_apply = peer.apply_float
+        owner._native_apply_host = apply_native_float_bounds
+        _bind_compiled_plan(owner, peer, peer.compile_float, float_bounds)
+        return
+    str_bounds = _closed_string_length(owner)
+    if str_bounds is None:
         _clear_native(owner)
         return
     peer = _load_native_peer()
     if peer is None:
         _clear_native(owner)
         return
-    owner._native_apply = peer.apply_float
-    owner._native_apply_host = apply_native_float_bounds
-    _bind_compiled_plan(owner, peer, peer.compile_float, float_bounds)
+    owner._native_apply = peer.apply_string
+    owner._native_apply_host = apply_native_string_length
+    _bind_compiled_plan(owner, peer, peer.compile_string, str_bounds)
 
 
 def _apply_native_closed(
@@ -232,6 +317,7 @@ def _apply_native_closed(
     expected: type,
     raise_type_miss: Any,
     after_overflow: Any,
+    extract_errors: type | tuple[type, ...] = OverflowError,
 ) -> None:
     """One FFI apply. Host formats KEEP wording. Extract overflow stays on host."""
     if value is None:
@@ -241,7 +327,7 @@ def _apply_native_closed(
         return
     try:
         fail = owner._native_apply(owner._native_plan, value)
-    except OverflowError:
+    except extract_errors:
         after_overflow(owner, value)
         return
     except Exception as err:
@@ -277,6 +363,24 @@ def apply_native_float_bounds(owner: Any, value: Any) -> None:
         float,
         _raise_host_float_type_miss,
         _apply_host_value_after_f64_overflow,
+    )
+
+
+def apply_native_string_length(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. UTF-8 extract miss stays on host.
+
+    OverflowError / UnicodeEncodeError at ``&str`` extract is a bridge
+    signal (same three buckets as Integer/Float: validation / bridge /
+    peer-infra ``RuntimeError`` naming ``ux_valio_native``). No public
+    L1 "overflow" message. Door A length is ``len(str)`` codepoints.
+    """
+    _apply_native_closed(
+        owner,
+        value,
+        str,
+        _raise_host_string_type_miss,
+        _apply_host_length_after_str_extract,
+        (OverflowError, UnicodeError),
     )
 
 

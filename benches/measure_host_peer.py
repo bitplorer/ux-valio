@@ -1,19 +1,22 @@
 # SPDX-License-Identifier: MIT
-"""Measure host setattr vs one-shot native apply of Integer/Float bound plans.
+"""Measure host setattr vs one-shot native apply of Integer/Float/String plans.
 
 Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
-``IntegerValidator`` or ``FloatValidator`` bound plan (taught API, soul
-stays Python).
+``IntegerValidator`` / ``FloatValidator`` bound plan or closed
+``StringValidator`` length plan (taught API, soul stays Python).
 
-Hot path B: ``compile(...)`` / ``compile_float(...)`` once, then
-``apply`` / ``apply_float`` on the ``ux-valio[native]`` peer. That is
+Hot path B: ``compile(...)`` / ``compile_float(...)`` /
+``compile_string(...)`` once, then ``apply`` / ``apply_float`` /
+``apply_string`` on the ``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
 store/raise. Not Cap Door B.
 
 Families: MinValue, MaxValue, GreaterThan, LessThan, Equal, min+max
-range — once for Integer, once for Float. Switch bar:
+range — once for Integer, once for Float — plus String MinLength /
+MaxLength / Length / min+max range. Switch bar:
 FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
 below the bar is not claimed native (KEEP host for that family).
+Bytes length is HOLD (next tip).
 
 Usage::
 
@@ -43,6 +46,8 @@ PASSING_EQ = (7, 7, 7, 7, 7, 7, 7, 7)
 PASSING_0_7_F = (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
 PASSING_1_8_F = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)
 PASSING_EQ_F = (7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0)
+PASSING_A_H = ("a", "b", "c", "d", "e", "f", "g", "h")
+PASSING_LEN3 = ("abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc")
 
 
 @dataclass(frozen=True)
@@ -78,6 +83,16 @@ def _float_family(**kwargs: Any) -> PlanFamily:
         compile_attr="compile_float",
         apply_attr="apply_float",
         annotation=float,
+        **kwargs,
+    )
+
+
+def _string_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="StringValidator",
+        compile_attr="compile_string",
+        apply_attr="apply_string",
+        annotation=str,
         **kwargs,
     )
 
@@ -220,7 +235,54 @@ FLOAT_FAMILIES = (
     ),
 )
 
-FAMILIES = INTEGER_FAMILIES + FLOAT_FAMILIES
+STRING_FAMILIES = (
+    _string_family(
+        name="String.MinLength",
+        field_kwargs={"min_length": 1},
+        compile_kwargs={"min_length": 1},
+        values=PASSING_A_H,
+        seed="a",
+        smoke_ok="a",
+        smoke_miss="",
+        smoke_kind="MinLength",
+        label="String + MinLength(1)",
+    ),
+    _string_family(
+        name="String.MaxLength",
+        field_kwargs={"max_length": 10},
+        compile_kwargs={"max_length": 10},
+        values=PASSING_A_H,
+        seed="a",
+        smoke_ok="a",
+        smoke_miss="abcdefghijk",
+        smoke_kind="MaxLength",
+        label="String + MaxLength(10)",
+    ),
+    _string_family(
+        name="String.Length",
+        field_kwargs={"length": 3},
+        compile_kwargs={"length": 3},
+        values=PASSING_LEN3,
+        seed="abc",
+        smoke_ok="abc",
+        smoke_miss="ab",
+        smoke_kind="Length",
+        label="String + Length(3)",
+    ),
+    _string_family(
+        name="String.Range",
+        field_kwargs={"min_length": 1, "max_length": 10},
+        compile_kwargs={"min_length": 1, "max_length": 10},
+        values=PASSING_A_H,
+        seed="a",
+        smoke_ok="a",
+        smoke_miss="",
+        smoke_kind="MinLength",
+        label="String + MinLength(1) + MaxLength(10)",
+    ),
+)
+
+FAMILIES = INTEGER_FAMILIES + FLOAT_FAMILIES + STRING_FAMILIES
 
 
 def _ensure_tree_on_path() -> None:
@@ -303,7 +365,7 @@ def _build_peer() -> tuple[Any | None, str | None]:
 def _load_facades() -> dict[str, Any]:
     _ensure_tree_on_path()
     try:
-        from ux_valio import FloatValidator, IntegerValidator
+        from ux_valio import FloatValidator, IntegerValidator, StringValidator
     except ImportError as err:
         raise SystemExit(
             "FAIL: ux-valio is not importable from the tree. "
@@ -312,6 +374,7 @@ def _load_facades() -> dict[str, Any]:
     return {
         "IntegerValidator": IntegerValidator,
         "FloatValidator": FloatValidator,
+        "StringValidator": StringValidator,
     }
 
 
@@ -325,6 +388,13 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
     field = facade(**family.field_kwargs)
     _clear_native(field)
     seed = family.seed
+    if family.annotation is str:
+
+        @dataclass
+        class StrBox:
+            n: str = field
+
+        return StrBox(n=seed)
     if family.annotation is float:
 
         @dataclass
@@ -417,7 +487,8 @@ def _report_header(skip_reason: str | None) -> None:
     print(f"rustc:    {rustc}")
     print(
         "plan:     Integer i64 + Float f64 bound units "
-        "(MinValue/MaxValue/GreaterThan/LessThan/Equal/range)"
+        "(MinValue/MaxValue/GreaterThan/LessThan/Equal/range); "
+        "String length units (MinLength/MaxLength/Length/range)"
     )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
@@ -480,11 +551,14 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
         results.append((family, unlocked, ratio))
     integer = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "IntegerValidator"]
     floating = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "FloatValidator"]
+    string = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "StringValidator"]
     failed = [family.name for family, unlocked, _ratio in results if not unlocked]
     int_passed = [family.name for family, unlocked, _ratio in integer if unlocked]
     int_new = [name for name in int_passed if name != "Integer.MinValue"]
     float_failed = [family.name for family, unlocked, _ratio in floating if not unlocked]
     float_passed = [family.name for family, unlocked, _ratio in floating if unlocked]
+    string_failed = [family.name for family, unlocked, _ratio in string if not unlocked]
+    string_passed = [family.name for family, unlocked, _ratio in string if unlocked]
     if any(not unlocked for _family, unlocked, _ratio in integer):
         print(
             f"SUMMARY: FAIL (KEEP Python) Integer families below {SWITCH_BAR:.1f}×: "
@@ -509,8 +583,20 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
             )
         )
         return 1
+    if string_failed:
+        print(
+            f"SUMMARY: String KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(string_failed)
+            + ". Do not claim native for those families. Bytes length is next. "
+            + (
+                f"String native unlocked: {', '.join(string_passed)}"
+                if string_passed
+                else "No String family met the bar."
+            )
+        )
+        return 1
     print(
-        f"SUMMARY: PASS — {', '.join(int_passed + float_passed)} each >= "
+        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed)} each >= "
         f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr)"
     )
     return 0
@@ -519,7 +605,8 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Measure IntegerValidator/FloatValidator setattr vs native bound-plan apply."
+            "Measure IntegerValidator/FloatValidator/StringValidator setattr "
+            "vs native bound/length-plan apply."
         )
     )
     parser.add_argument(

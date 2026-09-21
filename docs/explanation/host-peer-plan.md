@@ -18,7 +18,7 @@ to call, *which* plan, and *how* to raise.
 ```text
 bind / __init__     host compiles specified theory → plan
 set                 host hands (plan, value) once
-                    peer applies  (i64 or f64 extract; bound units)
+                    peer applies  (i64 / f64 / &str extract; bound or length units)
                     host stores on instance.__dict__
                     host runs hooks, named extras, debug-swallow
 ```
@@ -57,16 +57,21 @@ a native enum, built **once** at ``__init__`` / ``__set_name__``.
 
 Shipped closed plans: ``Integer`` or ``Float`` plus specified bound units —
 ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` / ``Equal``, including
-min+max range and exclusive ``gt``+``lt`` as the host encodes them.
+min+max range and exclusive ``gt``+``lt`` as the host encodes them —
+and ``String`` plus specified length units — ``MinLength`` /
+``MaxLength`` / ``Length``, including min+max range.
 ``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
 ``eq=7``, and ``min_value=0, max_value=10`` compile when the
 annotation is ``int`` and only those bound units are active.
 ``FloatValidator(min_value=0.0)`` (and the same family of kwargs)
 compile when the annotation is ``float`` and bounds are ``float``
-(an int bound such as ``min_value=0`` stays on the host). Unclosed
-paths (``required``, ``multiple_of``, length, pattern, choice, named
+(an int bound such as ``min_value=0`` stays on the host).
+``StringValidator(min_length=1)``, ``max_length=50``, ``length=3``,
+and ``min_length=1, max_length=10`` compile when the annotation is
+``str`` and only those length units are active. Unclosed
+paths (``required``, ``multiple_of``, pattern, choice, named
 identity, Email, a mixed bound type, Union / TypedDict /
-Annotated) stay on the host. Email / named identity were already
+Annotated, Bytes length) stay on the host. Email / named identity were already
 competitive in Python — do not start there.
 
 Closed Integer **type door** is the FFI ``i64`` extract. Closed Float
@@ -77,6 +82,9 @@ run after extract. Host ``isinstance`` is first so Python ``True`` is
 ``TypeError`` wording is host-formatted (not a ``FailKind.NotInteger``
 / ``NotFloat``; open TypeValidator is not reflected into Rust). Bound
 misses use the ``FailKind`` map.
+
+Closed String **type door** is the FFI ``&str`` extract
+(``apply_string``). Length units run after extract.
 
 **Float NaN / ±inf (Door A lock).** Host ``ValueValidator`` uses Python
 IEEE compares. Native must match; do not invent a second policy
@@ -91,10 +99,22 @@ IEEE compares. Native must match; do not invent a second policy
 - Extract overflow is a **bridge** (fall through to host
   ``ValueValidator``), not an L1 "overflow" message.
 
-HOLD this tip: String / Bytes length (next sequential), Boolean
-(only if later measure ≥3×), Decimal (scale/coerce unlocked),
-Date/DateTime, UUID/Path/IP/Enum, Pattern / custom callables,
-named facades, Cap Door B.
+**String length (Door A lock).** Host ``LengthValidator`` uses Python
+``len(str)`` — Unicode codepoints (scalar values), not UTF-8 bytes and
+not grapheme clusters:
+
+- Type: only ``str`` (``bytes`` / ``int`` miss). ``None`` skips.
+- Count: NFC ``é`` is 1; NFD ``e`` + combining acute is 2; a single
+  emoji codepoint is 1. Empty ``""`` is 0 (``min_length=1`` misses;
+  ``max_length=0`` / ``length=0`` accept it).
+- Extract overflow / lone surrogates that are not UTF-8 is a **bridge**
+  (fall through to host ``LengthValidator``), not an L1 "overflow"
+  message.
+
+HOLD this tip: Bytes length (next sequential), IntegerEnum / StringEnum
+after, Boolean (only if later measure ≥3×), Decimal (scale/coerce
+unlocked), Date/DateTime, UUID/Path/IP/plain EnumValidator, Pattern /
+custom callables, named facades, Cap Door B.
 
 ## What never leaves the host
 
@@ -113,13 +133,13 @@ named facades, Cap Door B.
    apply. ``pip install ux-valio[native]`` installs the ``ux-valio-native``
    wheel (module ``ux_valio_native`` — not a taught import).
 2. Same field default. Same ``annotation``. Same fail-closed errors.
-   L1 stays ``from ux_valio import IntegerValidator``.
+   L1 stays ``from ux_valio import IntegerValidator, StringValidator``.
 3. Compile at bind, not at set. Missing peer → host apply (no import
    error on the hot path after a failed extra install: bind-time
    choice).
 4. One FFI call per set for the specified scalar plan. Not eight.
 5. ``self`` is a ``PyObject*`` handle. Do not migrate the instance into
-   a Rust struct. Extract scalars (``i64`` / ``f64``), apply, box back.
+   a Rust struct. Extract scalars (``i64`` / ``f64`` / ``&str``), apply, box back.
 6. Do not re-implement the library in Rust.
 7. Do not quote the switch-test ratio as end-to-end product setattr.
    The measure compared full host setattr against **plan apply only**.
@@ -129,7 +149,11 @@ named facades, Cap Door B.
    signal, not a public validation miss and not a ``bit_length``
    pre-check. PyO3 ``f64`` extract is the Float door (``apply_float``).
    ``OverflowError`` at that extract is the same bridge (fall through
-   to host ``ValueValidator``; no L1 "overflow" message). Unexpected
+   to host ``ValueValidator``; no L1 "overflow" message). PyO3 ``&str``
+   extract is the String door (``apply_string``). ``OverflowError`` /
+   ``UnicodeEncodeError`` at that extract is the same bridge (fall
+   through to host ``LengthValidator``; no L1 "overflow" message).
+   Unexpected
    peer/infra is ``RuntimeError`` naming ``ux_valio_native``. Three
    buckets: validation (``FailKind``) / bridge (extract overflow) /
    peer-infra.
@@ -153,6 +177,7 @@ Without the extra, every existing test stays on the stdlib path.
 
 Build the product peer only if, on the same box, host apply of a
 specified ``IntegerValidator(min_value=0)`` / ``FloatValidator(min_value=0.0)``
+/ ``StringValidator(min_length=1)``
 setattr stays several times slower than a one-shot native apply of that
 same plan, and the Python compile (``_active_units``, skip TypedDict,
 skip watch) is already in.
@@ -165,13 +190,16 @@ the door risk.
 
 The harness lives in-tree. It installs/uses ``ux-valio`` from the repo
 root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with a
-closed ``IntegerValidator`` or ``FloatValidator`` bound plan. Hot path B is ``compile(...)``
-/ ``compile_float(...)`` once then ``apply`` / ``apply_float`` on the
+closed ``IntegerValidator`` or ``FloatValidator`` bound plan or a closed
+``StringValidator`` length plan. Hot path B is ``compile(...)``
+/ ``compile_float(...)`` / ``compile_string(...)`` once then ``apply`` /
+``apply_float`` / ``apply_string`` on the
 product peer (``native/``: owned unit list of ``Integer`` or ``Float``
 plus ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
-``Equal``). B is **not** product setattr (no store, no
+``Equal``, or ``String`` plus ``MinLength`` / ``MaxLength`` /
+``Length``). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
-family; the bar is **≥ 3×** for each. A Float family below the bar is
+family; the bar is **≥ 3×** for each. A family below the bar is
 KEEP host for that family (do not claim native).
 
 ```console
@@ -264,6 +292,28 @@ Door A (not part of the hot-path values). Bar 3× per family.
 apply here is ~93 ns/op (GIL released), not a 70× product setattr
 claim. Integer families on the same run stayed ~24× (still PASS).
 
-HOLD after Float: String / Bytes length units (next sequential tips).
-Boolean only if later measure ≥3×. Decimal, Date/DateTime, UUID/Path,
-Pattern, named facades, Cap Door B stay off this path.
+### Measured (2026-09-21) String length families
+
+Same class of box, one run, 400000 iters after 20000 warmup, CPython 3.14.7,
+rustc 1.83.0, Linux x86_64. Peer is a release cdylib. Host units were
+``_validate_type`` then ``_validate_length``. B is
+``apply_string(plan, &str)`` only (``Python::detach``). Count is
+codepoints (``chars().count()``), matching host ``len(str)``. Bar 3×
+per family.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| MinLength(1) | 2450 | 95.6 | **25.6×** |
+| MaxLength(10) | 2424 | 94.6 | **25.6×** |
+| Length (host ``length=3``) | 2445 | 96.7 | **25.3×** |
+| MinLength(1)+MaxLength(10) | 2399 | 94.8 | **25.3×** |
+
+**Verdict: PASS.** Every String family cleared the 3× bar (~25×). Native
+apply here is ~95 ns/op (GIL released), not a 70× product setattr
+claim. Integer families on the same run stayed ~24–26× and Float
+~25–27× (still PASS).
+
+HOLD after String: Bytes length (next sequential tip). IntegerEnum /
+StringEnum after. Boolean only if later measure ≥3×. Decimal,
+Date/DateTime, UUID/Path, Pattern, named facades, Cap Door B stay off
+this path.
