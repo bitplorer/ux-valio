@@ -4,13 +4,14 @@
 Bind-time choice: when ``ux_valio_native`` is importable and the specified
 path is a closed Integer or Float bound plan (``int`` / ``float``
 annotation + only ``ValueValidator`` bounds: min/max/gt/lt/eq) or a
-closed String length plan (``str`` annotation + only ``LengthValidator``
-``min_length`` / ``max_length`` / ``length``), compile a plan once.
-Type door is host-first ``isinstance`` then FFI extract (``i64`` /
-``f64`` / ``&str``); bound / length units run after extract. Open
-TypeValidator / Union / TypedDict / Annotated / pattern / Bytes stay
-on the host. Missing or failed extra → host ``_active_units`` path.
-No import on the hot path after that choice. Not Cap Door B.
+closed String or Bytes length plan (``str`` / ``bytes`` annotation +
+only ``LengthValidator`` ``min_length`` / ``max_length`` / ``length``),
+compile a plan once. Type door is host-first ``isinstance`` then FFI
+extract (``i64`` / ``f64`` / ``&str`` / ``&[u8]``); bound / length
+units run after extract. Open TypeValidator / Union / TypedDict /
+Annotated / pattern stay on the host. Missing or failed extra → host
+``_active_units`` path. No import on the hot path after that choice.
+Not Cap Door B.
 """
 
 from __future__ import annotations
@@ -98,13 +99,13 @@ def _closed_float_bounds(owner: Any) -> dict[str, float] | None:
     return _closed_value_bounds(owner, float, float)
 
 
-def _closed_string_length(owner: Any) -> dict[str, int] | None:
-    """Compile kwargs when the specified path is String + LengthValidator.
+def _closed_length(owner: Any, annotation: type) -> dict[str, int] | None:
+    """Compile kwargs when the specified path is annotation + LengthValidator.
 
-    Annotation must be ``str``. Bounds must be ``int`` (not ``bool`` /
-    ``float``). Bytes / list / pattern / required stay on the host.
+    Bounds must be ``int`` (not ``bool`` / ``float``). Pattern / required /
+    value bounds stay on the host.
     """
-    if getattr(owner, "annotation", None) is not str:
+    if getattr(owner, "annotation", None) is not annotation:
         return None
     units = getattr(owner, "_active_units", None)
     if units != (
@@ -123,6 +124,26 @@ def _closed_string_length(owner: Any) -> dict[str, int] | None:
     if not bounds:
         return None
     return bounds
+
+
+def _closed_string_length(owner: Any) -> dict[str, int] | None:
+    """Compile kwargs when the specified path is String + LengthValidator.
+
+    Annotation must be ``str``. Bounds must be ``int`` (not ``bool`` /
+    ``float``). List / pattern / required stay on the host. Count is
+    ``len(str)`` codepoints.
+    """
+    return _closed_length(owner, str)
+
+
+def _closed_bytes_length(owner: Any) -> dict[str, int] | None:
+    """Compile kwargs when the specified path is Bytes + LengthValidator.
+
+    Annotation must be ``bytes``. Bounds must be ``int`` (not ``bool`` /
+    ``float``). Pattern / custom / String stay on the host. Count is
+    ``len(bytes)`` (byte length), not Unicode codepoints.
+    """
+    return _closed_length(owner, bytes)
 
 
 def _clear_native(owner: Any) -> None:
@@ -162,57 +183,69 @@ def _apply_host_length_after_str_extract(owner: Any, value: Any) -> None:
     LengthValidator._validate_length(owner, None, value)
 
 
+def _apply_host_length_after_bytes_extract(owner: Any, value: Any) -> None:
+    """bytes extract failed before native length apply.
+
+    OverflowError / extract TypeError is a bridge signal, not a public
+    validation miss and not an L1 "overflow" message. Fall through to
+    host ``LengthValidator`` (Door A KEEP wording, ``len(bytes)``).
+    """
+    LengthValidator._validate_length(owner, None, value)
+
+
 def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
     """Map peer ``FailKind`` to Door A KEEP wording. Unexpected kind is infra."""
     kinds = owner._native_fail
-    if fail == kinds.MinValue:
-        min_value = owner.min_value
-        raise ValueError(
-            f"{owner.name} expect the minimum value of {min_value}, "
-            f"got {value} instead"
-        )
-    if fail == kinds.MaxValue:
-        max_value = owner.max_value
-        raise ValueError(
-            f"{owner.name} expect the maximum value of {max_value}, "
-            f"got {value} instead"
-        )
-    if fail == kinds.GreaterThan:
-        gt = owner.gt
-        raise ValueError(
-            f"{owner.name} expect a value greater than {gt}, got {value} instead"
-        )
-    if fail == kinds.LessThan:
-        lt = owner.lt
-        raise ValueError(
-            f"{owner.name} expect a value less than {lt}, got {value} instead"
-        )
-    if fail == kinds.Equal:
-        of_value = owner.value
-        raise ValueError(
-            f"{owner.name} expect the value {of_value}, got {value} as value instead"
-        )
-    if fail == kinds.MinLength:
-        min_length = owner.min_length
-        raise ValueError(
-            f"{owner.name} expect the value of minimum length {min_length}, "
-            f"got length {len(value)} value instead"
-        )
-    if fail == kinds.MaxLength:
-        max_length = owner.max_length
-        raise ValueError(
-            f"{owner.name} expect the value of maximum length {max_length}, "
-            f"got length {len(value)} value instead"
-        )
-    if fail == kinds.Length:
-        length = owner.length
-        raise ValueError(
-            f"{owner.name} expect the value of length {length}, "
-            f"got length {len(value)} value instead"
-        )
-    raise RuntimeError(
-        f"ux_valio_native apply returned unexpected fail kind {fail!r}"
-    )
+    match fail:
+        case kinds.MinValue:
+            min_value = owner.min_value
+            raise ValueError(
+                f"{owner.name} expect the minimum value of {min_value}, "
+                f"got {value} instead"
+            )
+        case kinds.MaxValue:
+            max_value = owner.max_value
+            raise ValueError(
+                f"{owner.name} expect the maximum value of {max_value}, "
+                f"got {value} instead"
+            )
+        case kinds.GreaterThan:
+            gt = owner.gt
+            raise ValueError(
+                f"{owner.name} expect a value greater than {gt}, got {value} instead"
+            )
+        case kinds.LessThan:
+            lt = owner.lt
+            raise ValueError(
+                f"{owner.name} expect a value less than {lt}, got {value} instead"
+            )
+        case kinds.Equal:
+            of_value = owner.value
+            raise ValueError(
+                f"{owner.name} expect the value {of_value}, got {value} as value instead"
+            )
+        case kinds.MinLength:
+            min_length = owner.min_length
+            raise ValueError(
+                f"{owner.name} expect the value of minimum length {min_length}, "
+                f"got length {len(value)} value instead"
+            )
+        case kinds.MaxLength:
+            max_length = owner.max_length
+            raise ValueError(
+                f"{owner.name} expect the value of maximum length {max_length}, "
+                f"got length {len(value)} value instead"
+            )
+        case kinds.Length:
+            length = owner.length
+            raise ValueError(
+                f"{owner.name} expect the value of length {length}, "
+                f"got length {len(value)} value instead"
+            )
+        case _:
+            raise RuntimeError(
+                f"ux_valio_native apply returned unexpected fail kind {fail!r}"
+            )
 
 
 def _raise_host_integer_type_miss(owner: Any, value: Any) -> None:
@@ -248,8 +281,19 @@ def _raise_host_string_type_miss(owner: Any, value: Any) -> None:
     _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
 
 
+def _raise_host_bytes_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Bytes type door is host-first.
+
+    FFI type is the later ``&[u8]`` extract. Python ``str`` /
+    ``bytearray`` / ``int`` are not ``bytes`` (KEEP). ``None`` is
+    skipped by the caller. ``collect_all`` continues into host
+    ``LengthValidator``.
+    """
+    _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
+
+
 def _raise_host_closed_type_miss(owner: Any, value: Any, continue_unit: Any) -> None:
-    """KEEP TypeError wording for a closed Integer, Float, or String plan."""
+    """KEEP TypeError wording for a closed Integer, Float, String, or Bytes plan."""
     err = TypeError(
         f"{owner.name} expect {owner.annotation} type, "
         f"got {type(value).__name__} type instead"
@@ -299,16 +343,26 @@ def bind_native_plan(owner: Any) -> None:
         _bind_compiled_plan(owner, peer, peer.compile_float, float_bounds)
         return
     str_bounds = _closed_string_length(owner)
-    if str_bounds is None:
+    if str_bounds is not None:
+        peer = _load_native_peer()
+        if peer is None:
+            _clear_native(owner)
+            return
+        owner._native_apply = peer.apply_string
+        owner._native_apply_host = apply_native_string_length
+        _bind_compiled_plan(owner, peer, peer.compile_string, str_bounds)
+        return
+    bytes_bounds = _closed_bytes_length(owner)
+    if bytes_bounds is None:
         _clear_native(owner)
         return
     peer = _load_native_peer()
     if peer is None:
         _clear_native(owner)
         return
-    owner._native_apply = peer.apply_string
-    owner._native_apply_host = apply_native_string_length
-    _bind_compiled_plan(owner, peer, peer.compile_string, str_bounds)
+    owner._native_apply = peer.apply_bytes
+    owner._native_apply_host = apply_native_bytes_length
+    _bind_compiled_plan(owner, peer, peer.compile_bytes, bytes_bounds)
 
 
 def _apply_native_closed(
@@ -381,6 +435,24 @@ def apply_native_string_length(owner: Any, value: Any) -> None:
         _raise_host_string_type_miss,
         _apply_host_length_after_str_extract,
         (OverflowError, UnicodeError),
+    )
+
+
+def apply_native_bytes_length(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. bytes extract miss stays on host.
+
+    OverflowError / extract TypeError at ``&[u8]`` extract is a bridge
+    signal (same three buckets as Integer/Float/String: validation /
+    bridge / peer-infra ``RuntimeError`` naming ``ux_valio_native``).
+    No public L1 "overflow" message. Door A length is ``len(bytes)``.
+    """
+    _apply_native_closed(
+        owner,
+        value,
+        bytes,
+        _raise_host_bytes_type_miss,
+        _apply_host_length_after_bytes_extract,
+        (OverflowError, TypeError),
     )
 
 
