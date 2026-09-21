@@ -1,14 +1,17 @@
 //! Optional apply peer for `ux-valio[native]`.
 //!
-//! Closed Integer and Float bound plans plus closed String and Bytes
-//! length plans. Type door is the FFI extract (`apply(plan, i64)` /
-//! `apply_float(plan, f64)` / `apply_string(plan, &str)` /
-//! `apply_bytes(plan, &[u8])`). Bound units (`MinValue` / `MaxValue` /
-//! `GreaterThan` / `LessThan` / `Equal`) run after numeric extract.
-//! Length units (`MinLength` / `MaxLength` / `Length`) are shared:
-//! String count is Unicode scalar values (`chars().count()`), matching
-//! host `len(str)`; Bytes count is `len()` of the extracted `&[u8]`,
-//! matching host `len(bytes)` — not Unicode scalar values.
+//! Closed Integer and Float bound plans, closed String and Bytes length
+//! plans, and a closed IntegerEnum member-set plan. Type door is the FFI
+//! extract (`apply(plan, i64)` / `apply_float(plan, f64)` /
+//! `apply_string(plan, &str)` / `apply_bytes(plan, &[u8])` /
+//! `apply_integer_enum(plan, i64)`). Bound units (`MinValue` /
+//! `MaxValue` / `GreaterThan` / `LessThan` / `Equal`) run after numeric
+//! extract. Length units (`MinLength` / `MaxLength` / `Length`) are
+//! shared: String count is Unicode scalar values (`chars().count()`),
+//! matching host `len(str)`; Bytes count is `len()` of the extracted
+//! `&[u8]`, matching host `len(bytes)` — not Unicode scalar values.
+//! IntegerEnum units are `Member(i64)` values from the concrete
+//! `enum.IntEnum`; membership is exact `i64` equality.
 //! Host maps `FailKind` to KEEP wording. Open / generic type checks
 //! stay on the host — this crate does not reflect Python typing. Host
 //! compiles once at bind; each set is one FFI apply. Soul stays on the
@@ -68,6 +71,14 @@ enum Unit {
     /// Host exact `length`. String count is Unicode scalar values;
     /// Bytes count is the extracted `&[u8]` length.
     Length(usize),
+    /// Plan-shape marker. Type extract is the FFI `i64` argument.
+    /// Host `isinstance` gates first against the concrete `enum.IntEnum`
+    /// (so a plain `int` or another enum misses before extract).
+    /// `None` / `collect_all` type miss stay host. Not an open type check.
+    IntegerEnum,
+    /// One `i64` member value of the concrete `enum.IntEnum`.
+    /// Membership is exact equality with the extracted `i64`.
+    Member(i64),
 }
 
 /// Compiled plan. Built once; applied many times.
@@ -105,6 +116,9 @@ enum FailKind {
     /// Host exact `length`: count was not the compiled length.
     /// String: codepoints. Bytes: `len(bytes)`.
     Length = 8,
+    /// Host IntegerEnum type door: extracted `i64` was not a compiled
+    /// member value. Host formats the KEEP type-door `TypeError`.
+    NotMember = 9,
 }
 
 /// Door A IEEE compares. `PartialOrd`/`PartialEq` on `f64` match host
@@ -147,6 +161,8 @@ fn apply_units(units: &[Unit], value: Bound) -> Result<(), FailKind> {
             // Length units belong on apply_string / apply_bytes; numeric apply
             // no-ops them (host never mixes doors).
             Unit::MinLength(_) | Unit::MaxLength(_) | Unit::Length(_) => None,
+            // IntegerEnum units belong on apply_integer_enum.
+            Unit::IntegerEnum | Unit::Member(_) => None,
         };
         if let Some(kind) = fail {
             return Err(kind);
@@ -201,6 +217,26 @@ fn apply_length_units(units: &[Unit], counted: usize) -> Result<(), FailKind> {
     Ok(())
 }
 
+fn apply_member_units(units: &[Unit], value: i64) -> Result<(), FailKind> {
+    for unit in units {
+        if let Unit::Member(member) = *unit {
+            if member == value {
+                return Ok(());
+            }
+        }
+    }
+    Err(FailKind::NotMember)
+}
+
+fn compile_integer_enum_plan(members: Vec<i64>) -> Plan {
+    let mut units = Vec::with_capacity(members.len() + 1);
+    units.push(Unit::IntegerEnum);
+    for member in members {
+        units.push(Unit::Member(member));
+    }
+    Plan { units }
+}
+
 fn compile_length_plan(
     shape: Unit,
     min_length: Option<usize>,
@@ -217,12 +253,15 @@ fn compile_length_plan(
 }
 
 /// Product peer: `compile(...)` / `compile_float(...)` /
-/// `compile_string(...)` / `compile_bytes(...)` + one-shot apply.
+/// `compile_string(...)` / `compile_bytes(...)` /
+/// `compile_integer_enum(...)` + one-shot apply.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`,
-/// `Float`, `String`, or `Bytes`; extract is the FFI argument. Compile
-/// kwargs are host names (`min_value` / `gt` / `max_length` / `length`)
-/// mapped onto the full-word units. Not a taught L1 API.
+/// `Float`, `String`, `Bytes`, or `IntegerEnum`; extract is the FFI
+/// argument. Compile kwargs are host names (`min_value` / `gt` /
+/// `max_length` / `length`) or `members` for the IntegerEnum set,
+/// mapped onto the full-word units. Not a taught L1 API. Compile and
+/// apply stay separate doors.
 #[pymodule]
 mod ux_valio_native {
     use super::*;
@@ -361,5 +400,28 @@ mod ux_valio_native {
         let units = plan.units.clone();
         let byte_len = value.len();
         py.detach(move || apply_length_units(&units, byte_len).err())
+    }
+
+    /// Closed IntegerEnum member-set plan. `members` are the concrete
+    /// `enum.IntEnum` `i64` values (host order). An empty list is an
+    /// empty set: every apply is `NotMember`. Host does not compile an
+    /// empty set. Not a taught L1 kwarg.
+    #[pyfunction]
+    fn compile_integer_enum(members: Vec<i64>) -> Plan {
+        compile_integer_enum_plan(members)
+    }
+
+    /// One-shot IntegerEnum apply. Success is `None`; a value outside
+    /// the compiled member set is `FailKind::NotMember`.
+    ///
+    /// Closed IntegerEnum type door is this `i64` extract. A Python int
+    /// outside i64 raises `OverflowError` at this FFI boundary; host
+    /// falls through to the host type door. Membership is exact `i64`
+    /// equality with `Member` units (not an open type check). Releases
+    /// the GIL (`Python::detach`) for the unit walk.
+    #[pyfunction]
+    fn apply_integer_enum(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
+        let units = plan.units.clone();
+        py.detach(move || apply_member_units(&units, value).err())
     }
 }
