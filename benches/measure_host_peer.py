@@ -3,17 +3,19 @@
 
 Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
 ``IntegerValidator`` / ``FloatValidator`` bound plan, a closed
-``StringValidator`` / ``BytesValidator`` length plan, or a closed
-``IntegerEnumValidator`` member-set plan, or a closed
-``StringEnumValidator`` UTF-8 member-set plan (taught API, soul stays
-Python). Enum path A clears the native plan after bind so the loop is
-pure Python setattr.
+``StringValidator`` / ``BytesValidator`` length plan, a closed
+``IntegerEnumValidator`` member-set plan, a closed
+``StringEnumValidator`` UTF-8 member-set plan, or a closed
+``BooleanValidator`` exact-bool type door (taught API, soul stays
+Python). Enum and Boolean path A clear the native plan after bind so
+the loop is pure Python setattr.
 
 Hot path B: ``compile_integer(...)`` / ``compile_float(...)`` /
 ``compile_string(...)`` / ``compile_bytes(...)`` /
-``compile_integer_enum(...)`` / ``compile_string_enum(...)`` once, then
+``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
+``compile_boolean()`` once, then
 ``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
-``apply_integer_enum`` / ``apply_string_enum`` on the
+``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` on the
 ``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
 store/raise. Not Cap Door B.
@@ -21,10 +23,10 @@ store/raise. Not Cap Door B.
 Families: MinValue, MaxValue, GreaterThan, LessThan, Equal, min+max
 range — once for Integer, once for Float — plus String and Bytes
 MinLength / MaxLength / Length / min+max range, plus one IntegerEnum
-member set and one StringEnum UTF-8 member set. Switch bar:
+member set, one StringEnum UTF-8 member set, and one Boolean exact
+``bool`` type door (no coerce of ``1`` / ``0``). Switch bar:
 FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
 below the bar is not claimed native (KEEP host for that family).
-Next HOLD: Boolean only if a later measure is >= 3× alone.
 
 Usage::
 
@@ -59,6 +61,7 @@ PASSING_A_H = ("a", "b", "c", "d", "e", "f", "g", "h")
 PASSING_LEN3 = ("abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc")
 PASSING_A_H_B = (b"a", b"b", b"c", b"d", b"e", b"f", b"g", b"h")
 PASSING_LEN3_B = (b"abc", b"abc", b"abc", b"abc", b"abc", b"abc", b"abc", b"abc")
+PASSING_BOOL = (True, False, True, False, True, False, True, False)
 
 
 @dataclass(frozen=True)
@@ -76,6 +79,7 @@ class PlanFamily:
     smoke_miss: Any
     smoke_kind: str
     label: str
+    smoke_raises: type[BaseException] | None = None
 
 
 def _integer_enum_family(**kwargs: Any) -> PlanFamily:
@@ -158,6 +162,16 @@ class _MeasureShade(enum.Enum):
 
 
 _MEASURE_SHADE_VALUES = tuple(_MeasureShade)
+
+
+def _boolean_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="BooleanValidator",
+        compile_attr="compile_boolean",
+        apply_attr="apply_boolean",
+        annotation=bool,
+        **kwargs,
+    )
 
 
 def _bytes_family(**kwargs: Any) -> PlanFamily:
@@ -430,6 +444,21 @@ STRING_ENUM_FAMILIES = (
     ),
 )
 
+BOOLEAN_FAMILIES = (
+    _boolean_family(
+        name="Boolean.Type",
+        field_kwargs={},
+        compile_kwargs={},
+        values=PASSING_BOOL,
+        seed=False,
+        smoke_ok=True,
+        smoke_miss=1,
+        smoke_kind="Extract",
+        label="Boolean exact bool",
+        smoke_raises=TypeError,
+    ),
+)
+
 FAMILIES = (
     INTEGER_FAMILIES
     + FLOAT_FAMILIES
@@ -437,6 +466,7 @@ FAMILIES = (
     + BYTES_FAMILIES
     + INTEGER_ENUM_FAMILIES
     + STRING_ENUM_FAMILIES
+    + BOOLEAN_FAMILIES
 )
 
 
@@ -521,6 +551,7 @@ def _load_facades() -> dict[str, Any]:
     _ensure_tree_on_path()
     try:
         from ux_valio import (
+            BooleanValidator,
             BytesValidator,
             FloatValidator,
             IntegerEnumValidator,
@@ -540,6 +571,7 @@ def _load_facades() -> dict[str, Any]:
         "BytesValidator": BytesValidator,
         "IntegerEnumValidator": IntegerEnumValidator,
         "StringEnumValidator": StringEnumValidator,
+        "BooleanValidator": BooleanValidator,
     }
 
 
@@ -551,11 +583,13 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
 
     facade = facades[family.facade]
     field = facade(**family.field_kwargs)
-    if family.facade in ("IntegerEnumValidator", "StringEnumValidator"):
-        # Bind the concrete enum first (plan compiles at ``__set_name__``),
-        # then drop it so path A is pure Python setattr.
+    if family.facade in ("IntegerEnumValidator", "StringEnumValidator", "BooleanValidator"):
+        # Bind first (enum plans compile at ``__set_name__``; Boolean may
+        # compile at construct), then drop the plan so path A is pure
+        # Python setattr.
         namespace = {"__annotations__": {"n": family.annotation}, "n": field}
-        box_type = dataclass(type("EnumBox", (), namespace))
+        box_name = "BoolBox" if family.annotation is bool else "EnumBox"
+        box_type = dataclass(type(box_name, (), namespace))
         _clear_native(field)
         return box_type(n=family.seed)
     _clear_native(field)
@@ -630,11 +664,50 @@ def _host_units(facades: dict[str, Any], family: PlanFamily) -> list[str]:
     return [unit.__name__ for unit in field._active_units]
 
 
+def _smoke_extract_miss(family: PlanFamily, plan: Any, apply_fn: Any) -> str:
+    """Exact type door: the miss raises at extract. No coerce."""
+    if family.annotation is bool:
+        false_ok = apply_fn(plan, False)
+        if false_ok is not None:
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, False) "
+                f"returned {false_ok!r}, expected None"
+            )
+        try:
+            coerced = apply_fn(plan, 0)
+        except family.smoke_raises:
+            coerced = None
+        else:
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, 0) "
+                f"returned {coerced!r}; int 0 must not coerce to False"
+            )
+    try:
+        raised = apply_fn(plan, family.smoke_miss)
+    except family.smoke_raises:
+        return (
+            f"SMOKE: {family.name}: {family.compile_attr}({family.compile_kwargs}) "
+            f"+ {family.apply_attr}({family.smoke_ok!r}) ok; {family.apply_attr}("
+            f"{family.smoke_miss!r}) raises {family.smoke_raises.__name__}"
+        )
+    raise SystemExit(
+        f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {family.smoke_miss!r}) "
+        f"returned {raised!r}, expected {family.smoke_raises.__name__}"
+    )
+
+
 def _smoke_family(peer: Any, family: PlanFamily) -> str:
     compile_fn = getattr(peer, family.compile_attr)
     apply_fn = getattr(peer, family.apply_attr)
     plan = compile_fn(**family.compile_kwargs)
     ok = apply_fn(plan, family.smoke_ok)
+    if family.smoke_raises is not None:
+        if ok is not None:
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {family.smoke_ok}) "
+                f"returned {ok!r}, expected None"
+            )
+        return _smoke_extract_miss(family, plan, apply_fn)
     miss = apply_fn(plan, family.smoke_miss)
     kind = getattr(peer.FailKind, family.smoke_kind)
     if ok is not None:
@@ -672,7 +745,8 @@ def _report_header(skip_reason: str | None) -> None:
         "String length units (MinLength/MaxLength/Length/range, codepoints); "
         "Bytes length units (MinLength/MaxLength/Length/range, byte count); "
         "IntegerEnum i64 member set (compile_integer_enum / apply_integer_enum); "
-        "StringEnum UTF-8 member set (compile_string_enum / apply_string_enum)"
+        "StringEnum UTF-8 member set (compile_string_enum / apply_string_enum); "
+        "Boolean exact bool (compile_boolean / apply_boolean)"
     )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
@@ -756,6 +830,13 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
     enum_passed = [family.name for family, unlocked, _ratio in enums if unlocked]
     string_enum_failed = [family.name for family, unlocked, _ratio in string_enums if not unlocked]
     string_enum_passed = [family.name for family, unlocked, _ratio in string_enums if unlocked]
+    boolean = [
+        (family, unlocked, ratio)
+        for family, unlocked, ratio in results
+        if family.facade == "BooleanValidator"
+    ]
+    boolean_failed = [family.name for family, unlocked, _ratio in boolean if not unlocked]
+    boolean_passed = [family.name for family, unlocked, _ratio in boolean if unlocked]
     if any(not unlocked for _family, unlocked, _ratio in integer):
         print(
             f"SUMMARY: FAIL (KEEP Python) Integer families below {SWITCH_BAR:.1f}×: "
@@ -808,20 +889,27 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
         print(
             f"SUMMARY: IntegerEnum KEEP host (below {SWITCH_BAR:.1f}×): "
             + ", ".join(enum_failed or ["(no IntegerEnum family)"])
-            + ". Do not claim native for IntegerEnum. Boolean stays off."
+            + ". Do not claim native for IntegerEnum."
         )
         return 1
     if string_enum_failed or not string_enum_passed:
         print(
             f"SUMMARY: StringEnum KEEP host (below {SWITCH_BAR:.1f}×): "
             + ", ".join(string_enum_failed or ["(no StringEnum family)"])
-            + ". Do not claim native for StringEnum. Boolean stays off."
+            + ". Do not claim native for StringEnum."
+        )
+        return 1
+    if boolean_failed or not boolean_passed:
+        print(
+            f"SUMMARY: Boolean KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(boolean_failed or ["(no Boolean family)"])
+            + ". Do not claim native for Boolean. Exact bool type door stays on the host."
         )
         return 1
     print(
-        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed)} each >= "
+        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed + boolean_passed)} each >= "
         f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr). "
-        "Boolean stays off."
+        "Boolean exact bool type door met the bar."
     )
     return 0
 
@@ -829,8 +917,8 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Measure Integer/Float/String/Bytes/IntegerEnum/StringEnum setattr vs "
-            "native plan apply."
+            "Measure Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean "
+            "setattr vs native plan apply."
         )
     )
     parser.add_argument(
