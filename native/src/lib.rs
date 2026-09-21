@@ -1,19 +1,23 @@
 //! Optional apply peer for `ux-valio[native]`.
 //!
-//! Closed Integer bound plans: `Integer` then the specified i64 units
-//! (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` / `Equal`,
-//! including min+max range and exclusive pairs). Host compiles once at
-//! bind; each set is one FFI `apply(plan, i64)`. Failures are
-//! `FailKind` — host formats KEEP wording. Soul stays on the host
-//! (descriptor, hooks, store). Not Cap Door B.
+//! Closed Integer bound plans only. Type door is the FFI `i64` extract
+//! (`apply(plan, i64)`). Bound units (`MinValue` / `MaxValue` /
+//! `GreaterThan` / `LessThan` / `Equal`) run after extract. Host maps
+//! `FailKind` to KEEP wording. Open / generic type checks stay on the
+//! host — this crate does not reflect Python typing. Float (`f64`) is
+//! a later tip. Host compiles once at bind; each set is one FFI apply.
+//! Soul stays on the host (descriptor, hooks, store). Not Cap Door B.
 
 use pyo3::prelude::*;
 
-/// Specified scalar units. `Integer` is the plan-shape marker; type
-/// extract is host `isinstance` plus the FFI `i64` argument.
+/// Specified scalar units. `Integer` is the plan-shape marker, not an
+/// open type check. Type is the FFI `i64` extract; bound units follow.
 #[derive(Clone, Copy)]
 enum Unit {
-    /// Plan-shape marker. Type extract is host `isinstance` + FFI i64.
+    /// Plan-shape marker. Type extract is the FFI `i64` argument, not an
+    /// open type check. Host `isinstance` gates first so Python `True`
+    /// is `int` (load-bearing); `None` / `collect_all` type miss stay
+    /// host.
     Integer,
     /// Host `min_value`, inclusive ≥.
     MinValue(i64),
@@ -36,8 +40,9 @@ struct Plan {
     units: Vec<Unit>,
 }
 
-/// Small error kind. Host formats messages; this crate does not.
-/// Type misses never leave the host (`isinstance` gates before apply).
+/// Small error kind. Host formats KEEP messages via the FailKind map.
+/// Type misses never leave the host (`isinstance` before apply — Python
+/// `True` is `int`). Bound units run after the `i64` extract.
 #[pyclass(eq, eq_int, skip_from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FailKind {
@@ -121,10 +126,11 @@ mod ux_valio_native {
 
     /// One-shot apply. Success is `None`; bound miss is a `FailKind`.
     ///
-    /// `i64` extract is the range oracle: a Python int outside i64 raises
-    /// `OverflowError` at this FFI boundary (host falls through). Releases
-    /// the GIL for the plan body (`Python::detach`). The plan is an owned
-    /// clone of `Copy` units; the scalar is `i64`.
+    /// Closed Integer type door is this `i64` extract (range oracle too:
+    /// a Python int outside i64 raises `OverflowError`; host falls
+    /// through). Bound units run after extract. Releases the GIL for
+    /// the plan body (`Python::detach`). The plan is an owned clone of
+    /// `Copy` units; the scalar is `i64`. Not an open type check.
     #[pyfunction]
     fn apply(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
         let units = plan.units.clone();

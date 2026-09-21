@@ -173,6 +173,34 @@ def test_native_unit_names_are_full_words():
     assert not re.search(r"\bkinds\.Eq\b", native_py)
 
 
+def test_closed_integer_type_door_is_ffi_extract():
+    """Type is i64 extract. Open TypeValidator / Float stay on the host."""
+    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
+    assert re.search(r"value: i64", rust)
+    assert "NotInteger" not in rust
+    for token in (
+        "TypeValidator",
+        "TypedDict",
+        "Annotated",
+        "is_instance_of",
+        "typing::",
+        "PyType",
+    ):
+        assert token not in rust, token
+    assert "_raise_host_integer_type_miss" in native_py
+    assert "isinstance(value, int)" in native_py
+    assert "if value is None:" in native_py
+
+
+def test_open_type_and_float_stay_on_host():
+    floating = FloatValidator(min_value=0.0, debug=True)
+    assert getattr(floating, "_native_plan", None) is None
+    union = Validator[int | str](min_value=0, debug=True, name="n")
+    assert union.annotation is not int
+    assert union._native_plan is None
+
+
 _BOUND_CASES = (
     pytest.param(
         {"min_value": 0},
@@ -580,11 +608,14 @@ def test_i64_overflow_gt_passes_max_misses():
 
 @needs_native
 def test_bool_as_int_matches_host_path():
+    """Python True is int — host-first isinstance, then i64 extract."""
     native = IntegerValidator(min_value=0, debug=True, name="n")
     host = _force_host(IntegerValidator(min_value=0, debug=True, name="n"))
     assert native._native_plan is not None
     for value in (True, False):
         assert _assign(native, value) == _assign(host, value), value
+    assert _assign(native, True) == ("ok", None, None, True)
+    assert _assign(native, False) == ("ok", None, None, False)
 
 
 @needs_native

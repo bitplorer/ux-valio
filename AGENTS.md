@@ -62,8 +62,9 @@ a parallel folder, not inside the layer they depend on.
   ``ux-valio[native]`` (sibling crate ``native/``, module
   ``ux_valio_native``) binds closed Integer bound plans at construct:
   ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
-  ``Equal`` and min+max
-  range, compile once, one FFI ``apply`` per set. Stdlib Python apply stays the
+  ``Equal`` and min+max range, compile once, one FFI ``apply`` per
+  set. Type door is FFI ``i64`` extract; open TypeValidator / Float
+  stay on the host. Stdlib Python apply stays the
   default without the extra. Do not add a Schema/Field twin to get it.
   Cap / cek-runtime / Cap Door B stay out of this repo. Do not claim
   the switch-test ratio as end-to-end product setattr.
@@ -270,7 +271,7 @@ New private helpers are verbs that name the action:
 `bind_native_plan`, `apply_native_integer_bounds`,
 `_load_native_peer`, `_closed_integer_bounds`,
 `_clear_native`, `_apply_host_value_after_i64_overflow`,
-`_raise_native_bound_miss`,
+`_raise_native_bound_miss`, `_raise_host_integer_type_miss`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,

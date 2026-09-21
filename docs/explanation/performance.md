@@ -17,8 +17,9 @@ At construct (`Validator.__init__` / `__set_name__`):
   that path
 - Pattern `re.compile` on the finder
 - with `ux-valio[native]`, a closed Integer bound plan (MinValue /
-  MaxValue / GreaterThan / LessThan / Equal / range; one owned Rust
-  `Plan`) — otherwise the interpreter still walks `_active_units`
+  MaxValue / GreaterThan / LessThan / Equal / range; type is FFI
+  `i64` extract, not an open type check). Otherwise the interpreter
+  still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply` for
 the closed native plan), then process hangs, then store on

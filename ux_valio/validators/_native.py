@@ -4,9 +4,11 @@
 Bind-time choice: when ``ux_valio_native`` is importable and the specified
 path is a closed Integer bound plan (``int`` annotation + only
 ``ValueValidator`` bounds: min/max/gt/lt/eq), compile a plan once.
-Each set extracts an ``i64`` and makes one FFI ``apply``. Missing or
-failed extra → host ``_active_units`` path. No import on the hot path
-after that choice. Not Cap Door B.
+Type door is host-first ``isinstance`` then FFI ``i64`` extract; bound
+units run after extract. Open TypeValidator / Union / TypedDict /
+Annotated stay on the host. Missing or failed extra → host
+``_active_units`` path. No import on the hot path after that choice.
+Not Cap Door B.
 """
 
 from __future__ import annotations
@@ -122,6 +124,29 @@ def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
     )
 
 
+def _raise_host_integer_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Integer type door is host-first.
+
+    FFI type is the later ``i64`` extract (bound ``FailKind`` map runs
+    after). Python ``True`` is ``int`` (load-bearing) so it never
+    reaches here. ``None`` is skipped by the caller. ``collect_all``
+    continues into host ``ValueValidator``. Open TypeValidator stays
+    on the host — not a native FailKind.
+    """
+    err = TypeError(
+        f"{owner.name} expect {owner.annotation} type, "
+        f"got {type(value).__name__} type instead"
+    )
+    if not owner.collect_all:
+        raise err
+    errors: list[BaseException] = [err]
+    try:
+        ValueValidator._validate_value(owner, None, value)
+    except Exception as second:
+        errors.append(second)
+    raise_collected(errors, name=owner.name)
+
+
 def bind_native_plan(owner: Any) -> None:
     """Compile at bind. No peer / unclosed path → ``_native_plan is None``."""
     bounds = _closed_integer_bounds(owner)
@@ -148,18 +173,7 @@ def apply_native_integer_bounds(owner: Any, value: Any) -> None:
     if value is None:
         return
     if not isinstance(value, int):
-        err = TypeError(
-            f"{owner.name} expect {owner.annotation} type, "
-            f"got {type(value).__name__} type instead"
-        )
-        if not owner.collect_all:
-            raise err
-        errors: list[BaseException] = [err]
-        try:
-            ValueValidator._validate_value(owner, None, value)
-        except Exception as second:
-            errors.append(second)
-        raise_collected(errors, name=owner.name)
+        _raise_host_integer_type_miss(owner, value)
         return
     try:
         fail = owner._native_apply(owner._native_plan, value)

@@ -62,8 +62,17 @@ min+max range and exclusive ``gt``+``lt`` as the host encodes them.
 ``eq=7``, and ``min_value=0, max_value=10`` all compile when the
 annotation is ``int`` and only those bound units are active. Unclosed
 paths (``required``, ``multiple_of``, length, pattern, choice, named
-identity, Email, Float, a non-``int`` bound) stay on the host. Email /
-named identity were already competitive in Python — do not start there.
+identity, Email, Float, a non-``int`` bound, Union / TypedDict /
+Annotated) stay on the host. Email / named identity were already
+competitive in Python — do not start there.
+
+Closed Integer **type door** is the FFI ``i64`` extract. Bound units
+run after extract. Host ``isinstance`` is first so Python ``True`` is
+``int`` (load-bearing); ``None`` and ``collect_all`` type miss stay
+host-first. KEEP ``TypeError`` wording is host-formatted (not a
+``FailKind.NotInteger``; open TypeValidator is not reflected into
+Rust). Bound misses use the ``FailKind`` map. Float (``f64`` extract)
+is a later tip.
 
 ## What never leaves the host
 
