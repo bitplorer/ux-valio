@@ -13,9 +13,11 @@ validators/        validate door (ValidateProperty : Property)
   hooks.py         HookHost (inherited)
   leaves/length/value   concern leaves (compose with & / |, no leaf MI)
   facade.py        Validator, ValidationPath
+  _native.py       bind-time optional peer (not a taught import)
 facades/           field-default products
   typed.py         IntegerValidator, StringValidator, …
   named/           identity products, sibling domains
+native/            optional ux-valio[native] wheel (PyO3; sibling crate)
 ```
 
 `named` does not import sibling named modules. `typed` does not import

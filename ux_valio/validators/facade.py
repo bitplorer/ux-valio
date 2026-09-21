@@ -12,6 +12,7 @@ from typing import Any, Callable, Iterable, TypeVar
 
 from ux_valio.descriptor import _UNSET
 from ux_valio.errors import continue_or_raise, raise_collected, run_steps
+from ux_valio.validators._native import apply_native_integer_min_value, bind_native_plan
 from ux_valio.validators.base import ValidateProperty
 from ux_valio.validators.leaves import (
     ChoiceValidator,
@@ -179,6 +180,12 @@ class Validator(ValidateProperty[T]):
             collect_all=collect_all,
         )
         self._active_units = _specified_units(self)
+        bind_native_plan(self)
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        super().__set_name__(owner, name)
+        if getattr(self, "_native_plan", None) is None:
+            bind_native_plan(self)
 
     _watch_assignment = ReassignValidator._watch_assignment
 
@@ -211,12 +218,19 @@ class Validator(ValidateProperty[T]):
         except (ValueError, TypeError, ArithmeticError) as err:
             raise ValueError(f"{self.name} expects a {what}, got {value!r}") from err
 
+    def _apply_specified_path(self, instance: Any, value: Any) -> None:
+        """Native closed plan when bound; else host ``_active_units``."""
+        if getattr(self, "_native_plan", None) is not None:
+            apply_native_integer_min_value(self, value)
+            return
+        self.validation_path.run(
+            self, instance, value, collect_all=self.collect_all
+        )
+
     def validate(self, instance: Any = None, value: Any = None) -> None:
         run_steps(
             (
-                lambda: self.validation_path.run(
-                    self, instance, value, collect_all=self.collect_all
-                ),
+                lambda: self._apply_specified_path(instance, value),
                 lambda: self._run_custom_validators(instance, value),
                 lambda: self._validate_named_facade(instance, value),
             ),

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "ux-valio-native"
+version = "0.2.0"
+description = "Optional PyO3 apply peer for ux-valio[native]: Integer + MinValue(i64)."
+license = "MIT"
+requires-python = ">=3.14"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+]
+
+[project.urls]
+Homepage = "https://github.com/bitplorer/ux-valio"
+Source = "https://github.com/bitplorer/ux-valio"
+
+[tool.maturin]
+module-name = "ux_valio_native"
+manifest-path = "Cargo.toml"

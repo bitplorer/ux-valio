@@ -13,6 +13,11 @@ assignment** (a `date`, not the string you typed).
 | facade | stores | when you use it |
 |---|---|---|
 | `IntegerValidator` | `int` | seats, quantity, age, reputation |
+
+`IntegerValidator(min_value=0)` is the taught field default. Optional
+`ux-valio[native]` may compile that closed path once and apply in one
+FFI; without the extra the same units run in Python. Call sites do not
+change. See [host / peer](../explanation/host-peer-plan.md).
 | `StringValidator` | `str` | names, slugs (without a named identity) |
 | `BooleanValidator` | `bool` | flags; `False` is kept (not replaced by default) |
 | `FloatValidator` | `float` | measurements that are allowed to be binary float |

@@ -1,14 +1,14 @@
 [package]
-name = "ux-valio-peer-bench"
-version = "0.0.0"
+name = "ux-valio-native"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 publish = false
-description = "Measure-only PyO3 stub: compile once + apply(Integer, MinValue(0)). Not ux-valio[native]."
+description = "Optional PyO3 apply peer: compile once + apply(Integer, MinValue(i64)). ux-valio[native]."
 rust-version = "1.83"
 
 [lib]
-name = "ux_valio_peer_bench"
+name = "ux_valio_native"
 crate-type = ["cdylib"]
 
 [dependencies]
