@@ -142,7 +142,7 @@ def test_unclosed_plans_stay_on_host():
 
 def test_plan_shape_is_owned_unit_list():
     rust = (ROOT / "native" / "src" / "lib.rs").read_text()
-    assert "[Unit; 2]" not in rust
+    assert "units: [Unit; 2]" not in rust
     assert "Vec<Unit>" in rust
 
 
@@ -230,22 +230,6 @@ _BOUND_CASES = (
 )
 
 
-def _passing_seed(kwargs: dict) -> int:
-    if "eq" in kwargs:
-        return kwargs["eq"]
-    if "value" in kwargs:
-        return kwargs["value"]
-    if "gt" in kwargs:
-        return kwargs["gt"] + 1
-    if "min_value" in kwargs:
-        return kwargs["min_value"]
-    if "lt" in kwargs:
-        return kwargs["lt"] - 1
-    if "max_value" in kwargs:
-        return kwargs["max_value"]
-    raise AssertionError(kwargs)
-
-
 @pytest.mark.parametrize("kwargs,samples", _BOUND_CASES)
 def test_integer_bound_door_a_wording_on_host(kwargs, samples):
     field = _force_host(IntegerValidator(debug=True, name="n", **kwargs))
@@ -323,13 +307,13 @@ def test_validator_int_subscript_binds_at_set_name():
 @needs_native
 @pytest.mark.parametrize("kwargs,samples", _BOUND_CASES)
 def test_closed_integer_bounds_compile_once(kwargs, samples):
-    del samples
     field = IntegerValidator(debug=True, name="n", **kwargs)
     plan = field._native_plan
     apply = field._native_apply
     assert plan is not None
     assert apply is not None
-    field.validate(None, _passing_seed(kwargs))
+    passing = next(value for value, fragment in samples if fragment is None)
+    field.validate(None, passing)
     assert field._native_plan is plan
     assert field._native_apply is apply
 

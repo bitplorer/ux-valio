@@ -60,7 +60,7 @@ FAMILIES = (
         values=PASSING_0_7,
         seed=0,
         smoke_ok=5,
-        smoke_miss=4,
+        smoke_miss=-1,
         smoke_kind="MinValue",
         label="Integer + MinValue(0)",
     ),
@@ -283,7 +283,7 @@ def _smoke_family(peer: Any, family: PlanFamily) -> str:
             f"returned {miss!r}, expected FailKind.{family.smoke_kind}"
         )
     return (
-        f"SMOKE {family.name}: compile({family.compile_kwargs}) "
+        f"SMOKE: {family.name}: compile({family.compile_kwargs}) "
         f"+ apply({family.smoke_ok}) ok; apply({family.smoke_miss}) "
         f"-> FailKind.{family.smoke_kind}"
     )

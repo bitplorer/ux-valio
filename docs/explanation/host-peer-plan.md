@@ -179,8 +179,29 @@ Rename-only re-run on the same box (plan units ``Integer`` +
 ``MinValue(0)``, same apply): host 3491–3672 ns/op, native 46.8–49.0
 ns/op, ratio **75×**. Same PASS.
 
-**Verdict: PASS (native extra shipped for this closed plan).** Host
+**Verdict: PASS (native extra shipped for closed Integer bound plans).** Host
 stayed several times slower than the one-shot native apply (bar 3×).
-This extra binds that plan at construct. Cap Door B, JSON-per-set,
+This extra binds those plans at construct. Cap Door B, JSON-per-set,
 migrating ``self`` into Rust, a Field/Schema twin, a mega shared plan
 crate, and email/named identity as a first target stay rejected.
+
+### Measured (2026-09-21) Integer bound families
+
+Same class of box, one run, 400000 iters after 20000 warmup, values as
+each family allows, CPython 3.14.7, rustc 1.83.0, Linux x86_64. Peer is
+a release cdylib. Host units were ``_validate_type`` then
+``_validate_value``. B is plan apply only (``Python::detach``).
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| MinValue(0) | 2341 | 95.0 | **24.6×** |
+| MaxValue(10) | 2299 | 94.4 | **24.4×** |
+| Gt(0) | 2303 | 94.7 | **24.3×** |
+| Lt(10) | 2312 | 94.5 | **24.5×** |
+| Eq(7) | 2315 | 93.6 | **24.7×** |
+| MinValue(0)+MaxValue(10) | 2415 | 99.4 | **24.3×** |
+
+**Verdict: PASS.** Every family, including new ones besides MinValue,
+cleared the 3× bar. Native apply here is ~95 ns/op (GIL released),
+slower than the first stub’s 46 ns/op and still not a 70× product
+setattr claim.

@@ -24,7 +24,7 @@ enum Unit {
 /// Compiled plan. Built once; applied many times.
 ///
 /// Owned `Vec` so a single-bound plan and a min+max range share one
-/// type — not a fixed `[Unit; 2]`.
+/// type — not a fixed two-slot array.
 #[pyclass(frozen)]
 struct Plan {
     units: Vec<Unit>,
