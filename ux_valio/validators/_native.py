@@ -3,19 +3,22 @@
 
 Bind-time choice: when ``ux_valio_native`` is importable and the specified
 path is a closed Integer or Float bound plan (``int`` / ``float``
-annotation + only ``ValueValidator`` bounds: min/max/gt/lt/eq) or a
+annotation + only ``ValueValidator`` bounds: min/max/gt/lt/eq), a
 closed String or Bytes length plan (``str`` / ``bytes`` annotation +
 only ``LengthValidator`` ``min_length`` / ``max_length`` / ``length``),
-compile a plan once. Type door is host-first ``isinstance`` then FFI
-extract (``i64`` / ``f64`` / ``&str`` / ``&[u8]``); bound / length
-units run after extract. Open TypeValidator / Union / TypedDict /
-Annotated / pattern stay on the host. Missing or failed extra → host
-``_active_units`` path. No import on the hot path after that choice.
-Not Cap Door B.
+or a closed IntegerEnum member set (``IntegerEnumValidator`` whose
+annotation is a concrete ``enum.IntEnum`` and only the type unit is
+active), compile a plan once. Type door is host-first ``isinstance``
+then FFI extract (``i64`` / ``f64`` / ``&str`` / ``&[u8]``); bound /
+length / member units run after extract. Open TypeValidator / Union /
+TypedDict / Annotated / pattern / plain Enum / StringEnum stay on the
+host. Missing or failed extra → host ``_active_units`` path. No import
+on the hot path after that choice. Not Cap Door B.
 """
 
 from __future__ import annotations
 
+import enum
 from typing import Any
 
 from ux_valio.errors import raise_collected
@@ -136,6 +139,49 @@ def _closed_string_length(owner: Any) -> dict[str, int] | None:
     return _closed_length(owner, str)
 
 
+def _closed_integer_enum_members(owner: Any) -> list[int] | None:
+    """Member i64s when the field is a closed ``IntegerEnumValidator`` plan.
+
+    The class marker keeps plain ``EnumValidator``, ``StringEnumValidator``,
+    and open ``Validator[SomeIntEnum]`` on the host. Annotation must be a
+    concrete ``enum.IntEnum`` subclass (not ``enum.IntEnum`` itself, not
+    ``IntFlag``). Only the type unit is active. Member values must be
+    ``int`` (``bool`` normalizes to ``0`` / ``1``). An empty member list
+    stays on the host. Out-of-i64 values fail later at compile and the
+    plan is dropped.
+    """
+    if getattr(type(owner), "_closed_integer_enum", False) is not True:
+        return None
+    annotation = getattr(owner, "annotation", None)
+    if not isinstance(annotation, type) or annotation is enum.IntEnum:
+        return None
+    try:
+        if not issubclass(annotation, enum.IntEnum) or issubclass(annotation, enum.IntFlag):
+            return None
+    except TypeError:
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    members: list[int] = []
+    seen: set[int] = set()
+    for member in annotation:
+        raw = member.value
+        if type(raw) is bool:
+            number = int(raw)
+        elif type(raw) is int:
+            number = raw
+        else:
+            return None
+        if number in seen:
+            continue
+        seen.add(number)
+        members.append(number)
+    if not members:
+        return None
+    return members
+
+
 def _closed_bytes_length(owner: Any) -> dict[str, int] | None:
     """Compile kwargs when the specified path is Bytes + LengthValidator.
 
@@ -242,6 +288,8 @@ def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
                 f"{owner.name} expect the value of length {length}, "
                 f"got length {len(value)} value instead"
             )
+        case kinds.Member:
+            _raise_host_integer_enum_type_miss(owner, value)
         case _:
             raise RuntimeError(
                 f"ux_valio_native apply returned unexpected fail kind {fail!r}"
@@ -279,6 +327,22 @@ def _raise_host_string_type_miss(owner: Any, value: Any) -> None:
     ``collect_all`` continues into host ``LengthValidator``.
     """
     _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
+
+
+def _raise_host_integer_enum_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording for a closed IntegerEnum member-set plan.
+
+    Same string as host ``TypeValidator``: the concrete annotation, then
+    the value's type name. This raise is only the type door.
+    ``validate()`` continues into the named extra when ``collect_all``
+    is on. Not a native ``FailKind`` for plain ``int`` / ``str`` — those
+    miss here before extract. ``FailKind.Member`` uses this same string.
+    """
+    annotation = owner.annotation
+    raise TypeError(
+        f"{owner.name} expect {annotation} type, "
+        f"got {type(value).__name__} type instead"
+    )
 
 
 def _raise_host_bytes_type_miss(owner: Any, value: Any) -> None:
@@ -353,16 +417,26 @@ def bind_native_plan(owner: Any) -> None:
         _bind_compiled_plan(owner, peer, peer.compile_string, str_bounds)
         return
     bytes_bounds = _closed_bytes_length(owner)
-    if bytes_bounds is None:
+    if bytes_bounds is not None:
+        peer = _load_native_peer()
+        if peer is None:
+            _clear_native(owner)
+            return
+        owner._native_apply = peer.apply_bytes
+        owner._native_apply_host = apply_native_bytes_length
+        _bind_compiled_plan(owner, peer, peer.compile_bytes, bytes_bounds)
+        return
+    members = _closed_integer_enum_members(owner)
+    if members is None:
         _clear_native(owner)
         return
     peer = _load_native_peer()
     if peer is None:
         _clear_native(owner)
         return
-    owner._native_apply = peer.apply_bytes
-    owner._native_apply_host = apply_native_bytes_length
-    _bind_compiled_plan(owner, peer, peer.compile_bytes, bytes_bounds)
+    owner._native_apply = peer.apply_integer_enum
+    owner._native_apply_host = apply_native_integer_enum
+    _bind_compiled_plan(owner, peer, peer.compile_integer_enum, {"members": members})
 
 
 def _apply_native_closed(
@@ -454,6 +528,38 @@ def apply_native_bytes_length(owner: Any, value: Any) -> None:
         _apply_host_length_after_bytes_extract,
         (OverflowError, TypeError),
     )
+
+
+def apply_native_integer_enum(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Out-of-i64 members stay on host.
+
+    Closed IntegerEnum type door is host-first. A value that is not an
+    ``IntEnum`` misses before extract (plain ``int`` / ``bool`` / ``str``
+    / plain ``Enum``). An ``IntEnum`` is extracted as ``i64`` and checked
+    against the compiled member set. A different enum with the same
+    integer is in the set and still misses ``isinstance`` of the concrete
+    annotation (KEEP). ``OverflowError`` at extract is a bridge signal
+    (same three buckets: validation / bridge / peer-infra
+    ``RuntimeError`` naming ``ux_valio_native``). No public L1
+    "overflow" message. Fall through to host ``TypeValidator``.
+    """
+    if value is None:
+        return
+    if not isinstance(value, enum.IntEnum):
+        _raise_host_integer_enum_type_miss(owner, value)
+        return
+    try:
+        fail = owner._native_apply(owner._native_plan, value)
+    except OverflowError:
+        TypeValidator._validate_type(owner, None, value)
+        return
+    except Exception as err:
+        raise RuntimeError("ux_valio_native apply failed") from err
+    if fail is None:
+        if not isinstance(value, owner.annotation):
+            _raise_host_integer_enum_type_miss(owner, value)
+        return
+    _raise_native_bound_miss(owner, fail, value)
 
 
 def apply_native_bounds(owner: Any, value: Any) -> None:

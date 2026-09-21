@@ -1,21 +1,26 @@
 # SPDX-License-Identifier: MIT
-"""Optional ``ux-valio[native]`` peer: Integer/Float bounds + String/Bytes length.
+"""Optional ``ux-valio[native]`` peer: Integer/Float bounds, String/Bytes length, IntegerEnum.
 
 Without the extra, stdlib apply stays the default (CI). With the extra,
 closed ``IntegerValidator`` / ``FloatValidator`` bound plans
-(min/max/gt/lt/eq, including range) and closed ``StringValidator`` /
-``BytesValidator`` length plans (min/max/exact) compile once and one
-FFI apply per set. Float Door A is IEEE compare (NaN unordered on
-min/max/gt/lt; ``eq`` uses ``!=`` so NaN never matches). String Door A
-is ``len(str)`` codepoints, not UTF-8 bytes or graphemes. Bytes Door A
-is ``len(bytes)`` (byte count), not Unicode codepoints or graphemes.
-Cap Door B / Ops / JSON / ``cek-peer-*`` stay off the field path.
+(min/max/gt/lt/eq, including range), closed ``StringValidator`` /
+``BytesValidator`` length plans (min/max/exact), and a closed
+``IntegerEnumValidator`` member set compile once and one FFI apply per
+set. Float Door A is IEEE compare (NaN unordered on min/max/gt/lt;
+``eq`` uses ``!=`` so NaN never matches). String Door A is ``len(str)``
+codepoints, not UTF-8 bytes or graphemes. Bytes Door A is ``len(bytes)``
+(byte count), not Unicode codepoints or graphemes. IntegerEnum Door A
+is the host type door: in-set ``IntEnum`` members (aliases included);
+a different ``IntEnum`` misses even when the integer matches; plain
+``int`` / ``bool`` / ``str`` miss. Cap Door B / Ops / JSON /
+``cek-peer-*`` stay off the field path.
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors
 at bind (KEEP).
 """
 
 import ast
+import enum
 import math
 import re
 from dataclasses import dataclass
@@ -24,9 +29,13 @@ from pathlib import Path
 import pytest
 
 from ux_valio import (
+    BooleanValidator,
     BytesValidator,
+    EnumValidator,
     FloatValidator,
+    IntegerEnumValidator,
     IntegerValidator,
+    StringEnumValidator,
     StringValidator,
     ValidationErrors,
     Validator,
@@ -2068,3 +2077,400 @@ def test_unexpected_bytes_peer_apply_raises_runtime_error():
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, b"a")
     assert isinstance(caught.value.__cause__, ValueError)
+
+
+class Rank(enum.IntEnum):
+    LOW = 1
+    HIGH = 2
+    ALSO = 1
+
+
+class Other(enum.IntEnum):
+    X = 9
+    LOW = 1
+
+
+class Color(enum.Enum):
+    RED = "red"
+
+
+class Shade(enum.Enum):
+    RED = "red"
+
+
+class OnOff(enum.IntEnum):
+    OFF = False
+    ON = True
+
+
+class Neg(enum.IntEnum):
+    MINUS = -3
+    ZERO = 0
+
+
+class Huge(enum.IntEnum):
+    BIG = 2**70
+
+
+class MixedOverflow(enum.IntEnum):
+    OK = 1
+    BIG = 2**70
+
+
+class Edge(enum.IntEnum):
+    MAX = 2**63 - 1
+    MIN = -(2**63)
+
+
+class PastEdge(enum.IntEnum):
+    OVER = 2**63
+
+
+class Empty(enum.IntEnum):
+    pass
+
+
+class AutoRank(enum.IntEnum):
+    A = enum.auto()
+    B = enum.auto()
+
+
+class Perm(enum.IntFlag):
+    READ = 1
+    WRITE = 2
+
+
+def _bind_integer_enum(enum_type, *, host=False, **kwargs):
+    field = IntegerEnumValidator(debug=kwargs.pop("debug", True), name="n", **kwargs)
+
+    @dataclass
+    class Owner:
+        n: enum_type = field
+
+    if host:
+        _force_host(field)
+    return field
+
+
+def test_integer_enum_door_a_wording_on_host():
+    field = _bind_integer_enum(Rank, host=True)
+    assert field._native_plan is None
+    assert _assign(field, Rank.LOW) == ("ok", None, None, Rank.LOW)
+    assert _assign(field, Rank.ALSO) == ("ok", None, None, Rank.LOW)
+    assert _assign(field, None) == ("ok", None, None, None)
+    other = _assign(field, Other.X)
+    assert other[0] == "err"
+    assert other[1] is TypeError
+    assert other[2] == "n expect <enum 'Rank'> type, got Other type instead"
+    same = _assign(field, Other.LOW)
+    assert same[1] is TypeError
+    assert same[2] == "n expect <enum 'Rank'> type, got Other type instead"
+    plain = _assign(field, 1)
+    assert plain[1] is ValidationErrors
+    assert "n expect <enum 'Rank'> type, got int type instead" in plain[2]
+    assert "n expect <enum 'IntEnum'> type, got int type instead" in plain[2]
+
+
+def test_integer_enum_unit_names_are_full_words():
+    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
+    assert "fn compile_integer_enum" in rust
+    assert "fn apply_integer_enum" in rust
+    assert "Unit::IntegerEnum" in rust
+    assert re.search(r"\bMember\(i64\)", rust)
+    assert re.search(r"^\s+Member =", rust, re.M)
+    assert not re.search(r"\bMem\(i64\)", rust)
+    assert not re.search(r"\bNotMem\b", rust)
+    assert re.search(r"\bmatch fail:", native_py)
+    assert not re.search(r"if fail == kinds\.", native_py)
+    assert re.search(r"\bkinds\.Member\b", native_py)
+    assert "compile_integer_enum" in native_py
+    assert "apply_integer_enum" in native_py
+
+
+def test_unclosed_integer_enum_stays_on_host():
+    assert IntegerEnumValidator(debug=True, name="n")._native_plan is None
+    assert _bind_integer_enum(Rank, min_value=1)._native_plan is None
+    assert _bind_integer_enum(Rank, required=True)._native_plan is None
+    assert _bind_integer_enum(Rank, in_choice=(Rank.LOW,))._native_plan is None
+    assert _bind_integer_enum(Rank, reassign=False)._native_plan is None
+    assert _bind_integer_enum(enum.IntEnum)._native_plan is None
+    assert _bind_integer_enum(Empty)._native_plan is None
+    assert _bind_integer_enum(Perm)._native_plan is None
+    assert _bind_integer_enum(Shade)._native_plan is None
+
+    @dataclass
+    class OptionalRank:
+        n: Rank | None = IntegerEnumValidator(debug=True)
+
+    assert OptionalRank.__dict__["n"]._native_plan is None
+
+    enum_field = EnumValidator(debug=True, name="n")
+
+    @dataclass
+    class AsEnum:
+        n: Rank = enum_field
+
+    assert enum_field._native_plan is None
+    assert enum_field.annotation is Rank
+
+    string_enum = StringEnumValidator(debug=True, name="n")
+
+    @dataclass
+    class AsStr:
+        n: Shade = string_enum
+
+    assert string_enum._native_plan is None
+
+    open_field = Validator[Rank](debug=True)
+
+    @dataclass
+    class AsOpen:
+        n: Rank = open_field
+
+    assert open_field.annotation is Rank
+    assert open_field._native_plan is None
+    assert BooleanValidator(debug=True, name="n")._native_plan is None
+
+
+@needs_native
+def test_integer_enum_compiles_member_set_once_at_bind():
+    field = _bind_integer_enum(Rank)
+    plan = field._native_plan
+    apply = field._native_apply
+    assert plan is not None
+    assert apply is not None
+    import ux_valio_native as peer
+
+    assert apply is peer.apply_integer_enum
+    assert apply is not peer.apply
+
+    @dataclass
+    class Box:
+        n: Rank = field
+
+    assert field._native_plan is plan
+    box = Box(n=Rank.LOW)
+    box.n = Rank.HIGH
+    box.n = Rank.ALSO
+    assert field._native_plan is plan
+    assert field._native_apply is apply
+    assert box.n is Rank.LOW
+
+
+@needs_native
+def test_one_ffi_apply_integer_enum_per_set():
+    field = _bind_integer_enum(Rank)
+
+    @dataclass
+    class Box:
+        n: Rank = field
+
+    calls: list[object] = []
+    orig = field._native_apply
+
+    def counted(plan, value):
+        calls.append(value)
+        return orig(plan, value)
+
+    field._native_apply = counted
+    box = Box(n=Rank.LOW)
+    box.n = Rank.HIGH
+    box.n = Rank.ALSO
+    assert calls == [Rank.LOW, Rank.HIGH, Rank.LOW]
+
+
+@needs_native
+def test_apply_integer_enum_member_set_failkind():
+    import ux_valio_native as peer
+
+    plan = peer.compile_integer_enum([1, 2])
+    assert peer.apply_integer_enum(plan, 1) is None
+    assert peer.apply_integer_enum(plan, Rank.LOW) is None
+    assert peer.apply_integer_enum(plan, Rank.HIGH) is None
+    miss = peer.apply_integer_enum(plan, 9)
+    assert miss == peer.FailKind.Member
+    assert peer.apply_integer_enum(plan, 0) == peer.FailKind.Member
+    assert hasattr(peer.FailKind, "Member")
+    assert not hasattr(peer.FailKind, "Mem")
+    assert peer.compile_integer_enum is not peer.apply_integer_enum
+
+
+@needs_native
+def test_native_integer_enum_parity_with_host():
+    native = _bind_integer_enum(Rank)
+    host = _bind_integer_enum(Rank, host=True)
+    assert native._native_plan is not None
+    assert host._native_plan is None
+    samples = (
+        Rank.LOW,
+        Rank.HIGH,
+        Rank.ALSO,
+        Other.X,
+        Other.LOW,
+        1,
+        0,
+        True,
+        False,
+        "LOW",
+        None,
+        Color.RED,
+        OnOff.OFF,
+        Neg.MINUS,
+    )
+    for value in samples:
+        assert _assign(native, value) == _assign(host, value), value
+    other = _assign(native, Other.X)
+    assert other[1] is TypeError
+    assert other[2] == "n expect <enum 'Rank'> type, got Other type instead"
+    assert "Overflow" not in other[2]
+    assert "int64" not in other[2].lower()
+    assert "PyO3" not in other[2]
+    same = _assign(native, Other.LOW)
+    assert same[2] == "n expect <enum 'Rank'> type, got Other type instead"
+    plain = _assign(native, 1)
+    assert plain[1] is ValidationErrors
+    assert plain[2] == _assign(host, 1)[2]
+
+
+@needs_native
+def test_native_integer_enum_collect_all_false_matches_host():
+    native = _bind_integer_enum(Rank, collect_all=False)
+    host = _bind_integer_enum(Rank, collect_all=False, host=True)
+    assert native._native_plan is not None
+    for value in (1, Other.X, "x", Rank.LOW):
+        assert _assign(native, value) == _assign(host, value), value
+    plain = _assign(native, 1)
+    assert plain[1] is TypeError
+    assert plain[2] == "n expect <enum 'Rank'> type, got int type instead"
+
+
+@needs_native
+def test_native_integer_enum_edges_match_host():
+    native_neg = _bind_integer_enum(Neg)
+    host_neg = _bind_integer_enum(Neg, host=True)
+    assert native_neg._native_plan is not None
+    for value in (Neg.MINUS, Neg.ZERO, 0, Other.X, None):
+        assert _assign(native_neg, value) == _assign(host_neg, value), value
+
+    native_bool = _bind_integer_enum(OnOff)
+    host_bool = _bind_integer_enum(OnOff, host=True)
+    assert native_bool._native_plan is not None
+    for value in (OnOff.OFF, OnOff.ON, False, True, 0, 1):
+        assert _assign(native_bool, value) == _assign(host_bool, value), value
+    assert _assign(native_bool, OnOff.OFF) == ("ok", None, None, OnOff.OFF)
+
+    native_auto = _bind_integer_enum(AutoRank)
+    assert native_auto._native_plan is not None
+    assert _assign(native_auto, AutoRank.A) == ("ok", None, None, AutoRank.A)
+    assert _assign(native_auto, AutoRank.B) == ("ok", None, None, AutoRank.B)
+
+    native_edge = _bind_integer_enum(Edge)
+    host_edge = _bind_integer_enum(Edge, host=True)
+    assert native_edge._native_plan is not None
+    for value in (Edge.MAX, Edge.MIN, 0):
+        assert _assign(native_edge, value) == _assign(host_edge, value), value
+
+    huge = _bind_integer_enum(Huge)
+    assert huge._native_plan is None
+    assert _assign(huge, Huge.BIG) == ("ok", None, None, Huge.BIG)
+    mixed = _bind_integer_enum(MixedOverflow)
+    assert mixed._native_plan is None
+    assert _assign(mixed, MixedOverflow.OK) == ("ok", None, None, MixedOverflow.OK)
+    past = _bind_integer_enum(PastEdge)
+    assert past._native_plan is None
+    assert _assign(past, PastEdge.OVER) == ("ok", None, None, PastEdge.OVER)
+
+
+@needs_native
+def test_native_integer_enum_none_and_debug_swallow():
+    @dataclass
+    class Box:
+        n: Rank = IntegerEnumValidator(debug=True)
+
+    assert Box.__dict__["n"]._native_plan is not None
+    assert Box(n=None).n is None  # type: ignore[arg-type]
+    assert Box(n=Rank.LOW).n is Rank.LOW
+
+    field = _bind_integer_enum(Rank, debug=False)
+    assert field._native_plan is not None
+
+    @dataclass
+    class Soft:
+        n: Rank = field
+
+    assert Soft(n=Other.X).n is None
+    assert field.errors
+    assert any("expect <enum 'Rank'> type" in str(err) for err in field.errors)
+
+
+@needs_native
+def test_native_integer_enum_pre_validate_and_custom_still_run():
+    @dataclass
+    class Box:
+        n: Rank = IntegerEnumValidator(debug=True)
+
+        @n.pre_validate
+        def lift(self, value):
+            if value is Rank.LOW:
+                return Rank.HIGH
+            return value
+
+    assert Box.__dict__["n"]._native_plan is not None
+    assert Box(n=Rank.LOW).n is Rank.HIGH
+
+    @dataclass
+    class Strict:
+        n: Rank = IntegerEnumValidator(debug=True)
+
+        @n.validator
+        def high_only(self, value):
+            if value is not None and value is not Rank.HIGH:
+                raise ValueError("low")
+
+    assert Strict.__dict__["n"]._native_plan is not None
+    assert Strict(n=Rank.HIGH).n is Rank.HIGH
+    with pytest.raises(ValueError, match="low"):
+        Strict(n=Rank.LOW)
+
+
+@needs_native
+def test_unexpected_integer_enum_peer_bind_raises_runtime_error(monkeypatch):
+    import ux_valio_native
+
+    def boom(**kwargs):
+        raise ValueError("peer exploded")
+
+    monkeypatch.setattr(ux_valio_native, "compile_integer_enum", boom)
+    with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
+        _bind_integer_enum(Rank)
+    assert isinstance(caught.value.__cause__, ValueError)
+    assert "Overflow" not in str(caught.value)
+    assert "expect" not in str(caught.value)
+
+
+@needs_native
+def test_unexpected_integer_enum_peer_apply_raises_runtime_error():
+    field = _bind_integer_enum(Rank)
+    assert field._native_plan is not None
+
+    def boom(plan, value):
+        raise ValueError("peer exploded")
+
+    field._native_apply = boom
+    with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
+        field.validate(None, Rank.LOW)
+    assert isinstance(caught.value.__cause__, ValueError)
+
+
+@needs_native
+def test_integer_enum_overflow_other_enum_falls_through_to_host():
+    """A different enum whose value does not fit i64 uses the host type door."""
+    native = _bind_integer_enum(Rank)
+    host = _bind_integer_enum(Rank, host=True)
+    assert native._native_plan is not None
+    assert _assign(native, Huge.BIG) == _assign(host, Huge.BIG)
+    miss = _assign(native, Huge.BIG)
+    assert miss[1] is TypeError
+    assert miss[2] == "n expect <enum 'Rank'> type, got Huge type instead"
+    assert "Overflow" not in miss[2]

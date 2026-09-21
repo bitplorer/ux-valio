@@ -146,7 +146,9 @@ collection facades, `enable_async`, `cache_task`, `add_pre_set`. List
 membership is `list[T]` on the type door. Object attributes: check at the
 call site or hang `validator`. Optional `ux-valio[native]` is not a second
 door: L1 stays `IntegerValidator` / `FloatValidator` / `StringValidator` /
-`BytesValidator`; the extra is compile-once + one FFI
-apply for closed Integer and Float bound units (min/max/gt/lt/eq) and
-closed String / Bytes length units (min/max/exact). Pattern
-and named identity stay on the host. Next: IntegerEnum.
+`BytesValidator` / `IntegerEnumValidator`; the extra is compile-once +
+one FFI apply for closed Integer and Float bound units (min/max/gt/lt/eq),
+closed String / Bytes length units (min/max/exact), and a closed
+IntegerEnum member set (`Member` i64 values from the concrete
+`IntEnum`). Pattern and named identity stay on the host. Next:
+StringEnum.

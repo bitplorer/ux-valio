@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- Native IntegerEnum member set: closed ``ux-valio[native]`` plans now
+  cover ``IntegerEnumValidator`` when the field annotation is a concrete
+  ``enum.IntEnum`` (not ``enum.IntEnum`` itself, not ``IntFlag``).
+  Member values compile once to ``IntegerEnum`` + ``Member(i64)`` and
+  one FFI ``apply_integer_enum`` checks the set.
+  ``compile_integer_enum`` / ``apply_integer_enum`` stay a separate
+  pair. Door A matches host: in-set members (aliases included) store;
+  a different ``IntEnum`` misses even when the integer is the same;
+  plain ``int`` / ``bool`` / ``str`` / plain ``Enum`` raise the host
+  type-door ``TypeError``. ``FailKind.Member`` uses that same string.
+  ``OverflowError`` at i64 extract falls through to host
+  ``TypeValidator`` (bridge, not an L1 "overflow" message). A member
+  outside i64 keeps the whole enum on the host. Only the type unit
+  may be active. Plain ``EnumValidator``, ``StringEnumValidator``,
+  open ``Validator[SomeIntEnum]``, Boolean, Decimal, Date*, UUID,
+  Path, and named facades stay host. Integer / Float / String / Bytes
+  closed plans are unchanged. Measure
+  (``python benches/measure_host_peer.py``); do not claim 70× product
+  setattr. Next HOLD: StringEnum. Boolean only if later measure ≥3×.
+  Cap Door B stays off.
+
 - Native Bytes length units: closed ``ux-valio[native]`` plans now
   cover ``BytesValidator`` ``MinLength`` / ``MaxLength`` / ``Length``
   (usize) and min+max range. Type door is FFI ``&[u8]`` extract

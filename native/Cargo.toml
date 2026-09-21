@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2021"
 license = "MIT"
 publish = false
-description = "Optional PyO3 apply peer: compile once + apply Integer/Float bounds and String/Bytes length. ux-valio[native]."
+description = "Optional PyO3 apply peer: compile once + apply Integer/Float bounds, String/Bytes length, and IntegerEnum member sets. ux-valio[native]."
 rust-version = "1.83"
 
 [lib]

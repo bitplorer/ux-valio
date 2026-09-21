@@ -283,6 +283,9 @@ class IntegerEnumValidator(Validator[enum.IntEnum]):
         level: Level = IntegerEnumValidator()
     """
 
+    # Bind marker for the optional native member-set plan. Not an L1 kwarg.
+    _closed_integer_enum = True
+
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
         self._reject_unless_instance(value, enum.IntEnum)
 

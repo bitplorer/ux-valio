@@ -1,14 +1,17 @@
 //! Optional apply peer for `ux-valio[native]`.
 //!
-//! Closed Integer and Float bound plans plus closed String and Bytes
-//! length plans. Type door is the FFI extract (`apply(plan, i64)` /
-//! `apply_float(plan, f64)` / `apply_string(plan, &str)` /
-//! `apply_bytes(plan, &[u8])`). Bound units (`MinValue` / `MaxValue` /
-//! `GreaterThan` / `LessThan` / `Equal`) run after numeric extract.
-//! Length units (`MinLength` / `MaxLength` / `Length`) are shared:
-//! String count is Unicode scalar values (`chars().count()`), matching
-//! host `len(str)`; Bytes count is `len()` of the extracted `&[u8]`,
-//! matching host `len(bytes)` — not Unicode scalar values.
+//! Closed Integer and Float bound plans, closed String and Bytes
+//! length plans, and a closed IntegerEnum member-set plan. Type door
+//! is the FFI extract (`apply(plan, i64)` / `apply_float(plan, f64)` /
+//! `apply_string(plan, &str)` / `apply_bytes(plan, &[u8])` /
+//! `apply_integer_enum(plan, i64)`). Bound units (`MinValue` /
+//! `MaxValue` / `GreaterThan` / `LessThan` / `Equal`) run after
+//! numeric extract. Length units (`MinLength` / `MaxLength` /
+//! `Length`) are shared: String count is Unicode scalar values
+//! (`chars().count()`), matching host `len(str)`; Bytes count is
+//! `len()` of the extracted `&[u8]`, matching host `len(bytes)` — not
+//! Unicode scalar values. IntegerEnum `Member` units are the concrete
+//! enum's `i64` values; apply checks set membership after extract.
 //! Host maps `FailKind` to KEEP wording. Open / generic type checks
 //! stay on the host — this crate does not reflect Python typing. Host
 //! compiles once at bind; each set is one FFI apply. Soul stays on the
@@ -24,9 +27,9 @@ enum Bound {
     Float(f64),
 }
 
-/// Specified scalar units. `Integer` / `Float` / `String` / `Bytes` are
-/// plan-shape markers, not open type checks. Type is the FFI extract;
-/// bound or length units follow.
+/// Specified scalar units. `Integer` / `Float` / `String` / `Bytes` /
+/// `IntegerEnum` are plan-shape markers, not open type checks. Type is
+/// the FFI extract; bound, length, or member units follow.
 #[derive(Clone, Copy)]
 enum Unit {
     /// Plan-shape marker. Type extract is the FFI `i64` argument, not an
@@ -68,6 +71,14 @@ enum Unit {
     /// Host exact `length`. String count is Unicode scalar values;
     /// Bytes count is the extracted `&[u8]` length.
     Length(usize),
+    /// Plan-shape marker. Type extract is the FFI `i64` argument.
+    /// Host `isinstance` gates first so a different `IntEnum` (even
+    /// with the same integer) and plain `int` / `bool` / `str` miss
+    /// (KEEP). `None` / `collect_all` type miss stay host.
+    IntegerEnum,
+    /// One compiled member value from the concrete `IntEnum`.
+    /// Aliases that share a value are one `i64`.
+    Member(i64),
 }
 
 /// Compiled plan. Built once; applied many times.
@@ -105,6 +116,10 @@ enum FailKind {
     /// Host exact `length`: count was not the compiled length.
     /// String: codepoints. Bytes: `len(bytes)`.
     Length = 8,
+    /// Host IntegerEnum member set: extracted `i64` was not one of the
+    /// compiled member values. Host formats the type-door `TypeError`
+    /// (KEEP wording). Not a second message.
+    Member = 9,
 }
 
 /// Door A IEEE compares. `PartialOrd`/`PartialEq` on `f64` match host
@@ -138,15 +153,15 @@ fn miss(kind: FailKind, value: Bound, bound: Bound) -> Option<FailKind> {
 fn apply_units(units: &[Unit], value: Bound) -> Result<(), FailKind> {
     for unit in units {
         let fail = match *unit {
-            Unit::Integer | Unit::Float | Unit::String | Unit::Bytes => None,
+            Unit::Integer | Unit::Float | Unit::String | Unit::Bytes | Unit::IntegerEnum => None,
             Unit::MinValue(bound) => miss(FailKind::MinValue, value, bound),
             Unit::MaxValue(bound) => miss(FailKind::MaxValue, value, bound),
             Unit::GreaterThan(bound) => miss(FailKind::GreaterThan, value, bound),
             Unit::LessThan(bound) => miss(FailKind::LessThan, value, bound),
             Unit::Equal(bound) => miss(FailKind::Equal, value, bound),
-            // Length units belong on apply_string / apply_bytes; numeric apply
-            // no-ops them (host never mixes doors).
-            Unit::MinLength(_) | Unit::MaxLength(_) | Unit::Length(_) => None,
+            // Length and member units belong on their own apply; numeric
+            // apply no-ops them (host never mixes doors).
+            Unit::MinLength(_) | Unit::MaxLength(_) | Unit::Length(_) | Unit::Member(_) => None,
         };
         if let Some(kind) = fail {
             return Err(kind);
@@ -201,6 +216,27 @@ fn apply_length_units(units: &[Unit], counted: usize) -> Result<(), FailKind> {
     Ok(())
 }
 
+fn apply_member_units(units: &[Unit], value: i64) -> Result<(), FailKind> {
+    for unit in units {
+        match *unit {
+            Unit::Member(member) if member == value => return Ok(()),
+            // Shape marker and other families' units are not members.
+            // Host never mixes doors.
+            _ => {}
+        }
+    }
+    Err(FailKind::Member)
+}
+
+fn compile_member_plan(members: Vec<i64>) -> Plan {
+    let mut units = Vec::with_capacity(members.len() + 1);
+    units.push(Unit::IntegerEnum);
+    for member in members {
+        units.push(Unit::Member(member));
+    }
+    Plan { units }
+}
+
 fn compile_length_plan(
     shape: Unit,
     min_length: Option<usize>,
@@ -217,12 +253,15 @@ fn compile_length_plan(
 }
 
 /// Product peer: `compile(...)` / `compile_float(...)` /
-/// `compile_string(...)` / `compile_bytes(...)` + one-shot apply.
+/// `compile_string(...)` / `compile_bytes(...)` /
+/// `compile_integer_enum(...)` + one-shot apply.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`,
-/// `Float`, `String`, or `Bytes`; extract is the FFI argument. Compile
-/// kwargs are host names (`min_value` / `gt` / `max_length` / `length`)
-/// mapped onto the full-word units. Not a taught L1 API.
+/// `Float`, `String`, `Bytes`, or `IntegerEnum`; extract is the FFI
+/// argument. Compile kwargs are host names (`min_value` / `gt` /
+/// `max_length` / `length`) or the member list (`members`) mapped onto
+/// the full-word units. `compile_*` and `apply_*` stay separate doors.
+/// Not a taught L1 API.
 #[pymodule]
 mod ux_valio_native {
     use super::*;
@@ -361,5 +400,30 @@ mod ux_valio_native {
         let units = plan.units.clone();
         let byte_len = value.len();
         py.detach(move || apply_length_units(&units, byte_len).err())
+    }
+
+    /// Closed IntegerEnum member-set plan. `members` are the concrete
+    /// enum's `i64` values (aliases that share a value may repeat; a
+    /// repeat is still a hit).
+    ///
+    /// Not an L1 kwarg. The host reads the field annotation's
+    /// `IntEnum` members at bind and passes them here once.
+    #[pyfunction]
+    fn compile_integer_enum(members: Vec<i64>) -> Plan {
+        compile_member_plan(members)
+    }
+
+    /// One-shot IntegerEnum apply. Success is `None`; a value outside
+    /// the compiled member set is `FailKind::Member`.
+    ///
+    /// Closed IntegerEnum type door is this `i64` extract. A Python int
+    /// outside i64 raises `OverflowError` at this FFI boundary; host
+    /// falls through to the type door. Member units run after
+    /// extract. Releases the GIL (`Python::detach`). Not an open type
+    /// check. Not merged with `compile_integer_enum`.
+    #[pyfunction]
+    fn apply_integer_enum(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
+        let units = plan.units.clone();
+        py.detach(move || apply_member_units(&units, value).err())
     }
 }

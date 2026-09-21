@@ -3,8 +3,8 @@
 Stdlib Python is the apply path by default. The taught API does not
 change for speed. An optional native peer is mapped in
 [host / peer](host-peer-plan.md). ``ux-valio[native]`` may bind a
-closed Integer or Float bound plan, or a closed String or Bytes length plan,
-at construct. Cap Door B
+closed Integer or Float bound plan, a closed String or Bytes length plan,
+or a closed IntegerEnum member set, at construct. Cap Door B
 is not on this path.
 
 ## What is already compiled
@@ -22,11 +22,14 @@ At construct (`Validator.__init__` / `__set_name__`):
   `i64` or `f64` extract, not an open type check) or a closed String or
   Bytes length plan (MinLength / MaxLength / Length / range; String type
   is FFI `&str` extract and count is `len(str)` codepoints; Bytes type
-  is FFI `&[u8]` extract and count is `len(bytes)`). Otherwise the interpreter
-  still walks `_active_units`
+  is FFI `&[u8]` extract and count is `len(bytes)`), or a closed
+  IntegerEnum member set (`IntegerEnum` + `Member(i64)` from the
+  concrete enum; type door is host `isinstance`, then FFI `i64`
+  extract). Otherwise the interpreter still walks `_active_units`
 
-At set, the interpreter walks that short tuple (or one FFI `apply` for
-the closed native plan), then process hangs, then store on
+At set, the interpreter walks that short tuple (or one FFI `apply` /
+`apply_float` / `apply_string` / `apply_bytes` / `apply_integer_enum`
+for the closed native plan), then process hangs, then store on
 `instance.__dict__`, then `post_set` / spawn `task_*`.
 
 Mutating `min_value` after construct does nothing to the path. Pass
@@ -68,7 +71,8 @@ each closed Integer and Float bound family (`MinValue` / `MaxValue` /
 one-shot native `apply(plan, i64)` / `apply_float(plan, f64)`, and each
 closed String length family (`MinLength` / `MaxLength` / `Length` /
 min+max range) vs `apply_string(plan, &str)`, and each closed Bytes
-length family vs `apply_bytes(plan, &[u8])`.
+length family vs `apply_bytes(plan, &[u8])`, and the IntegerEnum
+member set vs `apply_integer_enum(plan, i64)`.
 
 ```console
 python benches/measure_host_peer.py

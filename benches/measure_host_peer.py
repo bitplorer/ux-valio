@@ -1,24 +1,25 @@
 # SPDX-License-Identifier: MIT
-"""Measure host setattr vs one-shot native apply of Integer/Float/String/Bytes plans.
+"""Measure host setattr vs one-shot native apply of closed plans.
 
 Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
-``IntegerValidator`` / ``FloatValidator`` bound plan or closed
-``StringValidator`` / ``BytesValidator`` length plan (taught API, soul
-stays Python).
+``IntegerValidator`` / ``FloatValidator`` bound plan, a closed
+``StringValidator`` / ``BytesValidator`` length plan, or a closed
+``IntegerEnumValidator`` member set (taught API, soul stays Python).
 
 Hot path B: ``compile(...)`` / ``compile_float(...)`` /
-``compile_string(...)`` / ``compile_bytes(...)`` once, then ``apply`` /
-``apply_float`` / ``apply_string`` / ``apply_bytes`` on the
+``compile_string(...)`` / ``compile_bytes(...)`` /
+``compile_integer_enum(...)`` once, then ``apply`` / ``apply_float`` /
+``apply_string`` / ``apply_bytes`` / ``apply_integer_enum`` on the
 ``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
 store/raise. Not Cap Door B.
 
 Families: MinValue, MaxValue, GreaterThan, LessThan, Equal, min+max
 range — once for Integer, once for Float — plus String and Bytes
-MinLength / MaxLength / Length / min+max range. Switch bar:
-FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
-below the bar is not claimed native (KEEP host for that family).
-Next HOLD: IntegerEnum, then StringEnum.
+MinLength / MaxLength / Length / min+max range, plus one IntegerEnum
+member set. Switch bar: FAIL (KEEP Python) unless host ns/op is
+>= 3× native ns/op. A family below the bar is not claimed native
+(KEEP host for that family). Next HOLD: StringEnum.
 
 Usage::
 
@@ -27,6 +28,7 @@ Usage::
 """
 
 import argparse
+import enum
 import os
 import platform
 import shutil
@@ -52,6 +54,32 @@ PASSING_A_H = ("a", "b", "c", "d", "e", "f", "g", "h")
 PASSING_LEN3 = ("abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc")
 PASSING_A_H_B = (b"a", b"b", b"c", b"d", b"e", b"f", b"g", b"h")
 PASSING_LEN3_B = (b"abc", b"abc", b"abc", b"abc", b"abc", b"abc", b"abc", b"abc")
+
+
+class _MeasureLevel(enum.IntEnum):
+    """Eight members so the hot-loop mask stays a power of two."""
+
+    A = 0
+    B = 1
+    C = 2
+    D = 3
+    E = 4
+    F = 5
+    G = 6
+    H = 7
+
+
+PASSING_LEVEL = (
+    _MeasureLevel.A,
+    _MeasureLevel.B,
+    _MeasureLevel.C,
+    _MeasureLevel.D,
+    _MeasureLevel.E,
+    _MeasureLevel.F,
+    _MeasureLevel.G,
+    _MeasureLevel.H,
+)
+_LEVEL_MEMBERS = [member.value for member in _MeasureLevel]
 
 
 @dataclass(frozen=True)
@@ -107,6 +135,16 @@ def _bytes_family(**kwargs: Any) -> PlanFamily:
         compile_attr="compile_bytes",
         apply_attr="apply_bytes",
         annotation=bytes,
+        **kwargs,
+    )
+
+
+def _integer_enum_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="IntegerEnumValidator",
+        compile_attr="compile_integer_enum",
+        apply_attr="apply_integer_enum",
+        annotation=_MeasureLevel,
         **kwargs,
     )
 
@@ -343,7 +381,27 @@ BYTES_FAMILIES = (
     ),
 )
 
-FAMILIES = INTEGER_FAMILIES + FLOAT_FAMILIES + STRING_FAMILIES + BYTES_FAMILIES
+INTEGER_ENUM_FAMILIES = (
+    _integer_enum_family(
+        name="IntegerEnum.Member",
+        field_kwargs={},
+        compile_kwargs={"members": _LEVEL_MEMBERS},
+        values=PASSING_LEVEL,
+        seed=_MeasureLevel.A,
+        smoke_ok=_MeasureLevel.A,
+        smoke_miss=8,
+        smoke_kind="Member",
+        label="IntegerEnum + Member(0..7)",
+    ),
+)
+
+FAMILIES = (
+    INTEGER_FAMILIES
+    + FLOAT_FAMILIES
+    + STRING_FAMILIES
+    + BYTES_FAMILIES
+    + INTEGER_ENUM_FAMILIES
+)
 
 
 def _ensure_tree_on_path() -> None:
@@ -429,6 +487,7 @@ def _load_facades() -> dict[str, Any]:
         from ux_valio import (
             BytesValidator,
             FloatValidator,
+            IntegerEnumValidator,
             IntegerValidator,
             StringValidator,
         )
@@ -442,6 +501,7 @@ def _load_facades() -> dict[str, Any]:
         "FloatValidator": FloatValidator,
         "StringValidator": StringValidator,
         "BytesValidator": BytesValidator,
+        "IntegerEnumValidator": IntegerEnumValidator,
     }
 
 
@@ -476,6 +536,16 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
             n: float = field
 
         return FloatBox(n=seed)
+    if family.facade == "IntegerEnumValidator":
+        # Owner annotation must be the concrete enum. ``__set_name__``
+        # compiles the member set; clear after that so path A is host
+        # ``_validate_type``, not the native product setattr.
+        @dataclass
+        class EnumBox:
+            n: _MeasureLevel = field
+
+        _clear_native(field)
+        return EnumBox(n=seed)
 
     @dataclass
     class IntBox:
@@ -563,7 +633,8 @@ def _report_header(skip_reason: str | None) -> None:
         "plan:     Integer i64 + Float f64 bound units "
         "(MinValue/MaxValue/GreaterThan/LessThan/Equal/range); "
         "String length units (MinLength/MaxLength/Length/range, codepoints); "
-        "Bytes length units (MinLength/MaxLength/Length/range, byte count)"
+        "Bytes length units (MinLength/MaxLength/Length/range, byte count); "
+        "IntegerEnum i64 member set (Member)"
     )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
@@ -628,6 +699,11 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
     floating = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "FloatValidator"]
     string = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "StringValidator"]
     blob = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "BytesValidator"]
+    integer_enum = [
+        (family, unlocked, ratio)
+        for family, unlocked, ratio in results
+        if family.facade == "IntegerEnumValidator"
+    ]
     failed = [family.name for family, unlocked, _ratio in results if not unlocked]
     int_passed = [family.name for family, unlocked, _ratio in integer if unlocked]
     int_new = [name for name in int_passed if name != "Integer.MinValue"]
@@ -637,10 +713,16 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
     string_passed = [family.name for family, unlocked, _ratio in string if unlocked]
     bytes_failed = [family.name for family, unlocked, _ratio in blob if not unlocked]
     bytes_passed = [family.name for family, unlocked, _ratio in blob if unlocked]
+    enum_failed = [family.name for family, unlocked, _ratio in integer_enum if not unlocked]
+    enum_passed = [family.name for family, unlocked, _ratio in integer_enum if unlocked]
     if any(not unlocked for _family, unlocked, _ratio in integer):
         print(
             f"SUMMARY: FAIL (KEEP Python) Integer families below {SWITCH_BAR:.1f}×: "
-            + ", ".join(name for name in failed if name.startswith("Integer."))
+            + ", ".join(
+                name
+                for name in failed
+                if name.startswith("Integer.") and not name.startswith("IntegerEnum.")
+            )
         )
         return 1
     if not int_new:
@@ -677,7 +759,7 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
         print(
             f"SUMMARY: Bytes KEEP host (below {SWITCH_BAR:.1f}×): "
             + ", ".join(bytes_failed)
-            + ". Do not claim native for those families. IntegerEnum is next. "
+            + ". Do not claim native for those families. StringEnum is next. "
             + (
                 f"Bytes native unlocked: {', '.join(bytes_passed)}"
                 if bytes_passed
@@ -685,9 +767,18 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
             )
         )
         return 1
+    if enum_failed:
+        print(
+            f"SUMMARY: IntegerEnum KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(enum_failed)
+            + ". Do not claim native for IntegerEnum. Do not piggyback "
+            "StringEnum or Boolean."
+        )
+        return 1
     print(
-        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed)} each >= "
-        f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr)"
+        "SUMMARY: PASS — "
+        + ", ".join(int_passed + float_passed + string_passed + bytes_passed + enum_passed)
+        + f" each >= {SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr)"
     )
     return 0
 
@@ -695,8 +786,8 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Measure IntegerValidator/FloatValidator/StringValidator/"
-            "BytesValidator setattr vs native bound/length-plan apply."
+            "Measure Integer/Float/String/Bytes/IntegerEnum setattr vs "
+            "native plan apply."
         )
     )
     parser.add_argument(

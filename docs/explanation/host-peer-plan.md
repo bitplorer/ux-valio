@@ -18,7 +18,7 @@ to call, *which* plan, and *how* to raise.
 ```text
 bind / __init__     host compiles specified theory → plan
 set                 host hands (plan, value) once
-                    peer applies  (i64 / f64 / &str / &[u8] extract; bound or length units)
+                    peer applies  (i64 / f64 / &str / &[u8] extract; bound, length, or member units)
                     host stores on instance.__dict__
                     host runs hooks, named extras, debug-swallow
 ```
@@ -60,7 +60,9 @@ Shipped closed plans: ``Integer`` or ``Float`` plus specified bound units —
 min+max range and exclusive ``gt``+``lt`` as the host encodes them —
 and ``String`` plus specified length units — ``MinLength`` /
 ``MaxLength`` / ``Length``, including min+max range — and ``Bytes``
-plus the same length units (byte count, not codepoints).
+plus the same length units (byte count, not codepoints) — and
+``IntegerEnum`` plus ``Member(i64)`` values taken from the concrete
+``enum.IntEnum`` on the field.
 ``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
 ``eq=7``, and ``min_value=0, max_value=10`` compile when the
 annotation is ``int`` and only those bound units are active.
@@ -72,11 +74,16 @@ and ``min_length=1, max_length=10`` compile when the annotation is
 ``str`` and only those length units are active.
 ``BytesValidator(min_length=1)`` (and the same length kwargs)
 compile when the annotation is ``bytes`` and only those length
-units are active. Unclosed
-paths (``required``, ``multiple_of``, pattern, choice, named
+units are active.
+``IntegerEnumValidator()`` compiles when the owner annotation is a
+concrete ``IntEnum`` subclass (not ``enum.IntEnum`` itself, not
+``IntFlag``) and only the type unit is active. Member values are that
+enum's ``i64`` set (aliases that share a value are one member).
+Unclosed paths (``required``, ``multiple_of``, pattern, choice, named
 identity, Email, a mixed bound type, Union / TypedDict /
-Annotated) stay on the host. Email / named identity were already
-competitive in Python — do not start there.
+Annotated, plain ``EnumValidator``, ``StringEnumValidator``, open
+``Validator[SomeIntEnum]``) stay on the host. Email / named identity
+were already competitive in Python — do not start there.
 
 Closed Integer **type door** is the FFI ``i64`` extract. Closed Float
 **type door** is the FFI ``f64`` extract (``apply_float``). Bound units
@@ -130,10 +137,25 @@ clusters:
 - Extract overflow / extract TypeError is a **bridge** (fall through
   to host ``LengthValidator``), not an L1 "overflow" message.
 
-HOLD this tip: IntegerEnum i64 member-set (next sequential), then
-StringEnum. Boolean (only if later measure ≥3×), Decimal (scale/coerce
-unlocked), Date/DateTime, UUID/Path/IP/plain EnumValidator, Pattern /
-custom callables, named facades, Cap Door B.
+**IntegerEnum member set (Door A lock).** Host ``IntegerEnumValidator``
+accepts a member of the concrete ``IntEnum`` on the field and rejects
+everything else with the type-door ``TypeError``:
+
+- In-set members store, including aliases that share an integer.
+- A different ``IntEnum`` misses even when ``.value`` is the same
+  integer (``Other.LOW`` is not ``Rank.LOW``).
+- Plain ``int`` / ``bool`` / ``str`` / a non-int ``Enum`` miss. With
+  ``collect_all`` the named extra adds the ``IntEnum`` type error.
+- ``None`` skips.
+- ``FailKind.Member`` is the set miss. Host wording is that same
+  type-door ``TypeError``, not a second sentence.
+- A member outside ``i64`` keeps the enum on the host. ``OverflowError``
+  at extract is a **bridge** (fall through to host ``TypeValidator``),
+  not an L1 "overflow" message.
+
+HOLD this tip: StringEnum. Boolean (only if later measure ≥3×), Decimal
+(scale/coerce unlocked), Date/DateTime, UUID/Path/IP/plain
+EnumValidator, Pattern / custom callables, named facades, Cap Door B.
 
 ## What never leaves the host
 
@@ -152,7 +174,7 @@ custom callables, named facades, Cap Door B.
    apply. ``pip install ux-valio[native]`` installs the ``ux-valio-native``
    wheel (module ``ux_valio_native`` — not a taught import).
 2. Same field default. Same ``annotation``. Same fail-closed errors.
-   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator``.
+   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator``.
 3. Compile at bind, not at set. Missing peer → host apply (no import
    error on the hot path after a failed extra install: bind-time
    choice).
@@ -175,7 +197,11 @@ custom callables, named facades, Cap Door B.
    ``&[u8]`` extract is the Bytes door (``apply_bytes``).
    ``OverflowError`` / extract TypeError at that extract is the same
    bridge (fall through to host ``LengthValidator``; no L1 "overflow"
-   message). Unexpected
+   message). PyO3 ``i64`` extract is the IntegerEnum door
+   (``apply_integer_enum``). ``OverflowError`` at that extract is the
+   same bridge (fall through to host ``TypeValidator``; no L1
+   "overflow" message). ``compile_integer_enum`` and
+   ``apply_integer_enum`` stay separate doors. Unexpected
    peer/infra is ``RuntimeError`` naming ``ux_valio_native``. Three
    buckets: validation (``FailKind``) / bridge (extract overflow) /
    peer-infra.
@@ -200,6 +226,7 @@ Without the extra, every existing test stays on the stdlib path.
 Build the product peer only if, on the same box, host apply of a
 specified ``IntegerValidator(min_value=0)`` / ``FloatValidator(min_value=0.0)``
 / ``StringValidator(min_length=1)`` / ``BytesValidator(min_length=1)``
+/ ``IntegerEnumValidator()`` on a concrete ``IntEnum``
 setattr stays several times slower than a one-shot native apply of that
 same plan, and the Python compile (``_active_units``, skip TypedDict,
 skip watch) is already in.
@@ -212,15 +239,18 @@ the door risk.
 
 The harness lives in-tree. It installs/uses ``ux-valio`` from the repo
 root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with a
-closed ``IntegerValidator`` or ``FloatValidator`` bound plan or a closed
-``StringValidator`` / ``BytesValidator`` length plan. Hot path B is ``compile(...)``
+closed ``IntegerValidator`` or ``FloatValidator`` bound plan, a closed
+``StringValidator`` / ``BytesValidator`` length plan, or a closed
+``IntegerEnumValidator`` member set. Hot path B is ``compile(...)``
 / ``compile_float(...)`` / ``compile_string(...)`` / ``compile_bytes(...)``
+/ ``compile_integer_enum(...)``
 once then ``apply`` /
-``apply_float`` / ``apply_string`` / ``apply_bytes`` on the
+``apply_float`` / ``apply_string`` / ``apply_bytes`` /
+``apply_integer_enum`` on the
 product peer (``native/``: owned unit list of ``Integer`` or ``Float``
 plus ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
 ``Equal``, or ``String`` / ``Bytes`` plus ``MinLength`` / ``MaxLength`` /
-``Length``). B is **not** product setattr (no store, no
+``Length``, or ``IntegerEnum`` plus ``Member(i64)``). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
 family; the bar is **≥ 3×** for each. A family below the bar is
 KEEP host for that family (do not claim native).
@@ -336,10 +366,9 @@ apply here is ~95 ns/op (GIL released), not a 70× product setattr
 claim. Integer families on the same run stayed ~24–26× and Float
 ~25–27× (still PASS).
 
-HOLD after Bytes: IntegerEnum i64 member-set (next sequential tip),
-then StringEnum. Boolean only if later measure ≥3×. Decimal,
-Date/DateTime, UUID/Path, Pattern, named facades, Cap Door B stay off
-this path.
+HOLD after IntegerEnum: StringEnum. Boolean only if later measure ≥3×.
+Decimal, Date/DateTime, UUID/Path, Pattern, named facades, Cap Door B
+stay off this path.
 
 ### Measured (2026-09-21) Bytes length families
 

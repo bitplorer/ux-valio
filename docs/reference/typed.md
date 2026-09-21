@@ -15,8 +15,9 @@ assignment** (a `date`, not the string you typed).
 | `IntegerValidator` | `int` | seats, quantity, age, reputation |
 
 `IntegerValidator(min_value=0)` is the taught field default. Optional
-`ux-valio[native]` may compile closed Integer or Float bound plans (min/max/gt/lt/eq)
-and closed String / Bytes length plans (min/max/exact)
+`ux-valio[native]` may compile closed Integer or Float bound plans (min/max/gt/lt/eq),
+closed String / Bytes length plans (min/max/exact), and a closed
+`IntegerEnumValidator` member set (concrete `IntEnum` on the field)
 once and apply in one FFI; without the extra the same units run in Python.
 Call sites do not change. See [host / peer](../explanation/host-peer-plan.md).
 | `StringValidator` | `str` | names, slugs (without a named identity) |
@@ -32,7 +33,7 @@ Call sites do not change. See [host / peer](../explanation/host-peer-plan.md).
 | `IPv6Validator` | given string | |
 | `IPAddressValidator` | given string | v4 or v6 |
 | `EnumValidator` | `enum.Enum` | closed sets you already modelled as Enum |
-| `IntegerEnumValidator` | `enum.IntEnum` | |
+| `IntegerEnumValidator` | `enum.IntEnum` | concrete `IntEnum` on the field; optional native member set |
 | `StringEnumValidator` | str Enum member | |
 
 Money: use `DecimalValidator`, not `FloatValidator`.
