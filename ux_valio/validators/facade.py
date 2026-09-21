@@ -12,7 +12,7 @@ from typing import Any, Callable, Iterable, TypeVar
 
 from ux_valio.descriptor import _UNSET
 from ux_valio.errors import continue_or_raise, raise_collected, run_steps
-from ux_valio.validators._native import apply_native_integer_bounds, bind_native_plan
+from ux_valio.validators._native import apply_native_bounds, bind_native_plan
 from ux_valio.validators.base import ValidateProperty
 from ux_valio.validators.leaves import (
     ChoiceValidator,
@@ -221,7 +221,7 @@ class Validator(ValidateProperty[T]):
     def _apply_specified_path(self, instance: Any, value: Any) -> None:
         """Native closed plan when bound; else host ``_active_units``."""
         if getattr(self, "_native_plan", None) is not None:
-            apply_native_integer_bounds(self, value)
+            apply_native_bounds(self, value)
             return
         self.validation_path.run(
             self, instance, value, collect_all=self.collect_all
