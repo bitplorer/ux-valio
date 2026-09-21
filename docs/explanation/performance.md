@@ -69,10 +69,12 @@ Recorded 2026-09-21 on CPython 3.14.7 / rustc 1.83 / Linux x86_64:
 host **3389–3515 ns/op**, native **46.2–46.5 ns/op**, ratio **73–76×**.
 A rename-only re-run (plan units ``Integer`` + ``MinValue(0)``) stayed
 **75×**. **PASS — native extra bound for this closed plan.** Honesty:
-that ratio is descriptor setattr vs **plan apply only**. Do not claim
-the product extra is 70× end-to-end after host store/raise. CI without
-Rust skips (`python benches/measure_host_peer.py --ci`). Full notes,
-install, and rejected shapes: [host / peer](host-peer-plan.md).
+that ratio is descriptor setattr vs **plan apply only** on the measure
+stub (no GIL detach). Do not claim the product extra is 70× end-to-end
+after host store/raise. Product ``apply`` uses ``Python::detach``; a
+local re-run still PASSes the 3× bar. CI without Rust skips
+(`python benches/measure_host_peer.py --ci`). Full notes, install, and
+rejected shapes: [host / peer](host-peer-plan.md).
 
 ## What to do in application code
 

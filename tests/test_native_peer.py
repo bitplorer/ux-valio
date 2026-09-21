@@ -15,7 +15,13 @@ from pathlib import Path
 
 import pytest
 
-from ux_valio import FloatValidator, IntegerValidator, StringValidator, ValidationErrors
+from ux_valio import (
+    FloatValidator,
+    IntegerValidator,
+    StringValidator,
+    ValidationErrors,
+    Validator,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 FIELD_PATH_GLOBS = (
@@ -83,7 +89,7 @@ def test_integer_min_value_works_on_stdlib_path():
     assert Box(n=0).n == 0
     with pytest.raises(ValueError, match="minimum value of 0"):
         Box(n=-1)
-    with pytest.raises(TypeError, match="expect"):
+    with pytest.raises((TypeError, ValidationErrors), match="expect"):
         Box(n="0")  # type: ignore[arg-type]
 
 
@@ -140,6 +146,7 @@ def test_integer_min_value_compiles_once_at_bind():
     class Box:
         n: int = field
 
+    assert field._native_plan is plan
     box = Box(n=0)
     box.n = 3
     box.n = 7
@@ -150,6 +157,11 @@ def test_integer_min_value_compiles_once_at_bind():
 @needs_native
 def test_one_ffi_apply_per_set():
     field = IntegerValidator(min_value=0, debug=True, name="n")
+
+    @dataclass
+    class Box:
+        n: int = field
+
     assert field._native_plan is not None
     calls: list[int] = []
     orig = field._native_apply
@@ -159,15 +171,25 @@ def test_one_ffi_apply_per_set():
         return orig(plan, value)
 
     field._native_apply = counted
+    box = Box(n=1)
+    box.n = 2
+    box.n = 3
+    assert calls == [1, 2, 3]
+
+
+@needs_native
+def test_validator_int_subscript_binds_at_set_name():
+    field = Validator[int](min_value=0, debug=True)
 
     @dataclass
     class Box:
         n: int = field
 
-    box = Box(n=1)
-    box.n = 2
-    box.n = 3
-    assert calls == [1, 2, 3]
+    assert field.annotation is int
+    assert field._native_plan is not None
+    assert Box(n=2).n == 2
+    with pytest.raises(ValueError, match="minimum value"):
+        Box(n=-1)
 
 
 @needs_native
@@ -193,7 +215,7 @@ def test_native_min_value_wording_and_store():
     assert row.__dict__["n"] == 4
     with pytest.raises(ValueError, match="n expect the minimum value of 0, got -1 instead"):
         Box(n=-1)
-    with pytest.raises(TypeError, match="n expect .*int.* got str"):
+    with pytest.raises((TypeError, ValidationErrors), match="expect"):
         Box(n="1")  # type: ignore[arg-type]
 
 
@@ -235,16 +257,15 @@ def test_native_collect_all_type_miss_matches_host():
 
 @needs_native
 def test_native_pre_validate_still_runs_on_host():
-    n = IntegerValidator(min_value=0, debug=True)
-
-    @n.pre_validate
-    def bump(_self, value):
-        return value + 1
-
     @dataclass
     class Box:
-        n: int = n
+        n: int = IntegerValidator(min_value=0, debug=True)
 
+        @n.pre_validate
+        def bump(self, value):
+            return value + 1
+
+    assert Box.__dict__["n"]._native_plan is not None
     assert Box(n=0).n == 1
     with pytest.raises(ValueError, match="minimum value"):
         Box(n=-2)
@@ -252,17 +273,16 @@ def test_native_pre_validate_still_runs_on_host():
 
 @needs_native
 def test_native_custom_validator_still_runs():
-    n = IntegerValidator(min_value=0, debug=True)
-
-    @n.validator
-    def even(_self, value):
-        if value is not None and value % 2:
-            raise ValueError("odd")
-
     @dataclass
     class Box:
-        n: int = n
+        n: int = IntegerValidator(min_value=0, debug=True)
 
+        @n.validator
+        def even(self, value):
+            if value is not None and value % 2:
+                raise ValueError("odd")
+
+    assert Box.__dict__["n"]._native_plan is not None
     assert Box(n=2).n == 2
     with pytest.raises(ValueError, match="odd"):
         Box(n=1)

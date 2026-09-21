@@ -157,7 +157,10 @@ Xeon, 4 CPUs). Peer is a release cdylib. Host units were
 Honesty: A is the taught descriptor (``__set__``, specified units, store
 on ``instance.__dict__``). B is plan apply only (one FFI, no store, no
 hooks). That is the switch the map asked for, **not** a claim that
-product setattr is 70× end-to-end after host raise/store.
+product setattr is 70× end-to-end after host raise/store. Product
+``apply`` releases the GIL (``Python::detach``; PyO3 0.29 name for
+``allow_threads``), so a local re-run of B is slower than the stub’s
+46 ns/op and still PASSes the 3× bar.
 
 Rename-only re-run on the same box (plan units ``Integer`` +
 ``MinValue(0)``, same apply): host 3491–3672 ns/op, native 46.8–49.0

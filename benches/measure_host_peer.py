@@ -126,9 +126,15 @@ def _load_ux_valio() -> Any:
 
 def _make_box(IntegerValidator: Any) -> Any:
     # Owner annotations must be real types: postponed ``int`` TypeErrors at bind.
+    # Force stdlib apply on path A so the switch still compares host units vs
+    # plan-apply-only (product setattr is host+store+raise, not this bar).
+    field = IntegerValidator(min_value=0)
+    field._native_plan = None
+    field._native_apply = None
+
     @dataclass
     class Box:
-        n: int = IntegerValidator(min_value=0)
+        n: int = field
 
     return Box(n=0)
 

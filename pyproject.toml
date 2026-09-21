@@ -54,3 +54,6 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = "ux_valio_native"
 ignore_missing_imports = true
+
+[tool.uv.sources]
+ux-valio-native = { path = "native" }

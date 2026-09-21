@@ -184,7 +184,8 @@ class Validator(ValidateProperty[T]):
 
     def __set_name__(self, owner: type, name: str) -> None:
         super().__set_name__(owner, name)
-        bind_native_plan(self)
+        if getattr(self, "_native_plan", None) is None:
+            bind_native_plan(self)
 
     _watch_assignment = ReassignValidator._watch_assignment
 
