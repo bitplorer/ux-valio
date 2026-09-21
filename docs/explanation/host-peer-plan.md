@@ -1,9 +1,10 @@
 # Host decides, peer applies
 
-Future performance note. Not an implementation. Not a pydantic clone.
-The taught API stays ``field: T = SomeValidator(...)``. Stdlib Python is
-the default apply. An optional native peer is a later extra, never a
-second door (no Field, no Schema, no BaseModel).
+Performance map plus a **measure tip**. Not a pydantic clone. The taught
+API stays ``field: T = SomeValidator(...)``. Stdlib Python is the
+default apply. An optional native peer remains a later extra, never a
+second door (no Field, no Schema, no BaseModel). This tree does **not**
+ship ``ux-valio[native]`` or Cap Door B.
 
 ## Essence
 
@@ -84,9 +85,58 @@ are already competitive in Python — do not start there.
 
 ## Switch test (when to actually build it)
 
-Build the peer only if, on the same box, host apply of a specified
-``IntegerValidator(min_value=0)`` setattr stays several times slower
-than a one-shot native apply of that same plan, and the Python compile
-(``_active_units``, skip TypedDict, skip watch) is already in.
+Build the product peer only if, on the same box, host apply of a
+specified ``IntegerValidator(min_value=0)`` setattr stays several times
+slower than a one-shot native apply of that same plan, and the Python
+compile (``_active_units``, skip TypedDict, skip watch) is already in.
 
-Until then this file is the map, not a task.
+**Bar.** FAIL (KEEP Python) unless host ns/op is **≥ 3×** native ns/op.
+Three times is “several”; below that, FFI + a later extra is not worth
+the door risk.
+
+### How to run
+
+The harness lives in-tree. It installs/uses ``ux-valio`` from the repo
+root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with
+``IntegerValidator(min_value=0)``. Hot path B is ``compile()`` once then
+``apply(plan, i64)`` on a **measure-only** PyO3 stub
+(``benches/native/``: ``IntDoor`` + ``Ge(0)`` only). That stub is not a
+published extra.
+
+```console
+python -m pip install -e .
+python benches/measure_host_peer.py
+python benches/measure_host_peer.py --ci    # never builds Rust; SKIP or smoke
+```
+
+Local run needs ``rustc`` / ``cargo`` and will ``pip install maturin``
+then ``maturin develop --release`` the stub into the current
+interpreter. GitHub Actions has no Rust toolchain: ``--ci`` (and
+``tests/test_host_peer_measure.py``) skip with that reason, exit 0.
+
+Do not ``from __future__ import annotations`` on the measured ``Box``:
+postponed ``int`` TypeErrors at bind (KEEP).
+
+### Measured (2026-09-21)
+
+Same box, two consecutive runs, 400000 iters after 20000 warmup,
+values ``(0..7)``, CPython 3.14.7, rustc 1.83.0, Linux x86_64 (Intel
+Xeon, 4 CPUs). Stub is a release cdylib. Host units were
+``_validate_type`` then ``_validate_value``.
+
+| path | wall (run 1 / 2) | ns/op |
+|---|---|---|
+| A ``setattr`` ``IntegerValidator(min_value=0)`` | 1.355 s / 1.406 s | 3389 / 3515 |
+| B native ``apply(IntDoor, Ge(0))`` | 0.0185 s / 0.0186 s | 46.2 / 46.5 |
+| host / native | | **73× / 76×** |
+
+Honesty: A is the taught descriptor (``__set__``, specified units, store
+on ``instance.__dict__``). B is plan apply only (one FFI, no store, no
+hooks). That is the switch the map asked for, not a claim that a product
+peer would be 70× end-to-end after host raise/store.
+
+**Verdict: PASS (native tip unlocked).** Host stayed several times
+slower than the one-shot native apply (bar 3×). A later PR may bind an
+optional extra. This PR does not. Cap Door B, JSON-per-set, migrating
+``self`` into Rust, a Field/Schema twin, a mega shared plan crate, and
+email/named identity as a first target stay rejected.

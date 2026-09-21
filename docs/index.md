@@ -45,7 +45,7 @@ facade you want.
 | debug, logger, slots, falsy `0` | [Honesty](explanation/honesty.md) |
 | Import graph | [Layering](explanation/layering.md) |
 | What is fast / what is not | [Performance](explanation/performance.md) |
-| Future native apply | [Host / peer](explanation/host-peer-plan.md) |
+| Host / peer measure | [Host / peer](explanation/host-peer-plan.md) |
 
 Install: `pip install -e .`  
 Phone extra: `pip install ux-valio[phonenumbers]`  

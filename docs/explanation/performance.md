@@ -1,8 +1,8 @@
 # Performance
 
 Stdlib Python is the apply path today. The taught API does not change
-for speed. A native peer is mapped in [host / peer](host-peer-plan.md)
-and is **not implemented**.
+for speed. A native peer is mapped in [host / peer](host-peer-plan.md).
+The product extra is **not shipped**. The switch test is **measured**.
 
 ## What is already compiled
 
@@ -47,6 +47,24 @@ already competitive in Python — do not start a peer there.
 
 A peer that calls back into Python **per unit** is slower than today.
 One crossing per set, or none.
+
+## Switch test (measured)
+
+Bar: FAIL (KEEP Python) unless host ns/op ≥ **3×** native ns/op for
+`IntegerValidator(min_value=0)` setattr vs one-shot native
+`apply(IntDoor, Ge(0))`.
+
+```console
+python benches/measure_host_peer.py
+```
+
+Recorded 2026-09-21 on CPython 3.14.7 / rustc 1.83 / Linux x86_64:
+host **3389–3515 ns/op**, native **46.2–46.5 ns/op**, ratio **73–76×**.
+**PASS — native tip unlocked.** The measure stub under
+`benches/native/` is not `ux-valio[native]`. CI without Rust skips
+(`python benches/measure_host_peer.py --ci`). Full notes, honesty
+(descriptor+store vs plan apply), and rejected shapes: [host /
+peer](host-peer-plan.md).
 
 ## What to do in application code
 

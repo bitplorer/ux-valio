@@ -79,5 +79,6 @@ default (`ValidateProperty`). No Cap Host, no `rule/`. Import Pattern names
 from `ux_valio`. There is no `ux_valio.regexer`.
 
 A later optional native peer (host decides, peer applies) is mapped in
-[`docs/explanation/host-peer-plan.md`](docs/explanation/host-peer-plan.md)
-— not implemented.
+[`docs/explanation/host-peer-plan.md`](docs/explanation/host-peer-plan.md).
+Measure with `python benches/measure_host_peer.py`. The product extra is
+not shipped.
