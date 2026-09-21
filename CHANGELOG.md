@@ -18,9 +18,10 @@
   may be active. Plain ``EnumValidator``, ``StringEnumValidator``,
   open ``Validator[SomeIntEnum]``, Boolean, Decimal, Date*, UUID,
   Path, and named facades stay host. Integer / Float / String / Bytes
-  closed plans are unchanged. Measure
-  (``python benches/measure_host_peer.py``); do not claim 70× product
-  setattr. Next HOLD: StringEnum. Boolean only if later measure ≥3×.
+  closed plans are unchanged. Measured member-set ratio **34.4×**
+  (host 3267 ns/op, native 95.0 ns/op; bar 3×; plan-apply only, not
+  70× product setattr). Same run kept Integer / Float / String / Bytes
+  at ~25–27×. Next HOLD: StringEnum. Boolean only if later measure ≥3×.
   Cap Door B stays off.
 
 - Native Bytes length units: closed ``ux-valio[native]`` plans now

@@ -366,10 +366,6 @@ apply here is ~95 ns/op (GIL released), not a 70× product setattr
 claim. Integer families on the same run stayed ~24–26× and Float
 ~25–27× (still PASS).
 
-HOLD after IntegerEnum: StringEnum. Boolean only if later measure ≥3×.
-Decimal, Date/DateTime, UUID/Path, Pattern, named facades, Cap Door B
-stay off this path.
-
 ### Measured (2026-09-21) Bytes length families
 
 Same class of box, one run, 400000 iters after 20000 warmup, CPython 3.14.7,
@@ -390,3 +386,25 @@ per family.
 apply here is ~94 ns/op (GIL released), not a 70× product setattr
 claim. Integer families on the same run stayed ~24–25×, Float
 ~25–26×, and String ~24–25× (still PASS).
+
+### Measured (2026-09-21) IntegerEnum member set
+
+Same class of box, one run, 400000 iters after 20000 warmup, CPython 3.14.7,
+rustc 1.83.0, Linux x86_64. Peer is a release cdylib. Host units were
+``_validate_type`` (path A cleared after bind so it is host apply, not
+the native product setattr). B is ``apply_integer_enum(plan, i64)``
+only (``Python::detach``). The set is eight member values ``0..7``.
+Bar 3×.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| Member(0..7) | 3267 | 95.0 | **34.4×** |
+
+**Verdict: PASS.** The IntegerEnum member set cleared the 3× bar
+(34.4×). Native apply here is ~95 ns/op (GIL released), not a 70×
+product setattr claim. On the same run Integer stayed ~26–27×, Float
+~26×, String ~25×, and Bytes ~25–26× (still PASS).
+
+HOLD after IntegerEnum: StringEnum. Boolean only if later measure ≥3×.
+Decimal, Date/DateTime, UUID/Path, Pattern, named facades, Cap Door B
+stay off this path.

@@ -90,7 +90,10 @@ length re-run on this tip: host **2399–2450 ns/op**, native **94.6–96.7
 ns/op**, ratio **25.3–25.6×** for MinLength / MaxLength / Length /
 min+max range — all **PASS**. Bytes length re-run on this tip: host
 **2390–2434 ns/op**, native **93.2–95.7 ns/op**, ratio **25.3–25.9×**
-for MinLength / MaxLength / Length / min+max range — all **PASS**. Honesty: that ratio is descriptor
+for MinLength / MaxLength / Length / min+max range — all **PASS**.
+IntegerEnum member-set re-run on this tip: host **3267 ns/op**, native
+**95.0 ns/op**, ratio **34.4×** — **PASS**. Integer / Float / String /
+Bytes families on that run stayed ~25–27× (still PASS). Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end
 after host store/raise. CI without Rust skips
