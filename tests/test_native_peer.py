@@ -111,6 +111,21 @@ def test_native_is_not_a_taught_import():
     assert not hasattr(ux_valio, "Plan")
 
 
+@needs_native
+def test_bare_compile_and_apply_are_absent_on_the_peer():
+    """Hard cut: Integer doors are family-named. No alias remains."""
+    import ux_valio_native as peer
+
+    assert not hasattr(peer, "compile")
+    assert not hasattr(peer, "apply")
+    with pytest.raises(AttributeError):
+        getattr(peer, "compile")
+    with pytest.raises(AttributeError):
+        getattr(peer, "apply")
+    assert callable(getattr(peer, "compile_integer"))
+    assert callable(getattr(peer, "apply_integer"))
+
+
 def test_integer_min_value_works_on_stdlib_path():
     @dataclass
     class Box:
@@ -252,6 +267,14 @@ def test_closed_integer_type_door_is_ffi_extract():
     rust = (ROOT / "native" / "src" / "lib.rs").read_text()
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
     assert re.search(r"value: i64", rust)
+    assert "fn compile_integer" in rust
+    assert "fn apply_integer" in rust
+    assert "fn compile_integer_plan" in rust
+    assert "fn compile_float_plan" in rust
+    assert "fn compile_bound_plan" in rust
+    assert "fn compile_plan" not in rust
+    assert not re.search(r"\bfn compile\(", rust)
+    assert not re.search(r"\bfn apply\(", rust)
     assert "NotInteger" not in rust
     assert "NotFloat" not in rust
     for token in (
@@ -755,7 +778,7 @@ def test_unexpected_peer_bind_raises_runtime_error_with_ux_valio_native(monkeypa
     def boom(**kwargs):
         raise ValueError("peer exploded")
 
-    monkeypatch.setattr(ux_valio_native, "compile", boom)
+    monkeypatch.setattr(ux_valio_native, "compile_integer", boom)
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         IntegerValidator(min_value=0, debug=True, name="n")
     assert isinstance(caught.value.__cause__, ValueError)
@@ -1060,7 +1083,7 @@ def test_native_float_uses_apply_float_not_integer_apply():
     field = FloatValidator(min_value=0.0, debug=True, name="n")
     assert field._native_apply is peer.apply_float
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_apply is peer.apply
+    assert integer._native_apply is peer.apply_integer
 
 
 @needs_native
@@ -1437,7 +1460,7 @@ def test_native_string_uses_apply_string_not_numeric_apply():
     field = StringValidator(min_length=1, debug=True, name="n")
     assert field._native_apply is peer.apply_string
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_apply is peer.apply
+    assert integer._native_apply is peer.apply_integer
     floating = FloatValidator(min_value=0.0, debug=True, name="n")
     assert floating._native_apply is peer.apply_float
 
@@ -1912,7 +1935,7 @@ def test_native_bytes_uses_apply_bytes_not_string_apply():
     text = StringValidator(min_length=1, debug=True, name="n")
     assert text._native_apply is peer.apply_string
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_apply is peer.apply
+    assert integer._native_apply is peer.apply_integer
     floating = FloatValidator(min_value=0.0, debug=True, name="n")
     assert floating._native_apply is peer.apply_float
 
@@ -2280,9 +2303,9 @@ def test_native_integer_enum_uses_apply_integer_enum_not_integer_apply():
 
     field = _bind_enum_field(_Rank)
     assert field._native_apply is peer.apply_integer_enum
-    assert field._native_apply is not peer.apply
+    assert field._native_apply is not peer.apply_integer
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_apply is peer.apply
+    assert integer._native_apply is peer.apply_integer
     assert hasattr(peer.FailKind, "NotMember")
     assert not hasattr(peer.FailKind, "NotMem")
     plan = peer.compile_integer_enum(members=[1, 2, 0, -3])

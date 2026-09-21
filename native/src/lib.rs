@@ -3,7 +3,7 @@
 //! Closed Integer and Float bound plans, closed String and Bytes length
 //! plans, a closed IntegerEnum member-set plan, and a closed StringEnum
 //! UTF-8 member-set plan. Type door is the FFI extract
-//! (`apply(plan, i64)` / `apply_float(plan, f64)` /
+//! (`apply_integer(plan, i64)` / `apply_float(plan, f64)` /
 //! `apply_string(plan, &str)` / `apply_bytes(plan, &[u8])` /
 //! `apply_integer_enum(plan, i64)` / `apply_string_enum(plan, &str)`).
 //! Bound units (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` /
@@ -208,7 +208,7 @@ fn push_bound<T>(units: &mut Vec<Unit>, bound: Option<T>, unit: impl FnOnce(T) -
     }
 }
 
-fn compile_plan<T>(
+fn compile_bound_plan<T>(
     shape: Unit,
     wrap: impl Fn(T) -> Bound + Copy,
     min_value: Option<T>,
@@ -227,6 +227,34 @@ fn compile_plan<T>(
     push_bound(&mut units, lt, |v| Unit::LessThan(wrap(v)));
     push_bound(&mut units, eq, |v| Unit::Equal(wrap(v)));
     share_plan(units)
+}
+
+fn compile_integer_plan(
+    min_value: Option<i64>,
+    max_value: Option<i64>,
+    gt: Option<i64>,
+    lt: Option<i64>,
+    eq: Option<i64>,
+) -> Plan {
+    compile_bound_plan(
+        Unit::Integer,
+        Bound::Integer,
+        min_value,
+        max_value,
+        gt,
+        lt,
+        eq,
+    )
+}
+
+fn compile_float_plan(
+    min_value: Option<f64>,
+    max_value: Option<f64>,
+    gt: Option<f64>,
+    lt: Option<f64>,
+    eq: Option<f64>,
+) -> Plan {
+    compile_bound_plan(Unit::Float, Bound::Float, min_value, max_value, gt, lt, eq)
 }
 
 fn apply_length_units(units: &[Unit], counted: usize) -> Result<(), FailKind> {
@@ -307,10 +335,11 @@ fn compile_length_plan(
     share_plan(units)
 }
 
-/// Product peer: `compile(...)` / `compile_float(...)` /
+/// Product peer: `compile_integer(...)` / `compile_float(...)` /
 /// `compile_string(...)` / `compile_bytes(...)` /
 /// `compile_integer_enum(...)` / `compile_string_enum(...)` + one-shot
-/// apply.
+/// `apply_integer` / `apply_float` / `apply_string` / `apply_bytes` /
+/// `apply_integer_enum` / `apply_string_enum`.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`,
 /// `Float`, `String`, `Bytes`, `IntegerEnum`, or `StringEnum`; extract
@@ -330,33 +359,25 @@ mod ux_valio_native {
 
     /// Closed Integer bound plan. Omitted kwargs stay off the unit list.
     ///
-    /// `compile(5)` is still `MinValue(5)` (positional first arg). Range
-    /// is `compile(min_value=0, max_value=10)`. Host `gt`/`lt`/`eq`
-    /// map to `GreaterThan` / `LessThan` / `Equal`.
+    /// `compile_integer(5)` is still `MinValue(5)` (positional first arg).
+    /// Range is `compile_integer(min_value=0, max_value=10)`. Host
+    /// `gt`/`lt`/`eq` map to `GreaterThan` / `LessThan` / `Equal`.
     #[pyfunction]
     #[pyo3(signature = (min_value=None, max_value=None, gt=None, lt=None, eq=None))]
-    fn compile(
+    fn compile_integer(
         min_value: Option<i64>,
         max_value: Option<i64>,
         gt: Option<i64>,
         lt: Option<i64>,
         eq: Option<i64>,
     ) -> Plan {
-        compile_plan(
-            Unit::Integer,
-            Bound::Integer,
-            min_value,
-            max_value,
-            gt,
-            lt,
-            eq,
-        )
+        compile_integer_plan(min_value, max_value, gt, lt, eq)
     }
 
     /// Closed Float bound plan. Omitted kwargs stay off the unit list.
     ///
-    /// Same host kwarg names as `compile`. `f64` extract is the Float
-    /// door (`NaN` / `±inf` are values, not a second policy).
+    /// Same host kwarg names as `compile_integer`. `f64` extract is the
+    /// Float door (`NaN` / `±inf` are values, not a second policy).
     #[pyfunction]
     #[pyo3(signature = (min_value=None, max_value=None, gt=None, lt=None, eq=None))]
     fn compile_float(
@@ -366,7 +387,7 @@ mod ux_valio_native {
         lt: Option<f64>,
         eq: Option<f64>,
     ) -> Plan {
-        compile_plan(Unit::Float, Bound::Float, min_value, max_value, gt, lt, eq)
+        compile_float_plan(min_value, max_value, gt, lt, eq)
     }
 
     /// Closed String length plan. Omitted kwargs stay off the unit list.
@@ -408,7 +429,7 @@ mod ux_valio_native {
     /// the plan body (`Python::detach`). The unit list is an `Arc`
     /// clone; the scalar is `i64`. Not an open type check.
     #[pyfunction]
-    fn apply(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
+    fn apply_integer(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
         let units = Arc::clone(&plan.units);
         py.detach(move || apply_units(&units, Bound::Integer(value)).err())
     }

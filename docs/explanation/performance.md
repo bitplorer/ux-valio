@@ -30,7 +30,7 @@ At construct (`Validator.__init__` / `__set_name__`):
   (`compile_string_enum` / `apply_string_enum`). Otherwise the interpreter
   still walks `_active_units`
 
-At set, the interpreter walks that short tuple (or one FFI `apply` for
+At set, the interpreter walks that short tuple (or one FFI `apply_*` for
 the closed native plan), then process hangs, then store on
 `instance.__dict__`, then `post_set` / spawn `task_*`.
 
@@ -42,7 +42,7 @@ bounds at construct.
 | work | when | note |
 |---|---|---|
 | specified units | every set | the loop you actually want |
-| native `apply` | every set when the closed plan bound | one FFI; host still stores and raises |
+| native `apply_*` | every set when the closed plan bound | one FFI; host still stores and raises |
 | named extra | every set on that facade | checksums are cheap vs I/O |
 | `pre_validate` / `post_validate` | every set | your code; keep it small |
 | `post_set` | every successful set | persist/reserve; fail-closed |
@@ -70,7 +70,7 @@ One crossing per set, or none.
 Bar: FAIL (KEEP Python) unless host ns/op ≥ **3×** native ns/op for
 each closed Integer and Float bound family (`MinValue` / `MaxValue` /
 `GreaterThan` / `LessThan` / `Equal` / min+max range) setattr vs
-one-shot native `apply(plan, i64)` / `apply_float(plan, f64)`, and each
+one-shot native `apply_integer(plan, i64)` / `apply_float(plan, f64)`, and each
 closed String length family (`MinLength` / `MaxLength` / `Length` /
 min+max range) vs `apply_string(plan, &str)`, and each closed Bytes
 length family vs `apply_bytes(plan, &[u8])`, the closed IntegerEnum
@@ -101,7 +101,7 @@ native **108.1 ns/op**, ratio **31.7×** for ``Member(m0..m7)`` —
 **PASS**. Integer / Float / String / Bytes stayed ~24–25× and
 IntegerEnum ~35× on that same run (still PASS).
 Honesty: that ratio is descriptor
-setattr vs **plan apply only** (product ``apply`` uses
+setattr vs **plan apply only** (product ``apply_integer`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end
 after host store/raise. CI without Rust skips
 (`python benches/measure_host_peer.py --ci`). Full notes, install, and

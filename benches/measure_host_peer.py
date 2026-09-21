@@ -9,10 +9,10 @@ Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
 Python). Enum path A clears the native plan after bind so the loop is
 pure Python setattr.
 
-Hot path B: ``compile(...)`` / ``compile_float(...)`` /
+Hot path B: ``compile_integer(...)`` / ``compile_float(...)`` /
 ``compile_string(...)`` / ``compile_bytes(...)`` /
 ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` once, then
-``apply`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
+``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` on the
 ``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
@@ -101,8 +101,8 @@ def _string_enum_family(**kwargs: Any) -> PlanFamily:
 def _integer_family(**kwargs: Any) -> PlanFamily:
     return PlanFamily(
         facade="IntegerValidator",
-        compile_attr="compile",
-        apply_attr="apply",
+        compile_attr="compile_integer",
+        apply_attr="apply_integer",
         annotation=int,
         **kwargs,
     )
@@ -639,12 +639,12 @@ def _smoke_family(peer: Any, family: PlanFamily) -> str:
     kind = getattr(peer.FailKind, family.smoke_kind)
     if ok is not None:
         raise SystemExit(
-            f"SMOKE FAIL {family.name}: apply(plan, {family.smoke_ok}) "
+            f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {family.smoke_ok}) "
             f"returned {ok!r}, expected None"
         )
     if miss != kind:
         raise SystemExit(
-            f"SMOKE FAIL {family.name}: apply(plan, {family.smoke_miss}) "
+            f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {family.smoke_miss}) "
             f"returned {miss!r}, expected FailKind.{family.smoke_kind}"
         )
     return (
