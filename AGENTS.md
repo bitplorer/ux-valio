@@ -55,8 +55,12 @@ a parallel folder, not inside the layer they depend on.
   Result type, RGB/HSL, or star-import barrel.
 - Optional native apply (PyO3 peer, host decides / peer applies) is
   **not** a second door. Soul of the instance stays Python. See
-  `docs/explanation/host-peer-plan.md`. Do not add a Schema/Field twin to get it.
-  Do not implement the peer unless that note's switch test holds.
+  `docs/explanation/host-peer-plan.md`. Measure tip:
+  `python benches/measure_host_peer.py` (CI ``--ci`` skips without Rust).
+  The recorded switch test PASSed (host setattr several times slower
+  than native ``Integer`` + ``MinValue(0)``); the product extra
+  ``ux-valio[native]`` is still not shipped. Do not add a Schema/Field
+  twin to get it. Cap / cek-runtime stay out of this repo.
 - No `asyncio.run` in `__set__`. Nested loops use the nest-safe worker
   bridge only.
 - No `add_pre_set` / `_processors["pre_set"]` (that would be a second door).

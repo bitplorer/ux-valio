@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "ux-valio-peer-bench"
+version = "0.0.0"
+description = "Measure-only PyO3 stub for the host/peer switch test. Not a published extra."
+requires-python = ">=3.14"
+classifiers = ["Private :: Do Not Upload"]
+
+[tool.maturin]
+module-name = "ux_valio_peer_bench"
+manifest-path = "Cargo.toml"
