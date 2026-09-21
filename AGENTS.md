@@ -70,7 +70,7 @@ a parallel folder, not inside the layer they depend on.
   ``MaxLength`` / ``Length``, plus ``IntegerEnum`` ``Member`` values,
   plus ``StringEnum`` UTF-8 member values,
   compile once, one FFI
-  ``apply`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
+  ``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
   ``apply_integer_enum`` / ``apply_string_enum`` per set. Integer type door is FFI
   ``i64`` extract; Float is FFI ``f64`` extract (IEEE Door A: NaN
   unordered on min/max/gt/lt, ``eq`` uses ``!=`` so NaN never

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Peer-surface break: bare ``compile`` / ``apply`` on
+  ``ux_valio_native`` are retired. Closed Integer doors are
+  ``compile_integer`` / ``apply_integer`` (still a pair, still
+  separate). Host L1 (``IntegerValidator``, kwargs ``min_value`` /
+  ``gt`` / ``max_value`` / ``lt`` / ``eq``) is unchanged. Cap Door B
+  stays off. Float / String / Bytes / IntegerEnum / StringEnum door
+  names are unchanged.
+
 - Native Door A polish (no new family). Integer and Float share one
   scalar compare (Door A IEEE: NaN unordered on min/max/gt/lt, ``!=``
   so NaN never matches). The unit list is an ``Arc`` so apply clones

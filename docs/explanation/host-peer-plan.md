@@ -68,6 +68,7 @@ on the field.
 ``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
 ``eq=7``, and ``min_value=0, max_value=10`` compile when the
 annotation is ``int`` and only those bound units are active.
+``compile_integer`` / ``apply_integer`` stay a pair.
 ``FloatValidator(min_value=0.0)`` (and the same family of kwargs)
 compile when the annotation is ``float`` and bounds are ``float``
 (an int bound such as ``min_value=0`` stays on the host).
@@ -90,8 +91,9 @@ identity, Email, a mixed bound type, Union / TypedDict /
 Annotated) stay on the host. Email / named identity were already
 competitive in Python — do not start there.
 
-Closed Integer **type door** is the FFI ``i64`` extract. Closed Float
-**type door** is the FFI ``f64`` extract (``apply_float``). Bound units
+Closed Integer **type door** is the FFI ``i64`` extract
+(``apply_integer``). Closed Float **type door** is the FFI ``f64``
+extract (``apply_float``). Bound units
 run after extract. Host ``isinstance`` is first so Python ``True`` is
 ``int`` (load-bearing) and Python ``int`` is **not** ``float`` (KEEP);
 ``None`` and ``collect_all`` type miss stay host-first. KEEP
@@ -290,10 +292,10 @@ root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with a
 closed ``IntegerValidator`` or ``FloatValidator`` bound plan, a closed
 ``StringValidator`` / ``BytesValidator`` length plan, or a closed
 ``IntegerEnumValidator`` member-set plan, or a closed
-``StringEnumValidator`` UTF-8 member-set plan. Hot path B is ``compile(...)``
+``StringEnumValidator`` UTF-8 member-set plan. Hot path B is ``compile_integer(...)``
 / ``compile_float(...)`` / ``compile_string(...)`` / ``compile_bytes(...)``
 / ``compile_integer_enum(...)`` / ``compile_string_enum(...)``
-once then ``apply`` /
+once then ``apply_integer`` /
 ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` on the
 product peer (``native/``: owned unit list of ``Integer`` or ``Float``
@@ -332,14 +334,14 @@ Xeon, 4 CPUs). Peer is a release cdylib. Host units were
 | path | wall (run 1 / 2) | ns/op |
 |---|---|---|
 | A ``setattr`` ``IntegerValidator(min_value=0)`` | 1.355 s / 1.406 s | 3389 / 3515 |
-| B native ``apply(Integer, MinValue(0))`` | 0.0185 s / 0.0186 s | 46.2 / 46.5 |
+| B native ``apply_integer(plan, i64)`` MinValue(0) | 0.0185 s / 0.0186 s | 46.2 / 46.5 |
 | host / native | | **73× / 76×** |
 
 Honesty: A is the taught descriptor (``__set__``, specified units, store
 on ``instance.__dict__``). B is plan apply only (one FFI, no store, no
 hooks). That is the switch the map asked for, **not** a claim that
 product setattr is 70× end-to-end after host raise/store. Product
-``apply`` releases the GIL (``Python::detach``; PyO3 0.29 name for
+``apply_integer`` releases the GIL (``Python::detach``; PyO3 0.29 name for
 ``allow_threads``), so a local re-run of B is slower than the stub’s
 46 ns/op and still PASSes the 3× bar.
 

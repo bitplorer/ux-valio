@@ -622,8 +622,8 @@ type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
 
 
 def _select_integer_bounds(peer: Any, bounds: dict[str, int]) -> _ClosedPair:
-    """Closed Integer: ``compile`` and ``apply`` stay a pair."""
-    return peer.apply, apply_native_integer_bounds, peer.compile, bounds
+    """Closed Integer: ``compile_integer`` and ``apply_integer`` stay a pair."""
+    return peer.apply_integer, apply_native_integer_bounds, peer.compile_integer, bounds
 
 
 def _select_float_bounds(peer: Any, bounds: dict[str, float]) -> _ClosedPair:
