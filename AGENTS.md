@@ -82,7 +82,9 @@ a parallel folder, not inside the layer they depend on.
   values. StringEnum type door is host ``isinstance`` of the concrete
   str-valued ``enum.Enum``, then FFI ``&str`` extract of ``.value``;
   membership is exact UTF-8 equality (no casefold, no NFC).
-  ``compile_*`` and ``apply_*`` stay separate doors. Open
+  ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
+  one family list (``_select_*``); do not merge a pair into one door
+  and do not restore a per-family copy of the bind steps. Open
   TypeValidator / plain EnumValidator / Boolean stay on the host.
   Stdlib Python apply stays the
   default without the extra. Do not add a Schema/Field twin to get it.
@@ -304,7 +306,10 @@ New private helpers are verbs that name the action:
 `_raise_native_bound_miss`, `_raise_host_integer_type_miss`,
 `_raise_host_float_type_miss`, `_raise_host_string_type_miss`, `_raise_host_bytes_type_miss`,
 `_raise_host_integer_enum_type_miss`, `_raise_host_string_enum_type_miss`,
-`_raise_host_closed_type_miss`,
+`_raise_host_enum_type_miss`, `_raise_host_closed_type_miss`,
+`_select_integer_bounds`, `_select_float_bounds`, `_select_string_length`,
+`_select_bytes_length`, `_select_integer_enum`, `_select_string_enum`,
+`_ClosedPair`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,

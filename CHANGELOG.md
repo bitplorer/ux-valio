@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Native Door A polish (no new family). Integer and Float share one
+  scalar compare (Door A IEEE: NaN unordered on min/max/gt/lt, ``!=``
+  so NaN never matches). The unit list is an ``Arc`` so apply clones
+  the plan, not the units; plans that are not StringEnum share one
+  empty member set. Host bind walks one family list. Each family still
+  names its own ``compile_*`` / ``apply_*`` pair; those doors stay
+  separate. Cap Door B stays off. Boolean stays HOLD until a later
+  measure is ≥3× alone. Closed families remain Integer, Float, String,
+  Bytes, IntegerEnum, and StringEnum.
+
 - Native StringEnum member set: closed ``ux-valio[native]`` plans now
   cover ``StringEnumValidator`` when the field annotation is a concrete
   str-valued ``enum.Enum`` and the only active unit is the type door.

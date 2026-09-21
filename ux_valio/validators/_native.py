@@ -396,6 +396,14 @@ def _raise_host_string_type_miss(owner: Any, value: Any) -> None:
     _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
 
 
+def _raise_host_enum_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording for a closed IntegerEnum or StringEnum plan."""
+    raise TypeError(
+        f"{owner.name} expect {owner.annotation} type, "
+        f"got {type(value).__name__} type instead"
+    )
+
+
 def _raise_host_string_enum_type_miss(owner: Any, value: Any) -> None:
     """KEEP TypeError wording. Closed StringEnum type door is host-first.
 
@@ -406,10 +414,7 @@ def _raise_host_string_enum_type_miss(owner: Any, value: Any) -> None:
     caller. ``collect_all`` continues into the named str-Enum extra
     from ``validate``, not inside this raise.
     """
-    raise TypeError(
-        f"{owner.name} expect {owner.annotation} type, "
-        f"got {type(value).__name__} type instead"
-    )
+    _raise_host_enum_type_miss(owner, value)
 
 
 def _raise_host_integer_enum_type_miss(owner: Any, value: Any) -> None:
@@ -422,10 +427,7 @@ def _raise_host_integer_enum_type_miss(owner: Any, value: Any) -> None:
     skipped by the caller. ``collect_all`` continues into the named
     ``enum.IntEnum`` extra from ``validate``, not inside this raise.
     """
-    raise TypeError(
-        f"{owner.name} expect {owner.annotation} type, "
-        f"got {type(value).__name__} type instead"
-    )
+    _raise_host_enum_type_miss(owner, value)
 
 
 def _raise_host_bytes_type_miss(owner: Any, value: Any) -> None:
@@ -467,80 +469,13 @@ def _bind_compiled_plan(owner: Any, peer: Any, compile_fn: Any, bounds: dict[str
         raise RuntimeError("ux_valio_native bind failed") from err
 
 
-def bind_native_plan(owner: Any) -> None:
-    """Compile at bind. No peer / unclosed path → ``_native_plan is None``."""
-    int_bounds = _closed_integer_bounds(owner)
-    if int_bounds is not None:
-        peer = _load_native_peer()
-        if peer is None:
-            _clear_native(owner)
-            return
-        owner._native_apply = peer.apply
-        owner._native_apply_host = apply_native_integer_bounds
-        _bind_compiled_plan(owner, peer, peer.compile, int_bounds)
-        return
-    float_bounds = _closed_float_bounds(owner)
-    if float_bounds is not None:
-        peer = _load_native_peer()
-        if peer is None:
-            _clear_native(owner)
-            return
-        owner._native_apply = peer.apply_float
-        owner._native_apply_host = apply_native_float_bounds
-        _bind_compiled_plan(owner, peer, peer.compile_float, float_bounds)
-        return
-    str_bounds = _closed_string_length(owner)
-    if str_bounds is not None:
-        peer = _load_native_peer()
-        if peer is None:
-            _clear_native(owner)
-            return
-        owner._native_apply = peer.apply_string
-        owner._native_apply_host = apply_native_string_length
-        _bind_compiled_plan(owner, peer, peer.compile_string, str_bounds)
-        return
-    bytes_bounds = _closed_bytes_length(owner)
-    if bytes_bounds is not None:
-        peer = _load_native_peer()
-        if peer is None:
-            _clear_native(owner)
-            return
-        owner._native_apply = peer.apply_bytes
-        owner._native_apply_host = apply_native_bytes_length
-        _bind_compiled_plan(owner, peer, peer.compile_bytes, bytes_bounds)
-        return
-    enum_members = _closed_integer_enum_members(owner)
-    if enum_members is not None:
-        peer = _load_native_peer()
-        if peer is None:
-            _clear_native(owner)
-            return
-        owner._native_apply = peer.apply_integer_enum
-        owner._native_apply_host = apply_native_integer_enum
-        _bind_compiled_plan(owner, peer, peer.compile_integer_enum, {"members": enum_members})
-        return
-    string_enum_members = _closed_string_enum_members(owner)
-    if string_enum_members is None:
-        _clear_native(owner)
-        return
-    peer = _load_native_peer()
-    if peer is None:
-        _clear_native(owner)
-        return
-    owner._native_apply = peer.apply_string_enum
-    owner._native_apply_host = apply_native_string_enum
-    _bind_compiled_plan(
-        owner, peer, peer.compile_string_enum, {"members": string_enum_members}
-    )
-
-
 def _apply_native_closed(
     owner: Any,
     value: Any,
     expected: type,
     raise_type_miss: Any,
     after_overflow: Any,
-    extract_errors: type | tuple[type, ...] = OverflowError,
+    extract_errors: type[BaseException] | tuple[type[BaseException], ...] = OverflowError,
 ) -> None:
     """One FFI apply. Host formats KEEP wording. Extract overflow stays on host."""
     if value is None:
@@ -681,3 +616,76 @@ def apply_native_bounds(owner: Any, value: Any) -> None:
     if apply_host is None:
         raise RuntimeError("ux_valio_native apply failed")
     apply_host(owner, value)
+
+
+type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
+
+
+def _select_integer_bounds(peer: Any, bounds: dict[str, int]) -> _ClosedPair:
+    """Closed Integer: ``compile`` and ``apply`` stay a pair."""
+    return peer.apply, apply_native_integer_bounds, peer.compile, bounds
+
+
+def _select_float_bounds(peer: Any, bounds: dict[str, float]) -> _ClosedPair:
+    """Closed Float: ``compile_float`` and ``apply_float`` stay a pair."""
+    return peer.apply_float, apply_native_float_bounds, peer.compile_float, bounds
+
+
+def _select_string_length(peer: Any, bounds: dict[str, int]) -> _ClosedPair:
+    """Closed String: ``compile_string`` and ``apply_string`` stay a pair."""
+    return peer.apply_string, apply_native_string_length, peer.compile_string, bounds
+
+
+def _select_bytes_length(peer: Any, bounds: dict[str, int]) -> _ClosedPair:
+    """Closed Bytes: ``compile_bytes`` and ``apply_bytes`` stay a pair."""
+    return peer.apply_bytes, apply_native_bytes_length, peer.compile_bytes, bounds
+
+
+def _select_integer_enum(peer: Any, members: list[int]) -> _ClosedPair:
+    """Closed IntegerEnum: ``compile_integer_enum`` / ``apply_integer_enum`` stay a pair."""
+    return (
+        peer.apply_integer_enum,
+        apply_native_integer_enum,
+        peer.compile_integer_enum,
+        {"members": members},
+    )
+
+
+def _select_string_enum(peer: Any, members: list[str]) -> _ClosedPair:
+    """Closed StringEnum: ``compile_string_enum`` / ``apply_string_enum`` stay a pair."""
+    return (
+        peer.apply_string_enum,
+        apply_native_string_enum,
+        peer.compile_string_enum,
+        {"members": members},
+    )
+
+
+def bind_native_plan(owner: Any) -> None:
+    """Compile at bind. No peer / unclosed path → ``_native_plan is None``.
+
+    One walk. Each closed family keeps its own ``compile_*`` / ``apply_*``
+    pair. An unclosed path does not import the extra.
+    """
+    families: tuple[tuple[Any, Any], ...] = (
+        (_closed_integer_bounds, _select_integer_bounds),
+        (_closed_float_bounds, _select_float_bounds),
+        (_closed_string_length, _select_string_length),
+        (_closed_bytes_length, _select_bytes_length),
+        (_closed_integer_enum_members, _select_integer_enum),
+        (_closed_string_enum_members, _select_string_enum),
+    )
+    for detect, select in families:
+        payload = detect(owner)
+        if payload is None:
+            continue
+        peer = _load_native_peer()
+        if peer is None:
+            _clear_native(owner)
+            return
+        apply, host_apply, compile_fn, kwargs = select(peer, payload)
+        owner._native_apply = apply
+        owner._native_apply_host = host_apply
+        _bind_compiled_plan(owner, peer, compile_fn, kwargs)
+        return
+    _clear_native(owner)
