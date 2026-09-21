@@ -524,6 +524,10 @@ def _build_peer() -> tuple[Any | None, str | None]:
         return None, f"SKIP: could not install maturin ({tail})"
     env = os.environ.copy()
     env.setdefault("CARGO_TERM_COLOR", "never")
+    # ``venv/bin/python script.py`` does not export VIRTUAL_ENV. maturin
+    # develop refuses to install without it.
+    if sys.prefix != getattr(sys, "base_prefix", sys.prefix):
+        env.setdefault("VIRTUAL_ENV", sys.prefix)
     built = _run(
         [
             *_python_cmd(),
