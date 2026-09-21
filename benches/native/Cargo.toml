@@ -4,7 +4,7 @@ version = "0.0.0"
 edition = "2021"
 license = "MIT"
 publish = false
-description = "Measure-only PyO3 stub: compile once + apply(IntDoor, Ge(0)). Not ux-valio[native]."
+description = "Measure-only PyO3 stub: compile once + apply(Integer, MinValue(0)). Not ux-valio[native]."
 rust-version = "1.83"
 
 [lib]

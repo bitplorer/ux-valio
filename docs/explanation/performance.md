@@ -52,7 +52,7 @@ One crossing per set, or none.
 
 Bar: FAIL (KEEP Python) unless host ns/op ≥ **3×** native ns/op for
 `IntegerValidator(min_value=0)` setattr vs one-shot native
-`apply(IntDoor, Ge(0))`.
+`apply(Integer, MinValue(0))`.
 
 ```console
 python benches/measure_host_peer.py
@@ -60,7 +60,8 @@ python benches/measure_host_peer.py
 
 Recorded 2026-09-21 on CPython 3.14.7 / rustc 1.83 / Linux x86_64:
 host **3389–3515 ns/op**, native **46.2–46.5 ns/op**, ratio **73–76×**.
-**PASS — native tip unlocked.** The measure stub under
+A rename-only re-run (plan units ``Integer`` + ``MinValue(0)``) stayed
+**75×**. **PASS — native tip unlocked.** The measure stub under
 `benches/native/` is not `ux-valio[native]`. CI without Rust skips
 (`python benches/measure_host_peer.py --ci`). Full notes, honesty
 (descriptor+store vs plan apply), and rejected shapes: [host /

@@ -4,7 +4,7 @@
 
 - Measure tip (not a product extra): ``python benches/measure_host_peer.py``
   times ``IntegerValidator(min_value=0)`` setattr against a local PyO3
-  stub ``apply(IntDoor, Ge(0))``. CI ``--ci`` skips without Rust.
+  stub ``apply(Integer, MinValue(0))``. CI ``--ci`` skips without Rust.
   Verdict lives in ``docs/explanation/host-peer-plan.md``. Cap Door B
   and ``ux-valio[native]`` stay out of scope.
 

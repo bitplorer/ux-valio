@@ -50,8 +50,8 @@ Today the host already compiles at construct:
 - uniqueness of ``ValidationPath`` units at ``__init__`` (not per set)
 
 That tuple **is** the plan, still applied by the Python interpreter.
-A peer would be the same tuple as a native enum (int door, ``ge``,
-``min_length``, compiled regex, choice set, ``multiple_of``,
+A peer would be the same tuple as a native enum (``Integer``,
+``MinValue``, ``min_length``, compiled regex, choice set, ``multiple_of``,
 ``reassign``), built **once** at ``__init__`` / ``__set_name__``.
 
 Measured candidate (after the Python compile): unconstrained
@@ -100,7 +100,7 @@ The harness lives in-tree. It installs/uses ``ux-valio`` from the repo
 root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with
 ``IntegerValidator(min_value=0)``. Hot path B is ``compile()`` once then
 ``apply(plan, i64)`` on a **measure-only** PyO3 stub
-(``benches/native/``: ``IntDoor`` + ``Ge(0)`` only). That stub is not a
+(``benches/native/``: ``Integer`` + ``MinValue(0)`` only). That stub is not a
 published extra.
 
 ```console
@@ -127,13 +127,17 @@ Xeon, 4 CPUs). Stub is a release cdylib. Host units were
 | path | wall (run 1 / 2) | ns/op |
 |---|---|---|
 | A ``setattr`` ``IntegerValidator(min_value=0)`` | 1.355 s / 1.406 s | 3389 / 3515 |
-| B native ``apply(IntDoor, Ge(0))`` | 0.0185 s / 0.0186 s | 46.2 / 46.5 |
+| B native ``apply(Integer, MinValue(0))`` | 0.0185 s / 0.0186 s | 46.2 / 46.5 |
 | host / native | | **73× / 76×** |
 
 Honesty: A is the taught descriptor (``__set__``, specified units, store
 on ``instance.__dict__``). B is plan apply only (one FFI, no store, no
 hooks). That is the switch the map asked for, not a claim that a product
 peer would be 70× end-to-end after host raise/store.
+
+Rename-only re-run on the same box (plan units ``Integer`` +
+``MinValue(0)``, same apply): host 3491–3672 ns/op, native 46.8–49.0
+ns/op, ratio **75×**. Same PASS.
 
 **Verdict: PASS (native tip unlocked).** Host stayed several times
 slower than the one-shot native apply (bar 3×). A later PR may bind an

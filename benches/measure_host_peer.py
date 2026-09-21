@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Measure host setattr vs a one-shot native apply of IntDoor + Ge(0).
+"""Measure host setattr vs a one-shot native apply of Integer + MinValue(0).
 
 Hot path A: many ``setattr``s on a dataclass ``Box`` field with
 ``IntegerValidator(min_value=0)`` (taught API, soul stays Python).
@@ -175,12 +175,14 @@ def _host_units(IntegerValidator: Any) -> list[str]:
 def _smoke(stub: Any) -> str:
     plan = stub.compile()
     ok = stub.apply(plan, 0)
-    ge = stub.apply(plan, -1)
+    below = stub.apply(plan, -1)
     if ok is not None:
         raise SystemExit(f"SMOKE FAIL: apply(plan, 0) returned {ok!r}, expected None")
-    if ge != stub.FailKind.Ge:
-        raise SystemExit(f"SMOKE FAIL: apply(plan, -1) returned {ge!r}, expected FailKind.Ge")
-    return "SMOKE: compile() + apply(plan, 0) ok; apply(plan, -1) -> FailKind.Ge"
+    if below != stub.FailKind.MinValue:
+        raise SystemExit(
+            f"SMOKE FAIL: apply(plan, -1) returned {below!r}, expected FailKind.MinValue"
+        )
+    return "SMOKE: compile() + apply(plan, 0) ok; apply(plan, -1) -> FailKind.MinValue"
 
 
 def _report_header(skip_reason: str | None) -> None:
@@ -190,7 +192,7 @@ def _report_header(skip_reason: str | None) -> None:
     print(f"machine:  {platform.machine()}  {platform.processor() or '-'}")
     print(f"python:   {sys.version.split()[0]}  ({sys.executable})")
     print(f"rustc:    {rustc}")
-    print("plan:     IntegerValidator(min_value=0)  ==  IntDoor + Ge(0)")
+    print("plan:     IntegerValidator(min_value=0)  ==  Integer + MinValue(0)")
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; not ux-valio[native] product extra")
     if skip_reason:
@@ -226,7 +228,7 @@ def measure(iters: int, warmup: int, stub: Any, IntegerValidator: Any) -> int:
     print(f"warmup:   {warmup}   iters: {iters}   values: {VALUES}")
     print("hot path A: setattr Box.n = IntegerValidator(min_value=0)")
     print(f"  {_fmt_ns(host_ns, iters)}")
-    print("hot path B: native apply(plan, i64)  [IntDoor + Ge(0)]")
+    print("hot path B: native apply(plan, i64)  [Integer + MinValue(0)]")
     print(f"  {_fmt_ns(native_ns, iters)}")
     print(f"ratio:    host/native = {ratio:.2f}")
     print(f"VERDICT:  {verdict}")
@@ -235,7 +237,7 @@ def measure(iters: int, warmup: int, stub: Any, IntegerValidator: Any) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Measure IntegerValidator setattr vs native IntDoor+Ge(0) apply."
+        description="Measure IntegerValidator setattr vs native Integer+MinValue(0) apply."
     )
     parser.add_argument(
         "--ci",

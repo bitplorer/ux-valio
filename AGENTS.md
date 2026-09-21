@@ -58,7 +58,7 @@ a parallel folder, not inside the layer they depend on.
   `docs/explanation/host-peer-plan.md`. Measure tip:
   `python benches/measure_host_peer.py` (CI ``--ci`` skips without Rust).
   The recorded switch test PASSed (host setattr several times slower
-  than native ``IntDoor`` + ``Ge(0)``); the product extra
+  than native ``Integer`` + ``MinValue(0)``); the product extra
   ``ux-valio[native]`` is still not shipped. Do not add a Schema/Field
   twin to get it. Cap / cek-runtime stay out of this repo.
 - No `asyncio.run` in `__set__`. Nested loops use the nest-safe worker

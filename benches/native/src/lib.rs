@@ -1,18 +1,18 @@
-//! Measure-only apply stub. Not a product door.
+//! Measure-only apply stub. Not a published extra.
 //!
-//! Closed plan for `IntegerValidator(min_value=0)`: `IntDoor` then `Ge(0)`.
-//! `compile` once; `apply(plan, i64)` is one FFI call. Failures are
-//! `FailKind` (host would format KEEP wording). Do not ship as
-//! `ux-valio[native]`.
+//! Closed plan for `IntegerValidator(min_value=0)`: `Integer` then
+//! `MinValue(0)`. `compile` once; `apply(plan, i64)` is one FFI call.
+//! Failures are `FailKind` (host would format KEEP wording). Do not ship
+//! as `ux-valio[native]`.
 
 use pyo3::prelude::*;
 
-/// Specified scalar units. `IntDoor` is the `i64` extract at the FFI
+/// Specified scalar units. `Integer` is the `i64` extract at the FFI
 /// boundary; the match arm is the plan shape, not a second type check.
 #[derive(Clone, Copy)]
 enum Unit {
-    IntDoor,
-    Ge(i64),
+    Integer,
+    MinValue(i64),
 }
 
 /// Compiled plan. Built once; applied many times.
@@ -25,19 +25,19 @@ struct Plan {
 #[pyclass(eq, eq_int, skip_from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FailKind {
-    /// Value was not an integer (`IntDoor`). Unreachable when `apply`
-    /// takes `i64` — CPython/PyO3 reject the extract first.
-    NotInt = 1,
-    /// Value was less than the compiled `Ge` bound.
-    Ge = 2,
+    /// Value was not an integer. Unreachable when `apply` takes `i64` —
+    /// CPython/PyO3 reject the extract first.
+    NotInteger = 1,
+    /// Value was less than the compiled `MinValue` bound.
+    MinValue = 2,
 }
 
 fn apply_plan(plan: &Plan, value: i64) -> Result<(), FailKind> {
     for unit in plan.units {
         match unit {
-            Unit::IntDoor => {}
-            Unit::Ge(min) if value < min => return Err(FailKind::Ge),
-            Unit::Ge(_) => {}
+            Unit::Integer => {}
+            Unit::MinValue(min) if value < min => return Err(FailKind::MinValue),
+            Unit::MinValue(_) => {}
         }
     }
     Ok(())
@@ -45,7 +45,7 @@ fn apply_plan(plan: &Plan, value: i64) -> Result<(), FailKind> {
 
 /// Bench stub: `compile` + `apply(plan, i64) -> Result<(), FailKind>`.
 ///
-/// `None` is `Ok(())`. A `FailKind` is `Err`. `IntDoor` is the `i64`
+/// `None` is `Ok(())`. A `FailKind` is `Err`. `Integer` is the `i64`
 /// argument extract.
 #[pymodule]
 mod ux_valio_peer_bench {
@@ -57,16 +57,16 @@ mod ux_valio_peer_bench {
     #[pymodule_export]
     use super::Plan;
 
-    /// Closed plan: `IntDoor` + `Ge(0)`. Same specified theory as
+    /// Closed plan: `Integer` + `MinValue(0)`. Same specified theory as
     /// unconstrained `IntegerValidator(min_value=0)`.
     #[pyfunction]
     fn compile() -> Plan {
         Plan {
-            units: [Unit::IntDoor, Unit::Ge(0)],
+            units: [Unit::Integer, Unit::MinValue(0)],
         }
     }
 
-    /// One-shot apply. Success is `None`; `Ge` is `FailKind.Ge`.
+    /// One-shot apply. Success is `None`; bound miss is `FailKind.MinValue`.
     #[pyfunction]
     fn apply(plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
         apply_plan(&plan, value).err()
