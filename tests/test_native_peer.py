@@ -1628,7 +1628,7 @@ _EMPTY = b""
 _HIGH = b"\xff\xfe"
 _NULL_B = b"\x00"
 _UTF8_E_ACUTE = "é".encode()  # 2 bytes; 1 Unicode codepoint as str
-_EMOJI_B = "\U0001F600".encode()  # 4 bytes; 1 Unicode codepoint as str
+_EMOJI_B = "\U0001f600".encode()  # 4 bytes; 1 Unicode codepoint as str
 
 _BYTES_LENGTH_CASES = (
     pytest.param(
@@ -1693,7 +1693,10 @@ _BYTES_BINARY_CASES = (
         (
             (b"\xff", None),
             (_HIGH, "maximum length 1"),
-            (_UTF8_E_ACUTE, "maximum length 1"),  # 2 UTF-8 bytes; would pass if codepoints
+            (
+                _UTF8_E_ACUTE,
+                "maximum length 1",
+            ),  # 2 UTF-8 bytes; would pass if codepoints
             (_EMOJI_B, "maximum length 1"),  # 4 UTF-8 bytes
             (_NULL_B, None),
             (_EMPTY, None),
@@ -1730,7 +1733,17 @@ _BYTES_BINARY_CASES = (
     ),
 )
 
-_BYTES_TYPE_SAMPLES = (1, True, False, None, "ab", bytearray(b"ab"), memoryview(b"ab"), object(), 1.5)
+_BYTES_TYPE_SAMPLES = (
+    1,
+    True,
+    False,
+    None,
+    "ab",
+    bytearray(b"ab"),
+    memoryview(b"ab"),
+    object(),
+    1.5,
+)
 
 
 def test_bytes_min_length_works_on_stdlib_path():
@@ -1754,7 +1767,7 @@ def test_host_bytes_length_is_byte_count_not_codepoints():
     assert len(_UTF8_E_ACUTE) == 2
     assert len("é") == 1
     assert len(_EMOJI_B) == 4
-    assert len("\U0001F600") == 1
+    assert len("\U0001f600") == 1
     field = _force_host(BytesValidator(max_length=1, debug=True, name="n"))
     assert _assign(field, b"\xff") == ("ok", None, None, b"\xff")
     high = _assign(field, _HIGH)
@@ -1917,9 +1930,9 @@ def test_native_bytes_collect_all_type_miss_matches_host():
     native = BytesValidator(min_length=1, debug=True, name="n")
     host = _force_host(BytesValidator(min_length=1, debug=True, name="n"))
     with pytest.raises(ValidationErrors) as native_caught:
-        native.validate(None, "ab")
+        native.validate(None, 1)
     with pytest.raises(ValidationErrors) as host_caught:
-        host.validate(None, "ab")
+        host.validate(None, 1)
     assert [str(err) for err in native_caught.value.errors] == [
         str(err) for err in host_caught.value.errors
     ]

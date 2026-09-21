@@ -84,8 +84,9 @@ re-run on this tip: host **2441–2515 ns/op**, native **92.0–93.8 ns/op**,
 ratio **26.3–26.9×** for the same six families — all **PASS**. String
 length re-run on this tip: host **2399–2450 ns/op**, native **94.6–96.7
 ns/op**, ratio **25.3–25.6×** for MinLength / MaxLength / Length /
-min+max range — all **PASS**. Bytes length families are measured on
-this tip (`apply_bytes`; Door A `len(bytes)`). Honesty: that ratio is descriptor
+min+max range — all **PASS**. Bytes length re-run on this tip: host
+**2390–2434 ns/op**, native **93.2–95.7 ns/op**, ratio **25.3–25.9×**
+for MinLength / MaxLength / Length / min+max range — all **PASS**. Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end
 after host store/raise. CI without Rust skips

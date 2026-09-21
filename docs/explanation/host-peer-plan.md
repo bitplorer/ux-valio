@@ -341,8 +341,23 @@ then StringEnum. Boolean only if later measure ≥3×. Decimal,
 Date/DateTime, UUID/Path, Pattern, named facades, Cap Door B stay off
 this path.
 
-### Measured (pending this tip) Bytes length families
+### Measured (2026-09-21) Bytes length families
 
-Local switch test records host setattr vs ``apply_bytes(plan, &[u8])``.
-Count is byte ``len()``, matching host ``len(bytes)``. Bar 3× per
-family. Table filled after the measure run on this tip.
+Same class of box, one run, 400000 iters after 20000 warmup, CPython 3.14.7,
+rustc 1.83.0, Linux x86_64. Peer is a release cdylib. Host units were
+``_validate_type`` then ``_validate_length``. B is
+``apply_bytes(plan, &[u8])`` only (``Python::detach``). Count is
+``len()`` of the extracted bytes, matching host ``len(bytes)``. Bar 3×
+per family.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| MinLength(1) | 2434 | 94.8 | **25.7×** |
+| MaxLength(10) | 2390 | 94.2 | **25.4×** |
+| Length (host ``length=3``) | 2417 | 95.7 | **25.3×** |
+| MinLength(1)+MaxLength(10) | 2414 | 93.2 | **25.9×** |
+
+**Verdict: PASS.** Every Bytes family cleared the 3× bar (~25×). Native
+apply here is ~94 ns/op (GIL released), not a 70× product setattr
+claim. Integer families on the same run stayed ~24–25×, Float
+~25–26×, and String ~24–25× (still PASS).

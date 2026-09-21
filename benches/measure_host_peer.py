@@ -426,7 +426,12 @@ def _build_peer() -> tuple[Any | None, str | None]:
 def _load_facades() -> dict[str, Any]:
     _ensure_tree_on_path()
     try:
-        from ux_valio import BytesValidator, FloatValidator, IntegerValidator, StringValidator
+        from ux_valio import (
+            BytesValidator,
+            FloatValidator,
+            IntegerValidator,
+            StringValidator,
+        )
     except ImportError as err:
         raise SystemExit(
             "FAIL: ux-valio is not importable from the tree. "

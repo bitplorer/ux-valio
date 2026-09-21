@@ -8,7 +8,7 @@
 //! Length units (`MinLength` / `MaxLength` / `Length`) are shared:
 //! String count is Unicode scalar values (`chars().count()`), matching
 //! host `len(str)`; Bytes count is `len()` of the extracted `&[u8]`,
-//! matching host `len(bytes)` — not codepoints and not graphemes.
+//! matching host `len(bytes)` — not Unicode scalar values.
 //! Host maps `FailKind` to KEEP wording. Open / generic type checks
 //! stay on the host — this crate does not reflect Python typing. Host
 //! compiles once at bind; each set is one FFI apply. Soul stays on the
@@ -294,7 +294,7 @@ mod ux_valio_native {
     /// Host kwargs stay `min_length` / `max_length` / `length`. Units are
     /// the same `MinLength` / `MaxLength` / `Length` (usize) as String.
     /// Count at apply is `len()` of the extracted `&[u8]`, matching host
-    /// `len(bytes)` — not Unicode codepoints and not graphemes.
+    /// `len(bytes)` — not Unicode scalar values.
     #[pyfunction]
     #[pyo3(signature = (min_length=None, max_length=None, length=None))]
     fn compile_bytes(
@@ -354,7 +354,7 @@ mod ux_valio_native {
     /// (`OverflowError` or extract TypeError); host falls through to
     /// `LengthValidator`. Length units run after extract. Count is
     /// `value.len()`, matching host `len(bytes)` — not Unicode
-    /// codepoints and not graphemes. Releases the GIL
+    /// scalar values. Releases the GIL
     /// (`Python::detach`) for the unit walk.
     #[pyfunction]
     fn apply_bytes(py: Python<'_>, plan: PyRef<'_, Plan>, value: &[u8]) -> Option<FailKind> {
