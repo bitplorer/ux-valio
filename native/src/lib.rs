@@ -1,13 +1,16 @@
 //! Optional apply peer for `ux-valio[native]`.
 //!
-//! Closed Integer and Float bound plans. Type door is the FFI extract
-//! (`apply(plan, i64)` / `apply_float(plan, f64)`). Bound units
+//! Closed Integer and Float bound plans plus closed String length
+//! plans. Type door is the FFI extract (`apply(plan, i64)` /
+//! `apply_float(plan, f64)` / `apply_string(plan, &str)`). Bound units
 //! (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` / `Equal`)
-//! run after extract. Host maps `FailKind` to KEEP wording. Open /
-//! generic type checks stay on the host — this crate does not reflect
-//! Python typing. Host compiles once at bind; each set is one FFI
-//! apply. Soul stays on the host (descriptor, hooks, store). Not Cap
-//! Door B.
+//! run after numeric extract. Length units (`MinLength` / `MaxLength` /
+//! `Length`) run after `&str` extract; count is Unicode scalar values
+//! (`chars().count()`), matching host `len(str)`. Host maps `FailKind`
+//! to KEEP wording. Open / generic type checks stay on the host — this
+//! crate does not reflect Python typing. Host compiles once at bind;
+//! each set is one FFI apply. Soul stays on the host (descriptor,
+//! hooks, store). Not Cap Door B. Bytes length is not this tip.
 
 use pyo3::prelude::*;
 
@@ -19,8 +22,9 @@ enum Bound {
     Float(f64),
 }
 
-/// Specified scalar units. `Integer` / `Float` are plan-shape markers,
-/// not open type checks. Type is the FFI extract; bound units follow.
+/// Specified scalar units. `Integer` / `Float` / `String` are plan-shape
+/// markers, not open type checks. Type is the FFI extract; bound or
+/// length units follow.
 #[derive(Clone, Copy)]
 enum Unit {
     /// Plan-shape marker. Type extract is the FFI `i64` argument, not an
@@ -45,6 +49,16 @@ enum Unit {
     LessThan(Bound),
     /// Host `eq`/`value`, exact. IEEE `!=` so NaN never equals NaN.
     Equal(Bound),
+    /// Plan-shape marker. Type extract is the FFI `&str` argument.
+    /// Host `isinstance` gates first so Python `bytes` miss String
+    /// (KEEP); `None` / `collect_all` type miss stay host.
+    String,
+    /// Host `min_length`, inclusive. Count is Unicode scalar values.
+    MinLength(usize),
+    /// Host `max_length`, inclusive. Count is Unicode scalar values.
+    MaxLength(usize),
+    /// Host exact `length`. Count is Unicode scalar values.
+    Length(usize),
 }
 
 /// Compiled plan. Built once; applied many times.
@@ -73,6 +87,12 @@ enum FailKind {
     LessThan = 4,
     /// Host `eq`/`value`: value was not the compiled equal.
     Equal = 5,
+    /// Host `min_length`: codepoint count was less than the inclusive bound.
+    MinLength = 6,
+    /// Host `max_length`: codepoint count was greater than the inclusive bound.
+    MaxLength = 7,
+    /// Host exact `length`: codepoint count was not the compiled length.
+    Length = 8,
 }
 
 /// Door A IEEE compares. `PartialOrd`/`PartialEq` on `f64` match host
@@ -106,12 +126,15 @@ fn miss(kind: FailKind, value: Bound, bound: Bound) -> Option<FailKind> {
 fn apply_units(units: &[Unit], value: Bound) -> Result<(), FailKind> {
     for unit in units {
         let fail = match *unit {
-            Unit::Integer | Unit::Float => None,
+            Unit::Integer | Unit::Float | Unit::String => None,
             Unit::MinValue(bound) => miss(FailKind::MinValue, value, bound),
             Unit::MaxValue(bound) => miss(FailKind::MaxValue, value, bound),
             Unit::GreaterThan(bound) => miss(FailKind::GreaterThan, value, bound),
             Unit::LessThan(bound) => miss(FailKind::LessThan, value, bound),
             Unit::Equal(bound) => miss(FailKind::Equal, value, bound),
+            // Length units belong on apply_string; numeric apply no-ops them
+            // (host never mixes doors).
+            Unit::MinLength(_) | Unit::MaxLength(_) | Unit::Length(_) => None,
         };
         if let Some(kind) = fail {
             return Err(kind);
@@ -146,12 +169,47 @@ fn compile_plan<T>(
     Plan { units }
 }
 
-/// Product peer: `compile(...)` / `compile_float(...)` + one-shot apply.
+fn apply_length_units(units: &[Unit], char_len: usize) -> Result<(), FailKind> {
+    for unit in units {
+        let fail = match *unit {
+            Unit::String => None,
+            Unit::MinLength(min) if char_len < min => Some(FailKind::MinLength),
+            Unit::MinLength(_) => None,
+            Unit::MaxLength(max) if char_len > max => Some(FailKind::MaxLength),
+            Unit::MaxLength(_) => None,
+            Unit::Length(exact) if char_len != exact => Some(FailKind::Length),
+            Unit::Length(_) => None,
+            // Numeric units belong on apply / apply_float; host never mixes.
+            _ => None,
+        };
+        if let Some(kind) = fail {
+            return Err(kind);
+        }
+    }
+    Ok(())
+}
+
+fn compile_string_plan(
+    min_length: Option<usize>,
+    max_length: Option<usize>,
+    length: Option<usize>,
+) -> Plan {
+    let mut units = Vec::with_capacity(4);
+    units.push(Unit::String);
+    // Host `_validate_length` order: min_length, max_length, exact length.
+    push_bound(&mut units, min_length, Unit::MinLength);
+    push_bound(&mut units, max_length, Unit::MaxLength);
+    push_bound(&mut units, length, Unit::Length);
+    Plan { units }
+}
+
+/// Product peer: `compile(...)` / `compile_float(...)` /
+/// `compile_string(...)` + one-shot apply.
 ///
-/// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`
-/// or `Float`; extract is the FFI argument. Compile kwargs are host
-/// names (`min_value` / `gt` / `max_value` / `lt` / `eq`) mapped onto
-/// the full-word units. Not a taught L1 API.
+/// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`,
+/// `Float`, or `String`; extract is the FFI argument. Compile kwargs
+/// are host names (`min_value` / `gt` / `max_length` / `length`) mapped
+/// onto the full-word units. Not a taught L1 API.
 #[pymodule]
 mod ux_valio_native {
     use super::*;
@@ -203,6 +261,21 @@ mod ux_valio_native {
         compile_plan(Unit::Float, Bound::Float, min_value, max_value, gt, lt, eq)
     }
 
+    /// Closed String length plan. Omitted kwargs stay off the unit list.
+    ///
+    /// Host kwargs stay `min_length` / `max_length` / `length`. Units are
+    /// `MinLength` / `MaxLength` / `Length` (usize). Count at apply is
+    /// Unicode scalar values (`chars().count()`), matching host `len(str)`.
+    #[pyfunction]
+    #[pyo3(signature = (min_length=None, max_length=None, length=None))]
+    fn compile_string(
+        min_length: Option<usize>,
+        max_length: Option<usize>,
+        length: Option<usize>,
+    ) -> Plan {
+        compile_string_plan(min_length, max_length, length)
+    }
+
     /// One-shot Integer apply. Success is `None`; bound miss is a `FailKind`.
     ///
     /// Closed Integer type door is this `i64` extract (range oracle too:
@@ -228,5 +301,20 @@ mod ux_valio_native {
     fn apply_float(py: Python<'_>, plan: PyRef<'_, Plan>, value: f64) -> Option<FailKind> {
         let units = plan.units.clone();
         py.detach(move || apply_units(&units, Bound::Float(value)).err())
+    }
+
+    /// One-shot String apply. Success is `None`; length miss is a `FailKind`.
+    ///
+    /// Closed String type door is this `&str` extract. A Python value
+    /// that cannot extract as UTF-8 (lone surrogates) raises at this FFI
+    /// boundary; host falls through to `LengthValidator`. Length units
+    /// run after extract. Count is Unicode scalar values
+    /// (`chars().count()`), matching host `len(str)` — not UTF-8 byte
+    /// length. Releases the GIL (`Python::detach`) for the unit walk.
+    #[pyfunction]
+    fn apply_string(py: Python<'_>, plan: PyRef<'_, Plan>, value: &str) -> Option<FailKind> {
+        let units = plan.units.clone();
+        let char_len = value.chars().count();
+        py.detach(move || apply_length_units(&units, char_len).err())
     }
 }

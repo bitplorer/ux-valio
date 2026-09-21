@@ -3,7 +3,8 @@
 Stdlib Python is the apply path by default. The taught API does not
 change for speed. An optional native peer is mapped in
 [host / peer](host-peer-plan.md). ``ux-valio[native]`` may bind a
-closed Integer or Float bound plan at construct. Cap Door B
+closed Integer or Float bound plan, or a closed String length plan,
+at construct. Cap Door B
 is not on this path.
 
 ## What is already compiled
@@ -18,7 +19,9 @@ At construct (`Validator.__init__` / `__set_name__`):
 - Pattern `re.compile` on the finder
 - with `ux-valio[native]`, a closed Integer or Float bound plan (MinValue /
   MaxValue / GreaterThan / LessThan / Equal / range; type is FFI
-  `i64` or `f64` extract, not an open type check). Otherwise the interpreter
+  `i64` or `f64` extract, not an open type check) or a closed String
+  length plan (MinLength / MaxLength / Length / range; type is FFI
+  `&str` extract; count is `len(str)` codepoints). Otherwise the interpreter
   still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply` for
@@ -61,7 +64,9 @@ One crossing per set, or none.
 Bar: FAIL (KEEP Python) unless host ns/op ≥ **3×** native ns/op for
 each closed Integer and Float bound family (`MinValue` / `MaxValue` /
 `GreaterThan` / `LessThan` / `Equal` / min+max range) setattr vs
-one-shot native `apply(plan, i64)` / `apply_float(plan, f64)`.
+one-shot native `apply(plan, i64)` / `apply_float(plan, f64)`, and each
+closed String length family (`MinLength` / `MaxLength` / `Length` /
+min+max range) vs `apply_string(plan, &str)`.
 
 ```console
 python benches/measure_host_peer.py
@@ -74,7 +79,10 @@ pod: host **2299–2415 ns/op**, native **93.6–99.4 ns/op**, ratio
 **24.3–24.7×** for MinValue / MaxValue / GreaterThan / LessThan /
 Equal / min+max range — all **PASS** the 3× bar. Float closed-plan
 re-run on this tip: host **2441–2515 ns/op**, native **92.0–93.8 ns/op**,
-ratio **26.3–26.9×** for the same six families — all **PASS**. Honesty: that ratio is descriptor
+ratio **26.3–26.9×** for the same six families — all **PASS**. String
+length re-run on this tip: host **2399–2450 ns/op**, native **94.6–96.7
+ns/op**, ratio **25.3–25.6×** for MinLength / MaxLength / Length /
+min+max range — all **PASS**. Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end
 after host store/raise. CI without Rust skips

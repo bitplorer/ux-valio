@@ -2,21 +2,21 @@
 
 ## Unreleased
 
-- Native Float bound units: closed ``ux-valio[native]`` plans now
-  cover ``FloatValidator`` ``MinValue`` / ``MaxValue`` /
-  ``GreaterThan`` / ``LessThan`` / ``Equal`` (f64) and min+max range,
-  same family names as Integer. Type door is FFI ``f64`` extract
-  (``apply_float``). Door A NaN/inf is host IEEE compare — NaN is
-  unordered (min/max/gt/lt pass), ``eq`` uses ``!=`` (NaN never
-  matches, including ``eq=nan``). ``OverflowError`` at f64 extract
-  falls through to host ``ValueValidator`` (bridge, not an L1
-  "overflow" message). Integer i64 path is unchanged. Unclosed /
-  int-bound ``FloatValidator(min_value=0)`` / String length stay on
-  the host. Measure each Float family
+- Native String length units: closed ``ux-valio[native]`` plans now
+  cover ``StringValidator`` ``MinLength`` / ``MaxLength`` / ``Length``
+  (usize) and min+max range. Type door is FFI ``&str`` extract
+  (``apply_string``). Door A length is host ``len(str)`` Unicode
+  codepoints (``chars().count()``), not UTF-8 bytes and not graphemes.
+  Empty string and NFC/NFD/emoji edges match host. Lone-surrogate /
+  ``OverflowError`` extract falls through to host ``LengthValidator``
+  (bridge, not an L1 "overflow" message). Annotation must be ``str``
+  and only those length units active; pattern / custom / Bytes /
+  required stay on the host. Integer i64 and Float f64 paths are
+  unchanged. Measure each String family
   (``python benches/measure_host_peer.py``); do not claim 70× product
-  setattr. Next HOLD: String / Bytes length units. Boolean only if
-  later measure ≥3×. Decimal / Date / UUID / Path / Pattern / named
-  facades / Cap Door B stay HOLD.
+  setattr. Next HOLD: Bytes length. IntegerEnum / StringEnum after.
+  Boolean only if later measure ≥3×. Decimal / Date* / UUID / Path /
+  plain EnumValidator / Pattern / named facades / Cap Door B stay HOLD.
 
 - Native Integer bound units: closed ``ux-valio[native]`` plans now
   cover ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
