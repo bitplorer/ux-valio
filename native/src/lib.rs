@@ -1,17 +1,26 @@
 //! Optional apply peer for `ux-valio[native]`.
 //!
-//! Closed Integer bound plans only. Type door is the FFI `i64` extract
-//! (`apply(plan, i64)`). Bound units (`MinValue` / `MaxValue` /
-//! `GreaterThan` / `LessThan` / `Equal`) run after extract. Host maps
-//! `FailKind` to KEEP wording. Open / generic type checks stay on the
-//! host — this crate does not reflect Python typing. Float (`f64`) is
-//! a later tip. Host compiles once at bind; each set is one FFI apply.
-//! Soul stays on the host (descriptor, hooks, store). Not Cap Door B.
+//! Closed Integer and Float bound plans. Type door is the FFI extract
+//! (`apply(plan, i64)` / `apply_float(plan, f64)`). Bound units
+//! (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` / `Equal`)
+//! run after extract. Host maps `FailKind` to KEEP wording. Open /
+//! generic type checks stay on the host — this crate does not reflect
+//! Python typing. Host compiles once at bind; each set is one FFI
+//! apply. Soul stays on the host (descriptor, hooks, store). Not Cap
+//! Door B.
 
 use pyo3::prelude::*;
 
-/// Specified scalar units. `Integer` is the plan-shape marker, not an
-/// open type check. Type is the FFI `i64` extract; bound units follow.
+/// Bound payload. Integer plans carry `i64`; Float plans carry `f64`.
+/// Family names (`MinValue` / …) stay shared; the scalar is the door.
+#[derive(Clone, Copy)]
+enum Bound {
+    Integer(i64),
+    Float(f64),
+}
+
+/// Specified scalar units. `Integer` / `Float` are plan-shape markers,
+/// not open type checks. Type is the FFI extract; bound units follow.
 #[derive(Clone, Copy)]
 enum Unit {
     /// Plan-shape marker. Type extract is the FFI `i64` argument, not an
@@ -19,16 +28,23 @@ enum Unit {
     /// is `int` (load-bearing); `None` / `collect_all` type miss stay
     /// host.
     Integer,
+    /// Plan-shape marker. Type extract is the FFI `f64` argument.
+    /// Host `isinstance` gates first so Python `int` / `bool` miss
+    /// Float (KEEP); `None` / `collect_all` type miss stay host.
+    /// NaN / ±inf are valid `float` values — IEEE compare, no second
+    /// policy (Door A: `nan < bound` is false, so min/max/gt/lt pass;
+    /// `nan != bound` is true even when `bound` is NaN, so `eq` fails).
+    Float,
     /// Host `min_value`, inclusive ≥.
-    MinValue(i64),
+    MinValue(Bound),
     /// Host `max_value`, inclusive ≤.
-    MaxValue(i64),
+    MaxValue(Bound),
     /// Host `gt`, exclusive >.
-    GreaterThan(i64),
+    GreaterThan(Bound),
     /// Host `lt`, exclusive <.
-    LessThan(i64),
-    /// Host `eq`/`value`, exact.
-    Equal(i64),
+    LessThan(Bound),
+    /// Host `eq`/`value`, exact. IEEE `!=` so NaN never equals NaN.
+    Equal(Bound),
 }
 
 /// Compiled plan. Built once; applied many times.
@@ -42,7 +58,8 @@ struct Plan {
 
 /// Small error kind. Host formats KEEP messages via the FailKind map.
 /// Type misses never leave the host (`isinstance` before apply — Python
-/// `True` is `int`). Bound units run after the `i64` extract.
+/// `True` is `int`; Python `int` is not `float`). Bound units run after
+/// the scalar extract.
 #[pyclass(eq, eq_int, skip_from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FailKind {
@@ -58,35 +75,81 @@ enum FailKind {
     Equal = 5,
 }
 
-fn apply_units(units: &[Unit], value: i64) -> Result<(), FailKind> {
+/// Door A IEEE compares. `PartialOrd`/`PartialEq` on `f64` match host
+/// Python: NaN unordered (min/max/gt/lt pass), `nan != nan` (`eq` fails).
+/// Do not use `total_cmp` — that would be a second policy.
+#[allow(clippy::float_cmp)]
+fn miss(kind: FailKind, value: Bound, bound: Bound) -> Option<FailKind> {
+    match (value, bound) {
+        (Bound::Integer(value), Bound::Integer(bound)) => match kind {
+            FailKind::MinValue if value < bound => Some(kind),
+            FailKind::MaxValue if value > bound => Some(kind),
+            FailKind::GreaterThan if value <= bound => Some(kind),
+            FailKind::LessThan if value >= bound => Some(kind),
+            FailKind::Equal if value != bound => Some(kind),
+            _ => None,
+        },
+        (Bound::Float(value), Bound::Float(bound)) => match kind {
+            FailKind::MinValue if value < bound => Some(kind),
+            FailKind::MaxValue if value > bound => Some(kind),
+            FailKind::GreaterThan if value <= bound => Some(kind),
+            FailKind::LessThan if value >= bound => Some(kind),
+            FailKind::Equal if value != bound => Some(kind),
+            _ => None,
+        },
+        // Host never mixes doors; a mismatched payload is a no-op so
+        // apply still returns Option<FailKind> (infra is host RuntimeError).
+        _ => None,
+    }
+}
+
+fn apply_units(units: &[Unit], value: Bound) -> Result<(), FailKind> {
     for unit in units {
-        match *unit {
-            Unit::Integer => {}
-            Unit::MinValue(bound) if value < bound => return Err(FailKind::MinValue),
-            Unit::MinValue(_) => {}
-            Unit::MaxValue(bound) if value > bound => return Err(FailKind::MaxValue),
-            Unit::MaxValue(_) => {}
-            Unit::GreaterThan(bound) if value <= bound => return Err(FailKind::GreaterThan),
-            Unit::GreaterThan(_) => {}
-            Unit::LessThan(bound) if value >= bound => return Err(FailKind::LessThan),
-            Unit::LessThan(_) => {}
-            Unit::Equal(bound) if value != bound => return Err(FailKind::Equal),
-            Unit::Equal(_) => {}
+        let fail = match *unit {
+            Unit::Integer | Unit::Float => None,
+            Unit::MinValue(bound) => miss(FailKind::MinValue, value, bound),
+            Unit::MaxValue(bound) => miss(FailKind::MaxValue, value, bound),
+            Unit::GreaterThan(bound) => miss(FailKind::GreaterThan, value, bound),
+            Unit::LessThan(bound) => miss(FailKind::LessThan, value, bound),
+            Unit::Equal(bound) => miss(FailKind::Equal, value, bound),
+        };
+        if let Some(kind) = fail {
+            return Err(kind);
         }
     }
     Ok(())
 }
 
-fn push_bound(units: &mut Vec<Unit>, bound: Option<i64>, unit: impl FnOnce(i64) -> Unit) {
+fn push_bound<T>(units: &mut Vec<Unit>, bound: Option<T>, unit: impl FnOnce(T) -> Unit) {
     if let Some(value) = bound {
         units.push(unit(value));
     }
 }
 
-/// Product peer: `compile(...)` + `apply(plan, i64) -> Option[FailKind]`.
+fn compile_plan<T>(
+    shape: Unit,
+    wrap: impl Fn(T) -> Bound + Copy,
+    min_value: Option<T>,
+    max_value: Option<T>,
+    gt: Option<T>,
+    lt: Option<T>,
+    eq: Option<T>,
+) -> Plan {
+    let mut units = Vec::with_capacity(4);
+    units.push(shape);
+    // Host `_validate_value` order: min_value / gt, then max_value / lt, then eq.
+    push_bound(&mut units, min_value, |v| Unit::MinValue(wrap(v)));
+    push_bound(&mut units, gt, |v| Unit::GreaterThan(wrap(v)));
+    push_bound(&mut units, max_value, |v| Unit::MaxValue(wrap(v)));
+    push_bound(&mut units, lt, |v| Unit::LessThan(wrap(v)));
+    push_bound(&mut units, eq, |v| Unit::Equal(wrap(v)));
+    Plan { units }
+}
+
+/// Product peer: `compile(...)` / `compile_float(...)` + one-shot apply.
 ///
-/// `None` is `Ok(())`. A `FailKind` is `Err`. `Integer` is the plan
-/// shape; `i64` extract is the FFI argument. Compile kwargs are host
+/// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`
+/// or `Float`; extract is the FFI argument. Compile kwargs are host
 /// names (`min_value` / `gt` / `max_value` / `lt` / `eq`) mapped onto
 /// the full-word units. Not a taught L1 API.
 #[pymodule]
@@ -113,18 +176,34 @@ mod ux_valio_native {
         lt: Option<i64>,
         eq: Option<i64>,
     ) -> Plan {
-        let mut units = Vec::with_capacity(4);
-        units.push(Unit::Integer);
-        // Host `_validate_value` order: min_value / gt, then max_value / lt, then eq.
-        push_bound(&mut units, min_value, Unit::MinValue);
-        push_bound(&mut units, gt, Unit::GreaterThan);
-        push_bound(&mut units, max_value, Unit::MaxValue);
-        push_bound(&mut units, lt, Unit::LessThan);
-        push_bound(&mut units, eq, Unit::Equal);
-        Plan { units }
+        compile_plan(
+            Unit::Integer,
+            Bound::Integer,
+            min_value,
+            max_value,
+            gt,
+            lt,
+            eq,
+        )
     }
 
-    /// One-shot apply. Success is `None`; bound miss is a `FailKind`.
+    /// Closed Float bound plan. Omitted kwargs stay off the unit list.
+    ///
+    /// Same host kwarg names as `compile`. `f64` extract is the Float
+    /// door (`NaN` / `±inf` are values, not a second policy).
+    #[pyfunction]
+    #[pyo3(signature = (min_value=None, max_value=None, gt=None, lt=None, eq=None))]
+    fn compile_float(
+        min_value: Option<f64>,
+        max_value: Option<f64>,
+        gt: Option<f64>,
+        lt: Option<f64>,
+        eq: Option<f64>,
+    ) -> Plan {
+        compile_plan(Unit::Float, Bound::Float, min_value, max_value, gt, lt, eq)
+    }
+
+    /// One-shot Integer apply. Success is `None`; bound miss is a `FailKind`.
     ///
     /// Closed Integer type door is this `i64` extract (range oracle too:
     /// a Python int outside i64 raises `OverflowError`; host falls
@@ -134,6 +213,20 @@ mod ux_valio_native {
     #[pyfunction]
     fn apply(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
         let units = plan.units.clone();
-        py.detach(move || apply_units(&units, value).err())
+        py.detach(move || apply_units(&units, Bound::Integer(value)).err())
+    }
+
+    /// One-shot Float apply. Success is `None`; bound miss is a `FailKind`.
+    ///
+    /// Closed Float type door is this `f64` extract. A Python value that
+    /// cannot extract as `f64` raises at this FFI boundary (`OverflowError`
+    /// or extract TypeError); host falls through to `ValueValidator`.
+    /// Bound units run after extract. IEEE compare (Door A): NaN is
+    /// unordered, so min/max/gt/lt pass; `eq` uses `!=` so NaN never
+    /// matches. Releases the GIL (`Python::detach`).
+    #[pyfunction]
+    fn apply_float(py: Python<'_>, plan: PyRef<'_, Plan>, value: f64) -> Option<FailKind> {
+        let units = plan.units.clone();
+        py.detach(move || apply_units(&units, Bound::Float(value)).err())
     }
 }

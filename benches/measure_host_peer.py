@@ -1,17 +1,19 @@
 # SPDX-License-Identifier: MIT
-"""Measure host setattr vs one-shot native apply of Integer bound plans.
+"""Measure host setattr vs one-shot native apply of Integer/Float bound plans.
 
 Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
-``IntegerValidator`` bound plan (taught API, soul stays Python).
+``IntegerValidator`` or ``FloatValidator`` bound plan (taught API, soul
+stays Python).
 
-Hot path B: ``compile(...)`` once, then ``apply(plan, i64)`` on the
-``ux-valio[native]`` peer. That is plan apply only — not a claim that
-product setattr is 70× after host store/raise. Not Cap Door B.
+Hot path B: ``compile(...)`` / ``compile_float(...)`` once, then
+``apply`` / ``apply_float`` on the ``ux-valio[native]`` peer. That is
+plan apply only — not a claim that product setattr is 70× after host
+store/raise. Not Cap Door B.
 
 Families: MinValue, MaxValue, GreaterThan, LessThan, Equal, min+max
-range. Switch bar:
-FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. At least
-one family besides MinValue must meet the bar, or SKIP honestly.
+range — once for Integer, once for Float. Switch bar:
+FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
+below the bar is not claimed native (KEEP host for that family).
 
 Usage::
 
@@ -38,24 +40,51 @@ DEFAULT_WARMUP = 20_000
 PASSING_0_7 = (0, 1, 2, 3, 4, 5, 6, 7)
 PASSING_1_8 = (1, 2, 3, 4, 5, 6, 7, 8)
 PASSING_EQ = (7, 7, 7, 7, 7, 7, 7, 7)
+PASSING_0_7_F = (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
+PASSING_1_8_F = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)
+PASSING_EQ_F = (7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0)
 
 
 @dataclass(frozen=True)
 class PlanFamily:
     name: str
-    field_kwargs: dict[str, int]
-    compile_kwargs: dict[str, int]
-    values: tuple[int, ...]
-    seed: int
-    smoke_ok: int
-    smoke_miss: int
+    facade: str
+    compile_attr: str
+    apply_attr: str
+    annotation: type
+    field_kwargs: dict[str, Any]
+    compile_kwargs: dict[str, Any]
+    values: tuple[Any, ...]
+    seed: Any
+    smoke_ok: Any
+    smoke_miss: Any
     smoke_kind: str
     label: str
 
 
-FAMILIES = (
-    PlanFamily(
-        name="MinValue",
+def _integer_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="IntegerValidator",
+        compile_attr="compile",
+        apply_attr="apply",
+        annotation=int,
+        **kwargs,
+    )
+
+
+def _float_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="FloatValidator",
+        compile_attr="compile_float",
+        apply_attr="apply_float",
+        annotation=float,
+        **kwargs,
+    )
+
+
+INTEGER_FAMILIES = (
+    _integer_family(
+        name="Integer.MinValue",
         field_kwargs={"min_value": 0},
         compile_kwargs={"min_value": 0},
         values=PASSING_0_7,
@@ -65,8 +94,8 @@ FAMILIES = (
         smoke_kind="MinValue",
         label="Integer + MinValue(0)",
     ),
-    PlanFamily(
-        name="MaxValue",
+    _integer_family(
+        name="Integer.MaxValue",
         field_kwargs={"max_value": 10},
         compile_kwargs={"max_value": 10},
         values=PASSING_0_7,
@@ -76,8 +105,8 @@ FAMILIES = (
         smoke_kind="MaxValue",
         label="Integer + MaxValue(10)",
     ),
-    PlanFamily(
-        name="GreaterThan",
+    _integer_family(
+        name="Integer.GreaterThan",
         field_kwargs={"gt": 0},
         compile_kwargs={"gt": 0},
         values=PASSING_1_8,
@@ -87,8 +116,8 @@ FAMILIES = (
         smoke_kind="GreaterThan",
         label="Integer + GreaterThan(0)",
     ),
-    PlanFamily(
-        name="LessThan",
+    _integer_family(
+        name="Integer.LessThan",
         field_kwargs={"lt": 10},
         compile_kwargs={"lt": 10},
         values=PASSING_0_7,
@@ -98,8 +127,8 @@ FAMILIES = (
         smoke_kind="LessThan",
         label="Integer + LessThan(10)",
     ),
-    PlanFamily(
-        name="Equal",
+    _integer_family(
+        name="Integer.Equal",
         field_kwargs={"eq": 7},
         compile_kwargs={"eq": 7},
         values=PASSING_EQ,
@@ -109,8 +138,8 @@ FAMILIES = (
         smoke_kind="Equal",
         label="Integer + Equal(7)",
     ),
-    PlanFamily(
-        name="Range",
+    _integer_family(
+        name="Integer.Range",
         field_kwargs={"min_value": 0, "max_value": 10},
         compile_kwargs={"min_value": 0, "max_value": 10},
         values=PASSING_0_7,
@@ -121,6 +150,77 @@ FAMILIES = (
         label="Integer + MinValue(0) + MaxValue(10)",
     ),
 )
+
+FLOAT_FAMILIES = (
+    _float_family(
+        name="Float.MinValue",
+        field_kwargs={"min_value": 0.0},
+        compile_kwargs={"min_value": 0.0},
+        values=PASSING_0_7_F,
+        seed=0.0,
+        smoke_ok=5.0,
+        smoke_miss=-1.0,
+        smoke_kind="MinValue",
+        label="Float + MinValue(0.0)",
+    ),
+    _float_family(
+        name="Float.MaxValue",
+        field_kwargs={"max_value": 10.0},
+        compile_kwargs={"max_value": 10.0},
+        values=PASSING_0_7_F,
+        seed=0.0,
+        smoke_ok=10.0,
+        smoke_miss=11.0,
+        smoke_kind="MaxValue",
+        label="Float + MaxValue(10.0)",
+    ),
+    _float_family(
+        name="Float.GreaterThan",
+        field_kwargs={"gt": 0.0},
+        compile_kwargs={"gt": 0.0},
+        values=PASSING_1_8_F,
+        seed=1.0,
+        smoke_ok=1.0,
+        smoke_miss=0.0,
+        smoke_kind="GreaterThan",
+        label="Float + GreaterThan(0.0)",
+    ),
+    _float_family(
+        name="Float.LessThan",
+        field_kwargs={"lt": 10.0},
+        compile_kwargs={"lt": 10.0},
+        values=PASSING_0_7_F,
+        seed=0.0,
+        smoke_ok=9.0,
+        smoke_miss=10.0,
+        smoke_kind="LessThan",
+        label="Float + LessThan(10.0)",
+    ),
+    _float_family(
+        name="Float.Equal",
+        field_kwargs={"eq": 7.0},
+        compile_kwargs={"eq": 7.0},
+        values=PASSING_EQ_F,
+        seed=7.0,
+        smoke_ok=7.0,
+        smoke_miss=8.0,
+        smoke_kind="Equal",
+        label="Float + Equal(7.0)",
+    ),
+    _float_family(
+        name="Float.Range",
+        field_kwargs={"min_value": 0.0, "max_value": 10.0},
+        compile_kwargs={"min_value": 0.0, "max_value": 10.0},
+        values=PASSING_0_7_F,
+        seed=0.0,
+        smoke_ok=5.0,
+        smoke_miss=-1.0,
+        smoke_kind="MinValue",
+        label="Float + MinValue(0.0) + MaxValue(10.0)",
+    ),
+)
+
+FAMILIES = INTEGER_FAMILIES + FLOAT_FAMILIES
 
 
 def _ensure_tree_on_path() -> None:
@@ -200,33 +300,44 @@ def _build_peer() -> tuple[Any | None, str | None]:
     return peer, None
 
 
-def _load_ux_valio() -> Any:
+def _load_facades() -> dict[str, Any]:
     _ensure_tree_on_path()
     try:
-        from ux_valio import IntegerValidator
+        from ux_valio import FloatValidator, IntegerValidator
     except ImportError as err:
         raise SystemExit(
             "FAIL: ux-valio is not importable from the tree. "
             f"Install with `{sys.executable} -m pip install -e .` ({err})"
         ) from err
-    return IntegerValidator
+    return {
+        "IntegerValidator": IntegerValidator,
+        "FloatValidator": FloatValidator,
+    }
 
 
-def _make_box(IntegerValidator: Any, family: PlanFamily) -> Any:
+def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
     # Owner annotations must be real types: postponed ``int`` TypeErrors at bind.
     # Force stdlib apply on path A so the switch still compares host units vs
     # plan-apply-only (product setattr is host+store+raise, not this bar).
     from ux_valio.validators._native import _clear_native
 
-    field = IntegerValidator(**family.field_kwargs)
+    facade = facades[family.facade]
+    field = facade(**family.field_kwargs)
     _clear_native(field)
     seed = family.seed
+    if family.annotation is float:
+
+        @dataclass
+        class FloatBox:
+            n: float = field
+
+        return FloatBox(n=seed)
 
     @dataclass
-    class Box:
+    class IntBox:
         n: int = field
 
-    return Box(n=seed)
+    return IntBox(n=seed)
 
 
 def _time_loop(n: int, body: Any) -> int:
@@ -235,7 +346,7 @@ def _time_loop(n: int, body: Any) -> int:
     return time.perf_counter_ns() - start
 
 
-def _host_loop(box: Any, values: tuple[int, ...]) -> Any:
+def _host_loop(box: Any, values: tuple[Any, ...]) -> Any:
     mask = len(values) - 1
     name = "n"
     set_attr = setattr
@@ -247,7 +358,7 @@ def _host_loop(box: Any, values: tuple[int, ...]) -> Any:
     return run
 
 
-def _native_loop(apply: Any, plan: Any, values: tuple[int, ...]) -> Any:
+def _native_loop(apply: Any, plan: Any, values: tuple[Any, ...]) -> Any:
     mask = len(values) - 1
 
     def run(n: int) -> None:
@@ -263,15 +374,17 @@ def _fmt_ns(total_ns: int, n: int) -> str:
     return f"{seconds:.6f} s   {per:.1f} ns/op"
 
 
-def _host_units(IntegerValidator: Any, family: PlanFamily) -> list[str]:
-    field = IntegerValidator(**family.field_kwargs)
+def _host_units(facades: dict[str, Any], family: PlanFamily) -> list[str]:
+    field = facades[family.facade](**family.field_kwargs)
     return [unit.__name__ for unit in field._active_units]
 
 
 def _smoke_family(peer: Any, family: PlanFamily) -> str:
-    plan = peer.compile(**family.compile_kwargs)
-    ok = peer.apply(plan, family.smoke_ok)
-    miss = peer.apply(plan, family.smoke_miss)
+    compile_fn = getattr(peer, family.compile_attr)
+    apply_fn = getattr(peer, family.apply_attr)
+    plan = compile_fn(**family.compile_kwargs)
+    ok = apply_fn(plan, family.smoke_ok)
+    miss = apply_fn(plan, family.smoke_miss)
     kind = getattr(peer.FailKind, family.smoke_kind)
     if ok is not None:
         raise SystemExit(
@@ -284,9 +397,9 @@ def _smoke_family(peer: Any, family: PlanFamily) -> str:
             f"returned {miss!r}, expected FailKind.{family.smoke_kind}"
         )
     return (
-        f"SMOKE: {family.name}: compile({family.compile_kwargs}) "
-        f"+ apply({family.smoke_ok}) ok; apply({family.smoke_miss}) "
-        f"-> FailKind.{family.smoke_kind}"
+        f"SMOKE: {family.name}: {family.compile_attr}({family.compile_kwargs}) "
+        f"+ {family.apply_attr}({family.smoke_ok}) ok; {family.apply_attr}("
+        f"{family.smoke_miss}) -> FailKind.{family.smoke_kind}"
     )
 
 
@@ -302,7 +415,10 @@ def _report_header(skip_reason: str | None) -> None:
     print(f"machine:  {platform.machine()}  {platform.processor() or '-'}")
     print(f"python:   {sys.version.split()[0]}  ({sys.executable})")
     print(f"rustc:    {rustc}")
-    print("plan:     Integer bound units (MinValue/MaxValue/GreaterThan/LessThan/Equal/range)")
+    print(
+        "plan:     Integer i64 + Float f64 bound units "
+        "(MinValue/MaxValue/GreaterThan/LessThan/Equal/range)"
+    )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
     if skip_reason:
@@ -313,14 +429,16 @@ def _measure_family(
     iters: int,
     warmup: int,
     peer: Any,
-    IntegerValidator: Any,
+    facades: dict[str, Any],
     family: PlanFamily,
-) -> tuple[bool, float]:
-    units = _host_units(IntegerValidator, family)
-    box = _make_box(IntegerValidator, family)
+) -> tuple[bool, float, float, float]:
+    units = _host_units(facades, family)
+    box = _make_box(facades, family)
     host_body = _host_loop(box, family.values)
-    plan = peer.compile(**family.compile_kwargs)
-    native_body = _native_loop(peer.apply, plan, family.values)
+    compile_fn = getattr(peer, family.compile_attr)
+    apply_fn = getattr(peer, family.apply_attr)
+    plan = compile_fn(**family.compile_kwargs)
+    native_body = _native_loop(apply_fn, plan, family.values)
 
     host_body(warmup)
     native_body(warmup)
@@ -343,41 +461,57 @@ def _measure_family(
     print(f"family:   {family.name}  [{family.label}]")
     print(f"host units: {units}")
     print(f"warmup:   {warmup}   iters: {iters}   values: {family.values}")
-    print(f"hot path A: setattr Box.n = IntegerValidator({family.field_kwargs})")
+    print(f"hot path A: setattr Box.n = {family.facade}({family.field_kwargs})")
     print(f"  {_fmt_ns(host_ns, iters)}")
-    print(f"hot path B: native apply(plan, i64)  [{family.label}]")
+    print(f"hot path B: native {family.apply_attr}(plan, scalar)  [{family.label}]")
     print(f"  {_fmt_ns(native_ns, iters)}")
     print(f"ratio:    host/native = {ratio:.2f}")
     print(f"VERDICT:  {verdict}")
     print()
-    return unlocked, ratio
+    return unlocked, ratio, host_per, native_per
 
 
-def measure(iters: int, warmup: int, peer: Any, IntegerValidator: Any) -> int:
+def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
     results: list[tuple[PlanFamily, bool, float]] = []
     for family in FAMILIES:
-        unlocked, ratio = _measure_family(
-            iters, warmup, peer, IntegerValidator, family
+        unlocked, ratio, _host_per, _native_per = _measure_family(
+            iters, warmup, peer, facades, family
         )
         results.append((family, unlocked, ratio))
-    passed = [family.name for family, unlocked, _ratio in results if unlocked]
+    integer = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "IntegerValidator"]
+    floating = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "FloatValidator"]
     failed = [family.name for family, unlocked, _ratio in results if not unlocked]
-    new_passed = [name for name in passed if name != "MinValue"]
-    if failed:
+    int_passed = [family.name for family, unlocked, _ratio in integer if unlocked]
+    int_new = [name for name in int_passed if name != "Integer.MinValue"]
+    float_failed = [family.name for family, unlocked, _ratio in floating if not unlocked]
+    float_passed = [family.name for family, unlocked, _ratio in floating if unlocked]
+    if any(not unlocked for _family, unlocked, _ratio in integer):
         print(
-            f"SUMMARY: FAIL (KEEP Python) families below {SWITCH_BAR:.1f}×: "
-            + ", ".join(failed)
+            f"SUMMARY: FAIL (KEEP Python) Integer families below {SWITCH_BAR:.1f}×: "
+            + ", ".join(name for name in failed if name.startswith("Integer."))
         )
         return 1
-    if not new_passed:
+    if not int_new:
         print(
-            "SUMMARY: SKIP honestly — MinValue met the bar but no new "
-            "family (MaxValue/GreaterThan/LessThan/Equal/Range) did"
+            "SUMMARY: SKIP honestly — Integer MinValue met the bar but no new "
+            "Integer family (MaxValue/GreaterThan/LessThan/Equal/Range) did"
         )
         return 0
+    if float_failed:
+        print(
+            f"SUMMARY: Float KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(float_failed)
+            + ". Do not claim native for those families. "
+            + (
+                f"Float native unlocked: {', '.join(float_passed)}"
+                if float_passed
+                else "No Float family met the bar."
+            )
+        )
+        return 1
     print(
-        f"SUMMARY: PASS — {', '.join(passed)} each >= {SWITCH_BAR:.1f}× "
-        "(plan-apply-only; not 70× product setattr)"
+        f"SUMMARY: PASS — {', '.join(int_passed + float_passed)} each >= "
+        f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr)"
     )
     return 0
 
@@ -385,7 +519,7 @@ def measure(iters: int, warmup: int, peer: Any, IntegerValidator: Any) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Measure IntegerValidator setattr vs native Integer bound-plan apply."
+            "Measure IntegerValidator/FloatValidator setattr vs native bound-plan apply."
         )
     )
     parser.add_argument(
@@ -402,7 +536,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--warmup", type=int, default=DEFAULT_WARMUP)
     args = parser.parse_args(argv)
 
-    IntegerValidator = _load_ux_valio()
+    facades = _load_facades()
     peer = _import_peer()
     skip_reason: str | None = None
     if peer is None and not args.ci and not args.skip_build:
@@ -426,7 +560,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--iters must be >= 1")
     if args.warmup < 0:
         raise SystemExit("--warmup must be >= 0")
-    return measure(args.iters, args.warmup, peer, IntegerValidator)
+    return measure(args.iters, args.warmup, peer, facades)
 
 
 if __name__ == "__main__":

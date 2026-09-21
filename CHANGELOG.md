@@ -2,18 +2,33 @@
 
 ## Unreleased
 
+- Native Float bound units: closed ``ux-valio[native]`` plans now
+  cover ``FloatValidator`` ``MinValue`` / ``MaxValue`` /
+  ``GreaterThan`` / ``LessThan`` / ``Equal`` (f64) and min+max range,
+  same family names as Integer. Type door is FFI ``f64`` extract
+  (``apply_float``). Door A NaN/inf is host IEEE compare — NaN is
+  unordered (min/max/gt/lt pass), ``eq`` uses ``!=`` (NaN never
+  matches, including ``eq=nan``). ``OverflowError`` at f64 extract
+  falls through to host ``ValueValidator`` (bridge, not an L1
+  "overflow" message). Integer i64 path is unchanged. Unclosed /
+  int-bound ``FloatValidator(min_value=0)`` / String length stay on
+  the host. Measure each Float family
+  (``python benches/measure_host_peer.py``); do not claim 70× product
+  setattr. Next HOLD: String / Bytes length units. Boolean only if
+  later measure ≥3×. Decimal / Date / UUID / Path / Pattern / named
+  facades / Cap Door B stay HOLD.
+
 - Native Integer bound units: closed ``ux-valio[native]`` plans now
   cover ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
   ``Equal`` (i64) and min+max / exclusive pairs. Rust variants are
   full words; compile maps host kwargs (``min_value`` / ``gt`` /
   ``max_value`` / ``lt`` / ``eq``). Plan shape is an owned unit list
   (not a fixed two-slot array). Unclosed paths (``required``,
-  ``multiple_of``, length, pattern, choice, Float, named identity)
+  ``multiple_of``, length, pattern, choice, named identity)
   stay on the host. OverflowError at i64 extract still falls through
   to host ``ValueValidator``. Measure each family
   (``python benches/measure_host_peer.py``); do not claim 70× product
-  setattr. ``MultipleOf``, Float, Decimal, length, pattern, and open
-  TypeValidator (Union / TypedDict / Annotated) stay HOLD. Closed
+  setattr. Closed
   Integer type door is FFI ``i64`` extract; ``bool`` / ``None`` /
   ``collect_all`` stay host-first.
 
