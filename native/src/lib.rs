@@ -96,12 +96,13 @@ enum Unit {
 
 /// Compiled plan. Built once; applied many times.
 ///
-/// Owned `Vec` so a single-bound plan and a min+max range share one
-/// type — not a fixed two-slot array. `string_members` is empty except
-/// on a StringEnum plan; other apply paths do not clone it.
+/// Owned unit list (`Arc<Vec<Unit>>`) so a single-bound plan and a
+/// min+max range share one type — not a fixed two-slot array. Apply
+/// clones the `Arc`, not the units. `string_members` is the shared
+/// empty set except on a StringEnum plan.
 #[pyclass(frozen)]
 struct Plan {
-    units: Vec<Unit>,
+    units: Arc<Vec<Unit>>,
     string_members: Arc<Vec<String>>,
 }
 
@@ -137,31 +138,44 @@ enum FailKind {
     NotMember = 9,
 }
 
-/// Door A IEEE compares. `PartialOrd`/`PartialEq` on `f64` match host
-/// Python: NaN unordered (min/max/gt/lt pass), `nan != nan` (`eq` fails).
-/// Do not use `total_cmp` — that would be a second policy.
+/// Door A IEEE compares. `PartialOrd`/`PartialEq` match host Python:
+/// NaN unordered (min/max/gt/lt pass), `nan != nan` (`eq` fails).
+/// Do not use `total_cmp` — that would be a second policy. One compare
+/// for `i64` and `f64`; the scalar type is the door.
 #[allow(clippy::float_cmp)]
+fn scalar_miss<T: PartialOrd>(kind: FailKind, value: T, bound: T) -> Option<FailKind> {
+    let missed = match kind {
+        FailKind::MinValue => value < bound,
+        FailKind::MaxValue => value > bound,
+        FailKind::GreaterThan => value <= bound,
+        FailKind::LessThan => value >= bound,
+        FailKind::Equal => value != bound,
+        _ => false,
+    };
+    missed.then_some(kind)
+}
+
 fn miss(kind: FailKind, value: Bound, bound: Bound) -> Option<FailKind> {
     match (value, bound) {
-        (Bound::Integer(value), Bound::Integer(bound)) => match kind {
-            FailKind::MinValue if value < bound => Some(kind),
-            FailKind::MaxValue if value > bound => Some(kind),
-            FailKind::GreaterThan if value <= bound => Some(kind),
-            FailKind::LessThan if value >= bound => Some(kind),
-            FailKind::Equal if value != bound => Some(kind),
-            _ => None,
-        },
-        (Bound::Float(value), Bound::Float(bound)) => match kind {
-            FailKind::MinValue if value < bound => Some(kind),
-            FailKind::MaxValue if value > bound => Some(kind),
-            FailKind::GreaterThan if value <= bound => Some(kind),
-            FailKind::LessThan if value >= bound => Some(kind),
-            FailKind::Equal if value != bound => Some(kind),
-            _ => None,
-        },
+        (Bound::Integer(value), Bound::Integer(bound)) => scalar_miss(kind, value, bound),
+        (Bound::Float(value), Bound::Float(bound)) => scalar_miss(kind, value, bound),
         // Host never mixes doors; a mismatched payload is a no-op so
         // apply still returns Option<FailKind> (infra is host RuntimeError).
         _ => None,
+    }
+}
+
+/// One empty member set for every plan that is not a StringEnum.
+fn share_empty_members() -> Arc<Vec<String>> {
+    static EMPTY: std::sync::LazyLock<Arc<Vec<String>>> =
+        std::sync::LazyLock::new(|| Arc::new(Vec::new()));
+    Arc::clone(&EMPTY)
+}
+
+fn share_plan(units: Vec<Unit>) -> Plan {
+    Plan {
+        units: Arc::new(units),
+        string_members: share_empty_members(),
     }
 }
 
@@ -203,7 +217,8 @@ fn compile_plan<T>(
     lt: Option<T>,
     eq: Option<T>,
 ) -> Plan {
-    let mut units = Vec::with_capacity(4);
+    // Shape marker plus the five host bound kwargs.
+    let mut units = Vec::with_capacity(6);
     units.push(shape);
     // Host `_validate_value` order: min_value / gt, then max_value / lt, then eq.
     push_bound(&mut units, min_value, |v| Unit::MinValue(wrap(v)));
@@ -211,24 +226,28 @@ fn compile_plan<T>(
     push_bound(&mut units, max_value, |v| Unit::MaxValue(wrap(v)));
     push_bound(&mut units, lt, |v| Unit::LessThan(wrap(v)));
     push_bound(&mut units, eq, |v| Unit::Equal(wrap(v)));
-    Plan {
-        units,
-        string_members: Arc::new(Vec::new()),
-    }
+    share_plan(units)
 }
 
 fn apply_length_units(units: &[Unit], counted: usize) -> Result<(), FailKind> {
     for unit in units {
         let fail = match *unit {
             Unit::String | Unit::Bytes => None,
-            Unit::MinLength(min) if counted < min => Some(FailKind::MinLength),
-            Unit::MinLength(_) => None,
-            Unit::MaxLength(max) if counted > max => Some(FailKind::MaxLength),
-            Unit::MaxLength(_) => None,
-            Unit::Length(exact) if counted != exact => Some(FailKind::Length),
-            Unit::Length(_) => None,
-            // Numeric units belong on apply / apply_float; host never mixes.
-            _ => None,
+            Unit::MinLength(min) => (counted < min).then_some(FailKind::MinLength),
+            Unit::MaxLength(max) => (counted > max).then_some(FailKind::MaxLength),
+            Unit::Length(exact) => (counted != exact).then_some(FailKind::Length),
+            // Numeric and enum units belong on their own apply doors.
+            // Exhaustive so a new unit is a compile error, not a silent pass.
+            Unit::Integer
+            | Unit::Float
+            | Unit::MinValue(_)
+            | Unit::MaxValue(_)
+            | Unit::GreaterThan(_)
+            | Unit::LessThan(_)
+            | Unit::Equal(_)
+            | Unit::IntegerEnum
+            | Unit::Member(_)
+            | Unit::StringEnum => None,
         };
         if let Some(kind) = fail {
             return Err(kind);
@@ -238,14 +257,14 @@ fn apply_length_units(units: &[Unit], counted: usize) -> Result<(), FailKind> {
 }
 
 fn apply_member_units(units: &[Unit], value: i64) -> Result<(), FailKind> {
-    for unit in units {
-        if let Unit::Member(member) = *unit {
-            if member == value {
-                return Ok(());
-            }
-        }
+    let found = units
+        .iter()
+        .any(|unit| matches!(*unit, Unit::Member(member) if member == value));
+    if found {
+        Ok(())
+    } else {
+        Err(FailKind::NotMember)
     }
-    Err(FailKind::NotMember)
 }
 
 fn compile_integer_enum_plan(members: Vec<i64>) -> Plan {
@@ -254,15 +273,12 @@ fn compile_integer_enum_plan(members: Vec<i64>) -> Plan {
     for member in members {
         units.push(Unit::Member(member));
     }
-    Plan {
-        units,
-        string_members: Arc::new(Vec::new()),
-    }
+    share_plan(units)
 }
 
 fn compile_string_enum_plan(members: Vec<String>) -> Plan {
     Plan {
-        units: vec![Unit::StringEnum],
+        units: Arc::new(vec![Unit::StringEnum]),
         string_members: Arc::new(members),
     }
 }
@@ -281,16 +297,14 @@ fn compile_length_plan(
     max_length: Option<usize>,
     length: Option<usize>,
 ) -> Plan {
+    // Shape marker plus min_length / max_length / length.
     let mut units = Vec::with_capacity(4);
     units.push(shape);
     // Host `_validate_length` order: min_length, max_length, exact length.
     push_bound(&mut units, min_length, Unit::MinLength);
     push_bound(&mut units, max_length, Unit::MaxLength);
     push_bound(&mut units, length, Unit::Length);
-    Plan {
-        units,
-        string_members: Arc::new(Vec::new()),
-    }
+    share_plan(units)
 }
 
 /// Product peer: `compile(...)` / `compile_float(...)` /
@@ -391,11 +405,11 @@ mod ux_valio_native {
     /// Closed Integer type door is this `i64` extract (range oracle too:
     /// a Python int outside i64 raises `OverflowError`; host falls
     /// through). Bound units run after extract. Releases the GIL for
-    /// the plan body (`Python::detach`). The plan is an owned clone of
-    /// `Copy` units; the scalar is `i64`. Not an open type check.
+    /// the plan body (`Python::detach`). The unit list is an `Arc`
+    /// clone; the scalar is `i64`. Not an open type check.
     #[pyfunction]
     fn apply(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
-        let units = plan.units.clone();
+        let units = Arc::clone(&plan.units);
         py.detach(move || apply_units(&units, Bound::Integer(value)).err())
     }
 
@@ -409,7 +423,7 @@ mod ux_valio_native {
     /// matches. Releases the GIL (`Python::detach`).
     #[pyfunction]
     fn apply_float(py: Python<'_>, plan: PyRef<'_, Plan>, value: f64) -> Option<FailKind> {
-        let units = plan.units.clone();
+        let units = Arc::clone(&plan.units);
         py.detach(move || apply_units(&units, Bound::Float(value)).err())
     }
 
@@ -423,7 +437,7 @@ mod ux_valio_native {
     /// length. Releases the GIL (`Python::detach`) for the unit walk.
     #[pyfunction]
     fn apply_string(py: Python<'_>, plan: PyRef<'_, Plan>, value: &str) -> Option<FailKind> {
-        let units = plan.units.clone();
+        let units = Arc::clone(&plan.units);
         let char_len = value.chars().count();
         py.detach(move || apply_length_units(&units, char_len).err())
     }
@@ -439,7 +453,7 @@ mod ux_valio_native {
     /// (`Python::detach`) for the unit walk.
     #[pyfunction]
     fn apply_bytes(py: Python<'_>, plan: PyRef<'_, Plan>, value: &[u8]) -> Option<FailKind> {
-        let units = plan.units.clone();
+        let units = Arc::clone(&plan.units);
         let byte_len = value.len();
         py.detach(move || apply_length_units(&units, byte_len).err())
     }
@@ -463,7 +477,7 @@ mod ux_valio_native {
     /// the GIL (`Python::detach`) for the unit walk.
     #[pyfunction]
     fn apply_integer_enum(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
-        let units = plan.units.clone();
+        let units = Arc::clone(&plan.units);
         py.detach(move || apply_member_units(&units, value).err())
     }
 

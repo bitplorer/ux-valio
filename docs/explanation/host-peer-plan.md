@@ -214,9 +214,11 @@ EnumValidator, Pattern / custom callables, named facades, Cap Door B.
    wheel (module ``ux_valio_native`` — not a taught import).
 2. Same field default. Same ``annotation``. Same fail-closed errors.
    L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator``.
-3. Compile at bind, not at set. Missing peer → host apply (no import
+3. Compile at bind, not at set. Host bind walks one family list.
+   Each family keeps its ``compile_*`` / ``apply_*`` pair (those doors
+   stay separate). Missing peer → host apply (no import
    error on the hot path after a failed extra install: bind-time
-   choice).
+   choice). An unclosed path does not import the extra.
 4. One FFI call per set for the specified scalar plan. Not eight.
 5. ``self`` is a ``PyObject*`` handle. Do not migrate the instance into
    a Rust struct. Extract scalars (``i64`` / ``f64`` / ``&str`` / ``&[u8]``;
@@ -453,9 +455,10 @@ setattr is pure Python. B is ``apply_integer_enum(plan, i64)`` only
 product setattr claim. Integer / Float / String / Bytes families on
 the same run stayed ~24–26× (still PASS).
 
-HOLD after this tip: StringEnum. Boolean only if a later measure is
-≥3× alone. Decimal, Date/DateTime, UUID/Path, Pattern, plain
-EnumValidator, named facades, Cap Door B stay off this path.
+HOLD at the end of the IntegerEnum measure was StringEnum (shipped in
+the next section). Boolean only if a later measure is ≥3× alone.
+Decimal, Date/DateTime, UUID/Path, Pattern, plain EnumValidator,
+named facades, Cap Door B stay off this path.
 
 ### Measured (2026-09-21) StringEnum member set
 

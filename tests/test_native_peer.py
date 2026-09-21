@@ -2291,6 +2291,9 @@ def test_native_integer_enum_uses_apply_integer_enum_not_integer_apply():
     assert peer.apply_integer_enum(plan, -3) is None
     assert peer.apply_integer_enum(plan, 9) is peer.FailKind.NotMember
     assert peer.apply_integer_enum(plan, _Rank.LOW) is None
+    empty = peer.compile_integer_enum(members=[])
+    assert peer.apply_integer_enum(empty, 0) is peer.FailKind.NotMember
+    assert peer.apply_integer_enum(empty, 1) is peer.FailKind.NotMember
 
 
 @needs_native
@@ -2344,6 +2347,14 @@ def test_integer_enum_unclosed_and_other_facades_stay_on_host():
     assert over._native_plan is None
     edge = _bind_enum_field(_EdgeRank)
     assert edge._native_plan is not None
+
+    class OptionalOwner:
+        pass
+
+    OptionalOwner.__annotations__ = {"n": _Rank | None}
+    optional = IntegerEnumValidator(debug=True, name="n")
+    optional.__set_name__(OptionalOwner, "n")
+    assert optional._native_plan is None
 
 
 @needs_native
