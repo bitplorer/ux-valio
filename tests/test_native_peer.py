@@ -339,7 +339,10 @@ def test_i64_overflow_falls_through_to_host_and_passes():
     assert _assign(native, huge) == _assign(host, huge)
     assert _assign(native, 2**63 - 1) == ("ok", None, None, 2**63 - 1)
     assert _assign(native, 2**63) == ("ok", None, None, 2**63)
-    assert _assign(native, -(2**63)) == ("ok", None, None, -(2**63))
+    i64_min = _assign(native, -(2**63))
+    assert i64_min == _assign(host, -(2**63))
+    assert i64_min[1] is ValueError
+    assert "minimum value of 0" in i64_min[2]
     too_small = -(2**70)
     native_miss = _assign(native, too_small)
     host_miss = _assign(host, too_small)
