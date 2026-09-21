@@ -55,8 +55,9 @@ needs_native = pytest.mark.skipif(
 
 
 def _force_host(field: IntegerValidator) -> IntegerValidator:
-    field._native_plan = None
-    field._native_apply = None
+    from ux_valio.validators._native import _clear_native
+
+    _clear_native(field)
     return field
 
 
@@ -286,3 +287,118 @@ def test_native_custom_validator_still_runs():
     assert Box(n=2).n == 2
     with pytest.raises(ValueError, match="odd"):
         Box(n=1)
+
+
+def test_host_bridge_drops_i64_bit_length_precheck():
+    """PyO3 i64 extract is the range oracle. No host bit_length gate."""
+    native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
+    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    assert "_I64_BITS" not in native_py
+    assert "bit_length" not in native_py
+    assert "_native_fail_type" not in native_py
+    assert "NotInteger" not in native_py
+    assert "NotInteger" not in rust
+    assert "PyO3 int64 Overflow" not in native_py
+
+
+def test_negative_min_value_door_a_parity_on_host():
+    """Door A KEEP: MinValue is ``value < min`` including a negative bound."""
+
+    @dataclass
+    class Box:
+        n: int = IntegerValidator(min_value=-273, debug=True)
+
+    assert Box(n=-273).n == -273
+    assert Box(n=0).n == 0
+    with pytest.raises(ValueError, match="minimum value of -273"):
+        Box(n=-274)
+
+
+@needs_native
+def test_native_negative_min_value_parity_with_host():
+    native = IntegerValidator(min_value=-273, debug=True, name="n")
+    host = _force_host(IntegerValidator(min_value=-273, debug=True, name="n"))
+    assert native._native_plan is not None
+    assert host._native_plan is None
+    for value in (-274, -273, 0, 1):
+        assert _assign(native, value) == _assign(host, value), value
+    below = _assign(native, -274)
+    assert below[0] == "err"
+    assert below[1] is ValueError
+    assert "minimum value of -273" in below[2]
+
+
+@needs_native
+def test_i64_overflow_falls_through_to_host_and_passes():
+    """OverflowError at extract is a bridge signal, not an L1 miss."""
+    native = IntegerValidator(min_value=0, debug=True, name="n")
+    host = _force_host(IntegerValidator(min_value=0, debug=True, name="n"))
+    assert native._native_plan is not None
+    huge = 2**70
+    assert _assign(native, huge) == ("ok", None, None, huge)
+    assert _assign(native, huge) == _assign(host, huge)
+    assert _assign(native, 2**63 - 1) == ("ok", None, None, 2**63 - 1)
+    assert _assign(native, 2**63) == ("ok", None, None, 2**63)
+    i64_min = _assign(native, -(2**63))
+    assert i64_min == _assign(host, -(2**63))
+    assert i64_min[1] is ValueError
+    assert "minimum value of 0" in i64_min[2]
+    too_small = -(2**70)
+    native_miss = _assign(native, too_small)
+    host_miss = _assign(host, too_small)
+    assert native_miss == host_miss
+    assert native_miss[1] is ValueError
+    assert "minimum value of 0" in native_miss[2]
+    assert "Overflow" not in native_miss[2]
+    assert "int64" not in native_miss[2].lower()
+    assert "PyO3" not in native_miss[2]
+
+
+@needs_native
+def test_out_of_i64_min_value_bind_stays_on_host():
+    field = IntegerValidator(min_value=2**70, debug=True, name="n")
+    assert field._native_plan is None
+    assert _assign(field, 2**70) == ("ok", None, None, 2**70)
+    miss = _assign(field, 0)
+    assert miss[0] == "err"
+    assert miss[1] is ValueError
+    assert "minimum value of" in miss[2]
+    assert "Overflow" not in miss[2]
+
+
+@needs_native
+def test_bool_as_int_matches_host_path():
+    native = IntegerValidator(min_value=0, debug=True, name="n")
+    host = _force_host(IntegerValidator(min_value=0, debug=True, name="n"))
+    assert native._native_plan is not None
+    for value in (True, False):
+        assert _assign(native, value) == _assign(host, value), value
+
+
+@needs_native
+def test_unexpected_peer_bind_raises_runtime_error_with_ux_valio_native(monkeypatch):
+    import ux_valio_native
+
+    def boom(min_value):
+        raise ValueError("peer exploded")
+
+    monkeypatch.setattr(ux_valio_native, "compile", boom)
+    with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
+        IntegerValidator(min_value=0, debug=True, name="n")
+    assert isinstance(caught.value.__cause__, ValueError)
+    assert "Overflow" not in str(caught.value)
+    assert "expect" not in str(caught.value)
+
+
+@needs_native
+def test_unexpected_peer_apply_raises_runtime_error_with_ux_valio_native():
+    field = IntegerValidator(min_value=0, debug=True, name="n")
+    assert field._native_plan is not None
+
+    def boom(plan, value):
+        raise ValueError("peer exploded")
+
+    field._native_apply = boom
+    with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
+        field.validate(None, 1)
+    assert isinstance(caught.value.__cause__, ValueError)

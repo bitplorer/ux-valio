@@ -5,7 +5,8 @@ Hot path A: many ``setattr``s on a dataclass ``Box`` field with
 ``IntegerValidator(min_value=0)`` (taught API, soul stays Python).
 
 Hot path B: ``compile(0)`` once, then ``apply(plan, i64)`` on the
-``ux-valio[native]`` peer. That is plan apply only — not a claim that
+``ux-valio[native]`` peer (smoke uses ``compile(5)`` so bound and
+value are not both ``0``). That is plan apply only — not a claim that
 product setattr is 70× after host store/raise. Not Cap Door B.
 
 Switch bar: FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op.
@@ -128,9 +129,10 @@ def _make_box(IntegerValidator: Any) -> Any:
     # Owner annotations must be real types: postponed ``int`` TypeErrors at bind.
     # Force stdlib apply on path A so the switch still compares host units vs
     # plan-apply-only (product setattr is host+store+raise, not this bar).
+    from ux_valio.validators._native import _clear_native
+
     field = IntegerValidator(min_value=0)
-    field._native_plan = None
-    field._native_apply = None
+    _clear_native(field)
 
     @dataclass
     class Box:
@@ -179,16 +181,17 @@ def _host_units(IntegerValidator: Any) -> list[str]:
 
 
 def _smoke(peer: Any) -> str:
-    plan = peer.compile(0)
-    ok = peer.apply(plan, 0)
-    below = peer.apply(plan, -1)
+    # Bound 5 vs values 5 / 4 so compile arg and apply arg are not both 0.
+    plan = peer.compile(5)
+    ok = peer.apply(plan, 5)
+    below = peer.apply(plan, 4)
     if ok is not None:
-        raise SystemExit(f"SMOKE FAIL: apply(plan, 0) returned {ok!r}, expected None")
+        raise SystemExit(f"SMOKE FAIL: apply(plan, 5) returned {ok!r}, expected None")
     if below != peer.FailKind.MinValue:
         raise SystemExit(
-            f"SMOKE FAIL: apply(plan, -1) returned {below!r}, expected FailKind.MinValue"
+            f"SMOKE FAIL: apply(plan, 4) returned {below!r}, expected FailKind.MinValue"
         )
-    return "SMOKE: compile(0) + apply(plan, 0) ok; apply(plan, -1) -> FailKind.MinValue"
+    return "SMOKE: compile(5) + apply(plan, 5) ok; apply(plan, 4) -> FailKind.MinValue"
 
 
 def _report_header(skip_reason: str | None) -> None:

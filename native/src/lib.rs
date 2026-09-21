@@ -22,14 +22,12 @@ struct Plan {
 }
 
 /// Small error kind. Host formats messages; this crate does not.
+/// Type misses never leave the host (`isinstance` gates before apply).
 #[pyclass(eq, eq_int, skip_from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FailKind {
-    /// Value was not an integer. Unreachable when `apply` takes `i64` —
-    /// CPython/PyO3 reject the extract first. Host maps KEEP `TypeError`.
-    NotInteger = 1,
     /// Value was less than the compiled `MinValue` bound.
-    MinValue = 2,
+    MinValue = 1,
 }
 
 fn apply_units(units: [Unit; 2], value: i64) -> Result<(), FailKind> {
@@ -68,8 +66,10 @@ mod ux_valio_native {
 
     /// One-shot apply. Success is `None`; bound miss is `FailKind.MinValue`.
     ///
-    /// Releases the GIL for the plan body (`Python::detach`). The plan is
-    /// an owned copy of two `Copy` units; the scalar is `i64`.
+    /// `i64` extract is the range oracle: a Python int outside i64 raises
+    /// `OverflowError` at this FFI boundary (host falls through). Releases
+    /// the GIL for the plan body (`Python::detach`). The plan is an owned
+    /// copy of two `Copy` units; the scalar is `i64`.
     #[pyfunction]
     fn apply(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
         let units = plan.units;
