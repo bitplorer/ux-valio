@@ -45,9 +45,10 @@ facade you want.
 | debug, logger, slots, falsy `0` | [Honesty](explanation/honesty.md) |
 | Import graph | [Layering](explanation/layering.md) |
 | What is fast / what is not | [Performance](explanation/performance.md) |
-| Host / peer measure | [Host / peer](explanation/host-peer-plan.md) |
+| Host / peer | [Host / peer](explanation/host-peer-plan.md) |
 
 Install: `pip install -e .`  
 Phone extra: `pip install ux-valio[phonenumbers]`  
+Native extra: `pip install ux-valio[native]` (from a checkout: `pip install -e ./native`)  
 Runnable skeletons: [`examples/`](../examples/).
 `python examples/signup.py` is a live check (happy path + failures).

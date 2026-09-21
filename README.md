@@ -20,6 +20,14 @@ Python ≥ 3.14 (same floor as `ux-compose`).
 ```console
 pip install -e .
 pip install ux-valio[phonenumbers]   # PhoneNumberValidator
+pip install ux-valio[native]         # optional Integer + MinValue apply peer
+```
+
+From a checkout the native extra is a sibling maturin wheel (`native/`),
+not a second taught import. Needs `rustc` / `cargo`:
+
+```console
+pip install -e . && pip install -e ./native
 ```
 
 ## Usage
@@ -78,7 +86,10 @@ is a facade or `Validator`, not bare `Property`. Hang hooks on the field
 default (`ValidateProperty`). No Cap Host, no `rule/`. Import Pattern names
 from `ux_valio`. There is no `ux_valio.regexer`.
 
-A later optional native peer (host decides, peer applies) is mapped in
+Optional native apply (host decides, peer applies) is mapped in
 [`docs/explanation/host-peer-plan.md`](docs/explanation/host-peer-plan.md).
-Measure with `python benches/measure_host_peer.py`. The product extra is
-not shipped.
+`IntegerValidator(min_value=0)` may compile once and `apply` in one FFI
+when `ux-valio[native]` is installed; stdlib Python apply is the default
+without it. Measure with `python benches/measure_host_peer.py` (plan
+apply vs setattr — not a 70× product-setattr claim). Cap Door B stays
+off this path.

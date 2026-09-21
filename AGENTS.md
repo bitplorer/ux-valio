@@ -58,9 +58,13 @@ a parallel folder, not inside the layer they depend on.
   `docs/explanation/host-peer-plan.md`. Measure tip:
   `python benches/measure_host_peer.py` (CI ``--ci`` skips without Rust).
   The recorded switch test PASSed (host setattr several times slower
-  than native ``Integer`` + ``MinValue(0)``); the product extra
-  ``ux-valio[native]`` is still not shipped. Do not add a Schema/Field
-  twin to get it. Cap / cek-runtime stay out of this repo.
+  than native ``Integer`` + ``MinValue(0)``). Optional extra
+  ``ux-valio[native]`` (sibling crate ``native/``, module
+  ``ux_valio_native``) binds that closed plan at construct: compile
+  once, one FFI ``apply`` per set. Stdlib Python apply stays the
+  default without the extra. Do not add a Schema/Field twin to get it.
+  Cap / cek-runtime / Cap Door B stay out of this repo. Do not claim
+  the switch-test ratio as end-to-end product setattr.
 - No `asyncio.run` in `__set__`. Nested loops use the nest-safe worker
   bridge only.
 - No `add_pre_set` / `_processors["pre_set"]` (that would be a second door).
@@ -260,7 +264,10 @@ New private helpers are verbs that name the action:
 `PANCardValidator._is_valid_pan`,
 `PhoneNumberValidator._require_phonenumbers`,
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`,
-`read_bound`, `ValidateStep`.
+`read_bound`, `ValidateStep`,
+`bind_native_plan`, `apply_native_integer_min_value`,
+`_load_native_peer`, `_closed_integer_min_value`,
+`Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
 `cache_task`, `_HOOK_ADDERS`, `_install_adders`, `_hook_adder`,

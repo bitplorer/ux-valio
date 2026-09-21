@@ -1,8 +1,10 @@
 # Performance
 
-Stdlib Python is the apply path today. The taught API does not change
-for speed. A native peer is mapped in [host / peer](host-peer-plan.md).
-The product extra is **not shipped**. The switch test is **measured**.
+Stdlib Python is the apply path by default. The taught API does not
+change for speed. An optional native peer is mapped in
+[host / peer](host-peer-plan.md). ``ux-valio[native]`` may bind a
+closed ``Integer`` + ``MinValue(i64)`` plan at construct. Cap Door B
+is not on this path.
 
 ## What is already compiled
 
@@ -14,9 +16,13 @@ At construct (`Validator.__init__` / `__set_name__`):
 - named-facade extra (GSTIN checksum, Luhn, …) as one function after
   that path
 - Pattern `re.compile` on the finder
+- with `ux-valio[native]`, a closed Integer + MinValue plan (one
+  owned Rust `Plan`) — otherwise the interpreter still walks
+  `_active_units`
 
-At set, the interpreter walks that short tuple, then process hangs,
-then store on `instance.__dict__`, then `post_set` / spawn `task_*`.
+At set, the interpreter walks that short tuple (or one FFI `apply` for
+the closed native plan), then process hangs, then store on
+`instance.__dict__`, then `post_set` / spawn `task_*`.
 
 Mutating `min_value` after construct does nothing to the path. Pass
 bounds at construct.
@@ -26,6 +32,7 @@ bounds at construct.
 | work | when | note |
 |---|---|---|
 | specified units | every set | the loop you actually want |
+| native `apply` | every set when the closed plan bound | one FFI; host still stores and raises |
 | named extra | every set on that facade | checksums are cheap vs I/O |
 | `pre_validate` / `post_validate` | every set | your code; keep it small |
 | `post_set` | every successful set | persist/reserve; fail-closed |
@@ -61,11 +68,11 @@ python benches/measure_host_peer.py
 Recorded 2026-09-21 on CPython 3.14.7 / rustc 1.83 / Linux x86_64:
 host **3389–3515 ns/op**, native **46.2–46.5 ns/op**, ratio **73–76×**.
 A rename-only re-run (plan units ``Integer`` + ``MinValue(0)``) stayed
-**75×**. **PASS — native tip unlocked.** The measure stub under
-`benches/native/` is not `ux-valio[native]`. CI without Rust skips
-(`python benches/measure_host_peer.py --ci`). Full notes, honesty
-(descriptor+store vs plan apply), and rejected shapes: [host /
-peer](host-peer-plan.md).
+**75×**. **PASS — native extra bound for this closed plan.** Honesty:
+that ratio is descriptor setattr vs **plan apply only**. Do not claim
+the product extra is 70× end-to-end after host store/raise. CI without
+Rust skips (`python benches/measure_host_peer.py --ci`). Full notes,
+install, and rejected shapes: [host / peer](host-peer-plan.md).
 
 ## What to do in application code
 
@@ -77,3 +84,4 @@ peer](host-peer-plan.md).
 4. Ports (`Validator[UserStore]`) run the type door once per construct —
    they are not the bottleneck.
 5. `logger=True` is for diagnosis, not production hot paths.
+6. `pip install ux-valio[native]` is optional. Call sites do not change.

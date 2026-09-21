@@ -2,11 +2,16 @@
 
 ## Unreleased
 
-- Measure tip (not a product extra): ``python benches/measure_host_peer.py``
-  times ``IntegerValidator(min_value=0)`` setattr against a local PyO3
-  stub ``apply(Integer, MinValue(0))``. CI ``--ci`` skips without Rust.
-  Verdict lives in ``docs/explanation/host-peer-plan.md``. Cap Door B
-  and ``ux-valio[native]`` stay out of scope.
+- Optional ``ux-valio[native]`` extra: sibling maturin wheel
+  (``native/``, module ``ux_valio_native``) compiles
+  ``IntegerValidator(min_value=…)`` once to ``Integer`` +
+  ``MinValue(i64)`` and applies in one FFI per set. Host keeps
+  descriptor, hooks, KEEP wording, and store. Without the extra,
+  stdlib Python apply stays the default. Cap Door B / Ops / JSON /
+  ``cek-peer-*`` stay off the field path. Measure harness retargets
+  to the product peer (``python benches/measure_host_peer.py``;
+  CI ``--ci`` skips without Rust). Do not quote the switch-test
+  70× as end-to-end product setattr.
 
 - Drop unused ``number_of_assignment`` counter (valio leftover; reassign
   uses ``_assignment_counts``). ``doc=`` is the descriptor ``__doc__``.

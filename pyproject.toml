@@ -27,6 +27,9 @@ Source = "https://github.com/bitplorer/ux-valio"
 dev = ["pytest>=7", "phonenumbers>=9.0.0", "mypy>=1.8"]
 phonenumbers = ["phonenumbers>=9.0.0"]
 docs = ["mkdocs>=1.6", "mkdocs-material>=9"]
+# Separate maturin wheel in native/. Published: pip install ux-valio[native]
+# From a checkout: pip install -e . && pip install -e ./native (needs rustc).
+native = ["ux-valio-native"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["ux_valio"]
@@ -47,3 +50,7 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 module = "ux_valio.mypy_plugin"
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "ux_valio_native"
+ignore_missing_imports = true
