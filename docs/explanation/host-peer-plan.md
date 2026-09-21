@@ -18,7 +18,7 @@ to call, *which* plan, and *how* to raise.
 ```text
 bind / __init__     host compiles specified theory → plan
 set                 host hands (plan, value) once
-                    peer applies  (int?  ≥ min?)
+                    peer applies  (i64 extract; bound units)
                     host stores on instance.__dict__
                     host runs hooks, named extras, debug-swallow
 ```
@@ -55,11 +55,15 @@ That tuple **is** the plan. Without the extra, the interpreter applies
 it. With ``ux-valio[native]``, a **closed** subset is the same tuple as
 a native enum, built **once** at ``__init__`` / ``__set_name__``.
 
-Shipped closed plan: ``Integer`` + ``MinValue(i64)`` — the path
-``IntegerValidator(min_value=0)`` (and any other i64 ``min_value``).
-Unclosed paths (``max_value``, ``required``, ``gt``, named identity,
-Email, …) stay on the host. Email / named identity were already
-competitive in Python — do not start there.
+Shipped closed plans: ``Integer`` plus specified i64 bound units —
+``MinValue`` / ``MaxValue`` / ``Gt`` / ``Lt`` / ``Eq``, including
+min+max range and exclusive ``gt``+``lt`` as the host encodes them.
+``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
+``eq=7``, and ``min_value=0, max_value=10`` all compile when the
+annotation is ``int`` and only those bound units are active. Unclosed
+paths (``required``, ``multiple_of``, length, pattern, choice, named
+identity, Email, Float, a non-``int`` bound) stay on the host. Email /
+named identity were already competitive in Python — do not start there.
 
 ## What never leaves the host
 
@@ -124,11 +128,14 @@ the door risk.
 ### How to run
 
 The harness lives in-tree. It installs/uses ``ux-valio`` from the repo
-root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with
-``IntegerValidator(min_value=0)``. Hot path B is ``compile(0)`` once then
-``apply(plan, i64)`` on the product peer (``native/``: ``Integer`` +
-``MinValue(0)`` only). B is **not** product setattr (no store, no
-hooks, no host raise).
+root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with a
+closed ``IntegerValidator`` bound plan. Hot path B is ``compile(...)``
+once then ``apply(plan, i64)`` on the product peer (``native/``: owned
+unit list of ``Integer`` plus ``MinValue`` / ``MaxValue`` / ``Gt`` /
+``Lt`` / ``Eq``). B is **not** product setattr (no store, no
+hooks, no host raise). The harness prints one host-vs-apply ratio per
+family; the bar is **≥ 3×** for each, and at least one family besides
+MinValue must meet it (or SKIP honestly).
 
 ```console
 python -m pip install -e .

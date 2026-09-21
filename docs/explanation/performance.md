@@ -3,7 +3,7 @@
 Stdlib Python is the apply path by default. The taught API does not
 change for speed. An optional native peer is mapped in
 [host / peer](host-peer-plan.md). ``ux-valio[native]`` may bind a
-closed ``Integer`` + ``MinValue(i64)`` plan at construct. Cap Door B
+closed Integer bound plan at construct. Cap Door B
 is not on this path.
 
 ## What is already compiled
@@ -16,9 +16,9 @@ At construct (`Validator.__init__` / `__set_name__`):
 - named-facade extra (GSTIN checksum, Luhn, …) as one function after
   that path
 - Pattern `re.compile` on the finder
-- with `ux-valio[native]`, a closed Integer + MinValue plan (one
-  owned Rust `Plan`) — otherwise the interpreter still walks
-  `_active_units`
+- with `ux-valio[native]`, a closed Integer bound plan (MinValue /
+  MaxValue / Gt / Lt / Eq / range; one owned Rust `Plan`) — otherwise
+  the interpreter still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply` for
 the closed native plan), then process hangs, then store on
@@ -58,8 +58,9 @@ One crossing per set, or none.
 ## Switch test (measured)
 
 Bar: FAIL (KEEP Python) unless host ns/op ≥ **3×** native ns/op for
-`IntegerValidator(min_value=0)` setattr vs one-shot native
-`apply(Integer, MinValue(0))`.
+each closed Integer bound family (`MinValue` / `MaxValue` / `Gt` /
+`Lt` / `Eq` / min+max range) setattr vs one-shot native
+`apply(plan, i64)`.
 
 ```console
 python benches/measure_host_peer.py

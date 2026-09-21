@@ -20,7 +20,7 @@ Python ≥ 3.14 (same floor as `ux-compose`).
 ```console
 pip install -e .
 pip install ux-valio[phonenumbers]   # PhoneNumberValidator
-pip install ux-valio[native]         # optional Integer + MinValue apply peer
+pip install ux-valio[native]         # optional Integer bound apply peer
 ```
 
 From a checkout the native extra is a sibling maturin wheel (`native/`),

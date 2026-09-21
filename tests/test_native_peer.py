@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: MIT
-"""Optional ``ux-valio[native]`` peer: Integer + MinValue, host soul.
+"""Optional ``ux-valio[native]`` peer: Integer bound units, host soul.
 
 Without the extra, stdlib apply stays the default (CI). With the extra,
-``IntegerValidator(min_value=0)`` compiles once and one FFI ``apply``
-per set. Cap Door B / Ops / JSON / ``cek-peer-*`` stay off the field path.
+closed ``IntegerValidator`` bound plans (min/max/gt/lt/eq, including
+range) compile once and one FFI ``apply`` per set. Cap Door B / Ops /
+JSON / ``cek-peer-*`` stay off the field path.
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors
 at bind (KEEP).
@@ -121,18 +122,144 @@ def test_field_path_has_no_cap_door_b_or_json_plan():
 
 
 def test_unclosed_plans_stay_on_host():
-    extra = IntegerValidator(min_value=0, max_value=10, debug=True)
-    assert extra._native_plan is None
     required = IntegerValidator(min_value=0, required=True, debug=True)
     assert required._native_plan is None
-    gt = IntegerValidator(gt=0, debug=True)
-    assert gt._native_plan is None
+    multiple = IntegerValidator(min_value=0, multiple_of=2, debug=True)
+    assert multiple._native_plan is None
+    watched = IntegerValidator(min_value=0, reassign=False, debug=True)
+    assert watched._native_plan is None
+    choice = IntegerValidator(min_value=0, in_choice=(0, 1), debug=True)
+    assert choice._native_plan is None
+    float_bound = IntegerValidator(min_value=0.5, debug=True)
+    assert float_bound._native_plan is None
     plain = IntegerValidator(debug=True)
     assert plain._native_plan is None
     floating = FloatValidator(min_value=0.0, debug=True)
     assert getattr(floating, "_native_plan", None) is None
     text = StringValidator(min_length=1, debug=True)
     assert getattr(text, "_native_plan", None) is None
+
+
+def test_plan_shape_is_owned_unit_list():
+    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    assert "[Unit; 2]" not in rust
+    assert "Vec<Unit>" in rust
+
+
+_BOUND_CASES = (
+    pytest.param(
+        {"min_value": 0},
+        ((-1, "minimum value of 0"), (0, None), (1, None)),
+        id="min_value",
+    ),
+    pytest.param(
+        {"max_value": 10},
+        ((9, None), (10, None), (11, "maximum value of 10")),
+        id="max_value",
+    ),
+    pytest.param(
+        {"gt": 0},
+        ((-1, "greater than 0"), (0, "greater than 0"), (1, None)),
+        id="gt",
+    ),
+    pytest.param(
+        {"lt": 10},
+        ((9, None), (10, "less than 10"), (11, "less than 10")),
+        id="lt",
+    ),
+    pytest.param(
+        {"eq": 7},
+        ((6, "expect the value 7"), (7, None), (8, "expect the value 7")),
+        id="eq",
+    ),
+    pytest.param(
+        {"value": 7},
+        ((6, "expect the value 7"), (7, None), (8, "expect the value 7")),
+        id="value_alias",
+    ),
+    pytest.param(
+        {"min_value": 0, "max_value": 10},
+        (
+            (-1, "minimum value of 0"),
+            (0, None),
+            (10, None),
+            (11, "maximum value of 10"),
+        ),
+        id="range_min_max",
+    ),
+    pytest.param(
+        {"gt": 0, "lt": 10},
+        ((0, "greater than 0"), (1, None), (9, None), (10, "less than 10")),
+        id="range_gt_lt",
+    ),
+    pytest.param(
+        {"min_value": 0, "lt": 10},
+        ((-1, "minimum value of 0"), (0, None), (9, None), (10, "less than 10")),
+        id="min_lt",
+    ),
+    pytest.param(
+        {"gt": 0, "max_value": 10},
+        ((0, "greater than 0"), (1, None), (10, None), (11, "maximum value of 10")),
+        id="gt_max",
+    ),
+    pytest.param(
+        {"max_value": -1},
+        ((-2, None), (-1, None), (0, "maximum value of -1")),
+        id="negative_max",
+    ),
+    pytest.param(
+        {"gt": -5},
+        ((-6, "greater than -5"), (-5, "greater than -5"), (-4, None)),
+        id="negative_gt",
+    ),
+    pytest.param(
+        {"lt": -1},
+        ((-2, None), (-1, "less than -1"), (0, "less than -1")),
+        id="negative_lt",
+    ),
+    pytest.param(
+        {"eq": -3},
+        ((-4, "expect the value -3"), (-3, None), (-2, "expect the value -3")),
+        id="negative_eq",
+    ),
+    pytest.param(
+        {"min_value": 0, "eq": 5},
+        ((-1, "minimum value of 0"), (5, None), (6, "expect the value 5")),
+        id="min_eq",
+    ),
+)
+
+
+def _passing_seed(kwargs: dict) -> int:
+    if "eq" in kwargs:
+        return kwargs["eq"]
+    if "value" in kwargs:
+        return kwargs["value"]
+    if "gt" in kwargs:
+        return kwargs["gt"] + 1
+    if "min_value" in kwargs:
+        return kwargs["min_value"]
+    if "lt" in kwargs:
+        return kwargs["lt"] - 1
+    if "max_value" in kwargs:
+        return kwargs["max_value"]
+    raise AssertionError(kwargs)
+
+
+@pytest.mark.parametrize("kwargs,samples", _BOUND_CASES)
+def test_integer_bound_door_a_wording_on_host(kwargs, samples):
+    field = _force_host(IntegerValidator(debug=True, name="n", **kwargs))
+    for value, fragment in samples:
+        got = _assign(field, value)
+        if fragment is None:
+            assert got == ("ok", None, None, value), (kwargs, value, got)
+        else:
+            assert got[0] == "err", (kwargs, value, got)
+            assert got[1] is ValueError, (kwargs, value, got)
+            assert fragment in got[2], (kwargs, value, got[2])
+
+
+_TYPE_AND_OVERFLOW_SAMPLES = ("x", None, True, False, 1.5, object(), 2**70, -(2**70))
 
 
 @needs_native
@@ -194,14 +321,40 @@ def test_validator_int_subscript_binds_at_set_name():
 
 
 @needs_native
-def test_native_parity_with_host_path():
-    native = IntegerValidator(min_value=0, debug=True, name="n")
-    host = _force_host(IntegerValidator(min_value=0, debug=True, name="n"))
+@pytest.mark.parametrize("kwargs,samples", _BOUND_CASES)
+def test_closed_integer_bounds_compile_once(kwargs, samples):
+    del samples
+    field = IntegerValidator(debug=True, name="n", **kwargs)
+    plan = field._native_plan
+    apply = field._native_apply
+    assert plan is not None
+    assert apply is not None
+    field.validate(None, _passing_seed(kwargs))
+    assert field._native_plan is plan
+    assert field._native_apply is apply
+
+
+@needs_native
+@pytest.mark.parametrize("kwargs,samples", _BOUND_CASES)
+def test_native_parity_with_host_path(kwargs, samples):
+    native = IntegerValidator(debug=True, name="n", **kwargs)
+    host = _force_host(IntegerValidator(debug=True, name="n", **kwargs))
     assert native._native_plan is not None
     assert host._native_plan is None
-    samples = (0, 1, -1, "x", None, True, False, 2**70, -(2**70), 1.5, object())
-    for value in samples:
-        assert _assign(native, value) == _assign(host, value), value
+    seen = [value for value, _fragment in samples]
+    for value in (*seen, *_TYPE_AND_OVERFLOW_SAMPLES):
+        assert _assign(native, value) == _assign(host, value), (kwargs, value)
+    for value, fragment in samples:
+        got = _assign(native, value)
+        if fragment is None:
+            assert got == ("ok", None, None, value), (kwargs, value, got)
+        else:
+            assert got[0] == "err", (kwargs, value, got)
+            assert got[1] is ValueError, (kwargs, value, got)
+            assert fragment in got[2], (kwargs, value, got[2])
+            assert "Overflow" not in got[2]
+            assert "int64" not in got[2].lower()
+            assert "PyO3" not in got[2]
 
 
 @needs_native
@@ -367,6 +520,42 @@ def test_out_of_i64_min_value_bind_stays_on_host():
 
 
 @needs_native
+def test_out_of_i64_max_and_eq_bind_stays_on_host():
+    too_big = 2**70
+    maximum = IntegerValidator(max_value=too_big, debug=True, name="n")
+    assert maximum._native_plan is None
+    assert _assign(maximum, too_big) == ("ok", None, None, too_big)
+    exact = IntegerValidator(eq=too_big, debug=True, name="n")
+    assert exact._native_plan is None
+    assert _assign(exact, too_big) == ("ok", None, None, too_big)
+    miss = _assign(exact, 0)
+    assert miss[1] is ValueError
+    assert "expect the value" in miss[2]
+    assert "Overflow" not in miss[2]
+
+
+@needs_native
+def test_i64_overflow_gt_passes_max_misses():
+    """Huge ints skip native extract; host ValueValidator still owns Door A."""
+    gt = IntegerValidator(gt=0, debug=True, name="n")
+    host_gt = _force_host(IntegerValidator(gt=0, debug=True, name="n"))
+    assert gt._native_plan is not None
+    huge = 2**70
+    assert _assign(gt, huge) == ("ok", None, None, huge)
+    assert _assign(gt, huge) == _assign(host_gt, huge)
+
+    maximum = IntegerValidator(max_value=10, debug=True, name="n")
+    host_max = _force_host(IntegerValidator(max_value=10, debug=True, name="n"))
+    assert maximum._native_plan is not None
+    native_miss = _assign(maximum, huge)
+    host_miss = _assign(host_max, huge)
+    assert native_miss == host_miss
+    assert native_miss[1] is ValueError
+    assert "maximum value of 10" in native_miss[2]
+    assert "Overflow" not in native_miss[2]
+
+
+@needs_native
 def test_bool_as_int_matches_host_path():
     native = IntegerValidator(min_value=0, debug=True, name="n")
     host = _force_host(IntegerValidator(min_value=0, debug=True, name="n"))
@@ -379,7 +568,7 @@ def test_bool_as_int_matches_host_path():
 def test_unexpected_peer_bind_raises_runtime_error_with_ux_valio_native(monkeypatch):
     import ux_valio_native
 
-    def boom(min_value):
+    def boom(**kwargs):
         raise ValueError("peer exploded")
 
     monkeypatch.setattr(ux_valio_native, "compile", boom)
