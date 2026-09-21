@@ -8,13 +8,16 @@ closed String or Bytes length plan (``str`` / ``bytes`` annotation +
 only ``LengthValidator`` ``min_length`` / ``max_length`` / ``length``),
 or a closed IntegerEnum member-set plan (``IntegerEnumValidator`` whose
 annotation is a concrete ``enum.IntEnum`` and whose only active unit is
-the type door), compile a plan once. Type door is host-first
-``isinstance`` then FFI extract (``i64`` / ``f64`` / ``&str`` /
-``&[u8]``); bound / length / member units run after extract. Open
-TypeValidator / Union / TypedDict / Annotated / pattern / plain
-``EnumValidator`` / ``StringEnumValidator`` stay on the host. Missing
-or failed extra → host ``_active_units`` path. No import on the hot
-path after that choice. Not Cap Door B.
+the type door), or a closed StringEnum member-set plan
+(``StringEnumValidator`` whose annotation is a concrete str-valued
+``enum.Enum`` and whose only active unit is the type door), compile a
+plan once. Type door is host-first ``isinstance`` then FFI extract
+(``i64`` / ``f64`` / ``&str`` / ``&[u8]``); bound / length / member
+units run after extract. StringEnum extract is the member's ``.value``
+as UTF-8 ``&str``. Open TypeValidator / Union / TypedDict / Annotated /
+pattern / plain ``EnumValidator`` / ``BooleanValidator`` stay on the
+host. Missing or failed extra → host ``_active_units`` path. No import
+on the hot path after that choice. Not Cap Door B.
 """
 
 from __future__ import annotations
@@ -148,7 +151,8 @@ def _closed_integer_enum_members(owner: Any) -> list[int] | None:
     (``bool`` stays on the host). Extra bounds stay on the host. Plain
     ``EnumValidator`` / ``StringEnumValidator`` / ``Validator[SomeIntEnum]``
     stay on the host — this module does not import facades; the facade is
-    the class in ``ux_valio.facades.typed``.
+    the class in ``ux_valio.facades.typed``. StringEnum is
+    ``_closed_string_enum_members``, not this function.
     """
     if type(owner).__module__ != "ux_valio.facades.typed":
         return None
@@ -167,6 +171,49 @@ def _closed_integer_enum_members(owner: Any) -> list[int] | None:
     for member in annotation:
         raw = member.value
         if type(raw) is not int:
+            return None
+        if raw in seen:
+            continue
+        seen.add(raw)
+        members.append(raw)
+    if not members:
+        return None
+    return members
+
+
+def _closed_string_enum_members(owner: Any) -> list[str] | None:
+    """UTF-8 member values when the path is ``StringEnumValidator`` + type.
+
+    Annotation must be a concrete ``enum.Enum`` (not ``enum.Enum`` itself,
+    not a union, not bare ``enum.StrEnum`` with no members). Every member
+    ``.value`` must be an exact ``str`` (a ``str`` subclass stays on the
+    host) that encodes as UTF-8 (a lone surrogate stays on the host).
+    Extra bounds stay on the host. Plain ``EnumValidator`` /
+    ``IntegerEnumValidator`` / ``BooleanValidator`` /
+    ``Validator[SomeStrEnum]`` stay on the host — this module does not
+    import facades; the facade is the class in ``ux_valio.facades.typed``.
+    """
+    if type(owner).__module__ != "ux_valio.facades.typed":
+        return None
+    if type(owner).__qualname__ != "StringEnumValidator":
+        return None
+    annotation = getattr(owner, "annotation", None)
+    if not isinstance(annotation, type) or not issubclass(annotation, enum.Enum):
+        return None
+    if annotation is enum.Enum:
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    members: list[str] = []
+    seen: set[str] = set()
+    for member in annotation:
+        raw = member.value
+        if type(raw) is not str:
+            return None
+        try:
+            raw.encode("utf-8")
+        except UnicodeEncodeError:
             return None
         if raw in seen:
             continue
@@ -222,6 +269,17 @@ def _apply_host_length_after_str_extract(owner: Any, value: Any) -> None:
     host ``LengthValidator`` (Door A KEEP wording, ``len(str)``).
     """
     LengthValidator._validate_length(owner, None, value)
+
+
+def _apply_host_string_enum_after_str_extract(owner: Any, value: Any) -> None:
+    """UTF-8 extract failed before native member-set apply.
+
+    OverflowError / UnicodeError is a bridge signal, not a public
+    validation miss and not an L1 "overflow" message. Fall through to
+    host ``TypeValidator`` (Door A KEEP wording). A member whose value
+    is not UTF-8 never compiled (bind stays on the host).
+    """
+    TypeValidator._validate_type(owner, None, value)
 
 
 def _apply_host_integer_enum_after_i64_overflow(owner: Any, value: Any) -> None:
@@ -338,6 +396,22 @@ def _raise_host_string_type_miss(owner: Any, value: Any) -> None:
     _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
 
 
+def _raise_host_string_enum_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed StringEnum type door is host-first.
+
+    FFI type is the later ``&str`` extract of ``value.value``. The
+    concrete enum on the field is the member class, so a plain ``str``
+    (including one equal to a member value), ``bytes``, ``int``,
+    ``bool``, or another enum misses here. ``None`` is skipped by the
+    caller. ``collect_all`` continues into the named str-Enum extra
+    from ``validate``, not inside this raise.
+    """
+    raise TypeError(
+        f"{owner.name} expect {owner.annotation} type, "
+        f"got {type(value).__name__} type instead"
+    )
+
+
 def _raise_host_integer_enum_type_miss(owner: Any, value: Any) -> None:
     """KEEP TypeError wording. Closed IntegerEnum type door is host-first.
 
@@ -436,16 +510,28 @@ def bind_native_plan(owner: Any) -> None:
         _bind_compiled_plan(owner, peer, peer.compile_bytes, bytes_bounds)
         return
     enum_members = _closed_integer_enum_members(owner)
-    if enum_members is None:
+    if enum_members is not None:
+        peer = _load_native_peer()
+        if peer is None:
+            _clear_native(owner)
+            return
+        owner._native_apply = peer.apply_integer_enum
+        owner._native_apply_host = apply_native_integer_enum
+        _bind_compiled_plan(owner, peer, peer.compile_integer_enum, {"members": enum_members})
+        return
+    string_enum_members = _closed_string_enum_members(owner)
+    if string_enum_members is None:
         _clear_native(owner)
         return
     peer = _load_native_peer()
     if peer is None:
         _clear_native(owner)
         return
-    owner._native_apply = peer.apply_integer_enum
-    owner._native_apply_host = apply_native_integer_enum
-    _bind_compiled_plan(owner, peer, peer.compile_integer_enum, {"members": enum_members})
+    owner._native_apply = peer.apply_string_enum
+    owner._native_apply_host = apply_native_string_enum
+    _bind_compiled_plan(
+        owner, peer, peer.compile_string_enum, {"members": string_enum_members}
+    )
 
 
 def _apply_native_closed(
@@ -519,6 +605,38 @@ def apply_native_string_length(owner: Any, value: Any) -> None:
         _apply_host_length_after_str_extract,
         (OverflowError, UnicodeError),
     )
+
+
+def apply_native_string_enum(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-UTF-8 stays on host.
+
+    The FFI argument is ``value.value`` (UTF-8 ``&str``), not the enum
+    object. OverflowError / UnicodeError at ``&str`` extract is a
+    bridge signal (same three buckets as String length: validation
+    ``FailKind`` / bridge / peer-infra ``RuntimeError`` naming
+    ``ux_valio_native``). No public L1 "overflow" message. Door A
+    membership is the concrete enum class first, then exact UTF-8
+    equality with the compiled member values.
+    """
+    if value is None:
+        return
+    if not isinstance(value, owner.annotation):
+        _raise_host_string_enum_type_miss(owner, value)
+        return
+    raw = value.value
+    if type(raw) is not str:
+        _apply_host_string_enum_after_str_extract(owner, value)
+        return
+    try:
+        fail = owner._native_apply(owner._native_plan, raw)
+    except (OverflowError, UnicodeError):
+        _apply_host_string_enum_after_str_extract(owner, value)
+        return
+    except Exception as err:
+        raise RuntimeError("ux_valio_native apply failed") from err
+    if fail is None:
+        return
+    _raise_native_bound_miss(owner, fail, value)
 
 
 def apply_native_integer_enum(owner: Any, value: Any) -> None:

@@ -4,14 +4,16 @@
 Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
 ``IntegerValidator`` / ``FloatValidator`` bound plan, a closed
 ``StringValidator`` / ``BytesValidator`` length plan, or a closed
-``IntegerEnumValidator`` member-set plan (taught API, soul stays Python).
-IntegerEnum path A clears the native plan after bind so the loop is
+``IntegerEnumValidator`` member-set plan, or a closed
+``StringEnumValidator`` UTF-8 member-set plan (taught API, soul stays
+Python). Enum path A clears the native plan after bind so the loop is
 pure Python setattr.
 
 Hot path B: ``compile(...)`` / ``compile_float(...)`` /
 ``compile_string(...)`` / ``compile_bytes(...)`` /
-``compile_integer_enum(...)`` once, then ``apply`` / ``apply_float`` /
-``apply_string`` / ``apply_bytes`` / ``apply_integer_enum`` on the
+``compile_integer_enum(...)`` / ``compile_string_enum(...)`` once, then
+``apply`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
+``apply_integer_enum`` / ``apply_string_enum`` on the
 ``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
 store/raise. Not Cap Door B.
@@ -19,10 +21,10 @@ store/raise. Not Cap Door B.
 Families: MinValue, MaxValue, GreaterThan, LessThan, Equal, min+max
 range — once for Integer, once for Float — plus String and Bytes
 MinLength / MaxLength / Length / min+max range, plus one IntegerEnum
-member set. Switch bar:
+member set and one StringEnum UTF-8 member set. Switch bar:
 FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
 below the bar is not claimed native (KEEP host for that family).
-Next HOLD: StringEnum. Boolean only if a later measure is >= 3× alone.
+Next HOLD: Boolean only if a later measure is >= 3× alone.
 
 Usage::
 
@@ -86,6 +88,16 @@ def _integer_enum_family(**kwargs: Any) -> PlanFamily:
     )
 
 
+def _string_enum_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="StringEnumValidator",
+        compile_attr="compile_string_enum",
+        apply_attr="apply_string_enum",
+        annotation=_MeasureShade,
+        **kwargs,
+    )
+
+
 def _integer_family(**kwargs: Any) -> PlanFamily:
     return PlanFamily(
         facade="IntegerValidator",
@@ -130,6 +142,22 @@ class _MeasureRank(enum.IntEnum):
 
 
 _MEASURE_RANK_VALUES = tuple(_MeasureRank)
+
+
+class _MeasureShade(enum.Enum):
+    """UTF-8 member set for the StringEnum switch test. Not a taught type."""
+
+    M0 = "m0"
+    M1 = "m1"
+    M2 = "m2"
+    M3 = "m3"
+    M4 = "m4"
+    M5 = "m5"
+    M6 = "m6"
+    M7 = "m7"
+
+
+_MEASURE_SHADE_VALUES = tuple(_MeasureShade)
 
 
 def _bytes_family(**kwargs: Any) -> PlanFamily:
@@ -388,12 +416,27 @@ INTEGER_ENUM_FAMILIES = (
     ),
 )
 
+STRING_ENUM_FAMILIES = (
+    _string_enum_family(
+        name="StringEnum.Member",
+        field_kwargs={},
+        compile_kwargs={"members": [member.value for member in _MEASURE_SHADE_VALUES]},
+        values=_MEASURE_SHADE_VALUES,
+        seed=_MeasureShade.M0,
+        smoke_ok="m0",
+        smoke_miss="m8",
+        smoke_kind="NotMember",
+        label="StringEnum + Member(m0..m7)",
+    ),
+)
+
 FAMILIES = (
     INTEGER_FAMILIES
     + FLOAT_FAMILIES
     + STRING_FAMILIES
     + BYTES_FAMILIES
     + INTEGER_ENUM_FAMILIES
+    + STRING_ENUM_FAMILIES
 )
 
 
@@ -482,6 +525,7 @@ def _load_facades() -> dict[str, Any]:
             FloatValidator,
             IntegerEnumValidator,
             IntegerValidator,
+            StringEnumValidator,
             StringValidator,
         )
     except ImportError as err:
@@ -495,6 +539,7 @@ def _load_facades() -> dict[str, Any]:
         "StringValidator": StringValidator,
         "BytesValidator": BytesValidator,
         "IntegerEnumValidator": IntegerEnumValidator,
+        "StringEnumValidator": StringEnumValidator,
     }
 
 
@@ -506,8 +551,8 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
 
     facade = facades[family.facade]
     field = facade(**family.field_kwargs)
-    if family.facade == "IntegerEnumValidator":
-        # Bind the concrete IntEnum first (plan compiles at ``__set_name__``),
+    if family.facade in ("IntegerEnumValidator", "StringEnumValidator"):
+        # Bind the concrete enum first (plan compiles at ``__set_name__``),
         # then drop it so path A is pure Python setattr.
         namespace = {"__annotations__": {"n": family.annotation}, "n": field}
         box_type = dataclass(type("EnumBox", (), namespace))
@@ -626,7 +671,8 @@ def _report_header(skip_reason: str | None) -> None:
         "(MinValue/MaxValue/GreaterThan/LessThan/Equal/range); "
         "String length units (MinLength/MaxLength/Length/range, codepoints); "
         "Bytes length units (MinLength/MaxLength/Length/range, byte count); "
-        "IntegerEnum i64 member set (compile_integer_enum / apply_integer_enum)"
+        "IntegerEnum i64 member set (compile_integer_enum / apply_integer_enum); "
+        "StringEnum UTF-8 member set (compile_string_enum / apply_string_enum)"
     )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
@@ -692,6 +738,11 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
     string = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "StringValidator"]
     blob = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "BytesValidator"]
     enums = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "IntegerEnumValidator"]
+    string_enums = [
+        (family, unlocked, ratio)
+        for family, unlocked, ratio in results
+        if family.facade == "StringEnumValidator"
+    ]
     failed = [family.name for family, unlocked, _ratio in results if not unlocked]
     int_passed = [family.name for family, unlocked, _ratio in integer if unlocked]
     int_new = [name for name in int_passed if name != "Integer.MinValue"]
@@ -703,6 +754,8 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
     bytes_passed = [family.name for family, unlocked, _ratio in blob if unlocked]
     enum_failed = [family.name for family, unlocked, _ratio in enums if not unlocked]
     enum_passed = [family.name for family, unlocked, _ratio in enums if unlocked]
+    string_enum_failed = [family.name for family, unlocked, _ratio in string_enums if not unlocked]
+    string_enum_passed = [family.name for family, unlocked, _ratio in string_enums if unlocked]
     if any(not unlocked for _family, unlocked, _ratio in integer):
         print(
             f"SUMMARY: FAIL (KEEP Python) Integer families below {SWITCH_BAR:.1f}×: "
@@ -755,14 +808,20 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
         print(
             f"SUMMARY: IntegerEnum KEEP host (below {SWITCH_BAR:.1f}×): "
             + ", ".join(enum_failed or ["(no IntegerEnum family)"])
-            + ". Do not claim native for IntegerEnum. Do not add Boolean or "
-            "StringEnum to chase the bar. StringEnum stays HOLD."
+            + ". Do not claim native for IntegerEnum. Boolean stays off."
+        )
+        return 1
+    if string_enum_failed or not string_enum_passed:
+        print(
+            f"SUMMARY: StringEnum KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(string_enum_failed or ["(no StringEnum family)"])
+            + ". Do not claim native for StringEnum. Boolean stays off."
         )
         return 1
     print(
-        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed)} each >= "
+        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed)} each >= "
         f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr). "
-        "StringEnum stays HOLD. Boolean stays off."
+        "Boolean stays off."
     )
     return 0
 
@@ -770,7 +829,7 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Measure Integer/Float/String/Bytes/IntegerEnum setattr vs "
+            "Measure Integer/Float/String/Bytes/IntegerEnum/StringEnum setattr vs "
             "native plan apply."
         )
     )

@@ -59,17 +59,19 @@ a parallel folder, not inside the layer they depend on.
   `python benches/measure_host_peer.py` (CI ``--ci`` skips without Rust).
   The recorded switch test PASSed (host setattr several times slower
   than native Integer / Float bound apply, String / Bytes length apply,
-  and IntegerEnum member-set apply). Optional extra
+  IntegerEnum member-set apply, and StringEnum UTF-8 member-set apply).
+  Optional extra
   ``ux-valio[native]`` (sibling crate ``native/``, module
   ``ux_valio_native``) binds closed Integer and Float bound plans,
-  closed String and Bytes length plans, and a closed IntegerEnum
-  member-set plan at
+  closed String and Bytes length plans, a closed IntegerEnum
+  member-set plan, and a closed StringEnum UTF-8 member-set plan at
   construct: ``MinValue`` / ``MaxValue`` / ``GreaterThan`` /
   ``LessThan`` / ``Equal`` and min+max range, plus ``MinLength`` /
   ``MaxLength`` / ``Length``, plus ``IntegerEnum`` ``Member`` values,
+  plus ``StringEnum`` UTF-8 member values,
   compile once, one FFI
   ``apply`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
-  ``apply_integer_enum`` per set. Integer type door is FFI
+  ``apply_integer_enum`` / ``apply_string_enum`` per set. Integer type door is FFI
   ``i64`` extract; Float is FFI ``f64`` extract (IEEE Door A: NaN
   unordered on min/max/gt/lt, ``eq`` uses ``!=`` so NaN never
   matches). String type door is FFI ``&str`` extract; length is
@@ -77,8 +79,11 @@ a parallel folder, not inside the layer they depend on.
   length is ``len(bytes)``. IntegerEnum type door is host
   ``isinstance`` of the concrete ``enum.IntEnum``, then FFI ``i64``
   extract; membership is exact equality with the compiled member
-  values. ``compile_*`` and ``apply_*`` stay separate doors. Open
-  TypeValidator / plain EnumValidator / StringEnum stay on the host.
+  values. StringEnum type door is host ``isinstance`` of the concrete
+  str-valued ``enum.Enum``, then FFI ``&str`` extract of ``.value``;
+  membership is exact UTF-8 equality (no casefold, no NFC).
+  ``compile_*`` and ``apply_*`` stay separate doors. Open
+  TypeValidator / plain EnumValidator / Boolean stay on the host.
   Stdlib Python apply stays the
   default without the extra. Do not add a Schema/Field twin to get it.
   Cap / cek-runtime / Cap Door B stay out of this repo. Do not claim
@@ -286,16 +291,20 @@ New private helpers are verbs that name the action:
 `bind_native_plan`, `apply_native_bounds`, `apply_native_integer_bounds`,
 `apply_native_float_bounds`, `apply_native_string_length`,
 `apply_native_bytes_length`, `apply_native_integer_enum`,
+`apply_native_string_enum`,
 `_load_native_peer`, `_closed_integer_bounds`, `_closed_float_bounds`,
 `_closed_string_length`, `_closed_bytes_length`, `_closed_integer_enum_members`,
+`_closed_string_enum_members`,
 `_closed_length`, `_closed_value_bounds`, `_bind_compiled_plan`, `_apply_native_closed`,
 `_clear_native`, `_apply_host_value_after_i64_overflow`,
 `_apply_host_value_after_f64_overflow`, `_apply_host_length_after_str_extract`,
 `_apply_host_length_after_bytes_extract`,
 `_apply_host_integer_enum_after_i64_overflow`,
+`_apply_host_string_enum_after_str_extract`,
 `_raise_native_bound_miss`, `_raise_host_integer_type_miss`,
 `_raise_host_float_type_miss`, `_raise_host_string_type_miss`, `_raise_host_bytes_type_miss`,
-`_raise_host_integer_enum_type_miss`, `_raise_host_closed_type_miss`,
+`_raise_host_integer_enum_type_miss`, `_raise_host_string_enum_type_miss`,
+`_raise_host_closed_type_miss`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,

@@ -5,6 +5,7 @@ change for speed. An optional native peer is mapped in
 [host / peer](host-peer-plan.md). ``ux-valio[native]`` may bind a
 closed Integer or Float bound plan, a closed String or Bytes length plan,
 or a closed IntegerEnum member-set plan,
+or a closed StringEnum UTF-8 member-set plan,
 at construct. Cap Door B
 is not on this path.
 
@@ -25,7 +26,8 @@ At construct (`Validator.__init__` / `__set_name__`):
   is FFI `&str` extract and count is `len(str)` codepoints; Bytes type
   is FFI `&[u8]` extract and count is `len(bytes)`) or a closed
   IntegerEnum member set (`Member` `i64` values; `compile_integer_enum`
-  / `apply_integer_enum`). Otherwise the interpreter
+  / `apply_integer_enum`) or a closed StringEnum UTF-8 member set
+  (`compile_string_enum` / `apply_string_enum`). Otherwise the interpreter
   still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply` for
@@ -71,8 +73,9 @@ each closed Integer and Float bound family (`MinValue` / `MaxValue` /
 one-shot native `apply(plan, i64)` / `apply_float(plan, f64)`, and each
 closed String length family (`MinLength` / `MaxLength` / `Length` /
 min+max range) vs `apply_string(plan, &str)`, and each closed Bytes
-length family vs `apply_bytes(plan, &[u8])`, and the closed IntegerEnum
-member set vs `apply_integer_enum(plan, i64)`.
+length family vs `apply_bytes(plan, &[u8])`, the closed IntegerEnum
+member set vs `apply_integer_enum(plan, i64)`, and the closed StringEnum
+UTF-8 member set vs `apply_string_enum(plan, &str)`.
 
 ```console
 python benches/measure_host_peer.py
@@ -93,6 +96,10 @@ min+max range — all **PASS**. Bytes length re-run on this tip: host
 for MinLength / MaxLength / Length / min+max range — all **PASS**.
 IntegerEnum member-set re-run on this tip: host **3264 ns/op**, native
 **94.6 ns/op**, ratio **34.5×** for ``Member(0..7)`` — **PASS**.
+StringEnum UTF-8 member-set re-run on this tip: host **3421 ns/op**,
+native **108.1 ns/op**, ratio **31.7×** for ``Member(m0..m7)`` —
+**PASS**. Integer / Float / String / Bytes stayed ~24–25× and
+IntegerEnum ~35× on that same run (still PASS).
 Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end
