@@ -18,6 +18,8 @@ assignment** (a `date`, not the string you typed).
 `ux-valio[native]` may compile closed Integer or Float bound plans (min/max/gt/lt/eq)
 and closed String / Bytes length plans (min/max/exact), and a closed
 IntegerEnum member set when the field annotation is a concrete `IntEnum`,
+and a closed StringEnum UTF-8 member set when the field annotation is a
+concrete str-valued `Enum`,
 once and apply in one FFI; without the extra the same units run in Python.
 Call sites do not change. See [host / peer](../explanation/host-peer-plan.md).
 | `StringValidator` | `str` | names, slugs (without a named identity) |
@@ -34,7 +36,7 @@ Call sites do not change. See [host / peer](../explanation/host-peer-plan.md).
 | `IPAddressValidator` | given string | v4 or v6 |
 | `EnumValidator` | `enum.Enum` | closed sets you already modelled as Enum |
 | `IntegerEnumValidator` | `enum.IntEnum` | |
-| `StringEnumValidator` | str Enum member | |
+| `StringEnumValidator` | str Enum member | optional native UTF-8 member set when the annotation is a concrete str-valued `Enum` |
 
 Money: use `DecimalValidator`, not `FloatValidator`.
 `DecimalValidator(min_value=Decimal("0.01"))` on a checkout `amount`.

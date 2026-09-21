@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- Native StringEnum member set: closed ``ux-valio[native]`` plans now
+  cover ``StringEnumValidator`` when the field annotation is a concrete
+  str-valued ``enum.Enum`` and the only active unit is the type door.
+  Member values are UTF-8 ``&str`` (``compile_string_enum`` /
+  ``apply_string_enum``, kept as a pair). Door A matches host: in-set
+  members store the member; another enum (including a colliding string)
+  and non-members (``str`` / ``bytes`` / ``int`` / ``bool`` / ``IntEnum``)
+  raise the host type-door ``TypeError``. ``FailKind.NotMember`` uses
+  that same wording via ``match fail:``. ``OverflowError`` /
+  ``UnicodeError`` at ``&str`` extract falls through to host
+  ``TypeValidator``. A member that is not exact ``str`` or not UTF-8
+  (lone surrogate, ``str`` subclass) keeps the whole field on the host.
+  Bare ``enum.Enum`` / ``enum.StrEnum``, extra bounds, plain
+  ``EnumValidator``, ``BooleanValidator``, ``IntegerEnumValidator``, and
+  open ``Validator`` stay on the host. No ``members`` kwarg on the
+  facade. Integer / Float / String / Bytes / IntegerEnum plans are
+  unchanged. Cap Door B stays off. Measure
+  ``python benches/measure_host_peer.py``; do not claim 70× product
+  setattr. Next HOLD: Boolean only if a later measure is ≥3× alone.
+  Decimal / Date* / UUID / Path / plain EnumValidator / Pattern / named
+  facades stay HOLD.
+
 - Native IntegerEnum member set: closed ``ux-valio[native]`` plans now
   cover ``IntegerEnumValidator`` when the field annotation is a concrete
   ``enum.IntEnum`` and the only active unit is the type door. Member

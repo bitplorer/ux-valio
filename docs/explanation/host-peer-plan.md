@@ -62,7 +62,9 @@ and ``String`` plus specified length units — ``MinLength`` /
 ``MaxLength`` / ``Length``, including min+max range — and ``Bytes``
 plus the same length units (byte count, not codepoints) — and
 ``IntegerEnum`` plus ``Member`` ``i64`` values taken from the concrete
-``enum.IntEnum`` on the field.
+``enum.IntEnum`` on the field — and ``StringEnum`` plus the UTF-8
+``.value`` strings taken from the concrete str-valued ``enum.Enum``
+on the field.
 ``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
 ``eq=7``, and ``min_value=0, max_value=10`` compile when the
 annotation is ``int`` and only those bound units are active.
@@ -78,7 +80,11 @@ units are active.
 ``IntegerEnumValidator()`` compiles when the owner annotation is a
 concrete ``enum.IntEnum`` (not bare ``enum.IntEnum``) and the only
 active unit is the type door. ``compile_integer_enum(members)`` /
-``apply_integer_enum(plan, i64)`` stay a pair. Unclosed
+``apply_integer_enum(plan, i64)`` stay a pair.
+``StringEnumValidator()`` compiles when the owner annotation is a
+concrete str-valued ``enum.Enum`` (not bare ``enum.Enum``) and the
+only active unit is the type door. ``compile_string_enum(members)`` /
+``apply_string_enum(plan, &str)`` stay a pair. Unclosed
 paths (``required``, ``multiple_of``, pattern, choice, named
 identity, Email, a mixed bound type, Union / TypedDict /
 Annotated) stay on the host. Email / named identity were already
@@ -103,6 +109,11 @@ Closed IntegerEnum **type door** is host ``isinstance`` of the concrete
 ``enum.IntEnum``, then the FFI ``i64`` extract (``apply_integer_enum``).
 ``Member`` units run after extract. Membership is exact ``i64``
 equality with ``member.value``.
+
+Closed StringEnum **type door** is host ``isinstance`` of the concrete
+str-valued ``enum.Enum``, then the FFI ``&str`` extract of
+``member.value`` (``apply_string_enum``). Membership is exact UTF-8
+equality (no casefold, no NFC).
 
 **Float NaN / ±inf (Door A lock).** Host ``ValueValidator`` uses Python
 IEEE compares. Native must match; do not invent a second policy
@@ -156,10 +167,32 @@ checks the concrete annotation, then ``isinstance(value, enum.IntEnum)``:
   ``i64`` does not compile; the field stays on the host.
 - Bare ``enum.IntEnum``, extra bounds (``min_value``, ``required``,
   choice, ``reassign=False``), plain ``EnumValidator``,
-  ``StringEnumValidator``, ``BooleanValidator``, and open ``Validator``
-  stay on the host.
+  ``BooleanValidator``, and open ``Validator``
+  stay on the host. ``StringEnumValidator`` is its own closed plan.
 
-HOLD this tip: StringEnum. Boolean (only if later measure ≥3× alone),
+**StringEnum member set (Door A lock).** Host ``StringEnumValidator``
+checks the concrete annotation, then the named extra (an ``enum.Enum``
+whose ``.value`` is ``str``):
+
+- Type: only members of that enum. A plain ``str`` misses even when it
+  equals a member value. ``bytes`` / ``int`` / ``bool`` / another enum
+  miss, including a colliding string and an ``IntEnum``. ``None`` skips.
+- In-set members store that member object (aliases are the same object).
+  An empty-string value is kept (the member is stored; falsy ``""`` is
+  not ``None``).
+- ``FailKind.NotMember`` uses the type-door ``TypeError`` wording
+  (``expect {annotation} type, got {type} type instead``), via
+  ``match fail:``.
+- Extract ``OverflowError`` / ``UnicodeError`` is a **bridge** (fall
+  through to host ``TypeValidator``), not an L1 "overflow" message. A
+  member that is not an exact ``str``, or that cannot encode as UTF-8
+  (lone surrogate), does not compile; the field stays on the host.
+- Bare ``enum.Enum`` / ``enum.StrEnum``, extra bounds, plain
+  ``EnumValidator``, ``BooleanValidator``, ``IntegerEnumValidator`` on
+  a non-``IntEnum``, and open ``Validator`` stay on the host. There is
+  no ``members`` kwarg on the facade. Cap Door B stays off.
+
+HOLD this tip: Boolean (only if later measure ≥3× alone),
 Decimal (scale/coerce unlocked), Date/DateTime, UUID/Path/IP/plain
 EnumValidator, Pattern / custom callables, named facades, Cap Door B.
 
@@ -180,14 +213,15 @@ EnumValidator, Pattern / custom callables, named facades, Cap Door B.
    apply. ``pip install ux-valio[native]`` installs the ``ux-valio-native``
    wheel (module ``ux_valio_native`` — not a taught import).
 2. Same field default. Same ``annotation``. Same fail-closed errors.
-   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator``.
+   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator``.
 3. Compile at bind, not at set. Missing peer → host apply (no import
    error on the hot path after a failed extra install: bind-time
    choice).
 4. One FFI call per set for the specified scalar plan. Not eight.
 5. ``self`` is a ``PyObject*`` handle. Do not migrate the instance into
    a Rust struct. Extract scalars (``i64`` / ``f64`` / ``&str`` / ``&[u8]``;
-   IntegerEnum is ``i64``), apply, box back.
+   IntegerEnum is ``i64``; StringEnum is the member ``.value`` as
+   ``&str``), apply, box back.
 6. Do not re-implement the library in Rust.
 7. Do not quote the switch-test ratio as end-to-end product setattr.
    The measure compared full host setattr against **plan apply only**.
@@ -207,8 +241,12 @@ EnumValidator, Pattern / custom callables, named facades, Cap Door B.
    message). PyO3 ``i64`` extract is the IntegerEnum door
    (``apply_integer_enum``). ``OverflowError`` at that extract is the
    same bridge (fall through to host ``TypeValidator``; no L1
-   "overflow" message). ``FailKind.NotMember`` is the validation bucket
-   (host type-door wording). Unexpected
+   "overflow" message). PyO3 ``&str`` extract is the StringEnum door
+   (``apply_string_enum``, the member's ``.value``). ``OverflowError`` /
+   ``UnicodeError`` at that extract is the same bridge (fall through to
+   host ``TypeValidator``; no L1 "overflow" message).
+   ``FailKind.NotMember`` is the validation bucket
+   (host type-door wording, ``match fail:``). Unexpected
    peer/infra is ``RuntimeError`` naming ``ux_valio_native``. Three
    buckets: validation (``FailKind``) / bridge (extract overflow) /
    peer-infra.
@@ -234,6 +272,7 @@ Build the product peer only if, on the same box, host apply of a
 specified ``IntegerValidator(min_value=0)`` / ``FloatValidator(min_value=0.0)``
 / ``StringValidator(min_length=1)`` / ``BytesValidator(min_length=1)``
 / ``IntegerEnumValidator()`` on a concrete ``IntEnum``
+/ ``StringEnumValidator()`` on a concrete str-valued ``Enum``
 setattr stays several times slower than a one-shot native apply of that
 same plan, and the Python compile (``_active_units``, skip TypedDict,
 skip watch) is already in.
@@ -248,16 +287,18 @@ The harness lives in-tree. It installs/uses ``ux-valio`` from the repo
 root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with a
 closed ``IntegerValidator`` or ``FloatValidator`` bound plan, a closed
 ``StringValidator`` / ``BytesValidator`` length plan, or a closed
-``IntegerEnumValidator`` member-set plan. Hot path B is ``compile(...)``
+``IntegerEnumValidator`` member-set plan, or a closed
+``StringEnumValidator`` UTF-8 member-set plan. Hot path B is ``compile(...)``
 / ``compile_float(...)`` / ``compile_string(...)`` / ``compile_bytes(...)``
-/ ``compile_integer_enum(...)``
+/ ``compile_integer_enum(...)`` / ``compile_string_enum(...)``
 once then ``apply`` /
 ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
-``apply_integer_enum`` on the
+``apply_integer_enum`` / ``apply_string_enum`` on the
 product peer (``native/``: owned unit list of ``Integer`` or ``Float``
 plus ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
 ``Equal``, or ``String`` / ``Bytes`` plus ``MinLength`` / ``MaxLength`` /
-``Length``, or ``IntegerEnum`` plus ``Member``). B is **not** product setattr (no store, no
+``Length``, or ``IntegerEnum`` plus ``Member``, or ``StringEnum`` plus
+the UTF-8 value set). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
 family; the bar is **≥ 3×** for each. A family below the bar is
 KEEP host for that family (do not claim native).
@@ -413,5 +454,28 @@ product setattr claim. Integer / Float / String / Bytes families on
 the same run stayed ~24–26× (still PASS).
 
 HOLD after this tip: StringEnum. Boolean only if a later measure is
+≥3× alone. Decimal, Date/DateTime, UUID/Path, Pattern, plain
+EnumValidator, named facades, Cap Door B stay off this path.
+
+### Measured (2026-09-21) StringEnum member set
+
+Same class of box, one run, 400000 iters after 20000 warmup, CPython 3.14.7,
+rustc 1.83.0, Linux x86_64. Peer is a release cdylib. Host units were
+``_validate_type`` only. Path A clears the native plan after bind so
+setattr is pure Python. B is ``apply_string_enum(plan, &str)`` only
+(``Python::detach``). Members are the concrete enum values ``m0``..``m7``.
+Bar 3×.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| Member(m0..m7) | 3421 | 108.1 | **31.7×** |
+
+**Verdict: PASS.** The StringEnum UTF-8 member set cleared the 3× bar
+(31.7×). Native apply here is ~108 ns/op (GIL released; the query is
+one owned ``String``), not a 70× product setattr claim. Integer /
+Float / String / Bytes families on the same run stayed ~24–25× and
+IntegerEnum stayed ~35× (still PASS).
+
+HOLD after this tip: Boolean only if a later measure is
 ≥3× alone. Decimal, Date/DateTime, UUID/Path, Pattern, plain
 EnumValidator, named facades, Cap Door B stay off this path.

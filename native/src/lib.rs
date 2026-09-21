@@ -1,21 +1,27 @@
 //! Optional apply peer for `ux-valio[native]`.
 //!
 //! Closed Integer and Float bound plans, closed String and Bytes length
-//! plans, and a closed IntegerEnum member-set plan. Type door is the FFI
-//! extract (`apply(plan, i64)` / `apply_float(plan, f64)` /
+//! plans, a closed IntegerEnum member-set plan, and a closed StringEnum
+//! UTF-8 member-set plan. Type door is the FFI extract
+//! (`apply(plan, i64)` / `apply_float(plan, f64)` /
 //! `apply_string(plan, &str)` / `apply_bytes(plan, &[u8])` /
-//! `apply_integer_enum(plan, i64)`). Bound units (`MinValue` /
-//! `MaxValue` / `GreaterThan` / `LessThan` / `Equal`) run after numeric
-//! extract. Length units (`MinLength` / `MaxLength` / `Length`) are
-//! shared: String count is Unicode scalar values (`chars().count()`),
-//! matching host `len(str)`; Bytes count is `len()` of the extracted
-//! `&[u8]`, matching host `len(bytes)` — not Unicode scalar values.
-//! IntegerEnum units are `Member(i64)` values from the concrete
-//! `enum.IntEnum`; membership is exact `i64` equality.
-//! Host maps `FailKind` to KEEP wording. Open / generic type checks
-//! stay on the host — this crate does not reflect Python typing. Host
-//! compiles once at bind; each set is one FFI apply. Soul stays on the
-//! host (descriptor, hooks, store). Not Cap Door B.
+//! `apply_integer_enum(plan, i64)` / `apply_string_enum(plan, &str)`).
+//! Bound units (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` /
+//! `Equal`) run after numeric extract. Length units (`MinLength` /
+//! `MaxLength` / `Length`) are shared: String count is Unicode scalar
+//! values (`chars().count()`), matching host `len(str)`; Bytes count is
+//! `len()` of the extracted `&[u8]`, matching host `len(bytes)` — not
+//! Unicode scalar values. IntegerEnum units are `Member(i64)` values
+//! from the concrete `enum.IntEnum`; membership is exact `i64`
+//! equality. StringEnum values are UTF-8 strings from the concrete
+//! str-valued `enum.Enum`; membership is exact `&str` equality (no
+//! casefold, no NFC). Host maps `FailKind` to KEEP wording. Open /
+//! generic type checks stay on the host — this crate does not reflect
+//! Python typing. Host compiles once at bind; each set is one FFI
+//! apply. Soul stays on the host (descriptor, hooks, store). Not Cap
+//! Door B.
+
+use std::sync::Arc;
 
 use pyo3::prelude::*;
 
@@ -79,15 +85,24 @@ enum Unit {
     /// One `i64` member value of the concrete `enum.IntEnum`.
     /// Membership is exact equality with the extracted `i64`.
     Member(i64),
+    /// Plan-shape marker. Type extract is the FFI `&str` argument: the
+    /// member's `.value`, not the enum object. Host `isinstance` gates
+    /// first against the concrete str-valued `enum.Enum`. `None` /
+    /// `collect_all` type miss stay host. Not an open type check and
+    /// not a String length plan. The UTF-8 set lives on `Plan`, not in
+    /// this `Copy` unit.
+    StringEnum,
 }
 
 /// Compiled plan. Built once; applied many times.
 ///
 /// Owned `Vec` so a single-bound plan and a min+max range share one
-/// type — not a fixed two-slot array.
+/// type — not a fixed two-slot array. `string_members` is empty except
+/// on a StringEnum plan; other apply paths do not clone it.
 #[pyclass(frozen)]
 struct Plan {
     units: Vec<Unit>,
+    string_members: Arc<Vec<String>>,
 }
 
 /// Small error kind. Host formats KEEP messages via the FailKind map.
@@ -116,8 +131,9 @@ enum FailKind {
     /// Host exact `length`: count was not the compiled length.
     /// String: codepoints. Bytes: `len(bytes)`.
     Length = 8,
-    /// Host IntegerEnum type door: extracted `i64` was not a compiled
-    /// member value. Host formats the KEEP type-door `TypeError`.
+    /// Host IntegerEnum / StringEnum type door: extracted scalar was not
+    /// a compiled member value. Host formats the KEEP type-door
+    /// `TypeError`.
     NotMember = 9,
 }
 
@@ -161,8 +177,9 @@ fn apply_units(units: &[Unit], value: Bound) -> Result<(), FailKind> {
             // Length units belong on apply_string / apply_bytes; numeric apply
             // no-ops them (host never mixes doors).
             Unit::MinLength(_) | Unit::MaxLength(_) | Unit::Length(_) => None,
-            // IntegerEnum units belong on apply_integer_enum.
-            Unit::IntegerEnum | Unit::Member(_) => None,
+            // Enum member-set units belong on apply_integer_enum /
+            // apply_string_enum.
+            Unit::IntegerEnum | Unit::Member(_) | Unit::StringEnum => None,
         };
         if let Some(kind) = fail {
             return Err(kind);
@@ -194,7 +211,10 @@ fn compile_plan<T>(
     push_bound(&mut units, max_value, |v| Unit::MaxValue(wrap(v)));
     push_bound(&mut units, lt, |v| Unit::LessThan(wrap(v)));
     push_bound(&mut units, eq, |v| Unit::Equal(wrap(v)));
-    Plan { units }
+    Plan {
+        units,
+        string_members: Arc::new(Vec::new()),
+    }
 }
 
 fn apply_length_units(units: &[Unit], counted: usize) -> Result<(), FailKind> {
@@ -234,7 +254,25 @@ fn compile_integer_enum_plan(members: Vec<i64>) -> Plan {
     for member in members {
         units.push(Unit::Member(member));
     }
-    Plan { units }
+    Plan {
+        units,
+        string_members: Arc::new(Vec::new()),
+    }
+}
+
+fn compile_string_enum_plan(members: Vec<String>) -> Plan {
+    Plan {
+        units: vec![Unit::StringEnum],
+        string_members: Arc::new(members),
+    }
+}
+
+fn apply_string_members(members: &[String], value: &str) -> Result<(), FailKind> {
+    if members.iter().any(|member| member == value) {
+        Ok(())
+    } else {
+        Err(FailKind::NotMember)
+    }
 }
 
 fn compile_length_plan(
@@ -249,19 +287,23 @@ fn compile_length_plan(
     push_bound(&mut units, min_length, Unit::MinLength);
     push_bound(&mut units, max_length, Unit::MaxLength);
     push_bound(&mut units, length, Unit::Length);
-    Plan { units }
+    Plan {
+        units,
+        string_members: Arc::new(Vec::new()),
+    }
 }
 
 /// Product peer: `compile(...)` / `compile_float(...)` /
 /// `compile_string(...)` / `compile_bytes(...)` /
-/// `compile_integer_enum(...)` + one-shot apply.
+/// `compile_integer_enum(...)` / `compile_string_enum(...)` + one-shot
+/// apply.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`,
-/// `Float`, `String`, `Bytes`, or `IntegerEnum`; extract is the FFI
-/// argument. Compile kwargs are host names (`min_value` / `gt` /
-/// `max_length` / `length`) or `members` for the IntegerEnum set,
-/// mapped onto the full-word units. Not a taught L1 API. Compile and
-/// apply stay separate doors.
+/// `Float`, `String`, `Bytes`, `IntegerEnum`, or `StringEnum`; extract
+/// is the FFI argument. Compile kwargs are host names (`min_value` /
+/// `gt` / `max_length` / `length`) or `members` for an enum set, mapped
+/// onto the full-word units. Not a taught L1 API. Compile and apply
+/// stay separate doors.
 #[pymodule]
 mod ux_valio_native {
     use super::*;
@@ -423,5 +465,33 @@ mod ux_valio_native {
     fn apply_integer_enum(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
         let units = plan.units.clone();
         py.detach(move || apply_member_units(&units, value).err())
+    }
+
+    /// Closed StringEnum member-set plan. `members` are the concrete
+    /// str-valued enum `.value` strings (host order, UTF-8). An empty
+    /// list is an empty set: every apply is `NotMember`. Host does not
+    /// compile an empty set or a value that is not UTF-8. Not a taught
+    /// L1 kwarg. Not a String length plan.
+    #[pyfunction]
+    fn compile_string_enum(members: Vec<String>) -> Plan {
+        compile_string_enum_plan(members)
+    }
+
+    /// One-shot StringEnum apply. Success is `None`; a value outside
+    /// the compiled member set is `FailKind::NotMember`.
+    ///
+    /// Closed StringEnum type door is this `&str` extract (the member's
+    /// `.value`). A Python `str` that is not UTF-8 raises
+    /// `UnicodeEncodeError` at this FFI boundary; host falls through to
+    /// the host type door. Membership is exact UTF-8 equality with the
+    /// compiled strings (no casefold, no NFC). Releases the GIL
+    /// (`Python::detach`) for the walk. The member set is an `Arc`
+    /// clone; the query is one owned `String` so the walk does not
+    /// borrow Python.
+    #[pyfunction]
+    fn apply_string_enum(py: Python<'_>, plan: PyRef<'_, Plan>, value: &str) -> Option<FailKind> {
+        let members = Arc::clone(&plan.string_members);
+        let owned = value.to_owned();
+        py.detach(move || apply_string_members(&members, &owned).err())
     }
 }
