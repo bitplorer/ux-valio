@@ -1,22 +1,24 @@
 # SPDX-License-Identifier: MIT
-"""Measure host setattr vs one-shot native apply of Integer/Float/String plans.
+"""Measure host setattr vs one-shot native apply of Integer/Float/String/Bytes plans.
 
 Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
 ``IntegerValidator`` / ``FloatValidator`` bound plan or closed
-``StringValidator`` length plan (taught API, soul stays Python).
+``StringValidator`` / ``BytesValidator`` length plan (taught API, soul
+stays Python).
 
 Hot path B: ``compile(...)`` / ``compile_float(...)`` /
-``compile_string(...)`` once, then ``apply`` / ``apply_float`` /
-``apply_string`` on the ``ux_valio_native`` peer. That is
+``compile_string(...)`` / ``compile_bytes(...)`` once, then ``apply`` /
+``apply_float`` / ``apply_string`` / ``apply_bytes`` on the
+``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
 store/raise. Not Cap Door B.
 
 Families: MinValue, MaxValue, GreaterThan, LessThan, Equal, min+max
-range — once for Integer, once for Float — plus String MinLength /
-MaxLength / Length / min+max range. Switch bar:
+range — once for Integer, once for Float — plus String and Bytes
+MinLength / MaxLength / Length / min+max range. Switch bar:
 FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
 below the bar is not claimed native (KEEP host for that family).
-Bytes length is HOLD (next tip).
+Next HOLD: IntegerEnum, then StringEnum.
 
 Usage::
 
@@ -48,6 +50,8 @@ PASSING_1_8_F = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)
 PASSING_EQ_F = (7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0)
 PASSING_A_H = ("a", "b", "c", "d", "e", "f", "g", "h")
 PASSING_LEN3 = ("abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc")
+PASSING_A_H_B = (b"a", b"b", b"c", b"d", b"e", b"f", b"g", b"h")
+PASSING_LEN3_B = (b"abc", b"abc", b"abc", b"abc", b"abc", b"abc", b"abc", b"abc")
 
 
 @dataclass(frozen=True)
@@ -93,6 +97,16 @@ def _string_family(**kwargs: Any) -> PlanFamily:
         compile_attr="compile_string",
         apply_attr="apply_string",
         annotation=str,
+        **kwargs,
+    )
+
+
+def _bytes_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="BytesValidator",
+        compile_attr="compile_bytes",
+        apply_attr="apply_bytes",
+        annotation=bytes,
         **kwargs,
     )
 
@@ -282,7 +296,54 @@ STRING_FAMILIES = (
     ),
 )
 
-FAMILIES = INTEGER_FAMILIES + FLOAT_FAMILIES + STRING_FAMILIES
+BYTES_FAMILIES = (
+    _bytes_family(
+        name="Bytes.MinLength",
+        field_kwargs={"min_length": 1},
+        compile_kwargs={"min_length": 1},
+        values=PASSING_A_H_B,
+        seed=b"a",
+        smoke_ok=b"a",
+        smoke_miss=b"",
+        smoke_kind="MinLength",
+        label="Bytes + MinLength(1)",
+    ),
+    _bytes_family(
+        name="Bytes.MaxLength",
+        field_kwargs={"max_length": 10},
+        compile_kwargs={"max_length": 10},
+        values=PASSING_A_H_B,
+        seed=b"a",
+        smoke_ok=b"a",
+        smoke_miss=b"abcdefghijk",
+        smoke_kind="MaxLength",
+        label="Bytes + MaxLength(10)",
+    ),
+    _bytes_family(
+        name="Bytes.Length",
+        field_kwargs={"length": 3},
+        compile_kwargs={"length": 3},
+        values=PASSING_LEN3_B,
+        seed=b"abc",
+        smoke_ok=b"abc",
+        smoke_miss=b"ab",
+        smoke_kind="Length",
+        label="Bytes + Length(3)",
+    ),
+    _bytes_family(
+        name="Bytes.Range",
+        field_kwargs={"min_length": 1, "max_length": 10},
+        compile_kwargs={"min_length": 1, "max_length": 10},
+        values=PASSING_A_H_B,
+        seed=b"a",
+        smoke_ok=b"a",
+        smoke_miss=b"",
+        smoke_kind="MinLength",
+        label="Bytes + MinLength(1) + MaxLength(10)",
+    ),
+)
+
+FAMILIES = INTEGER_FAMILIES + FLOAT_FAMILIES + STRING_FAMILIES + BYTES_FAMILIES
 
 
 def _ensure_tree_on_path() -> None:
@@ -365,7 +426,7 @@ def _build_peer() -> tuple[Any | None, str | None]:
 def _load_facades() -> dict[str, Any]:
     _ensure_tree_on_path()
     try:
-        from ux_valio import FloatValidator, IntegerValidator, StringValidator
+        from ux_valio import BytesValidator, FloatValidator, IntegerValidator, StringValidator
     except ImportError as err:
         raise SystemExit(
             "FAIL: ux-valio is not importable from the tree. "
@@ -375,6 +436,7 @@ def _load_facades() -> dict[str, Any]:
         "IntegerValidator": IntegerValidator,
         "FloatValidator": FloatValidator,
         "StringValidator": StringValidator,
+        "BytesValidator": BytesValidator,
     }
 
 
@@ -388,6 +450,13 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
     field = facade(**family.field_kwargs)
     _clear_native(field)
     seed = family.seed
+    if family.annotation is bytes:
+
+        @dataclass
+        class BytesBox:
+            n: bytes = field
+
+        return BytesBox(n=seed)
     if family.annotation is str:
 
         @dataclass
@@ -488,7 +557,8 @@ def _report_header(skip_reason: str | None) -> None:
     print(
         "plan:     Integer i64 + Float f64 bound units "
         "(MinValue/MaxValue/GreaterThan/LessThan/Equal/range); "
-        "String length units (MinLength/MaxLength/Length/range)"
+        "String length units (MinLength/MaxLength/Length/range, codepoints); "
+        "Bytes length units (MinLength/MaxLength/Length/range, byte count)"
     )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
@@ -552,6 +622,7 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
     integer = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "IntegerValidator"]
     floating = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "FloatValidator"]
     string = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "StringValidator"]
+    blob = [(family, unlocked, ratio) for family, unlocked, ratio in results if family.facade == "BytesValidator"]
     failed = [family.name for family, unlocked, _ratio in results if not unlocked]
     int_passed = [family.name for family, unlocked, _ratio in integer if unlocked]
     int_new = [name for name in int_passed if name != "Integer.MinValue"]
@@ -559,6 +630,8 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
     float_passed = [family.name for family, unlocked, _ratio in floating if unlocked]
     string_failed = [family.name for family, unlocked, _ratio in string if not unlocked]
     string_passed = [family.name for family, unlocked, _ratio in string if unlocked]
+    bytes_failed = [family.name for family, unlocked, _ratio in blob if not unlocked]
+    bytes_passed = [family.name for family, unlocked, _ratio in blob if unlocked]
     if any(not unlocked for _family, unlocked, _ratio in integer):
         print(
             f"SUMMARY: FAIL (KEEP Python) Integer families below {SWITCH_BAR:.1f}×: "
@@ -587,7 +660,7 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
         print(
             f"SUMMARY: String KEEP host (below {SWITCH_BAR:.1f}×): "
             + ", ".join(string_failed)
-            + ". Do not claim native for those families. Bytes length is next. "
+            + ". Do not claim native for those families. "
             + (
                 f"String native unlocked: {', '.join(string_passed)}"
                 if string_passed
@@ -595,8 +668,20 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
             )
         )
         return 1
+    if bytes_failed:
+        print(
+            f"SUMMARY: Bytes KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(bytes_failed)
+            + ". Do not claim native for those families. IntegerEnum is next. "
+            + (
+                f"Bytes native unlocked: {', '.join(bytes_passed)}"
+                if bytes_passed
+                else "No Bytes family met the bar."
+            )
+        )
+        return 1
     print(
-        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed)} each >= "
+        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed)} each >= "
         f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr)"
     )
     return 0
@@ -605,8 +690,8 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Measure IntegerValidator/FloatValidator/StringValidator setattr "
-            "vs native bound/length-plan apply."
+            "Measure IntegerValidator/FloatValidator/StringValidator/"
+            "BytesValidator setattr vs native bound/length-plan apply."
         )
     )
     parser.add_argument(

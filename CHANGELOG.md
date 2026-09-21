@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Native Bytes length units: closed ``ux-valio[native]`` plans now
+  cover ``BytesValidator`` ``MinLength`` / ``MaxLength`` / ``Length``
+  (usize) and min+max range. Type door is FFI ``&[u8]`` extract
+  (``apply_bytes``). Door A length is host ``len(bytes)`` (byte count),
+  not Unicode codepoints and not graphemes. Empty ``b""`` and high-byte
+  edges match host. ``OverflowError`` / extract TypeError falls through
+  to host ``LengthValidator`` (bridge, not an L1 "overflow" message).
+  Annotation must be ``bytes`` and only those length units active;
+  pattern / custom / String stay on the host. Integer i64, Float f64,
+  and String codepoint length paths are unchanged. Measure each Bytes
+  family (``python benches/measure_host_peer.py``); do not claim 70×
+  product setattr. Next HOLD: IntegerEnum, then StringEnum. Boolean
+  only if later measure ≥3×. Decimal / Date* / UUID / Path / plain
+  EnumValidator / Pattern / named facades / Cap Door B stay HOLD.
+
 - Native String length units: closed ``ux-valio[native]`` plans now
   cover ``StringValidator`` ``MinLength`` / ``MaxLength`` / ``Length``
   (usize) and min+max range. Type door is FFI ``&str`` extract

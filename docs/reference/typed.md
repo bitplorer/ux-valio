@@ -16,7 +16,7 @@ assignment** (a `date`, not the string you typed).
 
 `IntegerValidator(min_value=0)` is the taught field default. Optional
 `ux-valio[native]` may compile closed Integer or Float bound plans (min/max/gt/lt/eq)
-and closed String length plans (min/max/exact)
+and closed String / Bytes length plans (min/max/exact)
 once and apply in one FFI; without the extra the same units run in Python.
 Call sites do not change. See [host / peer](../explanation/host-peer-plan.md).
 | `StringValidator` | `str` | names, slugs (without a named identity) |

@@ -145,7 +145,8 @@ type, RGB/HSL, star-import barrel, `AttributeValidator`, list/dict/set/tuple
 collection facades, `enable_async`, `cache_task`, `add_pre_set`. List
 membership is `list[T]` on the type door. Object attributes: check at the
 call site or hang `validator`. Optional `ux-valio[native]` is not a second
-door: L1 stays `IntegerValidator` / `FloatValidator` / `StringValidator`; the extra is compile-once + one FFI
+door: L1 stays `IntegerValidator` / `FloatValidator` / `StringValidator` /
+`BytesValidator`; the extra is compile-once + one FFI
 apply for closed Integer and Float bound units (min/max/gt/lt/eq) and
-closed String length units (min/max/exact). Bytes length, pattern,
-and named identity stay on the host. Next: Bytes length.
+closed String / Bytes length units (min/max/exact). Pattern
+and named identity stay on the host. Next: IntegerEnum.
