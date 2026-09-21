@@ -267,6 +267,7 @@ New private helpers are verbs that name the action:
 `read_bound`, `ValidateStep`,
 `bind_native_plan`, `apply_native_integer_min_value`,
 `_load_native_peer`, `_closed_integer_min_value`,
+`_clear_native`, `_apply_host_value_after_i64_overflow`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,

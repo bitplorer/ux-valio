@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Native tip polish after the ``[native]`` extra: PyO3 ``i64`` extract is
+  the range oracle (no host ``bit_length`` / ``_I64_BITS`` gate).
+  ``OverflowError`` at extract falls through to host ``ValueValidator``
+  (``2**70`` + ``min_value=0`` still PASSes). That is a bridge signal,
+  not a public overflow miss. Unexpected peer/infra raises
+  ``RuntimeError`` naming ``ux_valio_native``. Dead
+  ``FailKind.NotInteger`` dropped; type misses stay on the host
+  ``isinstance`` gate.
+
 - Optional ``ux-valio[native]`` extra: sibling maturin wheel
   (``native/``, module ``ux_valio_native``) compiles
   ``IntegerValidator(min_value=…)`` once to ``Integer`` +

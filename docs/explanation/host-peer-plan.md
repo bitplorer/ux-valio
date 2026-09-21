@@ -88,6 +88,12 @@ competitive in Python — do not start there.
 6. Do not re-implement the library in Rust.
 7. Do not quote the switch-test ratio as end-to-end product setattr.
    The measure compared full host setattr against **plan apply only**.
+8. PyO3 ``i64`` extract is the range oracle. A Python int outside i64
+   raises ``OverflowError`` at the FFI boundary; the host then runs
+   ``ValueValidator`` (Door A KEEP wording). Overflow is a bridge
+   signal, not a public validation miss and not a ``bit_length``
+   pre-check. Unexpected peer/infra is ``RuntimeError`` naming
+   ``ux_valio_native``.
 
 From a checkout (needs ``rustc`` / ``cargo``)::
 
