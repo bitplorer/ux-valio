@@ -196,54 +196,56 @@ def _apply_host_length_after_bytes_extract(owner: Any, value: Any) -> None:
 def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
     """Map peer ``FailKind`` to Door A KEEP wording. Unexpected kind is infra."""
     kinds = owner._native_fail
-    if fail == kinds.MinValue:
-        min_value = owner.min_value
-        raise ValueError(
-            f"{owner.name} expect the minimum value of {min_value}, "
-            f"got {value} instead"
-        )
-    if fail == kinds.MaxValue:
-        max_value = owner.max_value
-        raise ValueError(
-            f"{owner.name} expect the maximum value of {max_value}, "
-            f"got {value} instead"
-        )
-    if fail == kinds.GreaterThan:
-        gt = owner.gt
-        raise ValueError(
-            f"{owner.name} expect a value greater than {gt}, got {value} instead"
-        )
-    if fail == kinds.LessThan:
-        lt = owner.lt
-        raise ValueError(
-            f"{owner.name} expect a value less than {lt}, got {value} instead"
-        )
-    if fail == kinds.Equal:
-        of_value = owner.value
-        raise ValueError(
-            f"{owner.name} expect the value {of_value}, got {value} as value instead"
-        )
-    if fail == kinds.MinLength:
-        min_length = owner.min_length
-        raise ValueError(
-            f"{owner.name} expect the value of minimum length {min_length}, "
-            f"got length {len(value)} value instead"
-        )
-    if fail == kinds.MaxLength:
-        max_length = owner.max_length
-        raise ValueError(
-            f"{owner.name} expect the value of maximum length {max_length}, "
-            f"got length {len(value)} value instead"
-        )
-    if fail == kinds.Length:
-        length = owner.length
-        raise ValueError(
-            f"{owner.name} expect the value of length {length}, "
-            f"got length {len(value)} value instead"
-        )
-    raise RuntimeError(
-        f"ux_valio_native apply returned unexpected fail kind {fail!r}"
-    )
+    match fail:
+        case kinds.MinValue:
+            min_value = owner.min_value
+            raise ValueError(
+                f"{owner.name} expect the minimum value of {min_value}, "
+                f"got {value} instead"
+            )
+        case kinds.MaxValue:
+            max_value = owner.max_value
+            raise ValueError(
+                f"{owner.name} expect the maximum value of {max_value}, "
+                f"got {value} instead"
+            )
+        case kinds.GreaterThan:
+            gt = owner.gt
+            raise ValueError(
+                f"{owner.name} expect a value greater than {gt}, got {value} instead"
+            )
+        case kinds.LessThan:
+            lt = owner.lt
+            raise ValueError(
+                f"{owner.name} expect a value less than {lt}, got {value} instead"
+            )
+        case kinds.Equal:
+            of_value = owner.value
+            raise ValueError(
+                f"{owner.name} expect the value {of_value}, got {value} as value instead"
+            )
+        case kinds.MinLength:
+            min_length = owner.min_length
+            raise ValueError(
+                f"{owner.name} expect the value of minimum length {min_length}, "
+                f"got length {len(value)} value instead"
+            )
+        case kinds.MaxLength:
+            max_length = owner.max_length
+            raise ValueError(
+                f"{owner.name} expect the value of maximum length {max_length}, "
+                f"got length {len(value)} value instead"
+            )
+        case kinds.Length:
+            length = owner.length
+            raise ValueError(
+                f"{owner.name} expect the value of length {length}, "
+                f"got length {len(value)} value instead"
+            )
+        case _:
+            raise RuntimeError(
+                f"ux_valio_native apply returned unexpected fail kind {fail!r}"
+            )
 
 
 def _raise_host_integer_type_miss(owner: Any, value: Any) -> None:

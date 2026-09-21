@@ -222,6 +222,8 @@ def test_native_unit_names_are_full_words():
     assert not re.search(r"\bMinLen\b", rust)
     assert not re.search(r"\bMaxLen\b", rust)
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
+    assert re.search(r"\bmatch fail:", native_py)
+    assert not re.search(r"if fail == kinds\.", native_py)
     assert re.search(r"\bkinds\.GreaterThan\b", native_py)
     assert re.search(r"\bkinds\.LessThan\b", native_py)
     assert re.search(r"\bkinds\.Equal\b", native_py)
