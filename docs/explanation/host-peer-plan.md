@@ -18,7 +18,7 @@ to call, *which* plan, and *how* to raise.
 ```text
 bind / __init__     host compiles specified theory → plan
 set                 host hands (plan, value) once
-                    peer applies  (i64 / f64 / &str / &[u8] extract; bound, length, or member units)
+                    peer applies  (i64 / f64 / &str / &[u8] / bool extract; bound, length, or member units)
                     host stores on instance.__dict__
                     host runs hooks, named extras, debug-swallow
 ```
@@ -64,7 +64,8 @@ plus the same length units (byte count, not codepoints) — and
 ``IntegerEnum`` plus ``Member`` ``i64`` values taken from the concrete
 ``enum.IntEnum`` on the field — and ``StringEnum`` plus the UTF-8
 ``.value`` strings taken from the concrete str-valued ``enum.Enum``
-on the field.
+on the field — and ``Boolean`` as the exact ``bool`` type door
+(no bound unit).
 ``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
 ``eq=7``, and ``min_value=0, max_value=10`` compile when the
 annotation is ``int`` and only those bound units are active.
@@ -85,7 +86,11 @@ active unit is the type door. ``compile_integer_enum(members)`` /
 ``StringEnumValidator()`` compiles when the owner annotation is a
 concrete str-valued ``enum.Enum`` (not bare ``enum.Enum``) and the
 only active unit is the type door. ``compile_string_enum(members)`` /
-``apply_string_enum(plan, &str)`` stay a pair. Unclosed
+``apply_string_enum(plan, &str)`` stay a pair.
+``BooleanValidator()`` compiles when the annotation is ``bool`` and the
+only active unit is the type door. ``compile_boolean()`` /
+``apply_boolean(plan, bool)`` stay a pair. ``1`` / ``0`` are not
+coerced. Unclosed
 paths (``required``, ``multiple_of``, pattern, choice, named
 identity, Email, a mixed bound type, Union / TypedDict /
 Annotated) stay on the host. Email / named identity were already
@@ -168,9 +173,10 @@ checks the concrete annotation, then ``isinstance(value, enum.IntEnum)``:
   ``TypeValidator``), not an L1 "overflow" message. A member outside
   ``i64`` does not compile; the field stays on the host.
 - Bare ``enum.IntEnum``, extra bounds (``min_value``, ``required``,
-  choice, ``reassign=False``), plain ``EnumValidator``,
-  ``BooleanValidator``, and open ``Validator``
-  stay on the host. ``StringEnumValidator`` is its own closed plan.
+  choice, ``reassign=False``), plain ``EnumValidator``, and open
+  ``Validator`` stay on the host. ``StringEnumValidator`` is its own
+  closed plan. ``BooleanValidator`` is its own closed exact-bool plan,
+  not this member set.
 
 **StringEnum member set (Door A lock).** Host ``StringEnumValidator``
 checks the concrete annotation, then the named extra (an ``enum.Enum``
@@ -190,13 +196,32 @@ whose ``.value`` is ``str``):
   member that is not an exact ``str``, or that cannot encode as UTF-8
   (lone surrogate), does not compile; the field stays on the host.
 - Bare ``enum.Enum`` / ``enum.StrEnum``, extra bounds, plain
-  ``EnumValidator``, ``BooleanValidator``, ``IntegerEnumValidator`` on
-  a non-``IntEnum``, and open ``Validator`` stay on the host. There is
-  no ``members`` kwarg on the facade. Cap Door B stays off.
+  ``EnumValidator``, ``IntegerEnumValidator`` on a non-``IntEnum``, and
+  open ``Validator`` stay on the host. ``BooleanValidator`` is its own
+  closed exact-bool plan, not this member set. There is no ``members``
+  kwarg on the facade. Cap Door B stays off.
 
-HOLD this tip: Boolean (only if later measure ≥3× alone),
-Decimal (scale/coerce unlocked), Date/DateTime, UUID/Path/IP/plain
-EnumValidator, Pattern / custom callables, named facades, Cap Door B.
+**Boolean type door (Door A lock).** Host ``BooleanValidator`` checks
+``bool``, then the FFI ``bool`` extract (``apply_boolean``):
+
+- Type: exact ``bool``. ``True`` and ``False`` both pass and are stored
+  as that object. ``False`` is kept (falsy is not ``None``).
+- ``1`` / ``0`` / ``str`` / ``float`` miss. No coerce of ``int`` to
+  ``bool``. ``None`` skips.
+- Extract TypeError is a **bridge** (fall through to host
+  ``TypeValidator``), not an L1 message. There is no bound
+  ``FailKind`` on this plan.
+- Extra bounds (``min_value``, ``required``, choice, ``reassign=False``)
+  stay on the host. ``Validator[bool]`` with only the type door is the
+  same closed plan. ``Validator[bool | None]`` and plain
+  ``EnumValidator`` stay on the host. An owner annotation of
+  ``bool | None`` does not match ``BooleanValidator`` (bind
+  ``TypeError``). Integer still treats ``True`` as ``int`` (that door
+  is unchanged).
+
+HOLD this tip: Decimal (scale/coerce unlocked), Date/DateTime,
+UUID/Path/IP/plain EnumValidator, Pattern / custom callables, named
+facades, Cap Door B.
 
 ## What never leaves the host
 
@@ -215,7 +240,7 @@ EnumValidator, Pattern / custom callables, named facades, Cap Door B.
    apply. ``pip install ux-valio[native]`` installs the ``ux-valio-native``
    wheel (module ``ux_valio_native`` — not a taught import).
 2. Same field default. Same ``annotation``. Same fail-closed errors.
-   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator``.
+   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator, BooleanValidator``.
 3. Compile at bind, not at set. Host bind walks one family list.
    Each family keeps its ``compile_*`` / ``apply_*`` pair (those doors
    stay separate). Missing peer → host apply (no import
@@ -223,9 +248,9 @@ EnumValidator, Pattern / custom callables, named facades, Cap Door B.
    choice). An unclosed path does not import the extra.
 4. One FFI call per set for the specified scalar plan. Not eight.
 5. ``self`` is a ``PyObject*`` handle. Do not migrate the instance into
-   a Rust struct. Extract scalars (``i64`` / ``f64`` / ``&str`` / ``&[u8]``;
-   IntegerEnum is ``i64``; StringEnum is the member ``.value`` as
-   ``&str``), apply, box back.
+   a Rust struct. Extract scalars (``i64`` / ``f64`` / ``&str`` / ``&[u8]``
+   / ``bool``; IntegerEnum is ``i64``; StringEnum is the member
+   ``.value`` as ``&str``; Boolean is exact ``bool``), apply, box back.
 6. Do not re-implement the library in Rust.
 7. Do not quote the switch-test ratio as end-to-end product setattr.
    The measure compared full host setattr against **plan apply only**.
@@ -248,7 +273,11 @@ EnumValidator, Pattern / custom callables, named facades, Cap Door B.
    "overflow" message). PyO3 ``&str`` extract is the StringEnum door
    (``apply_string_enum``, the member's ``.value``). ``OverflowError`` /
    ``UnicodeError`` at that extract is the same bridge (fall through to
-   host ``TypeValidator``; no L1 "overflow" message).
+   host ``TypeValidator``; no L1 "overflow" message). PyO3 ``bool``
+   extract is the Boolean door (``apply_boolean``). A non-bool raises
+   at that extract; host ``isinstance`` misses first, and an extract
+   TypeError falls through to host ``TypeValidator`` (no coerce of
+   ``1`` / ``0``, no L1 "overflow" message).
    ``FailKind.NotMember`` is the validation bucket
    (host type-door wording, ``match fail:``). Unexpected
    peer/infra is ``RuntimeError`` naming ``ux_valio_native``. Three
@@ -277,6 +306,7 @@ specified ``IntegerValidator(min_value=0)`` / ``FloatValidator(min_value=0.0)``
 / ``StringValidator(min_length=1)`` / ``BytesValidator(min_length=1)``
 / ``IntegerEnumValidator()`` on a concrete ``IntEnum``
 / ``StringEnumValidator()`` on a concrete str-valued ``Enum``
+/ ``BooleanValidator()`` (exact ``bool``)
 setattr stays several times slower than a one-shot native apply of that
 same plan, and the Python compile (``_active_units``, skip TypedDict,
 skip watch) is already in.
@@ -292,17 +322,19 @@ root. Hot path A is many ``setattr``s on a dataclass ``Box.n`` with a
 closed ``IntegerValidator`` or ``FloatValidator`` bound plan, a closed
 ``StringValidator`` / ``BytesValidator`` length plan, or a closed
 ``IntegerEnumValidator`` member-set plan, or a closed
-``StringEnumValidator`` UTF-8 member-set plan. Hot path B is ``compile_integer(...)``
+``StringEnumValidator`` UTF-8 member-set plan, or a closed
+``BooleanValidator`` exact-bool type door. Hot path B is ``compile_integer(...)``
 / ``compile_float(...)`` / ``compile_string(...)`` / ``compile_bytes(...)``
-/ ``compile_integer_enum(...)`` / ``compile_string_enum(...)``
+/ ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
+``compile_boolean()``
 once then ``apply_integer`` /
 ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
-``apply_integer_enum`` / ``apply_string_enum`` on the
+``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` on the
 product peer (``native/``: owned unit list of ``Integer`` or ``Float``
 plus ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
 ``Equal``, or ``String`` / ``Bytes`` plus ``MinLength`` / ``MaxLength`` /
 ``Length``, or ``IntegerEnum`` plus ``Member``, or ``StringEnum`` plus
-the UTF-8 value set). B is **not** product setattr (no store, no
+the UTF-8 value set, or ``Boolean`` with no bound unit). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
 family; the bar is **≥ 3×** for each. A family below the bar is
 KEEP host for that family (do not claim native).
@@ -481,6 +513,35 @@ one owned ``String``), not a 70× product setattr claim. Integer /
 Float / String / Bytes families on the same run stayed ~24–25× and
 IntegerEnum stayed ~35× (still PASS).
 
-HOLD after this tip: Boolean only if a later measure is
-≥3× alone. Decimal, Date/DateTime, UUID/Path, Pattern, plain
+HOLD after the StringEnum tip was Boolean, measured in the next
+section.
+
+### Measured (2026-09-21) Boolean type door
+
+Same class of box, one run, 400000 iters after 20000 warmup, values
+``(True, False)`` repeated, CPython 3.14.7, rustc 1.83.0, Linux x86_64
+(Intel Xeon, 4 CPUs). Peer is a release cdylib
+(``python -m pip install maturin`` then ``maturin develop --release``
+via ``python benches/measure_host_peer.py``). Host units were
+``_validate_type`` only. Path A clears the native plan after bind so
+setattr is pure Python. B is ``apply_boolean(plan, bool)`` only
+(``Python::detach``). The type door is exact ``bool`` (smoke:
+``apply_boolean(plan, 1)`` raises ``TypeError``; ``0`` is not coerced).
+Bar 3×.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| exact bool | 2991.4 | 80.0 | **37.40×** |
+
+**Verdict: PASS.** The Boolean exact-bool type door cleared the 3× bar
+(37.40×). Native apply here is ~80 ns/op (GIL released), not a 70×
+product setattr claim. Integer / Float / String / Bytes families on
+the same run stayed ~27–29×, IntegerEnum ~38×, and StringEnum ~31×
+(still PASS).
+
+```console
+python benches/measure_host_peer.py
+```
+
+HOLD after this tip: Decimal, Date/DateTime, UUID/Path, Pattern, plain
 EnumValidator, named facades, Cap Door B stay off this path.

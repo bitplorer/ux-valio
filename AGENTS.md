@@ -59,19 +59,21 @@ a parallel folder, not inside the layer they depend on.
   `python benches/measure_host_peer.py` (CI ``--ci`` skips without Rust).
   The recorded switch test PASSed (host setattr several times slower
   than native Integer / Float bound apply, String / Bytes length apply,
-  IntegerEnum member-set apply, and StringEnum UTF-8 member-set apply).
+  IntegerEnum member-set apply, StringEnum UTF-8 member-set apply, and
+  Boolean exact-bool type-door apply).
   Optional extra
   ``ux-valio[native]`` (sibling crate ``native/``, module
   ``ux_valio_native``) binds closed Integer and Float bound plans,
   closed String and Bytes length plans, a closed IntegerEnum
-  member-set plan, and a closed StringEnum UTF-8 member-set plan at
+  member-set plan, a closed StringEnum UTF-8 member-set plan, and a
+  closed Boolean type door at
   construct: ``MinValue`` / ``MaxValue`` / ``GreaterThan`` /
   ``LessThan`` / ``Equal`` and min+max range, plus ``MinLength`` /
   ``MaxLength`` / ``Length``, plus ``IntegerEnum`` ``Member`` values,
-  plus ``StringEnum`` UTF-8 member values,
+  plus ``StringEnum`` UTF-8 member values, plus Boolean exact ``bool``,
   compile once, one FFI
   ``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
-  ``apply_integer_enum`` / ``apply_string_enum`` per set. Integer type door is FFI
+  ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` per set. Integer type door is FFI
   ``i64`` extract; Float is FFI ``f64`` extract (IEEE Door A: NaN
   unordered on min/max/gt/lt, ``eq`` uses ``!=`` so NaN never
   matches). String type door is FFI ``&str`` extract; length is
@@ -82,10 +84,14 @@ a parallel folder, not inside the layer they depend on.
   values. StringEnum type door is host ``isinstance`` of the concrete
   str-valued ``enum.Enum``, then FFI ``&str`` extract of ``.value``;
   membership is exact UTF-8 equality (no casefold, no NFC).
+  Boolean type door is host ``isinstance`` of ``bool``, then FFI
+  ``bool`` extract (``compile_boolean`` / ``apply_boolean``). Exact
+  ``bool`` only: ``1`` / ``0`` are not coerced. ``True`` and ``False``
+  both pass. Extra units on ``BooleanValidator`` stay on the host.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_select_*``); do not merge a pair into one door
   and do not restore a per-family copy of the bind steps. Open
-  TypeValidator / plain EnumValidator / Boolean stay on the host.
+  TypeValidator / plain EnumValidator stay on the host.
   Stdlib Python apply stays the
   default without the extra. Do not add a Schema/Field twin to get it.
   Cap / cek-runtime / Cap Door B stay out of this repo. Do not claim
@@ -293,22 +299,25 @@ New private helpers are verbs that name the action:
 `bind_native_plan`, `apply_native_bounds`, `apply_native_integer_bounds`,
 `apply_native_float_bounds`, `apply_native_string_length`,
 `apply_native_bytes_length`, `apply_native_integer_enum`,
-`apply_native_string_enum`,
+`apply_native_string_enum`, `apply_native_boolean`,
 `_load_native_peer`, `_closed_integer_bounds`, `_closed_float_bounds`,
 `_closed_string_length`, `_closed_bytes_length`, `_closed_integer_enum_members`,
-`_closed_string_enum_members`,
+`_closed_string_enum_members`, `_closed_boolean`,
 `_closed_length`, `_closed_value_bounds`, `_bind_compiled_plan`, `_apply_native_closed`,
 `_clear_native`, `_apply_host_value_after_i64_overflow`,
 `_apply_host_value_after_f64_overflow`, `_apply_host_length_after_str_extract`,
 `_apply_host_length_after_bytes_extract`,
 `_apply_host_integer_enum_after_i64_overflow`,
 `_apply_host_string_enum_after_str_extract`,
+`_apply_host_boolean_after_extract`,
 `_raise_native_bound_miss`, `_raise_host_integer_type_miss`,
 `_raise_host_float_type_miss`, `_raise_host_string_type_miss`, `_raise_host_bytes_type_miss`,
 `_raise_host_integer_enum_type_miss`, `_raise_host_string_enum_type_miss`,
+`_raise_host_boolean_type_miss`,
 `_raise_host_enum_type_miss`, `_raise_host_closed_type_miss`,
 `_select_integer_bounds`, `_select_float_bounds`, `_select_string_length`,
 `_select_bytes_length`, `_select_integer_enum`, `_select_string_enum`,
+`_select_boolean`,
 `_ClosedPair`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,

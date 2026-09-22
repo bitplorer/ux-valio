@@ -1,11 +1,12 @@
 //! Optional apply peer for `ux-valio[native]`.
 //!
 //! Closed Integer and Float bound plans, closed String and Bytes length
-//! plans, a closed IntegerEnum member-set plan, and a closed StringEnum
-//! UTF-8 member-set plan. Type door is the FFI extract
-//! (`apply_integer(plan, i64)` / `apply_float(plan, f64)` /
-//! `apply_string(plan, &str)` / `apply_bytes(plan, &[u8])` /
-//! `apply_integer_enum(plan, i64)` / `apply_string_enum(plan, &str)`).
+//! plans, a closed IntegerEnum member-set plan, a closed StringEnum
+//! UTF-8 member-set plan, and a closed Boolean type-door plan. Type door
+//! is the FFI extract (`apply_integer(plan, i64)` /
+//! `apply_float(plan, f64)` / `apply_string(plan, &str)` /
+//! `apply_bytes(plan, &[u8])` / `apply_integer_enum(plan, i64)` /
+//! `apply_string_enum(plan, &str)` / `apply_boolean(plan, bool)`).
 //! Bound units (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` /
 //! `Equal`) run after numeric extract. Length units (`MinLength` /
 //! `MaxLength` / `Length`) are shared: String count is Unicode scalar
@@ -92,6 +93,12 @@ enum Unit {
     /// not a String length plan. The UTF-8 set lives on `Plan`, not in
     /// this `Copy` unit.
     StringEnum,
+    /// Plan-shape marker. Type extract is the FFI `bool` argument.
+    /// Exact `bool` only: `1` / `0` are not coerced. Host `isinstance`
+    /// gates first so a non-bool misses before extract. `None` /
+    /// `collect_all` type miss stay host. Not an Integer bound plan
+    /// (Python `bool` is `int`, and that stays the Integer door).
+    Boolean,
 }
 
 /// Compiled plan. Built once; applied many times.
@@ -192,8 +199,8 @@ fn apply_units(units: &[Unit], value: Bound) -> Result<(), FailKind> {
             // no-ops them (host never mixes doors).
             Unit::MinLength(_) | Unit::MaxLength(_) | Unit::Length(_) => None,
             // Enum member-set units belong on apply_integer_enum /
-            // apply_string_enum.
-            Unit::IntegerEnum | Unit::Member(_) | Unit::StringEnum => None,
+            // apply_string_enum. Boolean belongs on apply_boolean.
+            Unit::IntegerEnum | Unit::Member(_) | Unit::StringEnum | Unit::Boolean => None,
         };
         if let Some(kind) = fail {
             return Err(kind);
@@ -275,7 +282,8 @@ fn apply_length_units(units: &[Unit], counted: usize) -> Result<(), FailKind> {
             | Unit::Equal(_)
             | Unit::IntegerEnum
             | Unit::Member(_)
-            | Unit::StringEnum => None,
+            | Unit::StringEnum
+            | Unit::Boolean => None,
         };
         if let Some(kind) = fail {
             return Err(kind);
@@ -311,6 +319,38 @@ fn compile_string_enum_plan(members: Vec<String>) -> Plan {
     }
 }
 
+fn compile_boolean_plan() -> Plan {
+    share_plan(vec![Unit::Boolean])
+}
+
+/// Closed Boolean type door is the FFI `bool` extract. `True` and
+/// `False` both pass. There is no bound unit. Other units no-op (host
+/// never mixes doors). Exhaustive so a new unit is a compile error.
+#[allow(clippy::single_match)]
+fn apply_boolean_units(units: &[Unit], _value: bool) -> Result<(), FailKind> {
+    for unit in units {
+        match *unit {
+            Unit::Boolean
+            | Unit::Integer
+            | Unit::Float
+            | Unit::String
+            | Unit::Bytes
+            | Unit::MinValue(_)
+            | Unit::MaxValue(_)
+            | Unit::GreaterThan(_)
+            | Unit::LessThan(_)
+            | Unit::Equal(_)
+            | Unit::MinLength(_)
+            | Unit::MaxLength(_)
+            | Unit::Length(_)
+            | Unit::IntegerEnum
+            | Unit::Member(_)
+            | Unit::StringEnum => {}
+        }
+    }
+    Ok(())
+}
+
 fn apply_string_members(members: &[String], value: &str) -> Result<(), FailKind> {
     if members.iter().any(|member| member == value) {
         Ok(())
@@ -337,16 +377,17 @@ fn compile_length_plan(
 
 /// Product peer: `compile_integer(...)` / `compile_float(...)` /
 /// `compile_string(...)` / `compile_bytes(...)` /
-/// `compile_integer_enum(...)` / `compile_string_enum(...)` + one-shot
-/// `apply_integer` / `apply_float` / `apply_string` / `apply_bytes` /
-/// `apply_integer_enum` / `apply_string_enum`.
+/// `compile_integer_enum(...)` / `compile_string_enum(...)` /
+/// `compile_boolean()` + one-shot `apply_integer` / `apply_float` /
+/// `apply_string` / `apply_bytes` / `apply_integer_enum` /
+/// `apply_string_enum` / `apply_boolean`.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`,
-/// `Float`, `String`, `Bytes`, `IntegerEnum`, or `StringEnum`; extract
-/// is the FFI argument. Compile kwargs are host names (`min_value` /
-/// `gt` / `max_length` / `length`) or `members` for an enum set, mapped
-/// onto the full-word units. Not a taught L1 API. Compile and apply
-/// stay separate doors.
+/// `Float`, `String`, `Bytes`, `IntegerEnum`, `StringEnum`, or
+/// `Boolean`; extract is the FFI argument. Compile kwargs are host
+/// names (`min_value` / `gt` / `max_length` / `length`) or `members`
+/// for an enum set, mapped onto the full-word units. Boolean takes no
+/// kwargs. Not a taught L1 API. Compile and apply stay separate doors.
 #[pymodule]
 mod ux_valio_native {
     use super::*;
@@ -528,5 +569,27 @@ mod ux_valio_native {
         let members = Arc::clone(&plan.string_members);
         let owned = value.to_owned();
         py.detach(move || apply_string_members(&members, &owned).err())
+    }
+
+    /// Closed Boolean type-door plan. No kwargs. The unit list is the
+    /// `Boolean` shape marker. Not a taught L1 API. Not an Integer plan
+    /// (`bool` is `int` on the host Integer door; this door is exact
+    /// `bool`).
+    #[pyfunction]
+    fn compile_boolean() -> Plan {
+        compile_boolean_plan()
+    }
+
+    /// One-shot Boolean apply. Success is `None` for `True` and `False`.
+    ///
+    /// Closed Boolean type door is this `bool` extract. A Python `int`
+    /// (`1` / `0`), `str`, or other non-bool raises at this FFI boundary
+    /// (extract error); host falls through to the host type door. No
+    /// coerce. No bound unit. Releases the GIL (`Python::detach`) for
+    /// the unit walk. Compile and apply stay a pair.
+    #[pyfunction]
+    fn apply_boolean(py: Python<'_>, plan: PyRef<'_, Plan>, value: bool) -> Option<FailKind> {
+        let units = Arc::clone(&plan.units);
+        py.detach(move || apply_boolean_units(&units, value).err())
     }
 }

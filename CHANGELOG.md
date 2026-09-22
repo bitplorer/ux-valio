@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Native Boolean type door: closed ``ux-valio[native]`` plans now cover
+  ``BooleanValidator`` when the annotation is ``bool`` and the only
+  active unit is the type door. ``compile_boolean`` / ``apply_boolean``
+  stay a pair. Door A is exact ``bool``: ``True`` and ``False`` pass
+  and are stored as that object (``False`` is kept); ``1`` / ``0`` are
+  not coerced and raise the host type-door ``TypeError``. Extract
+  ``TypeError`` falls through to host ``TypeValidator``. Extra bounds,
+  ``bool | None``, plain ``EnumValidator``, and open ``Validator`` stay
+  on the host. Integer still treats ``True`` as ``int``. Measure
+  ``python benches/measure_host_peer.py`` (Boolean **37.40×**, host
+  2991.4 ns/op, native 80.0 ns/op, CPython 3.14.7 / rustc 1.83 / Linux
+  x86_64); do not claim 70× product setattr. Cap Door B stays off.
+  Decimal / Date* / UUID / Path / plain EnumValidator / Pattern / named
+  facades stay HOLD.
+
 - Peer-surface break: bare ``compile`` / ``apply`` on
   ``ux_valio_native`` are retired. Closed Integer doors are
   ``compile_integer`` / ``apply_integer`` (still a pair, still

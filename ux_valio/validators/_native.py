@@ -10,14 +10,18 @@ or a closed IntegerEnum member-set plan (``IntegerEnumValidator`` whose
 annotation is a concrete ``enum.IntEnum`` and whose only active unit is
 the type door), or a closed StringEnum member-set plan
 (``StringEnumValidator`` whose annotation is a concrete str-valued
-``enum.Enum`` and whose only active unit is the type door), compile a
-plan once. Type door is host-first ``isinstance`` then FFI extract
-(``i64`` / ``f64`` / ``&str`` / ``&[u8]``); bound / length / member
-units run after extract. StringEnum extract is the member's ``.value``
-as UTF-8 ``&str``. Open TypeValidator / Union / TypedDict / Annotated /
-pattern / plain ``EnumValidator`` / ``BooleanValidator`` stay on the
-host. Missing or failed extra → host ``_active_units`` path. No import
-on the hot path after that choice. Not Cap Door B.
+``enum.Enum`` and whose only active unit is the type door), or a
+closed Boolean type door (annotation is ``bool`` and the only active
+unit is the type door), compile a plan once. Type door is host-first
+``isinstance`` then FFI extract (``i64`` / ``f64`` / ``&str`` /
+``&[u8]`` / ``bool``); bound / length / member units run after
+extract. StringEnum extract is the member's ``.value`` as UTF-8
+``&str``. Boolean extract is exact ``bool`` (``1`` / ``0`` are not
+coerced). Open TypeValidator / Union / TypedDict / Annotated /
+pattern / plain ``EnumValidator`` stay on the host. A
+``BooleanValidator`` with any extra unit stays on the host. Missing
+or failed extra → host ``_active_units`` path. No import on the hot
+path after that choice. Not Cap Door B.
 """
 
 from __future__ import annotations
@@ -189,9 +193,10 @@ def _closed_string_enum_members(owner: Any) -> list[str] | None:
     ``.value`` must be an exact ``str`` (a ``str`` subclass stays on the
     host) that encodes as UTF-8 (a lone surrogate stays on the host).
     Extra bounds stay on the host. Plain ``EnumValidator`` /
-    ``IntegerEnumValidator`` / ``BooleanValidator`` /
-    ``Validator[SomeStrEnum]`` stay on the host — this module does not
-    import facades; the facade is the class in ``ux_valio.facades.typed``.
+    ``IntegerEnumValidator`` / ``Validator[SomeStrEnum]`` stay on the
+    host — this module does not import facades; the facade is the class
+    in ``ux_valio.facades.typed``. ``BooleanValidator`` is
+    ``_closed_boolean``, not this function.
     """
     if type(owner).__module__ != "ux_valio.facades.typed":
         return None
@@ -222,6 +227,24 @@ def _closed_string_enum_members(owner: Any) -> list[str] | None:
     if not members:
         return None
     return members
+
+
+def _closed_boolean(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is exact ``bool`` + the type door.
+
+    Annotation must be ``bool`` (not ``bool | None``, not ``int``). Only
+    ``TypeValidator`` may be active. Extra bounds (``min_value``,
+    ``required``, choice, ``reassign=False``) stay on the host. No
+    coerce: ``1`` / ``0`` are not ``bool``. ``BooleanValidator`` is the
+    taught facade; ``Validator[bool]`` with the same closed shape is the
+    same door. This module does not import facades.
+    """
+    if getattr(owner, "annotation", None) is not bool:
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
 
 
 def _closed_bytes_length(owner: Any) -> dict[str, int] | None:
@@ -289,6 +312,17 @@ def _apply_host_integer_enum_after_i64_overflow(owner: Any, value: Any) -> None:
     not an L1 "overflow" message. Fall through to host
     ``TypeValidator`` (Door A KEEP wording). A member whose value does
     not fit i64 never compiled (bind stays on the host).
+    """
+    TypeValidator._validate_type(owner, None, value)
+
+
+def _apply_host_boolean_after_extract(owner: Any, value: Any) -> None:
+    """bool extract failed before native type-door apply.
+
+    Extract TypeError is a bridge signal, not a public validation miss
+    and not an L1 "overflow" message. Fall through to host
+    ``TypeValidator`` (Door A KEEP wording). ``1`` / ``0`` miss
+    ``isinstance`` before extract (no coerce).
     """
     TypeValidator._validate_type(owner, None, value)
 
@@ -428,6 +462,20 @@ def _raise_host_integer_enum_type_miss(owner: Any, value: Any) -> None:
     ``enum.IntEnum`` extra from ``validate``, not inside this raise.
     """
     _raise_host_enum_type_miss(owner, value)
+
+
+def _raise_host_boolean_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Boolean type door is host-first.
+
+    FFI type is the later ``bool`` extract. Python ``int`` (``1`` /
+    ``0``) is not ``bool`` (KEEP; no coerce). ``None`` is skipped by
+    the caller. The closed plan has no second path unit, so
+    ``collect_all`` does not continue inside this raise.
+    """
+    raise TypeError(
+        f"{owner.name} expect {owner.annotation} type, "
+        f"got {type(value).__name__} type instead"
+    )
 
 
 def _raise_host_bytes_type_miss(owner: Any, value: Any) -> None:
@@ -610,6 +658,25 @@ def apply_native_bytes_length(owner: Any, value: Any) -> None:
     )
 
 
+def apply_native_boolean(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-bool stays on host.
+
+    TypeError at ``bool`` extract is a bridge signal (same three
+    buckets as Integer: validation ``FailKind`` / bridge / peer-infra
+    ``RuntimeError`` naming ``ux_valio_native``). No public L1
+    "overflow" message. Door A is exact ``bool``: ``True`` and
+    ``False`` pass; ``1`` and ``0`` do not coerce. No bound unit.
+    """
+    _apply_native_closed(
+        owner,
+        value,
+        bool,
+        _raise_host_boolean_type_miss,
+        _apply_host_boolean_after_extract,
+        TypeError,
+    )
+
+
 def apply_native_bounds(owner: Any, value: Any) -> None:
     """Dispatch the bind-time host apply. Unset bundle is a caller bug."""
     apply_host = getattr(owner, "_native_apply_host", None)
@@ -651,6 +718,11 @@ def _select_integer_enum(peer: Any, members: list[int]) -> _ClosedPair:
     )
 
 
+def _select_boolean(peer: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Boolean: ``compile_boolean`` and ``apply_boolean`` stay a pair."""
+    return peer.apply_boolean, apply_native_boolean, peer.compile_boolean, bounds
+
+
 def _select_string_enum(peer: Any, members: list[str]) -> _ClosedPair:
     """Closed StringEnum: ``compile_string_enum`` / ``apply_string_enum`` stay a pair."""
     return (
@@ -674,6 +746,7 @@ def bind_native_plan(owner: Any) -> None:
         (_closed_bytes_length, _select_bytes_length),
         (_closed_integer_enum_members, _select_integer_enum),
         (_closed_string_enum_members, _select_string_enum),
+        (_closed_boolean, _select_boolean),
     )
     for detect, select in families:
         payload = detect(owner)

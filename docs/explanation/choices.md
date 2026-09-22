@@ -146,11 +146,13 @@ collection facades, `enable_async`, `cache_task`, `add_pre_set`. List
 membership is `list[T]` on the type door. Object attributes: check at the
 call site or hang `validator`. Optional `ux-valio[native]` is not a second
 door: L1 stays `IntegerValidator` / `FloatValidator` / `StringValidator` /
-`BytesValidator` / `IntegerEnumValidator` / `StringEnumValidator`; the extra is compile-once + one FFI
+`BytesValidator` / `IntegerEnumValidator` / `StringEnumValidator` /
+`BooleanValidator`; the extra is compile-once + one FFI
 apply for closed Integer and Float bound units (min/max/gt/lt/eq),
 closed String / Bytes length units (min/max/exact), a closed
 IntegerEnum member set (`compile_integer_enum` / `apply_integer_enum`),
-and a closed StringEnum UTF-8 member set (`compile_string_enum` /
-`apply_string_enum`). Pattern
-and named identity stay on the host. Next: Boolean, only if a later
-measure is ≥3× alone.
+a closed StringEnum UTF-8 member set (`compile_string_enum` /
+`apply_string_enum`), and a closed Boolean exact-bool type door
+(`compile_boolean` / `apply_boolean`; `1` / `0` are not coerced). Pattern
+and named identity stay on the host. Next: Decimal, Date/DateTime,
+UUID/Path, Pattern, plain EnumValidator stay off this path.
