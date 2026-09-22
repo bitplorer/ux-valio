@@ -8,6 +8,8 @@ or a closed IntegerEnum member-set plan,
 or a closed StringEnum UTF-8 member-set plan,
 or a closed Boolean exact-bool type door,
 or a closed Decimal exact-Decimal type door,
+or a closed Date ``datetime.date`` type door,
+or a closed DateTime ``datetime.datetime`` type door,
 at construct. Cap Door B
 is not on this path.
 
@@ -39,7 +41,11 @@ At construct (`Validator.__init__` / `__set_name__`):
   exact-bool type door (`compile_boolean` / `apply_boolean`; `1` / `0`
   are not coerced) or a closed Decimal exact-Decimal type door
   (`compile_decimal` / `apply_decimal`; `float` / `int` / `bool` are
-  not coerced; no scale unit). Otherwise the interpreter
+  not coerced; no scale unit) or a closed Date type door
+  (`compile_date` / `apply_date`; string coerce stays host;
+  `datetime` extracts because it subclasses `date`) or a closed
+  DateTime type door (`compile_datetime` / `apply_datetime`; a plain
+  `date` misses; string coerce stays host). Otherwise the interpreter
   still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply_*` for
@@ -89,7 +95,9 @@ length family vs `apply_bytes(plan, &[u8])`, the closed IntegerEnum
 member set vs `apply_integer_enum(plan, i64)`, the closed StringEnum
 UTF-8 member set vs `apply_string_enum(plan, &str)`, and the closed
 Boolean exact-bool type door vs `apply_boolean(plan, bool)`, and the
-closed Decimal exact-Decimal type door vs `apply_decimal(plan, Decimal)`.
+closed Decimal exact-Decimal type door vs `apply_decimal(plan, Decimal)`,
+and the closed Date type door vs `apply_date(plan, date)`, and the
+closed DateTime type door vs `apply_datetime(plan, datetime)`.
 
 ```console
 python benches/measure_host_peer.py
@@ -124,6 +132,14 @@ Bytes stayed ~28–30×, IntegerEnum ~41×, StringEnum ~33×, and Boolean
 ~38× on that same run (still PASS). Host setattr includes
 ``DecimalValidator`` pre-validate and the named Decimal extra; native
 is plan apply only.
+Date exact-date re-run on this tip: host **6281.4 ns/op**, native
+**79.2 ns/op**, ratio **79.33×** — **PASS**.
+DateTime exact-datetime re-run on this tip: host **6315.0 ns/op**,
+native **80.4 ns/op**, ratio **78.55×** — **PASS**. Integer / Float /
+String / Bytes stayed ~27–30×, IntegerEnum ~40×, StringEnum ~31×,
+Boolean ~39×, and Decimal ~78× on that same run (still PASS). Host
+setattr includes ``DateValidator`` / ``DateTimeValidator``
+pre-validate and the named extra; native is plan apply only.
 Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply_integer`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end

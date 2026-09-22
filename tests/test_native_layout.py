@@ -2,13 +2,15 @@
 """Native module layout: public doors, bare names, cross-family, Cap OFF.
 
 ``Plan`` is one variant per family (``BoundUnit`` / ``LengthUnit`` /
-member set / Boolean and Decimal type-door markers). No shared unit
-bag. Date* stays HOLD. Cap Door B stays off.
+member set / Boolean, Decimal, Date, and DateTime type-door
+markers). No shared unit bag. UUID / Path / IP stay HOLD. Cap Door B
+stays off.
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
 
 import ast
+import datetime
 import decimal
 import re
 
@@ -58,15 +60,21 @@ _PUBLIC_DOORS = (
     "apply_boolean",
     "compile_decimal",
     "apply_decimal",
+    "compile_date",
+    "apply_date",
+    "compile_datetime",
+    "apply_datetime",
 )
 
 _ABSENT_DOORS = (
     "compile",
     "apply",
-    "compile_date",
-    "apply_date",
-    "compile_datetime",
-    "apply_datetime",
+    "compile_uuid",
+    "apply_uuid",
+    "compile_path",
+    "apply_path",
+    "compile_ip",
+    "apply_ip",
     "compile_cap",
     "apply_cap",
 )
@@ -76,7 +84,7 @@ _ABSENT_DOORS = (
 def test_bare_compile_and_apply_are_absent_on_the_native_module():
     """Hard cut: doors are family-named. No alias remains.
 
-    Date* stays HOLD. Cap Door B stays off this native module.
+    UUID / Path / IP stay HOLD. Cap Door B stays off this native module.
     """
     import ux_valio_native as native
 
@@ -104,11 +112,20 @@ def test_bare_compile_and_apply_are_absent_on_the_native_module():
     plan = native.compile_integer(min_value=0)
     assert type(plan).__name__ == "Plan"
     rust = _native_rust()
-    assert "fn compile_date" not in rust
-    assert "fn apply_date" not in rust
-    assert "Plan::Date" not in rust
-    assert "fn compile_datetime" not in rust
-    assert "fn apply_datetime" not in rust
+    assert "fn compile_date" in rust
+    assert "fn apply_date" in rust
+    assert "Plan::Date" in rust
+    assert "fn compile_datetime" in rust
+    assert "fn apply_datetime" in rust
+    assert "fn compile_uuid" not in rust
+    assert "fn apply_uuid" not in rust
+    assert "Plan::Uuid" not in rust
+    assert "fn compile_path" not in rust
+    assert "fn apply_path" not in rust
+    assert "Plan::Path" not in rust
+    assert "fn compile_ip" not in rust
+    assert "fn apply_ip" not in rust
+    assert "Plan::Ip" not in rust
 
 
 @needs_native
@@ -134,6 +151,12 @@ def test_apply_door_rejects_a_different_family():
         ("apply_string_enum", native.compile_string_enum(["ab"]), "ab"),
         ("apply_boolean", native.compile_boolean(), True),
         ("apply_decimal", native.compile_decimal(), decimal.Decimal("1")),
+        ("apply_date", native.compile_date(), datetime.date(2020, 1, 2)),
+        (
+            "apply_datetime",
+            native.compile_datetime(),
+            datetime.datetime(2020, 1, 2, 3, 4),
+        ),
     )
     for door, plan, sample in doors:
         assert getattr(native, door)(plan, sample) is None
@@ -288,6 +311,8 @@ def test_plan_shape_is_owned_unit_list():
     assert "Bytes(Arc<Vec<LengthUnit>>)" in rust
     assert "IntegerEnum(Arc<Vec<i64>>)" in rust
     assert "StringEnum(Arc<Vec<String>>)" in rust
+    assert re.search(r"^\s+Date,$", rust, re.M)
+    assert re.search(r"^\s+DateTime,$", rust, re.M)
     assert "fn apply_bound_units" in rust
     assert "units: &[BoundUnit<T>]" in rust
     assert "fn apply_length_units" in rust

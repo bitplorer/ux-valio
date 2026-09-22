@@ -19,8 +19,6 @@ from tests.native_support import (
     needs_native,
 )
 from ux_valio import (
-    DateTimeValidator,
-    DateValidator,
     DecimalValidator,
     EnumValidator,
     PathValidator,
@@ -196,8 +194,6 @@ def test_decimal_unclosed_stays_on_host():
         DecimalValidator(decimal_places=2)  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         DecimalValidator(quantize=decimal.Decimal("0.01"))  # type: ignore[call-arg]
-    assert DateValidator(debug=True, name="n")._native_plan is None
-    assert DateTimeValidator(debug=True, name="n")._native_plan is None
     assert UUIDValidator(debug=True, name="n")._native_plan is None
     assert PathValidator(debug=True, name="n")._native_plan is None
     assert EnumValidator(debug=True, name="n")._native_plan is None

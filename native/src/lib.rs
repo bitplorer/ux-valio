@@ -3,8 +3,9 @@
 //! [`plan::Plan`] is one variant per family. The variant owns that
 //! family's checks: Integer / Float own [`bound::BoundUnit`] values,
 //! String / Bytes own [`length::LengthUnit`] values, IntegerEnum owns
-//! an `i64` member set, StringEnum owns a UTF-8 member set, Boolean and
-//! Decimal are type-door markers. `apply_integer` clones the integer
+//! an `i64` member set, StringEnum owns a UTF-8 member set, Boolean,
+//! Decimal, Date, and DateTime are type-door markers. `apply_integer`
+//! clones the integer
 //! bounds and walks those — a length unit is the wrong type, so it
 //! cannot be passed into that walk.
 //!
@@ -12,7 +13,9 @@
 //! `apply_float(plan, f64)` / `apply_string(plan, &str)` /
 //! `apply_bytes(plan, &[u8])` / `apply_integer_enum(plan, i64)` /
 //! `apply_string_enum(plan, &str)` / `apply_boolean(plan, bool)` /
-//! `apply_decimal(plan, decimal.Decimal)`).
+//! `apply_decimal(plan, decimal.Decimal)` /
+//! `apply_date(plan, datetime.date)` /
+//! `apply_datetime(plan, datetime.datetime)`).
 //! Bound units (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` /
 //! `Equal`) run after numeric extract. Each miss arm is fail-when:
 //! `min_value` passes when `value >= bound` (miss `<`); `gt` passes
@@ -74,6 +77,72 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExtractedDecimal {
 /// file does not name a reflected type object. Host `isinstance` misses
 /// first; this is the bridge for a direct `apply_decimal` call.
 fn decimal_extract_error(py: Python<'_>) -> PyErr {
+    extract_type_error(py, "decimal.Decimal")
+}
+
+/// Exact `datetime.date`. `datetime.datetime` is a subclass and extracts.
+/// Not a string coerce.
+struct ExtractedDate;
+
+/// Exact `datetime.datetime`. A plain `datetime.date` does not extract.
+/// Not a string coerce.
+struct ExtractedDateTime;
+
+fn cached_datetime_attr<'py>(
+    py: Python<'py>,
+    name: &'static str,
+    slot: &'static pyo3::sync::PyOnceLock<Py<PyAny>>,
+) -> PyResult<pyo3::Bound<'py, PyAny>> {
+    let cached = slot.get_or_try_init(py, || {
+        Ok::<_, PyErr>(py.import("datetime")?.getattr(name)?.unbind())
+    })?;
+    Ok(cached.bind(py).clone())
+}
+
+fn cached_date_type(py: Python<'_>) -> PyResult<pyo3::Bound<'_, PyAny>> {
+    use pyo3::sync::PyOnceLock;
+
+    static DATE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+    cached_datetime_attr(py, "date", &DATE)
+}
+
+fn cached_datetime_type(py: Python<'_>) -> PyResult<pyo3::Bound<'_, PyAny>> {
+    use pyo3::sync::PyOnceLock;
+
+    static DATETIME: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+    cached_datetime_attr(py, "datetime", &DATETIME)
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for ExtractedDate {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let date_type = cached_date_type(obj.py())?;
+        if obj.is_instance(&date_type)? {
+            Ok(ExtractedDate)
+        } else {
+            Err(extract_type_error(obj.py(), "datetime.date"))
+        }
+    }
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for ExtractedDateTime {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let datetime_type = cached_datetime_type(obj.py())?;
+        if obj.is_instance(&datetime_type)? {
+            Ok(ExtractedDateTime)
+        } else {
+            Err(extract_type_error(obj.py(), "datetime.datetime"))
+        }
+    }
+}
+
+/// Extract miss is a Python `TypeError`. Built from the builtin so this
+/// file does not name a reflected type object. Host `isinstance` misses
+/// first; this is the bridge for a direct `apply_*` call.
+fn extract_type_error(py: Python<'_>, expected: &str) -> PyErr {
     let cls = match py
         .import("builtins")
         .and_then(|builtins| builtins.getattr("TypeError"))
@@ -81,7 +150,7 @@ fn decimal_extract_error(py: Python<'_>) -> PyErr {
         Ok(cls) => cls,
         Err(err) => return err,
     };
-    match cls.call1(("argument 'value': expected decimal.Decimal",)) {
+    match cls.call1((format!("argument 'value': expected {expected}"),)) {
         Ok(err) => PyErr::from_value(err),
         Err(err) => err,
     }
@@ -127,20 +196,34 @@ fn compile_decimal_plan() -> PyPlan {
     share_plan(Plan::Decimal)
 }
 
+fn compile_date_plan() -> PyPlan {
+    share_plan(Plan::Date)
+}
+
+fn compile_datetime_plan() -> PyPlan {
+    share_plan(Plan::DateTime)
+}
+
 /// Product native module: `compile_integer(...)` / `compile_float(...)` /
 /// `compile_string(...)` / `compile_bytes(...)` /
 /// `compile_integer_enum(...)` / `compile_string_enum(...)` /
-/// `compile_boolean()` / `compile_decimal()` + one-shot `apply_integer` /
+/// `compile_boolean()` / `compile_decimal()` / `compile_date()` /
+/// `compile_datetime()` + one-shot `apply_integer` /
 /// `apply_float` / `apply_string` / `apply_bytes` / `apply_integer_enum` /
-/// `apply_string_enum` / `apply_boolean` / `apply_decimal`.
+/// `apply_string_enum` / `apply_boolean` / `apply_decimal` /
+/// `apply_date` / `apply_datetime`.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is the [`Plan`]
 /// variant; extract is the FFI argument. Compile kwargs are host names
 /// (`min_value` / `gt` / `max_length` / `length`) or `members` for an
-/// enum set. Boolean and Decimal take no kwargs. Decimal extract is
-/// exact `decimal.Decimal` (no float bridge, no scale unit). Not a taught
-/// L1 API. Compile and apply stay separate doors. A plan handed to
-/// another family's apply raises `RuntimeError` (the walk is not run).
+/// enum set. Boolean, Decimal, Date, and DateTime take no kwargs.
+/// Decimal extract is exact `decimal.Decimal` (no float bridge, no scale
+/// unit). Date extract is `datetime.date` (`datetime.datetime` extracts
+/// because it subclasses `date`). DateTime extract is
+/// `datetime.datetime` (a plain `date` does not). String coerce stays
+/// host. Not a taught L1 API. Compile and apply stay separate doors. A
+/// plan handed to another family's apply raises `RuntimeError` (the
+/// walk is not run).
 #[pymodule]
 mod ux_valio_native {
     use super::*;
@@ -241,7 +324,9 @@ mod ux_valio_native {
             | Plan::IntegerEnum(_)
             | Plan::StringEnum(_)
             | Plan::Boolean
-            | Plan::Decimal => return Err(unexpected_family("apply_integer")),
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime => return Err(unexpected_family("apply_integer")),
         };
         Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
@@ -270,7 +355,9 @@ mod ux_valio_native {
             | Plan::IntegerEnum(_)
             | Plan::StringEnum(_)
             | Plan::Boolean
-            | Plan::Decimal => return Err(unexpected_family("apply_float")),
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime => return Err(unexpected_family("apply_float")),
         };
         Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
@@ -297,7 +384,9 @@ mod ux_valio_native {
             | Plan::IntegerEnum(_)
             | Plan::StringEnum(_)
             | Plan::Boolean
-            | Plan::Decimal => return Err(unexpected_family("apply_string")),
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime => return Err(unexpected_family("apply_string")),
         };
         let char_len = value.chars().count();
         Ok(py.detach(move || apply_length_units(&units, char_len).err()))
@@ -325,7 +414,9 @@ mod ux_valio_native {
             | Plan::IntegerEnum(_)
             | Plan::StringEnum(_)
             | Plan::Boolean
-            | Plan::Decimal => return Err(unexpected_family("apply_bytes")),
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime => return Err(unexpected_family("apply_bytes")),
         };
         let byte_len = value.len();
         Ok(py.detach(move || apply_length_units(&units, byte_len).err()))
@@ -362,7 +453,9 @@ mod ux_valio_native {
             | Plan::Bytes(_)
             | Plan::StringEnum(_)
             | Plan::Boolean
-            | Plan::Decimal => return Err(unexpected_family("apply_integer_enum")),
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime => return Err(unexpected_family("apply_integer_enum")),
         };
         Ok(py.detach(move || apply_i64_members(&members, value).err()))
     }
@@ -402,7 +495,9 @@ mod ux_valio_native {
             | Plan::Bytes(_)
             | Plan::IntegerEnum(_)
             | Plan::Boolean
-            | Plan::Decimal => return Err(unexpected_family("apply_string_enum")),
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime => return Err(unexpected_family("apply_string_enum")),
         };
         let owned = value.to_owned();
         Ok(py.detach(move || apply_str_members(&members, &owned).err()))
@@ -438,7 +533,9 @@ mod ux_valio_native {
             | Plan::Bytes(_)
             | Plan::IntegerEnum(_)
             | Plan::StringEnum(_)
-            | Plan::Decimal => return Err(unexpected_family("apply_boolean")),
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime => return Err(unexpected_family("apply_boolean")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -474,7 +571,87 @@ mod ux_valio_native {
             | Plan::Bytes(_)
             | Plan::IntegerEnum(_)
             | Plan::StringEnum(_)
-            | Plan::Boolean => return Err(unexpected_family("apply_decimal")),
+            | Plan::Boolean
+            | Plan::Date
+            | Plan::DateTime => return Err(unexpected_family("apply_decimal")),
+        }
+        let _ = value;
+        Ok(py.detach(|| None))
+    }
+
+    /// Closed Date type-door plan. No kwargs. The variant is the
+    /// `Date` marker. Not a taught L1 API. Not a DateTime plan.
+    /// String coerce stays on the host.
+    #[pyfunction]
+    fn compile_date() -> PyPlan {
+        compile_date_plan()
+    }
+
+    /// One-shot Date apply. Success is `None` for a `datetime.date`,
+    /// including a `datetime.datetime` (it subclasses `date`).
+    ///
+    /// Closed Date type door is this extract. A Python `int`, `str`,
+    /// `bool`, or other non-date raises at this FFI boundary (extract
+    /// error); host falls through to the host type door. No string
+    /// coerce. No bound unit. `DateValidator` still rejects
+    /// `datetime.datetime` in the named extra after this door.
+    /// Releases the GIL (`Python::detach`). Compile and apply stay a
+    /// pair.
+    #[pyfunction]
+    fn apply_date(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: ExtractedDate,
+    ) -> PyResult<Option<FailKind>> {
+        match &plan.body {
+            Plan::Date => {}
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal
+            | Plan::DateTime => return Err(unexpected_family("apply_date")),
+        }
+        let _ = value;
+        Ok(py.detach(|| None))
+    }
+
+    /// Closed DateTime type-door plan. No kwargs. The variant is the
+    /// `DateTime` marker. Not a taught L1 API. Not a Date plan.
+    /// String coerce stays on the host.
+    #[pyfunction]
+    fn compile_datetime() -> PyPlan {
+        compile_datetime_plan()
+    }
+
+    /// One-shot DateTime apply. Success is `None` for a
+    /// `datetime.datetime`.
+    ///
+    /// Closed DateTime type door is this extract. A plain
+    /// `datetime.date`, raw `str`, `int`, or `bool` raises at this FFI
+    /// boundary (extract error); host falls through to the host type
+    /// door. No string coerce. No bound unit. Releases the GIL
+    /// (`Python::detach`). Compile and apply stay a pair.
+    #[pyfunction]
+    fn apply_datetime(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: ExtractedDateTime,
+    ) -> PyResult<Option<FailKind>> {
+        match &plan.body {
+            Plan::DateTime => {}
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal
+            | Plan::Date => return Err(unexpected_family("apply_datetime")),
         }
         let _ = value;
         Ok(py.detach(|| None))

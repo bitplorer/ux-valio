@@ -8,29 +8,37 @@ are the same walk for every family, so they stay here. This is not a
 
 ``Plan`` is one variant per family. Integer / Float own ``BoundUnit``
 values. String / Bytes own ``LengthUnit`` values. IntegerEnum /
-StringEnum own a member set. Boolean / Decimal are type-door markers.
-There is no shared unit bag.
+StringEnum own a member set. Boolean / Decimal / Date / DateTime
+are type-door markers. There is no shared unit bag.
 
 Bind-time choice: when ``ux_valio_native`` is importable and the
 specified path is one closed family, compile that variant once.
 Type door is host-first ``isinstance`` then FFI extract (``i64`` /
-``f64`` / ``&str`` / ``&[u8]`` / ``bool`` / ``decimal.Decimal``);
+``f64`` / ``&str`` / ``&[u8]`` / ``bool`` / ``decimal.Decimal`` /
+``datetime.date`` / ``datetime.datetime``);
 bound / length / member checks run after extract. StringEnum
 extract is the member's ``.value`` as UTF-8 ``&str``. Boolean
 extract is exact ``bool`` (``1`` / ``0`` are not coerced). Decimal
 extract is exact ``decimal.Decimal`` (``float`` / ``int`` /
 ``bool`` are not coerced; string coerce stays host
-``_pre_validate``). No scale unit. Open TypeValidator / Union /
-TypedDict / Annotated / pattern / plain ``EnumValidator`` / Date*
-stay on the host. A ``BooleanValidator`` or ``DecimalValidator``
-with any extra unit stays on the host. Missing or failed extra →
-host ``_active_units`` path. No import on the hot path after that
+``_pre_validate``). No scale unit. Date extract is
+``datetime.date`` (a ``datetime.datetime`` extracts, because it
+subclasses ``date``; ``DateValidator`` still rejects it in the
+named extra). DateTime extract is ``datetime.datetime`` (a plain
+``date`` does not). String coerce for both stays host
+``_pre_validate``. Open TypeValidator / Union / TypedDict /
+Annotated / pattern / plain ``EnumValidator`` / UUID / Path / IP
+stay on the host. A ``BooleanValidator``, ``DecimalValidator``,
+``DateValidator``, or ``DateTimeValidator`` with any extra unit
+stays on the host. Missing or failed extra → host
+``_active_units`` path. No import on the hot path after that
 choice. Each family keeps its own ``compile_*`` / ``apply_*`` pair.
 Not Cap Door B.
 """
 
 from __future__ import annotations
 
+import datetime
 import decimal
 import enum
 import types
@@ -273,6 +281,77 @@ def _is_decimal_type_annotation(annotation: Any) -> bool:
     return frozenset(get_args(annotation)) == frozenset((decimal.Decimal, str))
 
 
+def _is_date_type_annotation(annotation: Any) -> bool:
+    """Exact ``datetime.date``, or the facade coerce union ``date | str``.
+
+    ``date | None`` and every other union stay on the host.
+    ``datetime.datetime`` is not this annotation (that is
+    ``_is_datetime_type_annotation``). This module does not import
+    facades.
+    """
+    return _is_stored_or_str_annotation(annotation, datetime.date)
+
+
+def _is_datetime_type_annotation(annotation: Any) -> bool:
+    """Exact ``datetime.datetime``, or the facade coerce union ``datetime | str``.
+
+    ``datetime | None`` and every other union stay on the host. A
+    plain ``datetime.date`` annotation is ``_is_date_type_annotation``.
+    This module does not import facades.
+    """
+    return _is_stored_or_str_annotation(annotation, datetime.datetime)
+
+
+def _is_stored_or_str_annotation(annotation: Any, stored: type) -> bool:
+    """Exact ``stored``, or the coerce union ``stored | str``.
+
+    ``stored | None`` and every other union stay on the host.
+    """
+    if annotation is stored:
+        return True
+    origin = get_origin(annotation)
+    if origin is not Union and not isinstance(annotation, types.UnionType):
+        return False
+    return frozenset(get_args(annotation)) == frozenset((stored, str))
+
+
+def _closed_date(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is ``datetime.date`` + the type door.
+
+    Annotation is ``datetime.date`` or the coerce union
+    ``datetime.date | str`` (``DateValidator``). Only ``TypeValidator``
+    may be active. Extra bounds (``min_value``, ``required``, choice,
+    ``reassign=False``) stay on the host. String coerce stays host
+    ``_pre_validate``. ``DateValidator`` is the taught facade;
+    ``Validator[datetime.date]`` with the same closed shape is the
+    same door. This module does not import facades.
+    """
+    if not _is_date_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
+def _closed_datetime(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is ``datetime.datetime`` + the type door.
+
+    Annotation is ``datetime.datetime`` or the coerce union
+    ``datetime.datetime | str`` (``DateTimeValidator``). Only
+    ``TypeValidator`` may be active. Extra bounds stay on the host.
+    String coerce stays host ``_pre_validate``. A plain ``date``
+    annotation is ``_closed_date``. This module does not import
+    facades.
+    """
+    if not _is_datetime_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
 def _closed_decimal(owner: Any) -> dict[str, Any] | None:
     """Empty compile kwargs when the path is Decimal + the type door.
 
@@ -452,6 +531,37 @@ def _raise_host_enum_type_miss(owner: Any, value: Any) -> None:
         f"{owner.name} expect {owner.annotation} type, "
         f"got {type(value).__name__} type instead"
     )
+
+
+def _raise_host_date_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Date type door is host-first.
+
+    FFI type is the later ``datetime.date`` extract. ``int`` / ``str`` /
+    ``bool`` miss. A ``datetime.datetime`` is a ``date`` and does not
+    miss here (``DateValidator`` rejects it in the named extra). A raw
+    ``str`` misses only when the annotation does not accept ``str``;
+    the coerce union accepts ``str`` here and ``_pre_validate`` has
+    already parsed a calendar string. ``None`` is skipped by the
+    caller. The closed plan has no second path unit, so
+    ``collect_all`` does not continue inside this raise (``validate``
+    still continues into the named extra).
+    """
+    TypeValidator._validate_type(owner, None, value)
+
+
+def _raise_host_datetime_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed DateTime type door is host-first.
+
+    FFI type is the later ``datetime.datetime`` extract. A plain
+    ``datetime.date`` / ``int`` / ``str`` / ``bool`` miss. A raw
+    ``str`` misses only when the annotation does not accept ``str``;
+    the coerce union accepts ``str`` here and ``_pre_validate`` has
+    already parsed an ISO string. ``None`` is skipped by the caller.
+    The closed plan has no second path unit, so ``collect_all`` does
+    not continue inside this raise (``validate`` still continues into
+    the named extra).
+    """
+    TypeValidator._validate_type(owner, None, value)
 
 
 def _raise_host_decimal_type_miss(owner: Any, value: Any) -> None:
@@ -665,6 +775,60 @@ def apply_native_bytes_length(owner: Any, value: Any) -> None:
     )
 
 
+def apply_native_date(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-date stays on host.
+
+    TypeError at ``datetime.date`` extract is a bridge signal (same
+    three buckets as Decimal: validation ``FailKind`` / bridge /
+    native-infra ``RuntimeError`` naming ``ux_valio_native``). No
+    public L1 "overflow" message. Door A is ``datetime.date`` after
+    host string coerce. ``datetime.datetime`` passes this extract
+    (subclass) and ``DateValidator`` still rejects it afterwards. No
+    bound unit.
+    """
+    if value is None:
+        return
+    if not isinstance(value, datetime.date):
+        _raise_host_date_type_miss(owner, value)
+        return
+    try:
+        fail = owner._native_apply(owner._native_plan, value)
+    except TypeError:
+        _bridge_to_type(owner, value)
+        return
+    except Exception as err:
+        raise RuntimeError("ux_valio_native apply failed") from err
+    if fail is None:
+        return
+    _raise_native_bound_miss(owner, fail, value)
+
+
+def apply_native_datetime(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-datetime stays on host.
+
+    TypeError at ``datetime.datetime`` extract is a bridge signal (same
+    three buckets as Date: validation ``FailKind`` / bridge /
+    native-infra ``RuntimeError`` naming ``ux_valio_native``). No
+    public L1 "overflow" message. Door A is ``datetime.datetime`` after
+    host string coerce. A plain ``datetime.date`` misses. No bound unit.
+    """
+    if value is None:
+        return
+    if not isinstance(value, datetime.datetime):
+        _raise_host_datetime_type_miss(owner, value)
+        return
+    try:
+        fail = owner._native_apply(owner._native_plan, value)
+    except TypeError:
+        _bridge_to_type(owner, value)
+        return
+    except Exception as err:
+        raise RuntimeError("ux_valio_native apply failed") from err
+    if fail is None:
+        return
+    _raise_native_bound_miss(owner, fail, value)
+
+
 def apply_native_decimal(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. Non-Decimal stays on host.
 
@@ -787,6 +951,26 @@ def _select_boolean(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     )
 
 
+def _select_date(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Date: ``compile_date`` and ``apply_date`` stay a pair."""
+    return (
+        native.apply_date,
+        apply_native_date,
+        native.compile_date,
+        bounds,
+    )
+
+
+def _select_datetime(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed DateTime: ``compile_datetime`` and ``apply_datetime`` stay a pair."""
+    return (
+        native.apply_datetime,
+        apply_native_datetime,
+        native.compile_datetime,
+        bounds,
+    )
+
+
 def _select_decimal(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed Decimal: ``compile_decimal`` and ``apply_decimal`` stay a pair."""
     return (
@@ -813,8 +997,9 @@ def bind_native_plan(owner: Any) -> None:
     One walk. Each closed family keeps its own ``compile_*`` / ``apply_*``
     pair: Integer / Float own ``BoundUnit`` values, String / Bytes own
     ``LengthUnit`` values, IntegerEnum / StringEnum own a member set,
-    Boolean / Decimal are type-door markers. An unclosed path does not
-    import the extra. Do not merge a pair into one door.
+    Boolean / Decimal / Date / DateTime are type-door markers. An
+    unclosed path does not import the extra. Do not merge a pair into
+    one door.
     """
     families: tuple[tuple[Any, Any], ...] = (
         (_closed_integer_bounds, _select_integer_bounds),
@@ -825,6 +1010,8 @@ def bind_native_plan(owner: Any) -> None:
         (_closed_string_enum_members, _select_string_enum),
         (_closed_boolean, _select_boolean),
         (_closed_decimal, _select_decimal),
+        (_closed_date, _select_date),
+        (_closed_datetime, _select_datetime),
     )
     for detect, select in families:
         payload = detect(owner)
