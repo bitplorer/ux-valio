@@ -52,9 +52,13 @@ The host already compiles at construct:
 - uniqueness of ``ValidationPath`` units at ``__init__`` (not per set)
 - native bundle slots on ``Validator`` —
   ``_native_plan`` / ``_native_apply`` / ``_native_fail`` /
-  ``_native_apply_host`` — seeded ``None`` before
+  ``_native_extract_bridge`` — seeded ``None`` before
   ``bind_native_plan`` (``_clear_native`` clears the same four;
-  writers stay ``bind_native_plan`` / ``_clear_native``)
+  writers stay ``bind_native_plan`` / ``_clear_native``).
+  ``_native_extract_bridge`` is the extract-miss / OverflowError
+  bridge back to host KEEP wording (``ValueValidator`` /
+  ``LengthValidator`` / ``TypeValidator``), not a second peer apply
+  beside ``_native_apply``
 
 That tuple **is** the plan. Without the extra, the interpreter applies
 it. With ``ux-valio[native]``, a **closed** subset is the same tuple as

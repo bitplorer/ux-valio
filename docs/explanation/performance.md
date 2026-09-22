@@ -19,9 +19,10 @@ At construct (`Validator.__init__` / `__set_name__`):
   value, pattern, choice, `reassign`, `multiple_of` only when you passed
   them
 - native bundle slots (`_native_plan` / `_native_apply` / `_native_fail` /
-  `_native_apply_host`) seeded `None` on `Validator` before
-  `bind_native_plan`; `__set_name__` rebinds when the plan is still
-  `None` (annotation-ready cases)
+  `_native_extract_bridge`) seeded `None` on `Validator` before
+  `bind_native_plan`. `_native_extract_bridge` is the extract-miss
+  bridge to host KEEP wording, not a peer apply. `__set_name__`
+  rebinds when the plan is still `None` (annotation-ready cases)
 - named-facade extra (GSTIN checksum, Luhn, …) as one function after
   that path
 - Pattern `re.compile` on the finder

@@ -308,7 +308,7 @@ def _clear_native(owner: Any) -> None:
     owner._native_plan = None
     owner._native_apply = None
     owner._native_fail = None
-    owner._native_apply_host = None
+    owner._native_extract_bridge = None
 
 
 def _apply_host_value_after_i64_overflow(owner: Any, value: Any) -> None:
@@ -778,11 +778,16 @@ def apply_native_boolean(owner: Any, value: Any) -> None:
 
 
 def apply_native_bounds(owner: Any, value: Any) -> None:
-    """Dispatch the bind-time host apply. Unset bundle is a caller bug."""
-    apply_host = getattr(owner, "_native_apply_host", None)
-    if apply_host is None:
+    """Call the bind-time extract bridge. Unset bundle is a caller bug.
+
+    ``_native_extract_bridge`` is the extract-miss / OverflowError
+    bridge back to host KEEP wording, not a second peer apply beside
+    ``_native_apply``.
+    """
+    extract_bridge = owner._native_extract_bridge
+    if extract_bridge is None:
         raise RuntimeError("ux_valio_native apply failed")
-    apply_host(owner, value)
+    extract_bridge(owner, value)
 
 
 type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
@@ -865,9 +870,9 @@ def bind_native_plan(owner: Any) -> None:
         if peer is None:
             _clear_native(owner)
             return
-        apply, host_apply, compile_fn, kwargs = select(peer, payload)
+        apply, extract_bridge, compile_fn, kwargs = select(peer, payload)
         owner._native_apply = apply
-        owner._native_apply_host = host_apply
+        owner._native_extract_bridge = extract_bridge
         _bind_compiled_plan(owner, peer, compile_fn, kwargs)
         return
     _clear_native(owner)

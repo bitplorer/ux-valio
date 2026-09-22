@@ -180,12 +180,14 @@ class Validator(ValidateProperty[T]):
             collect_all=collect_all,
         )
         self._active_units = _specified_units(self)
-        # Native bundle ownership: same four slots ``_clear_native`` clears.
+        # Four slots: ``_native_plan`` / ``_native_apply`` / ``_native_fail`` /
+        # ``_native_extract_bridge``. The bridge is the extract-miss /
+        # OverflowError path back to host KEEP wording, not a peer apply.
         # Seed None here; ``bind_native_plan`` / ``_clear_native`` are the writers.
         self._native_plan = None
         self._native_apply = None
         self._native_fail = None
-        self._native_apply_host = None
+        self._native_extract_bridge = None
         bind_native_plan(self)
 
     def __set_name__(self, owner: type, name: str) -> None:
