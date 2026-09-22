@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Native peer layout: public doors, bare names, cross-family, Cap OFF.
+"""Native module layout: public doors, bare names, cross-family, Cap OFF.
 
 ``Plan`` is one variant per family (``BoundUnit`` / ``LengthUnit`` /
 member set / Boolean and Decimal type-door markers). No shared unit
@@ -19,7 +19,7 @@ from tests.native_support import (
     HOST_NATIVE_PATHS,
     ROOT,
     _HOLD,
-    _peer_rust,
+    _native_rust,
     host_native_source,
     needs_native,
 )
@@ -73,37 +73,37 @@ _ABSENT_DOORS = (
 
 
 @needs_native
-def test_bare_compile_and_apply_are_absent_on_the_peer():
+def test_bare_compile_and_apply_are_absent_on_the_native_module():
     """Hard cut: doors are family-named. No alias remains.
 
-    Date* stays HOLD. Cap Door B stays off this peer.
+    Date* stays HOLD. Cap Door B stays off this native module.
     """
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
-    assert not hasattr(peer, "compile")
-    assert not hasattr(peer, "apply")
+    assert not hasattr(native, "compile")
+    assert not hasattr(native, "apply")
     with pytest.raises(AttributeError):
-        getattr(peer, "compile")
+        getattr(native, "compile")
     with pytest.raises(AttributeError):
-        getattr(peer, "apply")
+        getattr(native, "apply")
     for name in _ABSENT_DOORS:
-        assert not hasattr(peer, name), name
+        assert not hasattr(native, name), name
         with pytest.raises(AttributeError):
-            getattr(peer, name)
+            getattr(native, name)
     for name in _PUBLIC_DOORS:
-        assert callable(getattr(peer, name)), name
-    assert {name for name in dir(peer) if name.startswith("compile")} == {
+        assert callable(getattr(native, name)), name
+    assert {name for name in dir(native) if name.startswith("compile")} == {
         name for name in _PUBLIC_DOORS if name.startswith("compile")
     }
-    assert {name for name in dir(peer) if name.startswith("apply")} == {
+    assert {name for name in dir(native) if name.startswith("apply")} == {
         name for name in _PUBLIC_DOORS if name.startswith("apply")
     }
-    assert callable(getattr(peer, "compile_integer"))
-    assert callable(getattr(peer, "apply_integer"))
-    assert not hasattr(peer, "PyPlan")
-    plan = peer.compile_integer(min_value=0)
+    assert callable(getattr(native, "compile_integer"))
+    assert callable(getattr(native, "apply_integer"))
+    assert not hasattr(native, "PyPlan")
+    plan = native.compile_integer(min_value=0)
     assert type(plan).__name__ == "Plan"
-    rust = _peer_rust()
+    rust = _native_rust()
     assert "fn compile_date" not in rust
     assert "fn apply_date" not in rust
     assert "Plan::Date" not in rust
@@ -114,34 +114,34 @@ def test_bare_compile_and_apply_are_absent_on_the_peer():
 @needs_native
 def test_apply_door_rejects_a_different_family():
     """Wrong family is an error at the door. The walk does not run."""
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
-    integer = peer.compile_integer(min_value=0)
-    text = peer.compile_string(min_length=1)
+    integer = native.compile_integer(min_value=0)
+    text = native.compile_string(min_length=1)
     with pytest.raises(RuntimeError, match="apply_integer plan family mismatch"):
-        peer.apply_integer(text, 1)
+        native.apply_integer(text, 1)
     with pytest.raises(RuntimeError, match="apply_string plan family mismatch"):
-        peer.apply_string(integer, "ab")
-    assert peer.apply_integer(integer, 1) is None
-    assert peer.apply_string(text, "ab") is None
+        native.apply_string(integer, "ab")
+    assert native.apply_integer(integer, 1) is None
+    assert native.apply_string(text, "ab") is None
 
     doors = (
-        ("apply_integer", peer.compile_integer(min_value=0), 1),
-        ("apply_float", peer.compile_float(min_value=0.0), 1.0),
-        ("apply_string", peer.compile_string(min_length=1), "ab"),
-        ("apply_bytes", peer.compile_bytes(min_length=1), b"ab"),
-        ("apply_integer_enum", peer.compile_integer_enum([1]), 1),
-        ("apply_string_enum", peer.compile_string_enum(["ab"]), "ab"),
-        ("apply_boolean", peer.compile_boolean(), True),
-        ("apply_decimal", peer.compile_decimal(), decimal.Decimal("1")),
+        ("apply_integer", native.compile_integer(min_value=0), 1),
+        ("apply_float", native.compile_float(min_value=0.0), 1.0),
+        ("apply_string", native.compile_string(min_length=1), "ab"),
+        ("apply_bytes", native.compile_bytes(min_length=1), b"ab"),
+        ("apply_integer_enum", native.compile_integer_enum([1]), 1),
+        ("apply_string_enum", native.compile_string_enum(["ab"]), "ab"),
+        ("apply_boolean", native.compile_boolean(), True),
+        ("apply_decimal", native.compile_decimal(), decimal.Decimal("1")),
     )
     for door, plan, sample in doors:
-        assert getattr(peer, door)(plan, sample) is None
+        assert getattr(native, door)(plan, sample) is None
         for other, _other_plan, other_sample in doors:
             if other == door:
                 continue
             with pytest.raises(RuntimeError, match=f"{other} plan family mismatch"):
-                getattr(peer, other)(plan, other_sample)
+                getattr(native, other)(plan, other_sample)
 
 
 def test_field_path_has_no_cap_door_b_or_json_plan():
@@ -187,7 +187,7 @@ def test_host_native_is_one_file():
 def test_closed_apply_slot_is_seeded_on_validator():
     """Fourth slot is the closed host apply.
 
-    ``Validator.__init__`` seeds it ``None``. Peer FFI apply stays
+    ``Validator.__init__`` seeds it ``None``. Product-PyO3 apply stays
     ``_native_ffi``. ``bind_native_plan`` writes ``apply_native_*``
     onto ``_native_entry``. ``apply_native_bounds`` reads the
     attribute directly.
@@ -202,16 +202,16 @@ def test_closed_apply_slot_is_seeded_on_validator():
     assert "owner._native_entry" in native_py
     assert "self._native_entry = None" in facade
     assert 'getattr(owner, "_native_entry"' not in native_py
-    assert "closed_apply = owner._native_entry" in native_py
+    assert "entry = owner._native_entry" in native_py
 
 
 @needs_native
 def test_bind_writes_closed_host_apply():
     """Closed bind stores ``apply_native_*`` on ``_native_entry``.
 
-    Peer FFI apply stays ``_native_ffi``.
+    Product-PyO3 apply stays ``_native_ffi``.
     """
-    import ux_valio_native as peer
+    import ux_valio_native as native
     from ux_valio.validators._native import (
         apply_native_float_bounds,
         apply_native_integer_bounds,
@@ -219,11 +219,11 @@ def test_bind_writes_closed_host_apply():
 
     field = IntegerValidator(min_value=0, debug=True, name="n")
     assert field._native_plan is not None
-    assert field._native_ffi is peer.apply_integer
+    assert field._native_ffi is native.apply_integer
     assert field._native_entry is apply_native_integer_bounds
     assert field._native_entry is not field._native_ffi
     floating = FloatValidator(min_value=0.0, debug=True, name="n")
-    assert floating._native_ffi is peer.apply_float
+    assert floating._native_ffi is native.apply_float
     assert floating._native_entry is apply_native_float_bounds
     assert floating._native_entry is not floating._native_ffi
 
@@ -277,7 +277,7 @@ def test_unclosed_plans_stay_on_host():
 
 def test_plan_shape_is_owned_unit_list():
     """Each family variant owns its checks. No shared ``Unit`` bag."""
-    rust = _peer_rust()
+    rust = _native_rust()
     assert "units: [Unit; 2]" not in rust
     assert "enum Unit" not in rust
     assert "Vec<Unit>" not in rust
@@ -296,7 +296,7 @@ def test_plan_shape_is_owned_unit_list():
 
 def test_native_unit_names_are_full_words():
     """Rust variants are parallel full words; host kwargs stay min_value/gt/…."""
-    rust = _peer_rust()
+    rust = _native_rust()
     assert re.search(r"\bMinValue\(T\)", rust)
     assert re.search(r"\bMaxValue\(T\)", rust)
     assert re.search(r"\bGreaterThan\(T\)", rust)

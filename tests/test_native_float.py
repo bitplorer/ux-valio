@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Native peer: Float bound plans (``Plan::Float`` / ``BoundUnit<f64>``).
+"""Native module: Float bound plans (``Plan::Float`` / ``BoundUnit<f64>``).
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
@@ -13,7 +13,7 @@ from tests.native_support import (
     _assign,
     _assign_eq,
     _force_host,
-    _peer_rust,
+    _native_rust,
     _stored_eq,
     host_native_source,
     needs_native,
@@ -27,7 +27,7 @@ from ux_valio import (
 
 def test_closed_float_type_door_is_f64_extract():
     """Float type is f64 extract. IEEE compare; no total_cmp / NotFloat."""
-    rust = _peer_rust()
+    rust = _native_rust()
     native_py = host_native_source()
     assert re.search(r"value: f64", rust)
     assert "fn apply_float" in rust
@@ -38,7 +38,7 @@ def test_closed_float_type_door_is_f64_extract():
     assert "_closed_float_bounds" in native_py
     assert "apply_native_float_bounds" in native_py
     assert "isinstance(value, expected)" in native_py
-    assert "_apply_host_value_after_f64_overflow" in native_py
+    assert "_bridge_to_value" in native_py
     assert 'raise ValueError("overflow' not in native_py
     assert "PyO3 float Overflow" not in native_py
     assert "public overflow" not in native_py
@@ -322,12 +322,12 @@ def test_native_float_parity_with_host_path(kwargs, samples):
 
 @needs_native
 def test_native_float_uses_apply_float_not_integer_apply():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = FloatValidator(min_value=0.0, debug=True, name="n")
-    assert field._native_ffi is peer.apply_float
+    assert field._native_ffi is native.apply_float
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_ffi is peer.apply_integer
+    assert integer._native_ffi is native.apply_integer
 
 
 @needs_native
@@ -422,11 +422,11 @@ def test_f64_overflow_falls_through_to_host_and_passes():
 
 
 @needs_native
-def test_unexpected_float_peer_bind_raises_runtime_error(monkeypatch):
+def test_unexpected_float_native_bind_raises_runtime_error(monkeypatch):
     import ux_valio_native
 
     def boom(**kwargs):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     monkeypatch.setattr(ux_valio_native, "compile_float", boom)
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
@@ -437,12 +437,12 @@ def test_unexpected_float_peer_bind_raises_runtime_error(monkeypatch):
 
 
 @needs_native
-def test_unexpected_float_peer_apply_raises_runtime_error():
+def test_unexpected_float_native_apply_raises_runtime_error():
     field = FloatValidator(min_value=0.0, debug=True, name="n")
     assert field._native_plan is not None
 
     def boom(plan, value):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:

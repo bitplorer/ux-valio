@@ -181,8 +181,8 @@ class Validator(ValidateProperty[T]):
         )
         self._active_units = _specified_units(self)
         # Four slots: ``_native_plan`` / ``_native_ffi`` / ``_native_fail_kind`` /
-        # ``_native_entry``. Peer FFI apply is ``_native_ffi``.
-        # Closed host apply is ``_native_entry``.
+        # ``_native_entry``. Product-PyO3 apply is ``_native_ffi``.
+        # Closed-family host entry is ``_native_entry``.
         # Seed None here; ``bind_native_plan`` / ``_clear_native`` are the writers.
         self._native_plan = None
         self._native_ffi = None

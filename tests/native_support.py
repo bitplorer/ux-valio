@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Shared helpers for native peer tests. Not collected as tests."""
+"""Shared helpers for native module tests. Not collected as tests."""
 
 import math
 from pathlib import Path
@@ -9,8 +9,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _peer_rust() -> str:
-    """Private peer sources. Layout may span modules under ``native/src``."""
+def _native_rust() -> str:
+    """Private native-crate sources. Layout may span modules under ``native/src``."""
     native_src = ROOT / "native" / "src"
     return "\n".join(path.read_text() for path in sorted(native_src.rglob("*.rs")))
 
@@ -39,7 +39,7 @@ def host_native_source() -> str:
     return "\n".join(path.read_text() for path in HOST_NATIVE_PATHS)
 
 
-def _peer_available() -> bool:
+def _native_available() -> bool:
     try:
         import ux_valio_native  # noqa: F401
     except ImportError:
@@ -48,7 +48,7 @@ def _peer_available() -> bool:
 
 
 needs_native = pytest.mark.skipif(
-    not _peer_available(),
+    not _native_available(),
     reason="ux-valio[native] extra not built (CI without Rust skips)",
 )
 

@@ -20,8 +20,8 @@ At construct (`Validator.__init__` / `__set_name__`):
   them
 - native bundle slots (`_native_plan` / `_native_ffi` / `_native_fail_kind` /
   `_native_entry`) seeded `None` on `Validator` before
-  `bind_native_plan`. Peer FFI apply stays `_native_ffi`. Closed
-  host apply is `_native_entry`. `__set_name__` rebinds when
+  `bind_native_plan`. Product-PyO3 apply stays `_native_ffi`. Closed-family
+  host entry is `_native_entry`. `__set_name__` rebinds when
   the plan is still `None` (annotation-ready cases)
 - named-facade extra (GSTIN checksum, Luhn, …) as one function after
   that path

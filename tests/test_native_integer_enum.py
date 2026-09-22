@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Native peer: IntegerEnum member-set plans (``Plan::IntegerEnum``).
+"""Native module: IntegerEnum member-set plans (``Plan::IntegerEnum``).
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
@@ -15,7 +15,7 @@ from tests.native_support import (
     _bind_enum_field,
     _enum_door,
     _force_host,
-    _peer_rust,
+    _native_rust,
     host_native_source,
     needs_native,
 )
@@ -85,7 +85,7 @@ def test_integer_enum_l1_has_no_members_kwarg():
 
 def test_closed_integer_enum_type_door_is_i64_extract():
     """IntegerEnum type is i64 extract. Compile and apply stay a pair."""
-    rust = _peer_rust()
+    rust = _native_rust()
     native_py = host_native_source()
     assert "fn compile_integer_enum" in rust
     assert "fn apply_integer_enum" in rust
@@ -95,8 +95,9 @@ def test_closed_integer_enum_type_door_is_i64_extract():
     assert "fn compile_and_apply" not in rust
     assert "_closed_integer_enum_members" in native_py
     assert "apply_native_integer_enum" in native_py
-    assert "_raise_host_integer_enum_type_miss" in native_py
-    assert "_apply_host_integer_enum_after_i64_overflow" in native_py
+    assert "_raise_host_enum_type_miss" in native_py
+    assert "_raise_host_integer_enum_type_miss" not in native_py
+    assert "_bridge_to_type" in native_py
     assert "kinds.NotMember" in native_py
     assert not re.search(r"if fail == kinds\.", native_py)
 
@@ -208,34 +209,34 @@ def test_native_integer_enum_parity_with_host():
 
 @needs_native
 def test_native_integer_enum_uses_apply_integer_enum_not_integer_apply():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = _bind_enum_field(_Rank)
-    assert field._native_ffi is peer.apply_integer_enum
-    assert field._native_ffi is not peer.apply_integer
+    assert field._native_ffi is native.apply_integer_enum
+    assert field._native_ffi is not native.apply_integer
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_ffi is peer.apply_integer
-    assert hasattr(peer.FailKind, "NotMember")
-    assert not hasattr(peer.FailKind, "NotMem")
-    plan = peer.compile_integer_enum(members=[1, 2, 0, -3])
-    assert peer.apply_integer_enum(plan, 1) is None
-    assert peer.apply_integer_enum(plan, 0) is None
-    assert peer.apply_integer_enum(plan, -3) is None
-    assert peer.apply_integer_enum(plan, 9) is peer.FailKind.NotMember
-    assert peer.apply_integer_enum(plan, _Rank.LOW) is None
-    empty = peer.compile_integer_enum(members=[])
-    assert peer.apply_integer_enum(empty, 0) is peer.FailKind.NotMember
-    assert peer.apply_integer_enum(empty, 1) is peer.FailKind.NotMember
+    assert integer._native_ffi is native.apply_integer
+    assert hasattr(native.FailKind, "NotMember")
+    assert not hasattr(native.FailKind, "NotMem")
+    plan = native.compile_integer_enum(members=[1, 2, 0, -3])
+    assert native.apply_integer_enum(plan, 1) is None
+    assert native.apply_integer_enum(plan, 0) is None
+    assert native.apply_integer_enum(plan, -3) is None
+    assert native.apply_integer_enum(plan, 9) is native.FailKind.NotMember
+    assert native.apply_integer_enum(plan, _Rank.LOW) is None
+    empty = native.compile_integer_enum(members=[])
+    assert native.apply_integer_enum(empty, 0) is native.FailKind.NotMember
+    assert native.apply_integer_enum(empty, 1) is native.FailKind.NotMember
 
 
 @needs_native
 def test_integer_enum_not_member_failkind_uses_type_door_wording():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = _bind_enum_field(_Rank)
 
     def always_miss(plan, value):
-        return peer.FailKind.NotMember
+        return native.FailKind.NotMember
 
     field._native_ffi = always_miss
     got = _assign(field, _Rank.LOW)
@@ -262,12 +263,12 @@ def test_integer_enum_unclosed_and_other_facades_stay_on_host():
     string_on_int = _bind_enum_field(_Rank, cls=StringEnumValidator)
     assert string_on_int._native_plan is None
     assert string_on_int.annotation is _Rank
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     boolean = BooleanValidator(debug=True, name="n")
     assert boolean._native_plan is not None
-    assert boolean._native_ffi is peer.apply_boolean
-    assert boolean._native_ffi is not peer.apply_integer_enum
+    assert boolean._native_ffi is native.apply_boolean
+    assert boolean._native_ffi is not native.apply_integer_enum
     open_validator = Validator[_Rank](debug=True, name="n")
 
     class OpenOwner:
@@ -415,11 +416,11 @@ def test_integer_enum_extract_overflow_falls_through_to_host():
 
 
 @needs_native
-def test_unexpected_integer_enum_peer_bind_raises_runtime_error(monkeypatch):
+def test_unexpected_integer_enum_native_bind_raises_runtime_error(monkeypatch):
     import ux_valio_native
 
     def boom(**kwargs):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     monkeypatch.setattr(ux_valio_native, "compile_integer_enum", boom)
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
@@ -430,12 +431,12 @@ def test_unexpected_integer_enum_peer_bind_raises_runtime_error(monkeypatch):
 
 
 @needs_native
-def test_unexpected_integer_enum_peer_apply_raises_runtime_error():
+def test_unexpected_integer_enum_native_apply_raises_runtime_error():
     field = _bind_enum_field(_Rank)
     assert field._native_plan is not None
 
     def boom(plan, value):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:

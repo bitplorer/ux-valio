@@ -55,7 +55,7 @@ The host already compiles at construct:
   ``_native_entry`` — seeded ``None`` before
   ``bind_native_plan`` (``_clear_native`` clears the same four;
   writers stay ``bind_native_plan`` / ``_clear_native``).
-  Peer FFI apply stays ``_native_ffi``. Closed host apply
+  Product-PyO3 apply stays ``_native_ffi``. Closed-family host entry
   (``apply_native_integer_bounds`` and the other family doors) is
   ``_native_entry``
 

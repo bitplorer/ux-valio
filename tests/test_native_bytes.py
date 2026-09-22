@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Native peer: Bytes length plans (``Plan::Bytes`` / ``LengthUnit``).
+"""Native module: Bytes length plans (``Plan::Bytes`` / ``LengthUnit``).
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
@@ -12,7 +12,7 @@ from tests.native_support import (
     _assign,
     _assign_eq,
     _force_host,
-    _peer_rust,
+    _native_rust,
     host_native_source,
     needs_native,
 )
@@ -27,7 +27,7 @@ from ux_valio import (
 
 def test_closed_bytes_type_door_is_bytes_extract():
     """Bytes type is ``&[u8]`` extract. Length is ``len()``, not codepoints."""
-    rust = _peer_rust()
+    rust = _native_rust()
     native_py = host_native_source()
     assert "fn compile_bytes" in rust
     assert "fn apply_bytes" in rust
@@ -37,7 +37,7 @@ def test_closed_bytes_type_door_is_bytes_extract():
     assert "grapheme" not in rust.lower()
     assert "_closed_bytes_length" in native_py
     assert "apply_native_bytes_length" in native_py
-    assert "_apply_host_length_after_bytes_extract" in native_py
+    assert "_bridge_to_length" in native_py
     assert 'raise ValueError("overflow' not in native_py
     assert "PyO3 bytes Overflow" not in native_py
     assert "public overflow" not in native_py
@@ -313,16 +313,16 @@ def test_native_bytes_parity_with_host_path(kwargs, samples):
 
 @needs_native
 def test_native_bytes_uses_apply_bytes_not_string_apply():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = BytesValidator(min_length=1, debug=True, name="n")
-    assert field._native_ffi is peer.apply_bytes
+    assert field._native_ffi is native.apply_bytes
     text = StringValidator(min_length=1, debug=True, name="n")
-    assert text._native_ffi is peer.apply_string
+    assert text._native_ffi is native.apply_string
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_ffi is peer.apply_integer
+    assert integer._native_ffi is native.apply_integer
     floating = FloatValidator(min_value=0.0, debug=True, name="n")
-    assert floating._native_ffi is peer.apply_float
+    assert floating._native_ffi is native.apply_float
 
 
 @needs_native
@@ -460,11 +460,11 @@ def test_non_int_bytes_length_bound_stays_on_host():
 
 
 @needs_native
-def test_unexpected_bytes_peer_bind_raises_runtime_error(monkeypatch):
+def test_unexpected_bytes_native_bind_raises_runtime_error(monkeypatch):
     import ux_valio_native
 
     def boom(**kwargs):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     monkeypatch.setattr(ux_valio_native, "compile_bytes", boom)
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
@@ -475,12 +475,12 @@ def test_unexpected_bytes_peer_bind_raises_runtime_error(monkeypatch):
 
 
 @needs_native
-def test_unexpected_bytes_peer_apply_raises_runtime_error():
+def test_unexpected_bytes_native_apply_raises_runtime_error():
     field = BytesValidator(min_length=1, debug=True, name="n")
     assert field._native_plan is not None
 
     def boom(plan, value):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:

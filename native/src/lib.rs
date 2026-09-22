@@ -1,4 +1,4 @@
-//! Optional apply peer for `ux-valio[native]`.
+//! Optional product PyO3 native module for `ux-valio[native]`.
 //!
 //! [`plan::Plan`] is one variant per family. The variant owns that
 //! family's checks: Integer / Float own [`bound::BoundUnit`] values,
@@ -37,7 +37,7 @@ use pyo3::prelude::*;
 use bound::{apply_bound_units, compile_bound_plan};
 use length::{apply_length_units, compile_length_plan};
 use plan::{
-    apply_member_units, apply_string_members, share_plan, unexpected_family, FailKind, Plan, PyPlan,
+    apply_i64_members, apply_str_members, share_plan, unexpected_family, FailKind, Plan, PyPlan,
 };
 
 mod bound;
@@ -127,7 +127,7 @@ fn compile_decimal_plan() -> PyPlan {
     share_plan(Plan::Decimal)
 }
 
-/// Product peer: `compile_integer(...)` / `compile_float(...)` /
+/// Product native module: `compile_integer(...)` / `compile_float(...)` /
 /// `compile_string(...)` / `compile_bytes(...)` /
 /// `compile_integer_enum(...)` / `compile_string_enum(...)` /
 /// `compile_boolean()` / `compile_decimal()` + one-shot `apply_integer` /
@@ -364,7 +364,7 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal => return Err(unexpected_family("apply_integer_enum")),
         };
-        Ok(py.detach(move || apply_member_units(&members, value).err()))
+        Ok(py.detach(move || apply_i64_members(&members, value).err()))
     }
 
     /// Closed StringEnum member-set plan. `members` are the concrete
@@ -405,7 +405,7 @@ mod ux_valio_native {
             | Plan::Decimal => return Err(unexpected_family("apply_string_enum")),
         };
         let owned = value.to_owned();
-        Ok(py.detach(move || apply_string_members(&members, &owned).err()))
+        Ok(py.detach(move || apply_str_members(&members, &owned).err()))
     }
 
     /// Closed Boolean type-door plan. No kwargs. The variant is the

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Native peer: Decimal type door (``Plan::Decimal``, exact ``Decimal``).
+"""Native module: Decimal type door (``Plan::Decimal``, exact ``Decimal``).
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
@@ -14,7 +14,7 @@ from tests.native_support import (
     ROOT,
     _assign,
     _force_host,
-    _peer_rust,
+    _native_rust,
     host_native_source,
     needs_native,
 )
@@ -48,7 +48,7 @@ def test_decimal_works_on_stdlib_path():
 
 def test_closed_decimal_type_door_is_decimal_extract():
     """Decimal type is exact Decimal extract. Compile and apply stay a pair."""
-    rust = _peer_rust()
+    rust = _native_rust()
     cargo = (ROOT / "native" / "Cargo.toml").read_text()
     native_py = host_native_source()
     assert "fn compile_decimal" in rust
@@ -66,13 +66,13 @@ def test_closed_decimal_type_door_is_decimal_extract():
     assert "_select_decimal" in native_py
     assert "apply_native_decimal" in native_py
     assert "_raise_host_decimal_type_miss" in native_py
-    assert "_apply_host_decimal_after_extract" in native_py
+    assert "_bridge_to_type" in native_py
     assert "_is_decimal_type_annotation" in native_py
 
 
 @needs_native
 def test_decimal_compiles_once_at_bind():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = DecimalValidator(debug=True)
 
@@ -82,14 +82,14 @@ def test_decimal_compiles_once_at_bind():
 
     plan = field._native_plan
     assert plan is not None
-    assert field._native_ffi is peer.apply_decimal
-    assert field._native_ffi is not peer.apply_float
+    assert field._native_ffi is native.apply_decimal
+    assert field._native_ffi is not native.apply_float
     assert field.annotation == decimal.Decimal | str
     box = Box(amount=decimal.Decimal("0"))
     box.amount = decimal.Decimal("1.23")
     assert box.amount == decimal.Decimal("1.23")
     assert field._native_plan is plan
-    assert field._native_ffi is peer.apply_decimal
+    assert field._native_ffi is native.apply_decimal
 
 
 @needs_native
@@ -162,22 +162,22 @@ def test_native_decimal_parity_with_host():
 
 @needs_native
 def test_native_decimal_uses_apply_decimal_not_float_apply():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = DecimalValidator(debug=True, name="n")
-    assert field._native_ffi is peer.apply_decimal
-    assert field._native_ffi is not peer.apply_float
-    plan = peer.compile_decimal()
-    assert peer.apply_decimal(plan, decimal.Decimal("1.23")) is None
-    assert peer.apply_decimal(plan, decimal.Decimal("0")) is None
+    assert field._native_ffi is native.apply_decimal
+    assert field._native_ffi is not native.apply_float
+    plan = native.compile_decimal()
+    assert native.apply_decimal(plan, decimal.Decimal("1.23")) is None
+    assert native.apply_decimal(plan, decimal.Decimal("0")) is None
     with pytest.raises(TypeError):
-        peer.apply_decimal(plan, 1.23)
+        native.apply_decimal(plan, 1.23)
     with pytest.raises(TypeError):
-        peer.apply_decimal(plan, 1)
+        native.apply_decimal(plan, 1)
     with pytest.raises(TypeError):
-        peer.apply_decimal(plan, True)
+        native.apply_decimal(plan, True)
     with pytest.raises(TypeError):
-        peer.apply_decimal(plan, "1.23")
+        native.apply_decimal(plan, "1.23")
 
 
 @needs_native
@@ -209,7 +209,7 @@ def test_decimal_unclosed_stays_on_host():
 
 @needs_native
 def test_validator_decimal_subscript_compiles_at_set_name():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = Validator[decimal.Decimal](debug=True, name="n")
 
@@ -220,7 +220,7 @@ def test_validator_decimal_subscript_compiles_at_set_name():
     field.__set_name__(Owner, "n")
     assert field.annotation is decimal.Decimal
     assert field._native_plan is not None
-    assert field._native_ffi is peer.apply_decimal
+    assert field._native_ffi is native.apply_decimal
     assert _assign(field, decimal.Decimal("0"))[3] == decimal.Decimal("0")
     assert _assign(field, 1.23)[1] is TypeError
     assert _assign(field, "1.23")[1] is TypeError
@@ -322,11 +322,11 @@ def test_decimal_extract_type_error_falls_through_to_host():
 
 
 @needs_native
-def test_unexpected_decimal_peer_bind_raises_runtime_error(monkeypatch):
+def test_unexpected_decimal_native_bind_raises_runtime_error(monkeypatch):
     import ux_valio_native
 
     def boom():
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     monkeypatch.setattr(ux_valio_native, "compile_decimal", boom)
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
@@ -337,12 +337,12 @@ def test_unexpected_decimal_peer_bind_raises_runtime_error(monkeypatch):
 
 
 @needs_native
-def test_unexpected_decimal_peer_apply_raises_runtime_error():
+def test_unexpected_decimal_native_apply_raises_runtime_error():
     field = DecimalValidator(debug=True, name="n")
     assert field._native_plan is not None
 
     def boom(plan, value):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
