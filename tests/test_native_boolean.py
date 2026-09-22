@@ -66,15 +66,15 @@ def test_boolean_compiles_once_at_bind():
 
     plan = field._native_plan
     assert plan is not None
-    assert field._native_apply is peer.apply_boolean
-    assert field._native_apply is not peer.apply_integer
+    assert field._native_ffi is peer.apply_boolean
+    assert field._native_ffi is not peer.apply_integer
     assert field.annotation is bool
     box = Box(flag=False)
     box.flag = True
     box.flag = False
     assert box.flag is False
     assert field._native_plan is plan
-    assert field._native_apply is peer.apply_boolean
+    assert field._native_ffi is peer.apply_boolean
 
 
 @needs_native
@@ -82,13 +82,13 @@ def test_one_ffi_apply_boolean_per_set():
     field = BooleanValidator(debug=True, name="n")
     assert field._native_plan is not None
     calls: list[object] = []
-    orig = field._native_apply
+    orig = field._native_ffi
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_apply = counted
+    field._native_ffi = counted
 
     class Box:
         pass
@@ -130,10 +130,10 @@ def test_native_boolean_uses_apply_boolean_not_integer_apply():
     import ux_valio_native as peer
 
     field = BooleanValidator(debug=True, name="n")
-    assert field._native_apply is peer.apply_boolean
-    assert field._native_apply is not peer.apply_integer
+    assert field._native_ffi is peer.apply_boolean
+    assert field._native_ffi is not peer.apply_integer
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_apply is peer.apply_integer
+    assert integer._native_ffi is peer.apply_integer
     assert _assign(integer, True)[3] is True
     plan = peer.compile_boolean()
     assert peer.apply_boolean(plan, True) is None
@@ -169,7 +169,7 @@ def test_validator_bool_subscript_compiles_at_set_name():
     field.__set_name__(Owner, "n")
     assert field.annotation is bool
     assert field._native_plan is not None
-    assert field._native_apply is peer.apply_boolean
+    assert field._native_ffi is peer.apply_boolean
     assert _assign(field, False)[3] is False
     assert _assign(field, 1)[1] is TypeError
 
@@ -250,7 +250,7 @@ def test_boolean_extract_type_error_falls_through_to_host():
     def boom(plan, value):
         raise TypeError("extract")
 
-    native._native_apply = boom
+    native._native_ffi = boom
     assert _assign(native, True)[3] is True
     assert _assign(native, False)[3] is False
     assert _assign(host, False)[3] is False
@@ -283,7 +283,7 @@ def test_unexpected_boolean_peer_apply_raises_runtime_error():
     def boom(plan, value):
         raise ValueError("peer exploded")
 
-    field._native_apply = boom
+    field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, True)
     assert isinstance(caught.value.__cause__, ValueError)

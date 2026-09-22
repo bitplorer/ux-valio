@@ -306,9 +306,9 @@ def _closed_bytes_length(owner: Any) -> dict[str, int] | None:
 def _clear_native(owner: Any) -> None:
     """One host-fallback clear for the bind-time native bundle."""
     owner._native_plan = None
-    owner._native_apply = None
-    owner._native_fail = None
-    owner._native_closed_apply = None
+    owner._native_ffi = None
+    owner._native_fail_kind = None
+    owner._native_entry = None
 
 
 def _apply_host_value_after_i64_overflow(owner: Any, value: Any) -> None:
@@ -397,7 +397,7 @@ def _apply_host_length_after_bytes_extract(owner: Any, value: Any) -> None:
 
 def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
     """Map peer ``FailKind`` to Door A KEEP wording. Unexpected kind is infra."""
-    kinds = owner._native_fail
+    kinds = owner._native_fail_kind
     match fail:
         case kinds.MinValue:
             min_value = owner.min_value
@@ -581,7 +581,7 @@ def _raise_host_closed_type_miss(owner: Any, value: Any, continue_unit: Any) -> 
 def _bind_compiled_plan(owner: Any, peer: Any, compile_fn: Any, bounds: dict[str, Any]) -> None:
     try:
         owner._native_plan = compile_fn(**bounds)
-        owner._native_fail = peer.FailKind
+        owner._native_fail_kind = peer.FailKind
     except OverflowError:
         _clear_native(owner)
         return
@@ -605,7 +605,7 @@ def _apply_native_closed(
         raise_type_miss(owner, value)
         return
     try:
-        fail = owner._native_apply(owner._native_plan, value)
+        fail = owner._native_ffi(owner._native_plan, value)
     except extract_errors:
         after_overflow(owner, value)
         return
@@ -684,7 +684,7 @@ def apply_native_string_enum(owner: Any, value: Any) -> None:
         _apply_host_string_enum_after_str_extract(owner, value)
         return
     try:
-        fail = owner._native_apply(owner._native_plan, raw)
+        fail = owner._native_ffi(owner._native_plan, raw)
     except (OverflowError, UnicodeError):
         _apply_host_string_enum_after_str_extract(owner, value)
         return
@@ -747,7 +747,7 @@ def apply_native_decimal(owner: Any, value: Any) -> None:
         _raise_host_decimal_type_miss(owner, value)
         return
     try:
-        fail = owner._native_apply(owner._native_plan, value)
+        fail = owner._native_ffi(owner._native_plan, value)
     except TypeError:
         _apply_host_decimal_after_extract(owner, value)
         return
@@ -780,11 +780,11 @@ def apply_native_boolean(owner: Any, value: Any) -> None:
 def apply_native_bounds(owner: Any, value: Any) -> None:
     """Call the bind-time closed host apply. Unset bundle is a caller bug.
 
-    ``_native_apply`` is the peer FFI apply. ``_native_closed_apply`` is
+    ``_native_ffi`` is the peer FFI apply. ``_native_entry`` is
     the closed-family host apply (``apply_native_integer_bounds`` and
     the other family doors).
     """
-    closed_apply = owner._native_closed_apply
+    closed_apply = owner._native_entry
     if closed_apply is None:
         raise RuntimeError("ux_valio_native apply failed")
     closed_apply(owner, value)
@@ -871,8 +871,8 @@ def bind_native_plan(owner: Any) -> None:
             _clear_native(owner)
             return
         apply, closed_apply, compile_fn, kwargs = select(peer, payload)
-        owner._native_apply = apply
-        owner._native_closed_apply = closed_apply
+        owner._native_ffi = apply
+        owner._native_entry = closed_apply
         _bind_compiled_plan(owner, peer, compile_fn, kwargs)
         return
     _clear_native(owner)

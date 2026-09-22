@@ -168,7 +168,7 @@ _TYPE_AND_OVERFLOW_SAMPLES = ("x", None, True, False, 1.5, object(), 2**70, -(2*
 def test_integer_min_value_compiles_once_at_bind():
     field = IntegerValidator(min_value=0, debug=True, name="n")
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
 
@@ -181,7 +181,7 @@ def test_integer_min_value_compiles_once_at_bind():
     box.n = 3
     box.n = 7
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -194,13 +194,13 @@ def test_one_ffi_apply_per_set():
 
     assert field._native_plan is not None
     calls: list[int] = []
-    orig = field._native_apply
+    orig = field._native_ffi
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_apply = counted
+    field._native_ffi = counted
     box = Box(n=1)
     box.n = 2
     box.n = 3
@@ -227,13 +227,13 @@ def test_validator_int_subscript_binds_at_set_name():
 def test_closed_integer_bounds_compile_once(kwargs, samples):
     field = IntegerValidator(debug=True, name="n", **kwargs)
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
     passing = next(value for value, fragment in samples if fragment is None)
     field.validate(None, passing)
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -504,7 +504,7 @@ def test_unexpected_peer_apply_raises_runtime_error_with_ux_valio_native():
     def boom(plan, value):
         raise ValueError("peer exploded")
 
-    field._native_apply = boom
+    field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, 1)
     assert isinstance(caught.value.__cause__, ValueError)

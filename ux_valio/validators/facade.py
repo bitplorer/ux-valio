@@ -180,14 +180,14 @@ class Validator(ValidateProperty[T]):
             collect_all=collect_all,
         )
         self._active_units = _specified_units(self)
-        # Four slots: ``_native_plan`` / ``_native_apply`` / ``_native_fail`` /
-        # ``_native_closed_apply``. Peer FFI apply is ``_native_apply``.
-        # Closed host apply is ``_native_closed_apply``.
+        # Four slots: ``_native_plan`` / ``_native_ffi`` / ``_native_fail_kind`` /
+        # ``_native_entry``. Peer FFI apply is ``_native_ffi``.
+        # Closed host apply is ``_native_entry``.
         # Seed None here; ``bind_native_plan`` / ``_clear_native`` are the writers.
         self._native_plan = None
-        self._native_apply = None
-        self._native_fail = None
-        self._native_closed_apply = None
+        self._native_ffi = None
+        self._native_fail_kind = None
+        self._native_entry = None
         bind_native_plan(self)
 
     def __set_name__(self, owner: type, name: str) -> None:

@@ -218,7 +218,7 @@ def test_bytes_length_door_a_wording_on_host(kwargs, samples):
 def test_bytes_min_length_compiles_once_at_bind():
     field = BytesValidator(min_length=1, debug=True, name="n")
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
 
@@ -231,7 +231,7 @@ def test_bytes_min_length_compiles_once_at_bind():
     box.n = b"ab"
     box.n = b"abc"
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -244,13 +244,13 @@ def test_one_ffi_apply_bytes_per_set():
 
     assert field._native_plan is not None
     calls: list[bytes] = []
-    orig = field._native_apply
+    orig = field._native_ffi
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_apply = counted
+    field._native_ffi = counted
     box = Box(n=b"a")
     box.n = b"b"
     box.n = b"c"
@@ -277,13 +277,13 @@ def test_validator_bytes_subscript_binds_at_set_name():
 def test_closed_bytes_length_compiles_once(kwargs, samples):
     field = BytesValidator(debug=True, name="n", **kwargs)
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
     passing = next(value for value, fragment in samples if fragment is None)
     field.validate(None, passing)
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -316,13 +316,13 @@ def test_native_bytes_uses_apply_bytes_not_string_apply():
     import ux_valio_native as peer
 
     field = BytesValidator(min_length=1, debug=True, name="n")
-    assert field._native_apply is peer.apply_bytes
+    assert field._native_ffi is peer.apply_bytes
     text = StringValidator(min_length=1, debug=True, name="n")
-    assert text._native_apply is peer.apply_string
+    assert text._native_ffi is peer.apply_string
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_apply is peer.apply_integer
+    assert integer._native_ffi is peer.apply_integer
     floating = FloatValidator(min_value=0.0, debug=True, name="n")
-    assert floating._native_apply is peer.apply_float
+    assert floating._native_ffi is peer.apply_float
 
 
 @needs_native
@@ -403,7 +403,7 @@ def test_bytes_extract_overflow_falls_through_to_host():
     def boom(plan, value):
         raise OverflowError("bytes extract")
 
-    native._native_apply = boom
+    native._native_ffi = boom
     assert _assign(native, b"a") == ("ok", None, None, b"a")
     assert _assign_eq(_assign(native, b"a"), _assign(host, b"a"))
     miss = _assign(native, _EMPTY)
@@ -425,7 +425,7 @@ def test_bytes_extract_type_miss_falls_through_to_host():
     def boom(plan, value):
         raise TypeError("bytes extract")
 
-    native._native_apply = boom
+    native._native_ffi = boom
     assert _assign(native, b"a") == ("ok", None, None, b"a")
     miss = _assign(native, _EMPTY)
     host_miss = _assign(host, _EMPTY)
@@ -482,7 +482,7 @@ def test_unexpected_bytes_peer_apply_raises_runtime_error():
     def boom(plan, value):
         raise ValueError("peer exploded")
 
-    field._native_apply = boom
+    field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, b"a")
     assert isinstance(caught.value.__cause__, ValueError)

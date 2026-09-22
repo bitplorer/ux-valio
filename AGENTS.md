@@ -119,12 +119,12 @@ a parallel folder, not inside the layer they depend on.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_select_*``); do not merge a pair into one door
   and do not restore a per-family copy of the bind steps.
-  ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /
-  ``_native_fail`` / ``_native_closed_apply`` as ``None`` before
+  ``Validator.__init__`` seeds ``_native_plan`` / ``_native_ffi`` /
+  ``_native_fail_kind`` / ``_native_entry`` as ``None`` before
   ``bind_native_plan`` (same four slots ``_clear_native`` clears).
-  Peer FFI apply stays ``_native_apply``. Closed host apply
+  Peer FFI apply stays ``_native_ffi``. Closed host apply
   (``apply_native_integer_bounds`` and the other family doors) is
-  ``_native_closed_apply``.
+  ``_native_entry``.
   Ownership is on ``Validator`` once — do not scatter those assigns on
   typed facades. ``bind_native_plan`` / ``_clear_native`` remain the
   writers; ``__set_name__`` rebinds when ``_native_plan is None``. Host

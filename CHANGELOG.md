@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Validator native slot rename (internal only, no behavior change).
+  ``_native_plan`` stays. Peer FFI apply is ``_native_ffi`` (was
+  ``_native_apply``). Host family entry is ``_native_entry`` (was
+  ``_native_closed_apply``). Fail enum type is ``_native_fail_kind``
+  (was ``_native_fail``). ``Closed`` stays only on detectors
+  (``_closed_*``). Public ``compile_*`` / ``apply_*`` names are
+  unchanged. Cap Door B stays off. Date* / UUID / Path / IP stay HOLD.
+
 - Closed-host-apply slot name (internal only, no behavior change).
   The fourth Validator native slot is ``_native_closed_apply``: the
   closed-family host apply (``apply_native_integer_bounds``,

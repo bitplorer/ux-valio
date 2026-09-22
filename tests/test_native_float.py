@@ -226,7 +226,7 @@ def test_float_bound_door_a_wording_on_host(kwargs, samples):
 def test_float_min_value_compiles_once_at_bind():
     field = FloatValidator(min_value=0.0, debug=True, name="n")
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
 
@@ -239,7 +239,7 @@ def test_float_min_value_compiles_once_at_bind():
     box.n = 3.0
     box.n = 7.0
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -252,13 +252,13 @@ def test_one_ffi_apply_float_per_set():
 
     assert field._native_plan is not None
     calls: list[float] = []
-    orig = field._native_apply
+    orig = field._native_ffi
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_apply = counted
+    field._native_ffi = counted
     box = Box(n=1.0)
     box.n = 2.0
     box.n = 3.0
@@ -285,14 +285,14 @@ def test_validator_float_subscript_binds_at_set_name():
 def test_closed_float_bounds_compile_once(kwargs, samples):
     field = FloatValidator(debug=True, name="n", **kwargs)
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
     passing = next((value for value, fragment in samples if fragment is None), None)
     if passing is not None:
         field.validate(None, passing)
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -325,9 +325,9 @@ def test_native_float_uses_apply_float_not_integer_apply():
     import ux_valio_native as peer
 
     field = FloatValidator(min_value=0.0, debug=True, name="n")
-    assert field._native_apply is peer.apply_float
+    assert field._native_ffi is peer.apply_float
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_apply is peer.apply_integer
+    assert integer._native_ffi is peer.apply_integer
 
 
 @needs_native
@@ -408,7 +408,7 @@ def test_f64_overflow_falls_through_to_host_and_passes():
     def boom(plan, value):
         raise OverflowError("f64 extract")
 
-    native._native_apply = boom
+    native._native_ffi = boom
     assert _assign(native, 1.0) == ("ok", None, None, 1.0)
     assert _assign_eq(_assign(native, 1.0), _assign(host, 1.0))
     miss = _assign(native, -1.0)
@@ -444,7 +444,7 @@ def test_unexpected_float_peer_apply_raises_runtime_error():
     def boom(plan, value):
         raise ValueError("peer exploded")
 
-    field._native_apply = boom
+    field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, 1.0)
     assert isinstance(caught.value.__cause__, ValueError)
