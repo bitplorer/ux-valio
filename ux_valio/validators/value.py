@@ -80,7 +80,7 @@ class MaxValueValidator(ValidateProperty):
 class ValueValidator(ValidateProperty):
     """Inclusive min/max, exclusive gt/lt, exact value/eq. Composes bound checks.
 
-    Each compare below is the miss (fail-when). ``min_value`` passes when
+    Each bound compare is the miss (fail-when). ``min_value`` passes when
     ``value >= min`` and misses when ``value < min``. ``gt`` passes when
     ``value > gt`` and misses when ``value <= gt``. ``max_value`` passes
     when ``value <= max`` and misses when ``value > max``. ``lt`` passes
