@@ -197,7 +197,7 @@ def test_string_length_door_a_wording_on_host(kwargs, samples):
 def test_string_min_length_compiles_once_at_bind():
     field = StringValidator(min_length=1, debug=True, name="n")
     plan = field._native_plan
-    apply = field._native_ffi
+    apply = field._native_apply
     assert plan is not None
     assert apply is not None
 
@@ -210,7 +210,7 @@ def test_string_min_length_compiles_once_at_bind():
     box.n = "ab"
     box.n = "abc"
     assert field._native_plan is plan
-    assert field._native_ffi is apply
+    assert field._native_apply is apply
 
 
 @needs_native
@@ -223,13 +223,13 @@ def test_one_ffi_apply_string_per_set():
 
     assert field._native_plan is not None
     calls: list[str] = []
-    orig = field._native_ffi
+    orig = field._native_apply
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_ffi = counted
+    field._native_apply = counted
     box = Box(n="a")
     box.n = "b"
     box.n = "c"
@@ -256,13 +256,13 @@ def test_validator_str_subscript_binds_at_set_name():
 def test_closed_string_length_compiles_once(kwargs, samples):
     field = StringValidator(debug=True, name="n", **kwargs)
     plan = field._native_plan
-    apply = field._native_ffi
+    apply = field._native_apply
     assert plan is not None
     assert apply is not None
     passing = next(value for value, fragment in samples if fragment is None)
     field.validate(None, passing)
     assert field._native_plan is plan
-    assert field._native_ffi is apply
+    assert field._native_apply is apply
 
 
 @needs_native
@@ -294,11 +294,11 @@ def test_native_string_uses_apply_string_not_numeric_apply():
     import ux_valio_native as native
 
     field = StringValidator(min_length=1, debug=True, name="n")
-    assert field._native_ffi is native.apply_string
+    assert field._native_apply is native.apply_string
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_ffi is native.apply_integer
+    assert integer._native_apply is native.apply_integer
     floating = FloatValidator(min_value=0.0, debug=True, name="n")
-    assert floating._native_ffi is native.apply_float
+    assert floating._native_apply is native.apply_float
 
 
 @needs_native
@@ -379,7 +379,7 @@ def test_str_extract_overflow_falls_through_to_host():
     def boom(plan, value):
         raise OverflowError("str extract")
 
-    native._native_ffi = boom
+    native._native_apply = boom
     assert _assign(native, "a") == ("ok", None, None, "a")
     assert _assign_eq(_assign(native, "a"), _assign(host, "a"))
     miss = _assign(native, "")
@@ -444,9 +444,9 @@ def test_integer_float_string_paths_unchanged_with_bytes_plans():
     assert floating._native_plan is not None
     assert text._native_plan is not None
     assert blob._native_plan is not None
-    assert integer._native_ffi is not blob._native_ffi
-    assert floating._native_ffi is not blob._native_ffi
-    assert text._native_ffi is not blob._native_ffi
+    assert integer._native_apply is not blob._native_apply
+    assert floating._native_apply is not blob._native_apply
+    assert text._native_apply is not blob._native_apply
     assert _assign(integer, 1) == ("ok", None, None, 1)
     assert _assign(floating, 1.0) == ("ok", None, None, 1.0)
     assert _assign(text, "a") == ("ok", None, None, "a")
@@ -476,7 +476,7 @@ def test_unexpected_string_native_apply_raises_runtime_error():
     def boom(plan, value):
         raise ValueError("native exploded")
 
-    field._native_ffi = boom
+    field._native_apply = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, "a")
     assert isinstance(caught.value.__cause__, ValueError)

@@ -51,13 +51,14 @@ The host already compiles at construct:
   always; length/value/pattern/… only when bound)
 - uniqueness of ``ValidationPath`` units at ``__init__`` (not per set)
 - native bundle slots on ``Validator`` —
-  ``_native_plan`` / ``_native_ffi`` / ``_native_fail_kind`` /
-  ``_native_entry`` — seeded ``None`` before
+  plan | apply (Rust FFI) | run (Python closed entry) | fail_kind —
+  ``_native_plan`` / ``_native_apply`` / ``_native_fail_kind`` /
+  ``_native_run`` — seeded ``None`` before
   ``bind_native_plan`` (``_clear_native`` clears the same four;
   writers stay ``bind_native_plan`` / ``_clear_native``).
-  Product-PyO3 apply stays ``_native_ffi``. Closed-family host entry
-  (``apply_native_integer_bounds`` and the other family doors) is
-  ``_native_entry``
+  Product-PyO3 Rust door stays ``_native_apply``. Closed-family Python
+  door (``apply_native_integer_bounds`` and the other family doors) is
+  ``_native_run``
 
 That tuple **is** the plan. Without the extra, the interpreter applies
 it. With ``ux-valio[native]``, a **closed** subset is the same tuple as

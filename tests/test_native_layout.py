@@ -185,31 +185,31 @@ def test_host_native_is_one_file():
 
 
 def test_closed_apply_slot_is_seeded_on_validator():
-    """Fourth slot is the closed host apply.
+    """Fourth slot is the closed Python run.
 
-    ``Validator.__init__`` seeds it ``None``. Product-PyO3 apply stays
-    ``_native_ffi``. ``bind_native_plan`` writes ``apply_native_*``
-    onto ``_native_entry``. ``apply_native_bounds`` reads the
+    ``Validator.__init__`` seeds it ``None``. Product-PyO3 Rust FFI stays
+    ``_native_apply``. ``bind_native_plan`` writes ``apply_native_*``
+    onto ``_native_run``. ``apply_native_bounds`` reads the
     attribute directly.
     """
     plain = IntegerValidator(debug=True, name="n")
     assert plain._native_plan is None
-    assert plain._native_ffi is None
+    assert plain._native_apply is None
     assert plain._native_fail_kind is None
-    assert plain._native_entry is None
+    assert plain._native_run is None
     native_py = host_native_source()
     facade = (ROOT / "ux_valio" / "validators" / "facade.py").read_text()
-    assert "owner._native_entry" in native_py
-    assert "self._native_entry = None" in facade
-    assert 'getattr(owner, "_native_entry"' not in native_py
-    assert "entry = owner._native_entry" in native_py
+    assert "owner._native_run" in native_py
+    assert "self._native_run = None" in facade
+    assert 'getattr(owner, "_native_run"' not in native_py
+    assert "run = owner._native_run" in native_py
 
 
 @needs_native
 def test_bind_writes_closed_host_apply():
-    """Closed bind stores ``apply_native_*`` on ``_native_entry``.
+    """Closed bind stores ``apply_native_*`` on ``_native_run``.
 
-    Product-PyO3 apply stays ``_native_ffi``.
+    Product-PyO3 Rust FFI stays ``_native_apply``.
     """
     import ux_valio_native as native
     from ux_valio.validators._native import (
@@ -219,13 +219,13 @@ def test_bind_writes_closed_host_apply():
 
     field = IntegerValidator(min_value=0, debug=True, name="n")
     assert field._native_plan is not None
-    assert field._native_ffi is native.apply_integer
-    assert field._native_entry is apply_native_integer_bounds
-    assert field._native_entry is not field._native_ffi
+    assert field._native_apply is native.apply_integer
+    assert field._native_run is apply_native_integer_bounds
+    assert field._native_run is not field._native_apply
     floating = FloatValidator(min_value=0.0, debug=True, name="n")
-    assert floating._native_ffi is native.apply_float
-    assert floating._native_entry is apply_native_float_bounds
-    assert floating._native_entry is not floating._native_ffi
+    assert floating._native_apply is native.apply_float
+    assert floating._native_run is apply_native_float_bounds
+    assert floating._native_run is not floating._native_apply
 
 
 def test_unclosed_plans_stay_on_host():

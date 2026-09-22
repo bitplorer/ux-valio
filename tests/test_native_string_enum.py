@@ -134,7 +134,7 @@ def test_string_enum_compiles_once_at_bind():
         n: _Tint = field
 
     plan = field._native_plan
-    apply = field._native_ffi
+    apply = field._native_apply
     assert plan is not None
     assert apply is not None
     assert field.annotation is _Tint
@@ -143,7 +143,7 @@ def test_string_enum_compiles_once_at_bind():
     box.n = _Tint.EMPTY
     assert box.n is _Tint.EMPTY
     assert field._native_plan is plan
-    assert field._native_ffi is apply
+    assert field._native_apply is apply
 
 
 @needs_native
@@ -151,13 +151,13 @@ def test_one_ffi_apply_string_enum_per_set():
     field = _bind_enum_field(_Tint, cls=StringEnumValidator)
     assert field._native_plan is not None
     calls: list[object] = []
-    orig = field._native_ffi
+    orig = field._native_apply
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_ffi = counted
+    field._native_apply = counted
 
     class Box:
         pass
@@ -246,13 +246,13 @@ def test_native_string_enum_uses_apply_string_enum_not_string_apply():
     import ux_valio_native as native
 
     field = _bind_enum_field(_Tint, cls=StringEnumValidator)
-    assert field._native_ffi is native.apply_string_enum
-    assert field._native_ffi is not native.apply_string
-    assert field._native_ffi is not native.apply_integer_enum
+    assert field._native_apply is native.apply_string_enum
+    assert field._native_apply is not native.apply_string
+    assert field._native_apply is not native.apply_integer_enum
     text = StringValidator(min_length=1, debug=True, name="n")
-    assert text._native_ffi is native.apply_string
+    assert text._native_apply is native.apply_string
     integer_enum = _bind_enum_field(_Rank)
-    assert integer_enum._native_ffi is native.apply_integer_enum
+    assert integer_enum._native_apply is native.apply_integer_enum
     assert hasattr(native.FailKind, "NotMember")
     plan = native.compile_string_enum(members=["pale", "deep", "", "café", "cafe\u0301"])
     assert native.apply_string_enum(plan, "pale") is None
@@ -276,7 +276,7 @@ def test_string_enum_not_member_failkind_uses_type_door_wording():
     def always_miss(plan, value):
         return native.FailKind.NotMember
 
-    field._native_ffi = always_miss
+    field._native_apply = always_miss
     got = _assign(field, _Tint.PALE)
     assert got[1] is TypeError
     assert got[2] == "n expect <enum '_Tint'> type, got _Tint type instead"
@@ -314,8 +314,8 @@ def test_string_enum_unclosed_and_other_facades_stay_on_host():
 
     boolean = BooleanValidator(debug=True, name="n")
     assert boolean._native_plan is not None
-    assert boolean._native_ffi is native.apply_boolean
-    assert boolean._native_ffi is not native.apply_string_enum
+    assert boolean._native_apply is native.apply_boolean
+    assert boolean._native_apply is not native.apply_string_enum
     open_validator = Validator[_Tint](debug=True, name="n")
 
     class OpenOwner:
@@ -452,7 +452,7 @@ def test_string_enum_extract_unicode_error_falls_through_to_host():
     def boom(plan, value):
         raise UnicodeEncodeError("utf-8", "\ud800", 0, 1, "surrogates not allowed")
 
-    native._native_ffi = boom
+    native._native_apply = boom
     assert _enum_door(native, host, _Tint.PALE)[3] is _Tint.PALE
     miss = _enum_door(native, host, "pale")
     assert miss[1] is ValidationErrors
@@ -484,7 +484,7 @@ def test_unexpected_string_enum_native_apply_raises_runtime_error():
     def boom(plan, value):
         raise ValueError("native exploded")
 
-    field._native_ffi = boom
+    field._native_apply = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, _Tint.PALE)
     assert isinstance(caught.value.__cause__, ValueError)

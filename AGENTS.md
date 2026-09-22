@@ -119,12 +119,14 @@ a parallel folder, not inside the layer they depend on.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_select_*``); do not merge a pair into one door
   and do not restore a per-family copy of the bind steps.
-  ``Validator.__init__`` seeds ``_native_plan`` / ``_native_ffi`` /
-  ``_native_fail_kind`` / ``_native_entry`` as ``None`` before
+  ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /
+  ``_native_fail_kind`` / ``_native_run`` as ``None`` before
   ``bind_native_plan`` (same four slots ``_clear_native`` clears).
-  Product-PyO3 apply stays ``_native_ffi``. Closed-family host entry
-  (``apply_native_integer_bounds`` and the other family doors) is
-  ``_native_entry``.
+  The four slots are plan | apply (Rust FFI) | run (Python closed
+  entry) | fail_kind. Product-PyO3 Rust door stays ``_native_apply``.
+  Closed-family Python door (``apply_native_integer_bounds`` and the
+  other family doors) is ``_native_run``. Reclaim ``_native_apply``
+  only together with ``_native_run``; alone it undoes the split.
   Ownership is on ``Validator`` once — do not scatter those assigns on
   typed facades. ``bind_native_plan`` / ``_clear_native`` remain the
   writers; ``__set_name__`` rebinds when ``_native_plan is None``. Host
@@ -381,7 +383,7 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_apply_host_boolean_after_extract`,
 `_apply_host_decimal_after_extract`,
 `_raise_host_integer_enum_type_miss`, `_raise_host_string_enum_type_miss`,
-`_native_apply`, `_native_closed_apply`, `_native_fail`).
+`_native_closed_apply`, `_native_fail`).
 Noun-only names that hide the action are not
 added. Names should fit any caller library — not a one-app
 nickname, not a slogan.
