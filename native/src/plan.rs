@@ -66,8 +66,8 @@ pub(crate) enum Plan {
     Decimal,
 }
 
-/// Frozen peer object. Python name is `Plan`. The body is a [`Plan`]
-/// variant, cloned by `Arc` on apply.
+/// Frozen peer object. Python name is `Plan`. The body is one [`Plan`]
+/// variant. Apply clones the `Arc` inside that variant.
 #[pyclass(frozen, name = "Plan")]
 pub(crate) struct PyPlan {
     pub(crate) body: Plan,
