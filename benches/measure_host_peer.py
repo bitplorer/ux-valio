@@ -6,20 +6,24 @@ Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
 ``StringValidator`` / ``BytesValidator`` length plan, a closed
 ``IntegerEnumValidator`` member-set plan, a closed
 ``StringEnumValidator`` UTF-8 member-set plan, a closed
-``BooleanValidator`` exact-bool type door, or a closed
-``DecimalValidator`` exact-Decimal type door (taught API, soul stays
-Python). Enum, Boolean, and Decimal path A clear the native plan after
-bind so the loop is pure Python setattr. Decimal values are exact
-``Decimal`` instances (string coerce is host ``_pre_validate``, not
-this apply-only comparison).
+``BooleanValidator`` exact-bool type door, a closed
+``DecimalValidator`` exact-Decimal type door, a closed
+``DateValidator`` date type door, or a closed
+``DateTimeValidator`` datetime type door (taught API, soul stays
+Python). Enum, Boolean, Decimal, Date, and DateTime path A clear the
+native plan after bind so the loop is pure Python setattr. Decimal
+values are exact ``Decimal`` instances, and Date / DateTime values are
+exact ``date`` / ``datetime`` instances (string coerce is host
+``_pre_validate``, not this apply-only comparison).
 
 Hot path B: ``compile_integer(...)`` / ``compile_float(...)`` /
 ``compile_string(...)`` / ``compile_bytes(...)`` /
 ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
-``compile_boolean()`` / ``compile_decimal()`` once, then
+``compile_boolean()`` / ``compile_decimal()`` /
+``compile_date()`` / ``compile_datetime()`` once, then
 ``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
-``apply_decimal`` on the
+``apply_decimal`` / ``apply_date`` / ``apply_datetime`` on the
 ``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
 store/raise. Not Cap Door B.
@@ -28,9 +32,13 @@ Families: MinValue, MaxValue, GreaterThan, LessThan, Equal, min+max
 range — once for Integer, once for Float — plus String and Bytes
 MinLength / MaxLength / Length / min+max range, plus one IntegerEnum
 member set, one StringEnum UTF-8 member set, one Boolean exact
-``bool`` type door (no coerce of ``1`` / ``0``), and one Decimal exact
+``bool`` type door (no coerce of ``1`` / ``0``), one Decimal exact
 ``decimal.Decimal`` type door (no coerce of ``float`` / ``int`` /
-``bool``; no scale unit). Switch bar:
+``bool``; no scale unit), one Date ``datetime.date`` type door
+(``datetime.datetime`` extracts because it subclasses ``date``; raw
+``str`` does not coerce), and one DateTime ``datetime.datetime`` type
+door (a plain ``date`` does not extract; raw ``str`` does not coerce).
+Switch bar:
 FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
 below the bar is not claimed native (KEEP host for that family).
 
@@ -41,6 +49,7 @@ Usage::
 """
 
 import argparse
+import datetime
 import decimal
 import enum
 import os
@@ -78,6 +87,26 @@ PASSING_DECIMAL = (
     decimal.Decimal("1.23"),
     decimal.Decimal("0"),
     decimal.Decimal("4"),
+)
+PASSING_DATE = (
+    datetime.date(2020, 1, 2),
+    datetime.date(2020, 2, 3),
+    datetime.date(1999, 12, 31),
+    datetime.date(2024, 2, 29),
+    datetime.date(2010, 6, 15),
+    datetime.date(2020, 1, 2),
+    datetime.date(2030, 7, 4),
+    datetime.date(1970, 1, 1),
+)
+PASSING_DATETIME = (
+    datetime.datetime(2020, 1, 2, 3, 4, 5),
+    datetime.datetime(2020, 1, 2),
+    datetime.datetime(1999, 12, 31, 23, 59),
+    datetime.datetime(2024, 2, 29, 12, 0),
+    datetime.datetime(2010, 6, 15, 8, 30),
+    datetime.datetime(2020, 1, 2, 3, 4, 5),
+    datetime.datetime(2030, 7, 4, 0, 0, 1),
+    datetime.datetime(1970, 1, 1),
 )
 
 
@@ -179,6 +208,26 @@ class _MeasureShade(enum.Enum):
 
 
 _MEASURE_SHADE_VALUES = tuple(_MeasureShade)
+
+
+def _date_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="DateValidator",
+        compile_attr="compile_date",
+        apply_attr="apply_date",
+        annotation=datetime.date,
+        **kwargs,
+    )
+
+
+def _datetime_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="DateTimeValidator",
+        compile_attr="compile_datetime",
+        apply_attr="apply_datetime",
+        annotation=datetime.datetime,
+        **kwargs,
+    )
 
 
 def _decimal_family(**kwargs: Any) -> PlanFamily:
@@ -501,6 +550,36 @@ DECIMAL_FAMILIES = (
     ),
 )
 
+DATE_FAMILIES = (
+    _date_family(
+        name="Date.Type",
+        field_kwargs={},
+        compile_kwargs={},
+        values=PASSING_DATE,
+        seed=datetime.date(2020, 1, 2),
+        smoke_ok=datetime.date(2020, 1, 2),
+        smoke_miss="2020-01-02",
+        smoke_kind="Extract",
+        label="Date datetime.date",
+        smoke_raises=TypeError,
+    ),
+)
+
+DATETIME_FAMILIES = (
+    _datetime_family(
+        name="DateTime.Type",
+        field_kwargs={},
+        compile_kwargs={},
+        values=PASSING_DATETIME,
+        seed=datetime.datetime(2020, 1, 2, 3, 4, 5),
+        smoke_ok=datetime.datetime(2020, 1, 2, 3, 4, 5),
+        smoke_miss=datetime.date(2020, 1, 2),
+        smoke_kind="Extract",
+        label="DateTime datetime.datetime",
+        smoke_raises=TypeError,
+    ),
+)
+
 FAMILIES = (
     INTEGER_FAMILIES
     + FLOAT_FAMILIES
@@ -510,6 +589,8 @@ FAMILIES = (
     + STRING_ENUM_FAMILIES
     + BOOLEAN_FAMILIES
     + DECIMAL_FAMILIES
+    + DATE_FAMILIES
+    + DATETIME_FAMILIES
 )
 
 
@@ -600,6 +681,8 @@ def _load_facades() -> dict[str, Any]:
         from ux_valio import (
             BooleanValidator,
             BytesValidator,
+            DateTimeValidator,
+            DateValidator,
             DecimalValidator,
             FloatValidator,
             IntegerEnumValidator,
@@ -621,6 +704,8 @@ def _load_facades() -> dict[str, Any]:
         "StringEnumValidator": StringEnumValidator,
         "BooleanValidator": BooleanValidator,
         "DecimalValidator": DecimalValidator,
+        "DateValidator": DateValidator,
+        "DateTimeValidator": DateTimeValidator,
     }
 
 
@@ -637,15 +722,21 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
         "StringEnumValidator",
         "BooleanValidator",
         "DecimalValidator",
+        "DateValidator",
+        "DateTimeValidator",
     ):
-        # Bind first (enum plans compile at ``__set_name__``; Boolean and
-        # Decimal may compile at construct), then drop the plan so path A
-        # is pure Python setattr.
+        # Bind first (enum plans compile at ``__set_name__``; Boolean,
+        # Decimal, Date, and DateTime may compile at construct), then
+        # drop the plan so path A is pure Python setattr.
         namespace = {"__annotations__": {"n": family.annotation}, "n": field}
         if family.annotation is bool:
             box_name = "BoolBox"
         elif family.annotation is decimal.Decimal:
             box_name = "DecimalBox"
+        elif family.annotation is datetime.date:
+            box_name = "DateBox"
+        elif family.annotation is datetime.datetime:
+            box_name = "DateTimeBox"
         else:
             box_name = "EnumBox"
         box_type = dataclass(type(box_name, (), namespace))
@@ -758,6 +849,33 @@ def _smoke_extract_miss(family: PlanFamily, plan: Any, apply_fn: Any) -> str:
                 f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {bad!r}) "
                 f"returned {coerced!r}; float/int/bool/str must not coerce to Decimal"
             )
+    if family.annotation is datetime.date:
+        stamped = datetime.datetime(2020, 1, 2, 3, 4)
+        stamped_ok = apply_fn(plan, stamped)
+        if stamped_ok is not None:
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, datetime) "
+                f"returned {stamped_ok!r}, expected None (datetime subclasses date)"
+            )
+        for bad in ("2020-01-02", 1, True):
+            try:
+                coerced = apply_fn(plan, bad)
+            except family.smoke_raises:
+                continue
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {bad!r}) "
+                f"returned {coerced!r}; str/int/bool must not coerce to date"
+            )
+    if family.annotation is datetime.datetime:
+        for bad in (datetime.date(2020, 1, 2), "2020-01-02T03:04:05", 1, True):
+            try:
+                coerced = apply_fn(plan, bad)
+            except family.smoke_raises:
+                continue
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {bad!r}) "
+                f"returned {coerced!r}; date/str/int/bool must not coerce to datetime"
+            )
     try:
         raised = apply_fn(plan, family.smoke_miss)
     except family.smoke_raises:
@@ -823,7 +941,10 @@ def _report_header(skip_reason: str | None) -> None:
         "IntegerEnum i64 member set (compile_integer_enum / apply_integer_enum); "
         "StringEnum UTF-8 member set (compile_string_enum / apply_string_enum); "
         "Boolean exact bool (compile_boolean / apply_boolean); "
-        "Decimal exact Decimal (compile_decimal / apply_decimal; no float bridge)"
+        "Decimal exact Decimal (compile_decimal / apply_decimal; no float bridge); "
+        "Date datetime.date (compile_date / apply_date; str stays host); "
+        "DateTime datetime.datetime (compile_datetime / apply_datetime; "
+        "plain date misses)"
     )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
@@ -997,10 +1118,38 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
             + ". Do not claim native for Decimal. Exact Decimal type door stays on the host."
         )
         return 1
+    date = [
+        (family, unlocked, ratio)
+        for family, unlocked, ratio in results
+        if family.facade == "DateValidator"
+    ]
+    date_failed = [family.name for family, unlocked, _ratio in date if not unlocked]
+    date_passed = [family.name for family, unlocked, _ratio in date if unlocked]
+    if date_failed or not date_passed:
+        print(
+            f"SUMMARY: Date KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(date_failed or ["(no Date family)"])
+            + ". Do not claim native for Date. Date type door stays on the host."
+        )
+        return 1
+    clock = [
+        (family, unlocked, ratio)
+        for family, unlocked, ratio in results
+        if family.facade == "DateTimeValidator"
+    ]
+    clock_failed = [family.name for family, unlocked, _ratio in clock if not unlocked]
+    clock_passed = [family.name for family, unlocked, _ratio in clock if unlocked]
+    if clock_failed or not clock_passed:
+        print(
+            f"SUMMARY: DateTime KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(clock_failed or ["(no DateTime family)"])
+            + ". Do not claim native for DateTime. DateTime type door stays on the host."
+        )
+        return 1
     print(
-        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed + boolean_passed + decimal_passed)} each >= "
+        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed + boolean_passed + decimal_passed + date_passed + clock_passed)} each >= "
         f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr). "
-        "Decimal exact Decimal type door met the bar."
+        "Date and DateTime type doors met the bar."
     )
     return 0
 
@@ -1008,8 +1157,8 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Measure Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean/Decimal "
-            "setattr vs native plan apply."
+            "Measure Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean/"
+            "Decimal/Date/DateTime setattr vs native plan apply."
         )
     )
     parser.add_argument(

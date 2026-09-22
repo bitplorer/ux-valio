@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- Native Date and DateTime type doors: closed ``ux-valio[native]``
+  plans now cover ``DateValidator`` when the annotation is
+  ``datetime.date`` or the facade coerce union ``datetime.date | str``,
+  and ``DateTimeValidator`` when the annotation is
+  ``datetime.datetime`` or ``datetime.datetime | str``, and the only
+  active unit is the type door. ``compile_date`` / ``apply_date`` and
+  ``compile_datetime`` / ``apply_datetime`` stay pairs. Door A lock:
+  stored type is the calendar value only after host
+  ``_pre_validate`` (EU / IND date strings, ISO datetimes); the peer
+  never sees a raw ``str``. ``datetime.datetime`` extracts on the
+  Date door because it subclasses ``date``; ``DateValidator`` still
+  rejects it in the named extra. A plain ``date`` misses the
+  DateTime door. Exact ``date`` and ``datetime`` pass. Bounds
+  (min/max/gt/lt/eq) stay host. Extract ``TypeError`` falls through
+  to host ``TypeValidator``. ``None`` skips. ``date | None``,
+  ``datetime | None``, and other unions stay host. Cap Door B stays
+  off. UUID / Path / IP / plain EnumValidator / Pattern / named
+  facades stay HOLD. No follow-up remains on this Date* concern.
+  Measure ``python benches/measure_host_peer.py`` (Date **79.33×**,
+  host 6281.4 ns/op, native 79.2 ns/op; DateTime **78.55×**, host
+  6315.0 ns/op, native 80.4 ns/op; CPython 3.14.7 / rustc 1.83 /
+  Linux x86_64); do not claim 70× product setattr.
+
 - Validator native slot pair (internal only, no behavior change).
   ``_native_plan`` and ``_native_fail_kind`` stay. The four slots are
   plan | apply (Rust FFI) | run (Python closed entry) | fail_kind:

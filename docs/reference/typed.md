@@ -24,6 +24,12 @@ annotation is exact `bool` (`1` / `0` are not coerced),
 and a closed Decimal type door when the annotation is
 `decimal.Decimal` or `decimal.Decimal | str` (`float` / `int` / `bool`
 are not coerced; string coerce stays host; no scale unit),
+and a closed Date type door when the annotation is `datetime.date` or
+`datetime.date | str` (string coerce stays host; `datetime` extracts
+because it subclasses `date`),
+and a closed DateTime type door when the annotation is
+`datetime.datetime` or `datetime.datetime | str` (a plain `date`
+misses; string coerce stays host),
 once and apply in one FFI; without the extra the same units run in Python.
 Call sites do not change. See [host / peer](../explanation/host-peer-plan.md).
 | `StringValidator` | `str` | names, slugs (without a named identity) |

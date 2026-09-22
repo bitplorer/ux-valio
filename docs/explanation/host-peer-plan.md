@@ -18,7 +18,7 @@ to call, *which* plan, and *how* to raise.
 ```text
 bind / __init__     host compiles specified theory → plan
 set                 host hands (plan, value) once
-                    peer applies  (i64 / f64 / &str / &[u8] / bool / Decimal extract; bound, length, or member units)
+                    peer applies  (i64 / f64 / &str / &[u8] / bool / Decimal / date / datetime extract; bound, length, or member units)
                     host stores on instance.__dict__
                     host runs hooks, named extras, debug-swallow
 ```
@@ -79,7 +79,10 @@ plus the same length units (byte count, not codepoints) — and
 ``.value`` strings taken from the concrete str-valued ``enum.Enum``
 on the field — and ``Boolean`` as the exact ``bool`` type door
 (no bound unit) — and ``Decimal`` as the exact ``decimal.Decimal``
-type door (no bound unit, no scale unit).
+type door (no bound unit, no scale unit) — and ``Date`` as the
+``datetime.date`` type door (no bound unit; a ``datetime`` extracts)
+— and ``DateTime`` as the ``datetime.datetime`` type door (no bound
+unit; a plain ``date`` does not extract).
 ``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
 ``eq=7``, and ``min_value=0, max_value=10`` compile when the
 annotation is ``int`` and only those bound units are active.
@@ -110,6 +113,19 @@ coerced.
 ``decimal.Decimal | str`` and the only active unit is the type door.
 ``compile_decimal()`` / ``apply_decimal(plan, Decimal)`` stay a pair.
 ``float`` / ``int`` / ``bool`` are not coerced. String coerce stays
+host ``_pre_validate``.
+``DateValidator()`` compiles when the annotation is ``datetime.date``
+or the facade coerce union ``datetime.date | str`` and the only
+active unit is the type door. ``compile_date()`` /
+``apply_date(plan, date)`` stay a pair. String coerce stays host
+``_pre_validate``. ``datetime.datetime`` extracts on this door
+(it subclasses ``date``); ``DateValidator`` still rejects it in the
+named extra.
+``DateTimeValidator()`` compiles when the annotation is
+``datetime.datetime`` or the facade coerce union
+``datetime.datetime | str`` and the only active unit is the type
+door. ``compile_datetime()`` / ``apply_datetime(plan, datetime)``
+stay a pair. A plain ``date`` does not extract. String coerce stays
 host ``_pre_validate``. Unclosed
 paths (``required``, ``multiple_of``, pattern, choice, named
 identity, Email, a mixed bound type, Union / TypedDict /
@@ -275,11 +291,53 @@ The measure cleared 3×, so the closed type door ships. Scale does not:
   ``decimal.Decimal | str`` is that host coerce door, not an open
   union — ``str`` is coerced before apply. Any other union stays host.
 
-HOLD after this tip: Date/DateTime, UUID/Path/IP/plain EnumValidator,
-Pattern / custom callables, named facades, Cap Door B. Decimal scale
-/ quantize / context / rounding stay HOLD. Decimal bounds
-(min/max/gt/lt/eq) stay host until a later tip closes them with
-Decimal bounds.
+HOLD after the Decimal tip was Date/DateTime, shipped in the next
+section. Decimal scale / quantize / context / rounding stay HOLD.
+Decimal bounds (min/max/gt/lt/eq) stay host until a later tip closes
+them with Decimal bounds.
+
+**Date and DateTime type doors (Door A lock).** Stored type is
+``datetime.date`` or ``datetime.datetime`` only after host
+pre-validate. Two families. The measure cleared 3×, so both closed
+type doors ship. Bounds do not:
+
+- Host ``DateValidator._pre_validate`` parses EU ``YYYY-MM-DD`` /
+  IND ``DD-MM-YYYY`` strings (``-`` / ``/`` ``:``). Host
+  ``DateTimeValidator._pre_validate`` parses ISO strings via
+  ``datetime.fromisoformat``. The peer never sees a raw ``str``.
+- Date extract is ``isinstance`` of ``datetime.date``.
+  ``datetime.datetime`` extracts here because it subclasses
+  ``date``. ``DateValidator._validate_named_facade`` still rejects
+  ``datetime`` after the type path (KEEP). ``Validator[datetime.date]``
+  stores a ``datetime`` (same as the host type door).
+- DateTime extract is ``isinstance`` of ``datetime.datetime``. A
+  plain ``datetime.date`` misses. Aware datetimes pass. No timezone
+  policy on this door.
+- Exact ``datetime.date`` and ``datetime.datetime`` pass, including
+  ``date.min`` / ``datetime.min``.
+- **Bounds.** Door A does not add min/max/gt/lt/eq units for either
+  family. ``DateValidator(min_value=...)`` and
+  ``DateTimeValidator(min_value=...)`` stay on the host.
+- Cap Door B stays off. Two families only (Date and DateTime).
+  UUID / Path / IP / plain Enum / Pattern stay off this tip.
+- Pair naming: ``compile_date`` / ``apply_date`` and
+  ``compile_datetime`` / ``apply_datetime`` (intentional pairs — do
+  not merge). Host ``_select_date`` / ``_select_datetime`` walk the
+  one-family bind list, same shape as Decimal.
+- String coerce stays host. No calendar arithmetic in Rust.
+- ``FailKind`` / host ``TypeError`` wording matches the other Door A
+  families. Extract miss is a bridge to host ``TypeValidator``, not
+  an L1 overflow message.
+- ``None`` skips. ``date | None`` and ``datetime | None`` stay host.
+  The facade coerce annotations ``datetime.date | str`` and
+  ``datetime.datetime | str`` are the host coerce doors, not open
+  unions — ``str`` is coerced before apply. Any other union stays
+  host.
+
+HOLD after this tip: UUID/Path/IP, plain EnumValidator, Pattern /
+custom callables, named facades, Cap Door B. Date and DateTime
+bounds (min/max/gt/lt/eq) stay host. No follow-up remains on
+this Date* concern.
 
 ## What never leaves the host
 
@@ -298,7 +356,7 @@ Decimal bounds.
    apply. ``pip install ux-valio[native]`` installs the ``ux-valio-native``
    wheel (module ``ux_valio_native`` — not a taught import).
 2. Same field default. Same ``annotation``. Same fail-closed errors.
-   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator, BooleanValidator, DecimalValidator``.
+   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator, BooleanValidator, DecimalValidator, DateValidator, DateTimeValidator``.
 3. Compile at bind, not at set. Host bind walks one family list.
    Each family keeps its ``compile_*`` / ``apply_*`` pair (those doors
    stay separate). Missing peer → host apply (no import
@@ -307,9 +365,12 @@ Decimal bounds.
 4. One FFI call per set for the specified scalar plan. Not eight.
 5. ``self`` is a ``PyObject*`` handle. Do not migrate the instance into
    a Rust struct. Extract scalars (``i64`` / ``f64`` / ``&str`` / ``&[u8]``
-   / ``bool`` / ``decimal.Decimal``; IntegerEnum is ``i64``; StringEnum
+   / ``bool`` / ``decimal.Decimal`` / ``datetime.date`` /
+   ``datetime.datetime``; IntegerEnum is ``i64``; StringEnum
    is the member ``.value`` as ``&str``; Boolean is exact ``bool``;
-   Decimal is exact ``decimal.Decimal``, not ``f64``), apply, box back.
+   Decimal is exact ``decimal.Decimal``, not ``f64``; Date is
+   ``datetime.date`` (a ``datetime`` extracts); DateTime is
+   ``datetime.datetime``, not a plain ``date``), apply, box back.
 6. Do not re-implement the library in Rust.
 7. Do not quote the switch-test ratio as end-to-end product setattr.
    The measure compared full host setattr against **plan apply only**.
@@ -341,7 +402,17 @@ Decimal bounds.
    raises at that extract; host ``isinstance`` misses first (``float``
    / ``int`` / ``bool``), and an extract TypeError falls through to
    host ``TypeValidator`` (no float bridge, no L1 "overflow" message).
-   String coerce stays host ``_pre_validate``.
+   String coerce stays host ``_pre_validate``. PyO3
+   ``datetime.date`` extract is the Date door (``apply_date``). A
+   non-date raises at that extract; host ``isinstance`` misses first,
+   and an extract TypeError falls through to host ``TypeValidator``
+   (no string coerce, no L1 "overflow" message). A
+   ``datetime.datetime`` extracts on this door. PyO3
+   ``datetime.datetime`` extract is the DateTime door
+   (``apply_datetime``). A plain ``date`` raises at that extract;
+   host ``isinstance`` misses first, and an extract TypeError falls
+   through to host ``TypeValidator``. String coerce stays host
+   ``_pre_validate``.
    ``FailKind.NotMember`` is the validation bucket
    (host type-door wording, ``match fail:``). Unexpected
    peer/infra is ``RuntimeError`` naming ``ux_valio_native``. Three
@@ -372,6 +443,8 @@ specified ``IntegerValidator(min_value=0)`` / ``FloatValidator(min_value=0.0)``
 / ``StringEnumValidator()`` on a concrete str-valued ``Enum``
 / ``BooleanValidator()`` (exact ``bool``)
 / ``DecimalValidator()`` (exact ``decimal.Decimal``; no float bridge)
+/ ``DateValidator()`` (``datetime.date``; string coerce stays host)
+/ ``DateTimeValidator()`` (``datetime.datetime``; a plain ``date`` misses)
 setattr stays several times slower than a one-shot native apply of that
 same plan, and the Python compile (``_active_units``, skip TypedDict,
 skip watch) is already in.
@@ -390,20 +463,25 @@ closed ``IntegerValidator`` or ``FloatValidator`` bound plan, a closed
 ``StringEnumValidator`` UTF-8 member-set plan, or a closed
 ``BooleanValidator`` exact-bool type door, or a closed
 ``DecimalValidator`` exact-Decimal type door (values are ``Decimal``
-instances, so string coerce is not in the apply-only comparison). Hot
+instances, so string coerce is not in the apply-only comparison), or a
+closed ``DateValidator`` date type door, or a closed
+``DateTimeValidator`` datetime type door (values are ``date`` /
+``datetime`` instances, so string coerce is not in the apply-only
+comparison). Hot
 path B is ``compile_integer(...)``
 / ``compile_float(...)`` / ``compile_string(...)`` / ``compile_bytes(...)``
 / ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
-``compile_boolean()`` / ``compile_decimal()``
+``compile_boolean()`` / ``compile_decimal()`` /
+``compile_date()`` / ``compile_datetime()``
 once then ``apply_integer`` /
 ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
-``apply_decimal`` on the
+``apply_decimal`` / ``apply_date`` / ``apply_datetime`` on the
 product peer (``native/``: private ``Plan`` enum, one variant per
 family — Integer / Float own bound units, String / Bytes own length
-units, IntegerEnum / StringEnum own their member sets, Boolean and
-Decimal are type-door markers; public ``compile_*`` / ``apply_*``
-names unchanged). B is **not** product setattr (no store, no
+units, IntegerEnum / StringEnum own their member sets, Boolean,
+Decimal, Date, and DateTime are type-door markers; public
+``compile_*`` / ``apply_*`` names unchanged). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
 family; the bar is **≥ 3×** for each. A family below the bar is
 KEEP host for that family (do not claim native).
@@ -649,7 +727,49 @@ StringEnum ~33×, and Boolean ~38× (still PASS).
 python benches/measure_host_peer.py
 ```
 
-HOLD after this tip: Date/DateTime, UUID/Path, Pattern, plain
-EnumValidator, named facades, Cap Door B stay off this path. Decimal
-scale / quantize / context / rounding stay HOLD. Decimal bounds
-(min/max/gt/lt/eq) stay host.
+HOLD after the Decimal tip was Date/DateTime, measured in the next
+section. Decimal scale / quantize / context / rounding stay HOLD.
+Decimal bounds (min/max/gt/lt/eq) stay host.
+
+### Measured (2026-09-22) Date and DateTime type doors
+
+Same class of box, one run, 400000 iters after 20000 warmup, CPython
+3.14.7, rustc 1.83.0, Linux x86_64. Date values are
+``datetime.date`` instances (string coerce is host
+``_pre_validate``, not this apply-only comparison). DateTime values
+are ``datetime.datetime`` instances. Peer is a release cdylib
+(``python -m pip install maturin`` then ``maturin develop --release``
+via ``python benches/measure_host_peer.py``). Host units were
+``_validate_type`` only. Path A clears the native plan after bind so
+setattr is pure Python (``DateValidator`` / ``DateTimeValidator``
+still run host string coerce and the named extra; the measured
+values are already ``date`` / ``datetime``, so coerce does not
+parse). B is ``apply_date(plan, date)`` / ``apply_datetime(plan,
+datetime)`` only (``Python::detach``). Date extract accepts
+``datetime.datetime`` (subclass). DateTime extract rejects a plain
+``date`` (smoke: ``apply_datetime(plan, date)`` raises
+``TypeError``). Raw ``str`` is not coerced on either door. No bound
+unit. Bar 3×.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| exact date | 6281.4 | 79.2 | **79.33×** |
+| exact datetime | 6315.0 | 80.4 | **78.55×** |
+
+**Verdict: PASS.** Both Date and DateTime type doors cleared the 3×
+bar (79.33× and 78.55×). Native apply here is ~80 ns/op (GIL
+released), not a 70× product setattr claim. Host setattr is slower
+than the Boolean type door because ``DateValidator`` /
+``DateTimeValidator`` still run ``_pre_validate`` and the named
+extra on the Python path. Integer / Float / String / Bytes families
+on the same run stayed ~27–30×, IntegerEnum ~40×, StringEnum ~31×,
+Boolean ~39×, and Decimal ~78× (still PASS). CPython 3.14.7 / rustc
+1.83.0 / Linux x86_64.
+
+```console
+python benches/measure_host_peer.py
+```
+
+HOLD after this tip: UUID/Path/IP, Pattern, plain EnumValidator,
+named facades, Cap Door B stay off this path. Date and DateTime
+bounds stay host. No follow-up remains on this Date* concern.

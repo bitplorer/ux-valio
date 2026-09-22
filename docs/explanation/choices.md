@@ -147,7 +147,8 @@ membership is `list[T]` on the type door. Object attributes: check at the
 call site or hang `validator`. Optional `ux-valio[native]` is not a second
 door: L1 stays `IntegerValidator` / `FloatValidator` / `StringValidator` /
 `BytesValidator` / `IntegerEnumValidator` / `StringEnumValidator` /
-`BooleanValidator` / `DecimalValidator`; the extra is compile-once + one FFI
+`BooleanValidator` / `DecimalValidator` / `DateValidator` /
+`DateTimeValidator`; the extra is compile-once + one FFI
 apply for closed Integer and Float bound units (min/max/gt/lt/eq),
 closed String / Bytes length units (min/max/exact), a closed
 IntegerEnum member set (`compile_integer_enum` / `apply_integer_enum`),
@@ -156,6 +157,10 @@ a closed StringEnum UTF-8 member set (`compile_string_enum` /
 (`compile_boolean` / `apply_boolean`; `1` / `0` are not coerced), and a
 closed Decimal exact-Decimal type door (`compile_decimal` /
 `apply_decimal`; `float` / `int` / `bool` are not coerced; no scale
-unit). Pattern and named identity stay on the host. Next: Date/DateTime,
-UUID/Path, Pattern, plain EnumValidator stay off this path. Decimal
-scale / quantize stays HOLD.
+unit), and a closed Date type door (`compile_date` / `apply_date`;
+string coerce stays host), and a closed DateTime type door
+(`compile_datetime` / `apply_datetime`; a plain `date` misses).
+Pattern and named identity stay on the host. Next: UUID/Path/IP,
+Pattern, plain EnumValidator stay off this path. Decimal scale /
+quantize stays HOLD. Date and DateTime bounds stay host. No
+follow-up remains on this Date* concern.
