@@ -2,13 +2,13 @@
 
 ## Unreleased
 
-- Extract-bridge slot name (internal only, no behavior change). The
-  fourth Validator native slot is ``_native_extract_bridge``: the
-  extract-miss / OverflowError bridge back to host KEEP wording
-  (``ValueValidator`` / ``LengthValidator`` / ``TypeValidator``). It
-  is not a second peer apply beside ``_native_apply``. The four slots
-  stay ``_native_plan`` / ``_native_apply`` / ``_native_fail`` /
-  ``_native_extract_bridge``, seeded ``None`` on ``Validator.__init__``
+- Closed-host-apply slot name (internal only, no behavior change).
+  The fourth Validator native slot is ``_native_closed_apply``: the
+  closed-family host apply (``apply_native_integer_bounds``,
+  ``apply_native_float_bounds``, and the other family doors). Peer
+  FFI apply stays ``_native_apply``. The four slots stay
+  ``_native_plan`` / ``_native_apply`` / ``_native_fail`` /
+  ``_native_closed_apply``, seeded ``None`` on ``Validator.__init__``
   and cleared by ``_clear_native``. Writers stay ``bind_native_plan``
   / ``_clear_native``. ``apply_native_bounds`` reads the slot
   directly. ``ux_valio/validators/_native.py`` stays private. Cap Door
@@ -16,7 +16,7 @@
 
 - Native-plan ownership clarity (internal only, no behavior change).
   ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /
-  ``_native_fail`` / ``_native_extract_bridge`` as ``None`` before
+  ``_native_fail`` / ``_native_closed_apply`` as ``None`` before
   ``bind_native_plan(self)`` — the same four slots ``_clear_native``
   clears. Ownership stays on ``Validator`` once; typed facades inherit
   that ``__init__``. ``__set_name__`` rebinds when ``_native_plan is
