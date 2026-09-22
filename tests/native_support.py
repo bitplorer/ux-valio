@@ -31,15 +31,11 @@ _HOLD = (
 )
 
 _VALIDATORS = ROOT / "ux_valio" / "validators"
-HOST_NATIVE_PATHS = (
-    _VALIDATORS / "_native.py",
-    _VALIDATORS / "_native_closed.py",
-    _VALIDATORS / "_native_apply.py",
-)
+HOST_NATIVE_PATHS = (_VALIDATORS / "_native.py",)
 
 
 def host_native_source() -> str:
-    """Host bind sources. Same locks as the former single ``_native.py``."""
+    """Host bind source. One file: ``_native.py``."""
     return "\n".join(path.read_text() for path in HOST_NATIVE_PATHS)
 
 

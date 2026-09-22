@@ -13,9 +13,7 @@ validators/        validate door (ValidateProperty : Property)
   hooks.py         HookHost (inherited)
   leaves/length/value   concern leaves (compose with & / |, no leaf MI)
   facade.py        Validator, ValidationPath
-  _native.py       bind door: load, _select_*, bind_native_plan
-  _native_closed.py  closed Plan detectors (_closed_*)
-  _native_apply.py   apply helpers, FailKind map, extract bridges
+  _native.py       bind-time optional peer (one file; not a taught import)
 facades/           field-default products
   typed.py         IntegerValidator, StringValidator, …
   named/           identity products, sibling domains

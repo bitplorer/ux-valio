@@ -171,6 +171,19 @@ def test_field_path_has_no_cap_door_b_or_json_plan():
                     json_imports.append(node.module)
     assert json_imports == []
 
+
+def test_host_native_is_one_file():
+    """Private modules only when one file is one family walk.
+
+    Closed / apply / select siblings mix every family. That split
+    stays out. ``_native.py`` is the host door.
+    """
+    validators = ROOT / "ux_valio" / "validators"
+    assert (validators / "_native.py").is_file()
+    extra = sorted(path.name for path in validators.glob("_native_*.py"))
+    assert extra == []
+
+
 def test_unclosed_plans_stay_on_host():
     required = IntegerValidator(min_value=0, required=True, debug=True)
     assert required._native_plan is None

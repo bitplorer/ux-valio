@@ -8,11 +8,9 @@
   ``tests/test_native_layout.py`` (public ``compile_*`` / ``apply_*``
   presence, bare ``compile`` / ``apply`` absence, cross-family
   ``RuntimeError``, Cap OFF, Date* HOLD). Shared helpers are
-  ``tests/native_support.py``. Host bind stays one walk. Closed
-  detectors live in ``_native_closed.py``; apply helpers, the
-  ``FailKind`` map, and extract bridges live in ``_native_apply.py``;
-  ``_native.py`` keeps ``_load_native_peer``, ``_select_*``,
-  ``bind_native_plan``, and ``apply_native_bounds``.
+  ``tests/native_support.py``. Host ``_native.py`` stays one file:
+  closed detectors, apply, and the bind list are the same walk for
+  every family, so a closed/apply split is not one family walk.
   Public ``compile_*`` / ``apply_*`` names and signatures are
   unchanged. Cap Door B stays off. Date* stays HOLD.
 
