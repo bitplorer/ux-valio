@@ -112,7 +112,19 @@ a parallel folder, not inside the layer they depend on.
   off. One family. Pattern / Date* / UUID / Path / plain Enum stay off.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_select_*``); do not merge a pair into one door
-  and do not restore a per-family copy of the bind steps. Open
+  and do not restore a per-family copy of the bind steps. Private
+  modules, still one walk: ``_native.py`` holds ``_load_native_peer``,
+  ``_select_*``, ``bind_native_plan``, and ``apply_native_bounds``;
+  ``_native_closed.py`` holds ``_closed_*``;
+  ``_native_apply.py`` holds the other ``apply_native_*`` helpers,
+  the ``FailKind`` map, and extract bridges. Do not fold those three
+  back into one file and do not give a family its own bind walk.
+  Tests are ``tests/test_native_layout.py`` (public ``compile_*`` /
+  ``apply_*`` presence, bare ``compile`` / ``apply`` absence,
+  cross-family ``RuntimeError``, Cap OFF, Date* HOLD) plus
+  ``tests/test_native_<family>.py``. Helpers live in
+  ``tests/native_support.py``. Do not recombine
+  ``tests/test_native_peer.py``. Open
   TypeValidator / plain EnumValidator stay on the host.
   Stdlib Python apply stays the
   default without the extra. Do not add a Schema/Field twin to get it.

@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Test and host-native layout (internal only, no L1 break). Native
+  peer tests are one module per family
+  (``tests/test_native_<family>.py``) plus
+  ``tests/test_native_layout.py`` (public ``compile_*`` / ``apply_*``
+  presence, bare ``compile`` / ``apply`` absence, cross-family
+  ``RuntimeError``, Cap OFF, Date* HOLD). Shared helpers are
+  ``tests/native_support.py``. Host bind stays one walk. Closed
+  detectors live in ``_native_closed.py``; apply helpers, the
+  ``FailKind`` map, and extract bridges live in ``_native_apply.py``;
+  ``_native.py`` keeps ``_load_native_peer``, ``_select_*``,
+  ``bind_native_plan``, and ``apply_native_bounds``.
+  Public ``compile_*`` / ``apply_*`` names and signatures are
+  unchanged. Cap Door B stays off. Date* stays HOLD.
+
 - Native peer layout (internal only, no L1 break). The private ``Plan``
   enum is one variant per family; each variant owns only that family's
   checks (Integer / Float bounds, String / Bytes length, IntegerEnum /
