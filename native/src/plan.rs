@@ -20,15 +20,16 @@ use crate::length::LengthUnit;
 #[pyclass(eq, eq_int, skip_from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum FailKind {
-    /// Host `min_value`: value was less than the inclusive bound.
+    /// Host `min_value`. Pass when `value >= bound`; miss when `value < bound`.
     MinValue = 1,
-    /// Host `max_value`: value was greater than the inclusive bound.
+    /// Host `max_value`. Pass when `value <= bound`; miss when `value > bound`.
     MaxValue = 2,
-    /// Host `gt`: value was not strictly greater than the bound.
+    /// Host `gt` (exclusive). Pass when `value > bound`; miss when `value <= bound`.
     GreaterThan = 3,
-    /// Host `lt`: value was not strictly less than the bound.
+    /// Host `lt` (exclusive). Pass when `value < bound`; miss when `value >= bound`.
     LessThan = 4,
-    /// Host `eq`/`value`: value was not the compiled equal.
+    /// Host `eq`/`value`. Pass when `value == bound`; miss when `value != bound`.
+    /// IEEE NaN never equals.
     Equal = 5,
     /// Host `min_length`: count was less than the inclusive bound.
     /// String: codepoints. Bytes: `len(bytes)`.

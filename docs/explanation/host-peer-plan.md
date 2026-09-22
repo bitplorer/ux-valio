@@ -57,7 +57,11 @@ a native enum, built **once** at ``__init__`` / ``__set_name__``.
 
 Shipped closed plans: ``Integer`` or ``Float`` plus specified bound units —
 ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` / ``Equal``, including
-min+max range and exclusive ``gt``+``lt`` as the host encodes them —
+min+max range and exclusive ``gt``+``lt``. Miss arms are fail-when
+(``min_value`` passes ``value >= min`` and misses ``<``; ``gt`` passes
+``value > gt`` and misses ``<=``; ``max_value`` passes ``value <= max``
+and misses ``>``; ``lt`` passes ``value < lt`` and misses ``>=``;
+``eq`` misses on ``!=``, and IEEE NaN never equals) —
 and ``String`` plus specified length units — ``MinLength`` /
 ``MaxLength`` / ``Length``, including min+max range — and ``Bytes``
 plus the same length units (byte count, not codepoints) — and
@@ -134,9 +138,10 @@ IEEE compares. Native must match; do not invent a second policy
 (``total_cmp``, NaN-reject, inf-reject):
 
 - Type: ``float('nan')`` / ``±inf`` are ``float`` and pass the type door.
-- min/max/gt/lt: NaN is unordered (``nan < bound`` is false), so those
-  bounds **pass** NaN. ``+inf`` fails a finite ``max_value`` / ``lt``;
-  ``-inf`` fails a finite ``min_value`` / ``gt``.
+- min/max/gt/lt: NaN is unordered, so each fail-when compare is false
+  (``value < min``, ``value > max``, ``value <= gt``, ``value >= lt``)
+  and those bounds **pass** NaN. ``+inf`` fails a finite ``max_value`` /
+  ``lt``; ``-inf`` fails a finite ``min_value`` / ``gt``.
 - ``eq``: ``!=`` so NaN **never** matches, including ``eq=nan``
   (``nan != nan``). Signed zero: ``-0.0 == 0.0``.
 - Extract overflow is a **bridge** (fall through to host
