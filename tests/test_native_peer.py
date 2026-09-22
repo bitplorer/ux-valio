@@ -44,6 +44,12 @@ from ux_valio import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _peer_rust() -> str:
+    """Private peer sources. Layout may span modules under ``native/src``."""
+    native_src = ROOT / "native" / "src"
+    return "\n".join(path.read_text() for path in sorted(native_src.rglob("*.rs")))
 FIELD_PATH_GLOBS = (
     "ux_valio/**/*.py",
     "native/src/**/*.rs",
@@ -130,6 +136,24 @@ def test_bare_compile_and_apply_are_absent_on_the_peer():
         getattr(peer, "apply")
     assert callable(getattr(peer, "compile_integer"))
     assert callable(getattr(peer, "apply_integer"))
+    assert not hasattr(peer, "PyPlan")
+    plan = peer.compile_integer(min_value=0)
+    assert type(plan).__name__ == "Plan"
+
+
+@needs_native
+def test_apply_door_rejects_a_different_family():
+    """Wrong family is an error at the door. The walk does not run."""
+    import ux_valio_native as peer
+
+    integer = peer.compile_integer(min_value=0)
+    text = peer.compile_string(min_length=1)
+    with pytest.raises(RuntimeError, match="apply_integer plan family mismatch"):
+        peer.apply_integer(text, 1)
+    with pytest.raises(RuntimeError, match="apply_string plan family mismatch"):
+        peer.apply_string(integer, "ab")
+    assert peer.apply_integer(integer, 1) is None
+    assert peer.apply_string(text, "ab") is None
 
 
 def test_integer_min_value_works_on_stdlib_path():
@@ -218,27 +242,40 @@ def test_unclosed_plans_stay_on_host():
 
 
 def test_plan_shape_is_owned_unit_list():
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    """Each family variant owns its checks. No shared ``Unit`` bag."""
+    rust = _peer_rust()
     assert "units: [Unit; 2]" not in rust
-    assert "Vec<Unit>" in rust
+    assert "enum Unit" not in rust
+    assert "Vec<Unit>" not in rust
+    assert "enum Plan" in rust
+    assert "Integer(Arc<Vec<BoundUnit<i64>>>)" in rust
+    assert "Float(Arc<Vec<BoundUnit<f64>>>)" in rust
+    assert "String(Arc<Vec<LengthUnit>>)" in rust
+    assert "Bytes(Arc<Vec<LengthUnit>>)" in rust
+    assert "IntegerEnum(Arc<Vec<i64>>)" in rust
+    assert "StringEnum(Arc<Vec<String>>)" in rust
+    assert "fn apply_bound_units" in rust
+    assert "units: &[BoundUnit<T>]" in rust
+    assert "fn apply_length_units" in rust
+    assert "units: &[LengthUnit]" in rust
 
 
 def test_native_unit_names_are_full_words():
     """Rust variants are parallel full words; host kwargs stay min_value/gt/…."""
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
-    assert re.search(r"\bMinValue\(Bound\)", rust)
-    assert re.search(r"\bMaxValue\(Bound\)", rust)
-    assert re.search(r"\bGreaterThan\(Bound\)", rust)
-    assert re.search(r"\bLessThan\(Bound\)", rust)
-    assert re.search(r"\bEqual\(Bound\)", rust)
-    assert re.search(r"Integer\(i64\)", rust)
-    assert re.search(r"Float\(f64\)", rust)
+    rust = _peer_rust()
+    assert re.search(r"\bMinValue\(T\)", rust)
+    assert re.search(r"\bMaxValue\(T\)", rust)
+    assert re.search(r"\bGreaterThan\(T\)", rust)
+    assert re.search(r"\bLessThan\(T\)", rust)
+    assert re.search(r"\bEqual\(T\)", rust)
+    assert re.search(r"BoundUnit<i64>", rust)
+    assert re.search(r"BoundUnit<f64>", rust)
     assert re.search(r"\bMinLength\(usize\)", rust)
     assert re.search(r"\bMaxLength\(usize\)", rust)
     assert re.search(r"\bLength\(usize\)", rust)
     assert re.search(r"\bIntegerEnum\b", rust)
     assert re.search(r"\bStringEnum\b", rust)
-    assert re.search(r"\bMember\(i64\)", rust)
+    assert not re.search(r"\bMember\(i64\)", rust)
     assert "total_cmp(" not in rust
     assert ".total_cmp" not in rust
     assert not re.search(r"\bGt\(i64\)", rust)
@@ -278,7 +315,7 @@ def test_native_unit_names_are_full_words():
 
 def test_closed_integer_type_door_is_ffi_extract():
     """Integer type is i64 extract. Open TypeValidator stays on the host."""
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    rust = _peer_rust()
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
     assert re.search(r"value: i64", rust)
     assert "fn compile_integer" in rust
@@ -307,7 +344,7 @@ def test_closed_integer_type_door_is_ffi_extract():
 
 def test_closed_float_type_door_is_f64_extract():
     """Float type is f64 extract. IEEE compare; no total_cmp / NotFloat."""
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    rust = _peer_rust()
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
     assert re.search(r"value: f64", rust)
     assert "fn apply_float" in rust
@@ -326,7 +363,7 @@ def test_closed_float_type_door_is_f64_extract():
 
 def test_closed_string_type_door_is_str_extract():
     """String type is UTF-8 extract. Length is codepoints (chars), not bytes."""
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    rust = _peer_rust()
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
     assert "fn compile_string" in rust
     assert "fn apply_string" in rust
@@ -343,13 +380,13 @@ def test_closed_string_type_door_is_str_extract():
 
 def test_closed_bytes_type_door_is_bytes_extract():
     """Bytes type is ``&[u8]`` extract. Length is ``len()``, not codepoints."""
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    rust = _peer_rust()
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
     assert "fn compile_bytes" in rust
     assert "fn apply_bytes" in rust
     assert "value: &[u8]" in rust
     assert "let byte_len = value.len();" in rust
-    assert "Unit::Bytes" in rust
+    assert "Plan::Bytes" in rust
     assert "grapheme" not in rust.lower()
     assert "_closed_bytes_length" in native_py
     assert "apply_native_bytes_length" in native_py
@@ -663,7 +700,7 @@ def test_failkind_exposes_full_word_names():
 def test_host_bridge_drops_i64_bit_length_precheck():
     """PyO3 i64 extract is the range oracle. No host bit_length gate."""
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    rust = _peer_rust()
     assert "_I64_BITS" not in native_py
     assert "bit_length" not in native_py
     assert "_native_fail_type" not in native_py
@@ -2190,12 +2227,12 @@ def test_integer_enum_l1_has_no_members_kwarg():
 
 def test_closed_integer_enum_type_door_is_i64_extract():
     """IntegerEnum type is i64 extract. Compile and apply stay a pair."""
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    rust = _peer_rust()
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
     assert "fn compile_integer_enum" in rust
     assert "fn apply_integer_enum" in rust
-    assert "Unit::IntegerEnum" in rust
-    assert "Unit::Member" in rust
+    assert "Plan::IntegerEnum" in rust
+    assert "IntegerEnum(Arc<Vec<i64>>)" in rust
     assert "FailKind::NotMember" in rust
     assert "fn compile_and_apply" not in rust
     assert "_closed_integer_enum_members" in native_py
@@ -2625,11 +2662,11 @@ def test_string_enum_l1_has_no_members_kwarg():
 
 def test_closed_string_enum_type_door_is_str_extract():
     """StringEnum type is UTF-8 extract. Compile and apply stay a pair."""
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    rust = _peer_rust()
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
     assert "fn compile_string_enum" in rust
     assert "fn apply_string_enum" in rust
-    assert "Unit::StringEnum" in rust
+    assert "Plan::StringEnum" in rust
     assert "fn compile_and_apply" not in rust
     assert "_closed_string_enum_members" in native_py
     assert "apply_native_string_enum" in native_py
@@ -3020,12 +3057,12 @@ def test_boolean_works_on_stdlib_path():
 
 def test_closed_boolean_type_door_is_bool_extract():
     """Boolean type is exact bool extract. Compile and apply stay a pair."""
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    rust = _peer_rust()
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
     assert "fn compile_boolean" in rust
     assert "fn apply_boolean" in rust
     assert "value: bool" in rust
-    assert "Unit::Boolean" in rust
+    assert "Plan::Boolean" in rust
     assert "fn compile_and_apply" not in rust
     assert not re.search(r"\bfn compile\(", rust)
     assert not re.search(r"\bfn apply\(", rust)
@@ -3290,12 +3327,12 @@ def test_decimal_works_on_stdlib_path():
 
 def test_closed_decimal_type_door_is_decimal_extract():
     """Decimal type is exact Decimal extract. Compile and apply stay a pair."""
-    rust = (ROOT / "native" / "src" / "lib.rs").read_text()
+    rust = _peer_rust()
     cargo = (ROOT / "native" / "Cargo.toml").read_text()
     native_py = (ROOT / "ux_valio" / "validators" / "_native.py").read_text()
     assert "fn compile_decimal" in rust
     assert "fn apply_decimal" in rust
-    assert "Unit::Decimal" in rust
+    assert "Plan::Decimal" in rust
     assert "fn compile_and_apply" not in rust
     assert not re.search(r"\bfn compile\(", rust)
     assert not re.search(r"\bfn apply\(", rust)

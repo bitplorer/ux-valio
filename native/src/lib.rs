@@ -1,10 +1,14 @@
 //! Optional apply peer for `ux-valio[native]`.
 //!
-//! Closed Integer and Float bound plans, closed String and Bytes length
-//! plans, a closed IntegerEnum member-set plan, a closed StringEnum
-//! UTF-8 member-set plan, a closed Boolean type-door plan, and a closed
-//! Decimal type-door plan. Type door
-//! is the FFI extract (`apply_integer(plan, i64)` /
+//! [`plan::Plan`] is one variant per family. The variant owns that
+//! family's checks: Integer / Float own [`bound::BoundUnit`] values,
+//! String / Bytes own [`length::LengthUnit`] values, IntegerEnum owns
+//! an `i64` member set, StringEnum owns a UTF-8 member set, Boolean and
+//! Decimal are type-door markers. `apply_integer` clones the integer
+//! bounds and walks those — a length unit is the wrong type, so it
+//! cannot be passed into that walk.
+//!
+//! Type door is the FFI extract (`apply_integer(plan, i64)` /
 //! `apply_float(plan, f64)` / `apply_string(plan, &str)` /
 //! `apply_bytes(plan, &[u8])` / `apply_integer_enum(plan, i64)` /
 //! `apply_string_enum(plan, &str)` / `apply_boolean(plan, bool)` /
@@ -13,391 +17,27 @@
 //! `Equal`) run after numeric extract. Length units (`MinLength` /
 //! `MaxLength` / `Length`) are shared: String count is Unicode scalar
 //! values (`chars().count()`), matching host `len(str)`; Bytes count is
-//! `len()` of the extracted `&[u8]`, matching host `len(bytes)` — not
-//! Unicode scalar values. IntegerEnum units are `Member(i64)` values
-//! from the concrete `enum.IntEnum`; membership is exact `i64`
-//! equality. StringEnum values are UTF-8 strings from the concrete
-//! str-valued `enum.Enum`; membership is exact `&str` equality (no
-//! casefold, no NFC). Host maps `FailKind` to KEEP wording. Open /
-//! generic type checks stay on the host — this crate does not reflect
-//! Python typing. Host compiles once at bind; each set is one FFI
-//! apply. Soul stays on the host (descriptor, hooks, store). Not Cap
-//! Door B.
+//! `len()` of the extracted `&[u8]`, matching host `len(bytes)`.
+//! IntegerEnum membership is exact `i64` equality. StringEnum membership
+//! is exact `&str` equality (no casefold, no NFC). Host maps `FailKind`
+//! to KEEP wording. Open / generic type checks stay on the host — this
+//! crate does not reflect Python typing. Host compiles once at bind;
+//! each set is one FFI apply. Soul stays on the host (descriptor, hooks,
+//! store). Not Cap Door B.
 
 use std::sync::Arc;
 
 use pyo3::prelude::*;
 
-/// Bound payload. Integer plans carry `i64`; Float plans carry `f64`.
-/// Family names (`MinValue` / …) stay shared; the scalar is the door.
-#[derive(Clone, Copy)]
-enum Bound {
-    Integer(i64),
-    Float(f64),
-}
+use bound::{apply_bound_units, compile_bound_plan};
+use length::{apply_length_units, compile_length_plan};
+use plan::{
+    apply_member_units, apply_string_members, share_plan, unexpected_family, FailKind, Plan, PyPlan,
+};
 
-/// Specified scalar units. `Integer` / `Float` / `String` / `Bytes` are
-/// plan-shape markers, not open type checks. Type is the FFI extract;
-/// bound or length units follow.
-#[derive(Clone, Copy)]
-enum Unit {
-    /// Plan-shape marker. Type extract is the FFI `i64` argument, not an
-    /// open type check. Host `isinstance` gates first so Python `True`
-    /// is `int` (load-bearing); `None` / `collect_all` type miss stay
-    /// host.
-    Integer,
-    /// Plan-shape marker. Type extract is the FFI `f64` argument.
-    /// Host `isinstance` gates first so Python `int` / `bool` miss
-    /// Float (KEEP); `None` / `collect_all` type miss stay host.
-    /// NaN / ±inf are valid `float` values — IEEE compare, no second
-    /// policy (Door A: `nan < bound` is false, so min/max/gt/lt pass;
-    /// `nan != bound` is true even when `bound` is NaN, so `eq` fails).
-    Float,
-    /// Host `min_value`, inclusive ≥.
-    MinValue(Bound),
-    /// Host `max_value`, inclusive ≤.
-    MaxValue(Bound),
-    /// Host `gt`, exclusive >.
-    GreaterThan(Bound),
-    /// Host `lt`, exclusive <.
-    LessThan(Bound),
-    /// Host `eq`/`value`, exact. IEEE `!=` so NaN never equals NaN.
-    Equal(Bound),
-    /// Plan-shape marker. Type extract is the FFI `&str` argument.
-    /// Host `isinstance` gates first so Python `bytes` miss String
-    /// (KEEP); `None` / `collect_all` type miss stay host.
-    String,
-    /// Plan-shape marker. Type extract is the FFI `&[u8]` argument.
-    /// Host `isinstance` gates first so Python `str` / `bytearray`
-    /// miss Bytes (KEEP); `None` / `collect_all` type miss stay host.
-    Bytes,
-    /// Host `min_length`, inclusive. String count is Unicode scalar
-    /// values; Bytes count is the extracted `&[u8]` length.
-    MinLength(usize),
-    /// Host `max_length`, inclusive. String count is Unicode scalar
-    /// values; Bytes count is the extracted `&[u8]` length.
-    MaxLength(usize),
-    /// Host exact `length`. String count is Unicode scalar values;
-    /// Bytes count is the extracted `&[u8]` length.
-    Length(usize),
-    /// Plan-shape marker. Type extract is the FFI `i64` argument.
-    /// Host `isinstance` gates first against the concrete `enum.IntEnum`
-    /// (so a plain `int` or another enum misses before extract).
-    /// `None` / `collect_all` type miss stay host. Not an open type check.
-    IntegerEnum,
-    /// One `i64` member value of the concrete `enum.IntEnum`.
-    /// Membership is exact equality with the extracted `i64`.
-    Member(i64),
-    /// Plan-shape marker. Type extract is the FFI `&str` argument: the
-    /// member's `.value`, not the enum object. Host `isinstance` gates
-    /// first against the concrete str-valued `enum.Enum`. `None` /
-    /// `collect_all` type miss stay host. Not an open type check and
-    /// not a String length plan. The UTF-8 set lives on `Plan`, not in
-    /// this `Copy` unit.
-    StringEnum,
-    /// Plan-shape marker. Type extract is the FFI `bool` argument.
-    /// Exact `bool` only: `1` / `0` are not coerced. Host `isinstance`
-    /// gates first so a non-bool misses before extract. `None` /
-    /// `collect_all` type miss stay host. Not an Integer bound plan
-    /// (Python `bool` is `int`, and that stays the Integer door).
-    Boolean,
-    /// Plan-shape marker. Type extract is exact `decimal.Decimal`.
-    /// `float` / `int` / `bool` / raw `str` miss (no float bridge, no
-    /// silent float→Decimal). Host `_pre_validate` coerces Decimal
-    /// strings before apply, so this extract never sees a raw `str`
-    /// on the setattr path. No scale unit. `None` stays host.
-    Decimal,
-}
-
-/// Compiled plan. Built once; applied many times.
-///
-/// Owned unit list (`Arc<Vec<Unit>>`) so a single-bound plan and a
-/// min+max range share one type — not a fixed two-slot array. Apply
-/// clones the `Arc`, not the units. `string_members` is the shared
-/// empty set except on a StringEnum plan.
-#[pyclass(frozen)]
-struct Plan {
-    units: Arc<Vec<Unit>>,
-    string_members: Arc<Vec<String>>,
-}
-
-/// Small error kind. Host formats KEEP messages via the FailKind map.
-/// Type misses never leave the host (`isinstance` before apply — Python
-/// `True` is `int`; Python `int` is not `float`). Bound units run after
-/// the scalar extract.
-#[pyclass(eq, eq_int, skip_from_py_object)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum FailKind {
-    /// Host `min_value`: value was less than the inclusive bound.
-    MinValue = 1,
-    /// Host `max_value`: value was greater than the inclusive bound.
-    MaxValue = 2,
-    /// Host `gt`: value was not strictly greater than the bound.
-    GreaterThan = 3,
-    /// Host `lt`: value was not strictly less than the bound.
-    LessThan = 4,
-    /// Host `eq`/`value`: value was not the compiled equal.
-    Equal = 5,
-    /// Host `min_length`: count was less than the inclusive bound.
-    /// String: codepoints. Bytes: `len(bytes)`.
-    MinLength = 6,
-    /// Host `max_length`: count was greater than the inclusive bound.
-    /// String: codepoints. Bytes: `len(bytes)`.
-    MaxLength = 7,
-    /// Host exact `length`: count was not the compiled length.
-    /// String: codepoints. Bytes: `len(bytes)`.
-    Length = 8,
-    /// Host IntegerEnum / StringEnum type door: extracted scalar was not
-    /// a compiled member value. Host formats the KEEP type-door
-    /// `TypeError`.
-    NotMember = 9,
-}
-
-/// Door A IEEE compares. `PartialOrd`/`PartialEq` match host Python:
-/// NaN unordered (min/max/gt/lt pass), `nan != nan` (`eq` fails).
-/// Do not use `total_cmp` — that would be a second policy. One compare
-/// for `i64` and `f64`; the scalar type is the door.
-#[allow(clippy::float_cmp)]
-fn scalar_miss<T: PartialOrd>(kind: FailKind, value: T, bound: T) -> Option<FailKind> {
-    let missed = match kind {
-        FailKind::MinValue => value < bound,
-        FailKind::MaxValue => value > bound,
-        FailKind::GreaterThan => value <= bound,
-        FailKind::LessThan => value >= bound,
-        FailKind::Equal => value != bound,
-        _ => false,
-    };
-    missed.then_some(kind)
-}
-
-fn miss(kind: FailKind, value: Bound, bound: Bound) -> Option<FailKind> {
-    match (value, bound) {
-        (Bound::Integer(value), Bound::Integer(bound)) => scalar_miss(kind, value, bound),
-        (Bound::Float(value), Bound::Float(bound)) => scalar_miss(kind, value, bound),
-        // Host never mixes doors; a mismatched payload is a no-op so
-        // apply still returns Option<FailKind> (infra is host RuntimeError).
-        _ => None,
-    }
-}
-
-/// One empty member set for every plan that is not a StringEnum.
-fn share_empty_members() -> Arc<Vec<String>> {
-    static EMPTY: std::sync::LazyLock<Arc<Vec<String>>> =
-        std::sync::LazyLock::new(|| Arc::new(Vec::new()));
-    Arc::clone(&EMPTY)
-}
-
-fn share_plan(units: Vec<Unit>) -> Plan {
-    Plan {
-        units: Arc::new(units),
-        string_members: share_empty_members(),
-    }
-}
-
-fn apply_units(units: &[Unit], value: Bound) -> Result<(), FailKind> {
-    for unit in units {
-        let fail = match *unit {
-            Unit::Integer | Unit::Float | Unit::String | Unit::Bytes => None,
-            Unit::MinValue(bound) => miss(FailKind::MinValue, value, bound),
-            Unit::MaxValue(bound) => miss(FailKind::MaxValue, value, bound),
-            Unit::GreaterThan(bound) => miss(FailKind::GreaterThan, value, bound),
-            Unit::LessThan(bound) => miss(FailKind::LessThan, value, bound),
-            Unit::Equal(bound) => miss(FailKind::Equal, value, bound),
-            // Length units belong on apply_string / apply_bytes; numeric apply
-            // no-ops them (host never mixes doors).
-            Unit::MinLength(_) | Unit::MaxLength(_) | Unit::Length(_) => None,
-            // Enum member-set units belong on apply_integer_enum /
-            // apply_string_enum. Boolean belongs on apply_boolean.
-            Unit::IntegerEnum
-            | Unit::Member(_)
-            | Unit::StringEnum
-            | Unit::Boolean
-            | Unit::Decimal => None,
-        };
-        if let Some(kind) = fail {
-            return Err(kind);
-        }
-    }
-    Ok(())
-}
-
-fn push_bound<T>(units: &mut Vec<Unit>, bound: Option<T>, unit: impl FnOnce(T) -> Unit) {
-    if let Some(value) = bound {
-        units.push(unit(value));
-    }
-}
-
-fn compile_bound_plan<T>(
-    shape: Unit,
-    wrap: impl Fn(T) -> Bound + Copy,
-    min_value: Option<T>,
-    max_value: Option<T>,
-    gt: Option<T>,
-    lt: Option<T>,
-    eq: Option<T>,
-) -> Plan {
-    // Shape marker plus the five host bound kwargs.
-    let mut units = Vec::with_capacity(6);
-    units.push(shape);
-    // Host `_validate_value` order: min_value / gt, then max_value / lt, then eq.
-    push_bound(&mut units, min_value, |v| Unit::MinValue(wrap(v)));
-    push_bound(&mut units, gt, |v| Unit::GreaterThan(wrap(v)));
-    push_bound(&mut units, max_value, |v| Unit::MaxValue(wrap(v)));
-    push_bound(&mut units, lt, |v| Unit::LessThan(wrap(v)));
-    push_bound(&mut units, eq, |v| Unit::Equal(wrap(v)));
-    share_plan(units)
-}
-
-fn compile_integer_plan(
-    min_value: Option<i64>,
-    max_value: Option<i64>,
-    gt: Option<i64>,
-    lt: Option<i64>,
-    eq: Option<i64>,
-) -> Plan {
-    compile_bound_plan(
-        Unit::Integer,
-        Bound::Integer,
-        min_value,
-        max_value,
-        gt,
-        lt,
-        eq,
-    )
-}
-
-fn compile_float_plan(
-    min_value: Option<f64>,
-    max_value: Option<f64>,
-    gt: Option<f64>,
-    lt: Option<f64>,
-    eq: Option<f64>,
-) -> Plan {
-    compile_bound_plan(Unit::Float, Bound::Float, min_value, max_value, gt, lt, eq)
-}
-
-fn apply_length_units(units: &[Unit], counted: usize) -> Result<(), FailKind> {
-    for unit in units {
-        let fail = match *unit {
-            Unit::String | Unit::Bytes => None,
-            Unit::MinLength(min) => (counted < min).then_some(FailKind::MinLength),
-            Unit::MaxLength(max) => (counted > max).then_some(FailKind::MaxLength),
-            Unit::Length(exact) => (counted != exact).then_some(FailKind::Length),
-            // Numeric and enum units belong on their own apply doors.
-            // Exhaustive so a new unit is a compile error, not a silent pass.
-            Unit::Integer
-            | Unit::Float
-            | Unit::MinValue(_)
-            | Unit::MaxValue(_)
-            | Unit::GreaterThan(_)
-            | Unit::LessThan(_)
-            | Unit::Equal(_)
-            | Unit::IntegerEnum
-            | Unit::Member(_)
-            | Unit::StringEnum
-            | Unit::Boolean
-            | Unit::Decimal => None,
-        };
-        if let Some(kind) = fail {
-            return Err(kind);
-        }
-    }
-    Ok(())
-}
-
-fn apply_member_units(units: &[Unit], value: i64) -> Result<(), FailKind> {
-    let found = units
-        .iter()
-        .any(|unit| matches!(*unit, Unit::Member(member) if member == value));
-    if found {
-        Ok(())
-    } else {
-        Err(FailKind::NotMember)
-    }
-}
-
-fn compile_integer_enum_plan(members: Vec<i64>) -> Plan {
-    let mut units = Vec::with_capacity(members.len() + 1);
-    units.push(Unit::IntegerEnum);
-    for member in members {
-        units.push(Unit::Member(member));
-    }
-    share_plan(units)
-}
-
-fn compile_string_enum_plan(members: Vec<String>) -> Plan {
-    Plan {
-        units: Arc::new(vec![Unit::StringEnum]),
-        string_members: Arc::new(members),
-    }
-}
-
-fn compile_boolean_plan() -> Plan {
-    share_plan(vec![Unit::Boolean])
-}
-
-/// Closed Boolean type door is the FFI `bool` extract. `True` and
-/// `False` both pass. There is no bound unit. Other units no-op (host
-/// never mixes doors). Exhaustive so a new unit is a compile error.
-#[allow(clippy::single_match)]
-fn apply_boolean_units(units: &[Unit], _value: bool) -> Result<(), FailKind> {
-    for unit in units {
-        match *unit {
-            Unit::Boolean
-            | Unit::Integer
-            | Unit::Float
-            | Unit::String
-            | Unit::Bytes
-            | Unit::MinValue(_)
-            | Unit::MaxValue(_)
-            | Unit::GreaterThan(_)
-            | Unit::LessThan(_)
-            | Unit::Equal(_)
-            | Unit::MinLength(_)
-            | Unit::MaxLength(_)
-            | Unit::Length(_)
-            | Unit::IntegerEnum
-            | Unit::Member(_)
-            | Unit::StringEnum
-            | Unit::Decimal => {}
-        }
-    }
-    Ok(())
-}
-
-fn compile_decimal_plan() -> Plan {
-    share_plan(vec![Unit::Decimal])
-}
-
-/// Closed Decimal type door is the `decimal.Decimal` extract. Exact
-/// instances pass, including a zero Decimal. There is no bound unit and
-/// no scale unit. Other units no-op (host never mixes doors). Exhaustive
-/// so a new unit is a compile error.
-#[allow(clippy::single_match)]
-fn apply_decimal_units(units: &[Unit], _value: ExtractedDecimal) -> Result<(), FailKind> {
-    for unit in units {
-        match *unit {
-            Unit::Decimal
-            | Unit::Boolean
-            | Unit::Integer
-            | Unit::Float
-            | Unit::String
-            | Unit::Bytes
-            | Unit::MinValue(_)
-            | Unit::MaxValue(_)
-            | Unit::GreaterThan(_)
-            | Unit::LessThan(_)
-            | Unit::Equal(_)
-            | Unit::MinLength(_)
-            | Unit::MaxLength(_)
-            | Unit::Length(_)
-            | Unit::IntegerEnum
-            | Unit::Member(_)
-            | Unit::StringEnum => {}
-        }
-    }
-    Ok(())
-}
+mod bound;
+mod length;
+mod plan;
 
 /// Exact `decimal.Decimal`. Not `f64`. Not a string coerce.
 struct ExtractedDecimal;
@@ -442,28 +82,44 @@ fn decimal_extract_error(py: Python<'_>) -> PyErr {
     }
 }
 
-fn apply_string_members(members: &[String], value: &str) -> Result<(), FailKind> {
-    if members.iter().any(|member| member == value) {
-        Ok(())
-    } else {
-        Err(FailKind::NotMember)
-    }
+fn compile_integer_plan(
+    min_value: Option<i64>,
+    max_value: Option<i64>,
+    gt: Option<i64>,
+    lt: Option<i64>,
+    eq: Option<i64>,
+) -> PyPlan {
+    share_plan(Plan::Integer(compile_bound_plan(
+        min_value, max_value, gt, lt, eq,
+    )))
 }
 
-fn compile_length_plan(
-    shape: Unit,
-    min_length: Option<usize>,
-    max_length: Option<usize>,
-    length: Option<usize>,
-) -> Plan {
-    // Shape marker plus min_length / max_length / length.
-    let mut units = Vec::with_capacity(4);
-    units.push(shape);
-    // Host `_validate_length` order: min_length, max_length, exact length.
-    push_bound(&mut units, min_length, Unit::MinLength);
-    push_bound(&mut units, max_length, Unit::MaxLength);
-    push_bound(&mut units, length, Unit::Length);
-    share_plan(units)
+fn compile_float_plan(
+    min_value: Option<f64>,
+    max_value: Option<f64>,
+    gt: Option<f64>,
+    lt: Option<f64>,
+    eq: Option<f64>,
+) -> PyPlan {
+    share_plan(Plan::Float(compile_bound_plan(
+        min_value, max_value, gt, lt, eq,
+    )))
+}
+
+fn compile_integer_enum_plan(members: Vec<i64>) -> PyPlan {
+    share_plan(Plan::IntegerEnum(Arc::new(members)))
+}
+
+fn compile_string_enum_plan(members: Vec<String>) -> PyPlan {
+    share_plan(Plan::StringEnum(Arc::new(members)))
+}
+
+fn compile_boolean_plan() -> PyPlan {
+    share_plan(Plan::Boolean)
+}
+
+fn compile_decimal_plan() -> PyPlan {
+    share_plan(Plan::Decimal)
 }
 
 /// Product peer: `compile_integer(...)` / `compile_float(...)` /
@@ -473,14 +129,13 @@ fn compile_length_plan(
 /// `apply_float` / `apply_string` / `apply_bytes` / `apply_integer_enum` /
 /// `apply_string_enum` / `apply_boolean` / `apply_decimal`.
 ///
-/// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`,
-/// `Float`, `String`, `Bytes`, `IntegerEnum`, `StringEnum`,
-/// `Boolean`, or `Decimal`; extract is the FFI argument. Compile kwargs
-/// are host names (`min_value` / `gt` / `max_length` / `length`) or
-/// `members` for an enum set, mapped onto the full-word units. Boolean
-/// and Decimal take no kwargs. Decimal extract is exact
-/// `decimal.Decimal` (no float bridge, no scale unit). Not a taught L1
-/// API. Compile and apply stay separate doors.
+/// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is the [`Plan`]
+/// variant; extract is the FFI argument. Compile kwargs are host names
+/// (`min_value` / `gt` / `max_length` / `length`) or `members` for an
+/// enum set. Boolean and Decimal take no kwargs. Decimal extract is
+/// exact `decimal.Decimal` (no float bridge, no scale unit). Not a taught
+/// L1 API. Compile and apply stay separate doors. A plan handed to
+/// another family's apply raises `RuntimeError` (the walk is not run).
 #[pymodule]
 mod ux_valio_native {
     use super::*;
@@ -489,7 +144,7 @@ mod ux_valio_native {
     use super::FailKind;
 
     #[pymodule_export]
-    use super::Plan;
+    use super::PyPlan;
 
     /// Closed Integer bound plan. Omitted kwargs stay off the unit list.
     ///
@@ -504,7 +159,7 @@ mod ux_valio_native {
         gt: Option<i64>,
         lt: Option<i64>,
         eq: Option<i64>,
-    ) -> Plan {
+    ) -> PyPlan {
         compile_integer_plan(min_value, max_value, gt, lt, eq)
     }
 
@@ -520,7 +175,7 @@ mod ux_valio_native {
         gt: Option<f64>,
         lt: Option<f64>,
         eq: Option<f64>,
-    ) -> Plan {
+    ) -> PyPlan {
         compile_float_plan(min_value, max_value, gt, lt, eq)
     }
 
@@ -535,8 +190,10 @@ mod ux_valio_native {
         min_length: Option<usize>,
         max_length: Option<usize>,
         length: Option<usize>,
-    ) -> Plan {
-        compile_length_plan(Unit::String, min_length, max_length, length)
+    ) -> PyPlan {
+        share_plan(Plan::String(compile_length_plan(
+            min_length, max_length, length,
+        )))
     }
 
     /// Closed Bytes length plan. Omitted kwargs stay off the unit list.
@@ -544,15 +201,17 @@ mod ux_valio_native {
     /// Host kwargs stay `min_length` / `max_length` / `length`. Units are
     /// the same `MinLength` / `MaxLength` / `Length` (usize) as String.
     /// Count at apply is `len()` of the extracted `&[u8]`, matching host
-    /// `len(bytes)` — not Unicode scalar values.
+    /// `len(bytes)`.
     #[pyfunction]
     #[pyo3(signature = (min_length=None, max_length=None, length=None))]
     fn compile_bytes(
         min_length: Option<usize>,
         max_length: Option<usize>,
         length: Option<usize>,
-    ) -> Plan {
-        compile_length_plan(Unit::Bytes, min_length, max_length, length)
+    ) -> PyPlan {
+        share_plan(Plan::Bytes(compile_length_plan(
+            min_length, max_length, length,
+        )))
     }
 
     /// One-shot Integer apply. Success is `None`; bound miss is a `FailKind`.
@@ -561,11 +220,25 @@ mod ux_valio_native {
     /// a Python int outside i64 raises `OverflowError`; host falls
     /// through). Bound units run after extract. Releases the GIL for
     /// the plan body (`Python::detach`). The unit list is an `Arc`
-    /// clone; the scalar is `i64`. Not an open type check.
+    /// clone; the scalar is `i64`. Another family's plan is
+    /// `RuntimeError` before the walk.
     #[pyfunction]
-    fn apply_integer(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
-        let units = Arc::clone(&plan.units);
-        py.detach(move || apply_units(&units, Bound::Integer(value)).err())
+    fn apply_integer(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: i64,
+    ) -> PyResult<Option<FailKind>> {
+        let units = match &plan.body {
+            Plan::Integer(units) => Arc::clone(units),
+            Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal => return Err(unexpected_family("apply_integer")),
+        };
+        Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
 
     /// One-shot Float apply. Success is `None`; bound miss is a `FailKind`.
@@ -577,9 +250,22 @@ mod ux_valio_native {
     /// unordered, so min/max/gt/lt pass; `eq` uses `!=` so NaN never
     /// matches. Releases the GIL (`Python::detach`).
     #[pyfunction]
-    fn apply_float(py: Python<'_>, plan: PyRef<'_, Plan>, value: f64) -> Option<FailKind> {
-        let units = Arc::clone(&plan.units);
-        py.detach(move || apply_units(&units, Bound::Float(value)).err())
+    fn apply_float(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: f64,
+    ) -> PyResult<Option<FailKind>> {
+        let units = match &plan.body {
+            Plan::Float(units) => Arc::clone(units),
+            Plan::Integer(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal => return Err(unexpected_family("apply_float")),
+        };
+        Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
 
     /// One-shot String apply. Success is `None`; length miss is a `FailKind`.
@@ -588,13 +274,26 @@ mod ux_valio_native {
     /// that cannot extract as UTF-8 (lone surrogates) raises at this FFI
     /// boundary; host falls through to `LengthValidator`. Length units
     /// run after extract. Count is Unicode scalar values
-    /// (`chars().count()`), matching host `len(str)` — not UTF-8 byte
-    /// length. Releases the GIL (`Python::detach`) for the unit walk.
+    /// (`chars().count()`), matching host `len(str)`. Releases the GIL
+    /// (`Python::detach`) for the unit walk.
     #[pyfunction]
-    fn apply_string(py: Python<'_>, plan: PyRef<'_, Plan>, value: &str) -> Option<FailKind> {
-        let units = Arc::clone(&plan.units);
+    fn apply_string(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: &str,
+    ) -> PyResult<Option<FailKind>> {
+        let units = match &plan.body {
+            Plan::String(units) => Arc::clone(units),
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal => return Err(unexpected_family("apply_string")),
+        };
         let char_len = value.chars().count();
-        py.detach(move || apply_length_units(&units, char_len).err())
+        Ok(py.detach(move || apply_length_units(&units, char_len).err()))
     }
 
     /// One-shot Bytes apply. Success is `None`; length miss is a `FailKind`.
@@ -603,14 +302,26 @@ mod ux_valio_native {
     /// that cannot extract as bytes raises at this FFI boundary
     /// (`OverflowError` or extract TypeError); host falls through to
     /// `LengthValidator`. Length units run after extract. Count is
-    /// `value.len()`, matching host `len(bytes)` — not Unicode
-    /// scalar values. Releases the GIL
+    /// `value.len()`, matching host `len(bytes)`. Releases the GIL
     /// (`Python::detach`) for the unit walk.
     #[pyfunction]
-    fn apply_bytes(py: Python<'_>, plan: PyRef<'_, Plan>, value: &[u8]) -> Option<FailKind> {
-        let units = Arc::clone(&plan.units);
+    fn apply_bytes(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: &[u8],
+    ) -> PyResult<Option<FailKind>> {
+        let units = match &plan.body {
+            Plan::Bytes(units) => Arc::clone(units),
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal => return Err(unexpected_family("apply_bytes")),
+        };
         let byte_len = value.len();
-        py.detach(move || apply_length_units(&units, byte_len).err())
+        Ok(py.detach(move || apply_length_units(&units, byte_len).err()))
     }
 
     /// Closed IntegerEnum member-set plan. `members` are the concrete
@@ -618,7 +329,7 @@ mod ux_valio_native {
     /// empty set: every apply is `NotMember`. Host does not compile an
     /// empty set. Not a taught L1 kwarg.
     #[pyfunction]
-    fn compile_integer_enum(members: Vec<i64>) -> Plan {
+    fn compile_integer_enum(members: Vec<i64>) -> PyPlan {
         compile_integer_enum_plan(members)
     }
 
@@ -628,12 +339,25 @@ mod ux_valio_native {
     /// Closed IntegerEnum type door is this `i64` extract. A Python int
     /// outside i64 raises `OverflowError` at this FFI boundary; host
     /// falls through to the host type door. Membership is exact `i64`
-    /// equality with `Member` units (not an open type check). Releases
-    /// the GIL (`Python::detach`) for the unit walk.
+    /// equality with the compiled member values. Releases the GIL
+    /// (`Python::detach`) for the walk.
     #[pyfunction]
-    fn apply_integer_enum(py: Python<'_>, plan: PyRef<'_, Plan>, value: i64) -> Option<FailKind> {
-        let units = Arc::clone(&plan.units);
-        py.detach(move || apply_member_units(&units, value).err())
+    fn apply_integer_enum(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: i64,
+    ) -> PyResult<Option<FailKind>> {
+        let members = match &plan.body {
+            Plan::IntegerEnum(members) => Arc::clone(members),
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal => return Err(unexpected_family("apply_integer_enum")),
+        };
+        Ok(py.detach(move || apply_member_units(&members, value).err()))
     }
 
     /// Closed StringEnum member-set plan. `members` are the concrete
@@ -642,7 +366,7 @@ mod ux_valio_native {
     /// compile an empty set or a value that is not UTF-8. Not a taught
     /// L1 kwarg. Not a String length plan.
     #[pyfunction]
-    fn compile_string_enum(members: Vec<String>) -> Plan {
+    fn compile_string_enum(members: Vec<String>) -> PyPlan {
         compile_string_enum_plan(members)
     }
 
@@ -658,18 +382,31 @@ mod ux_valio_native {
     /// clone; the query is one owned `String` so the walk does not
     /// borrow Python.
     #[pyfunction]
-    fn apply_string_enum(py: Python<'_>, plan: PyRef<'_, Plan>, value: &str) -> Option<FailKind> {
-        let members = Arc::clone(&plan.string_members);
+    fn apply_string_enum(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: &str,
+    ) -> PyResult<Option<FailKind>> {
+        let members = match &plan.body {
+            Plan::StringEnum(members) => Arc::clone(members),
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal => return Err(unexpected_family("apply_string_enum")),
+        };
         let owned = value.to_owned();
-        py.detach(move || apply_string_members(&members, &owned).err())
+        Ok(py.detach(move || apply_string_members(&members, &owned).err()))
     }
 
-    /// Closed Boolean type-door plan. No kwargs. The unit list is the
-    /// `Boolean` shape marker. Not a taught L1 API. Not an Integer plan
+    /// Closed Boolean type-door plan. No kwargs. The variant is the
+    /// `Boolean` marker. Not a taught L1 API. Not an Integer plan
     /// (`bool` is `int` on the host Integer door; this door is exact
     /// `bool`).
     #[pyfunction]
-    fn compile_boolean() -> Plan {
+    fn compile_boolean() -> PyPlan {
         compile_boolean_plan()
     }
 
@@ -678,19 +415,33 @@ mod ux_valio_native {
     /// Closed Boolean type door is this `bool` extract. A Python `int`
     /// (`1` / `0`), `str`, or other non-bool raises at this FFI boundary
     /// (extract error); host falls through to the host type door. No
-    /// coerce. No bound unit. Releases the GIL (`Python::detach`) for
-    /// the unit walk. Compile and apply stay a pair.
+    /// coerce. No bound unit. Releases the GIL (`Python::detach`).
+    /// Compile and apply stay a pair.
     #[pyfunction]
-    fn apply_boolean(py: Python<'_>, plan: PyRef<'_, Plan>, value: bool) -> Option<FailKind> {
-        let units = Arc::clone(&plan.units);
-        py.detach(move || apply_boolean_units(&units, value).err())
+    fn apply_boolean(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: bool,
+    ) -> PyResult<Option<FailKind>> {
+        match &plan.body {
+            Plan::Boolean => {}
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Decimal => return Err(unexpected_family("apply_boolean")),
+        }
+        let _ = value;
+        Ok(py.detach(|| None))
     }
 
-    /// Closed Decimal type-door plan. No kwargs. The unit list is the
-    /// `Decimal` shape marker. Not a taught L1 API. Not a Float plan
+    /// Closed Decimal type-door plan. No kwargs. The variant is the
+    /// `Decimal` marker. Not a taught L1 API. Not a Float plan
     /// (no `f64` bridge) and not a scale plan.
     #[pyfunction]
-    fn compile_decimal() -> Plan {
+    fn compile_decimal() -> PyPlan {
         compile_decimal_plan()
     }
 
@@ -701,15 +452,24 @@ mod ux_valio_native {
     /// `int`, `bool`, or raw `str` raises at this FFI boundary (extract
     /// error); host falls through to the host type door. No coerce. No
     /// `Decimal(float)`. No scale unit. Releases the GIL
-    /// (`Python::detach`) for the unit walk. Compile and apply stay a
-    /// pair.
+    /// (`Python::detach`). Compile and apply stay a pair.
     #[pyfunction]
     fn apply_decimal(
         py: Python<'_>,
-        plan: PyRef<'_, Plan>,
+        plan: PyRef<'_, PyPlan>,
         value: ExtractedDecimal,
-    ) -> Option<FailKind> {
-        let units = Arc::clone(&plan.units);
-        py.detach(move || apply_decimal_units(&units, value).err())
+    ) -> PyResult<Option<FailKind>> {
+        match &plan.body {
+            Plan::Decimal => {}
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean => return Err(unexpected_family("apply_decimal")),
+        }
+        let _ = value;
+        Ok(py.detach(|| None))
     }
 }
