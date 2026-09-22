@@ -112,7 +112,17 @@ a parallel folder, not inside the layer they depend on.
   off. One family. Pattern / Date* / UUID / Path / plain Enum stay off.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_select_*``); do not merge a pair into one door
-  and do not restore a per-family copy of the bind steps. Open
+  and do not restore a per-family copy of the bind steps. Host
+  ``_native.py`` stays one file. Closed detectors, apply, and the
+  bind list are the same walk for every family. A private module is
+  allowed only when opening it shows one family's walk. Do not mirror
+  Rust ``plan`` / ``bound`` / ``length`` into ``_native_closed.py`` /
+  ``_native_apply.py``. Tests are ``tests/test_native_layout.py`` (public ``compile_*`` /
+  ``apply_*`` presence, bare ``compile`` / ``apply`` absence,
+  cross-family ``RuntimeError``, Cap OFF, Date* HOLD) plus
+  ``tests/test_native_<family>.py``. Helpers live in
+  ``tests/native_support.py``. Do not recombine
+  ``tests/test_native_peer.py``. Open
   TypeValidator / plain EnumValidator stay on the host.
   Stdlib Python apply stays the
   default without the extra. Do not add a Schema/Field twin to get it.

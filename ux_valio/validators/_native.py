@@ -1,32 +1,32 @@
 # SPDX-License-Identifier: MIT
 """Optional native apply peer. Not a taught import.
 
-Bind-time choice: when ``ux_valio_native`` is importable and the specified
-path is a closed Integer or Float bound plan (``int`` / ``float``
-annotation + only ``ValueValidator`` bounds: min/max/gt/lt/eq), a
-closed String or Bytes length plan (``str`` / ``bytes`` annotation +
-only ``LengthValidator`` ``min_length`` / ``max_length`` / ``length``),
-or a closed IntegerEnum member-set plan (``IntegerEnumValidator`` whose
-annotation is a concrete ``enum.IntEnum`` and whose only active unit is
-the type door), or a closed StringEnum member-set plan
-(``StringEnumValidator`` whose annotation is a concrete str-valued
-``enum.Enum`` and whose only active unit is the type door), or a
-closed Boolean type door (annotation is ``bool`` and the only active
-unit is the type door), or a closed Decimal type door (annotation is
-``decimal.Decimal`` or the facade coerce union ``decimal.Decimal | str``,
-and the only active unit is the type door), compile a plan once. Type
-door is host-first ``isinstance`` then FFI extract (``i64`` / ``f64`` /
-``&str`` / ``&[u8]`` / ``bool`` / ``decimal.Decimal``); bound / length /
-member units run after extract. StringEnum extract is the member's
-``.value`` as UTF-8 ``&str``. Boolean extract is exact ``bool``
-(``1`` / ``0`` are not coerced). Decimal extract is exact
-``decimal.Decimal`` (``float`` / ``int`` / ``bool`` are not coerced;
-string coerce stays host ``_pre_validate``). No scale unit. Open
-TypeValidator / Union / TypedDict / Annotated / pattern / plain
-``EnumValidator`` stay on the host. A ``BooleanValidator`` or
-``DecimalValidator`` with any extra unit stays on the host. Missing
-or failed extra → host ``_active_units`` path. No import on the hot
-path after that choice. Not Cap Door B.
+One module. A private split is worth it only when opening that file
+shows one family's walk. Closed detectors, apply, and the bind list
+are the same walk for every family, so they stay here. This is not a
+``plan`` / ``bound`` / ``length`` mirror of the Rust crate.
+
+``Plan`` is one variant per family. Integer / Float own ``BoundUnit``
+values. String / Bytes own ``LengthUnit`` values. IntegerEnum /
+StringEnum own a member set. Boolean / Decimal are type-door markers.
+There is no shared unit bag.
+
+Bind-time choice: when ``ux_valio_native`` is importable and the
+specified path is one closed family, compile that variant once.
+Type door is host-first ``isinstance`` then FFI extract (``i64`` /
+``f64`` / ``&str`` / ``&[u8]`` / ``bool`` / ``decimal.Decimal``);
+bound / length / member checks run after extract. StringEnum
+extract is the member's ``.value`` as UTF-8 ``&str``. Boolean
+extract is exact ``bool`` (``1`` / ``0`` are not coerced). Decimal
+extract is exact ``decimal.Decimal`` (``float`` / ``int`` /
+``bool`` are not coerced; string coerce stays host
+``_pre_validate``). No scale unit. Open TypeValidator / Union /
+TypedDict / Annotated / pattern / plain ``EnumValidator`` / Date*
+stay on the host. A ``BooleanValidator`` or ``DecimalValidator``
+with any extra unit stays on the host. Missing or failed extra →
+host ``_active_units`` path. No import on the hot path after that
+choice. Each family keeps its own ``compile_*`` / ``apply_*`` pair.
+Not Cap Door B.
 """
 
 from __future__ import annotations
@@ -43,22 +43,6 @@ from ux_valio.validators.value import ValueValidator
 
 _peer: Any | None = None
 _probed = False
-
-# Host stores ``eq=`` as ``value``. Compile kwargs use the unit name.
-_HOST_BOUND_TO_COMPILE = (
-    ("min_value", "min_value"),
-    ("gt", "gt"),
-    ("max_value", "max_value"),
-    ("lt", "lt"),
-    ("value", "eq"),
-)
-
-# L1 kwargs stay min_length / max_length / length.
-_HOST_LENGTH_TO_COMPILE = (
-    ("min_length", "min_length"),
-    ("max_length", "max_length"),
-    ("length", "length"),
-)
 
 
 def _load_native_peer() -> Any | None:
@@ -77,6 +61,27 @@ def _load_native_peer() -> Any | None:
     _probed = True
     _peer = peer
     return _peer
+
+
+# Host stores ``eq=`` as ``value``. Compile kwargs are BoundUnit names
+# (MinValue / GreaterThan / MaxValue / LessThan / Equal) on
+# Plan::Integer and Plan::Float. There is no shared Unit bag.
+_HOST_BOUND_TO_COMPILE = (
+    ("min_value", "min_value"),
+    ("gt", "gt"),
+    ("max_value", "max_value"),
+    ("lt", "lt"),
+    ("value", "eq"),
+)
+
+# L1 kwargs stay min_length / max_length / length. Compile kwargs are
+# LengthUnit names (MinLength / MaxLength / Length) on Plan::String
+# and Plan::Bytes.
+_HOST_LENGTH_TO_COMPILE = (
+    ("min_length", "min_length"),
+    ("max_length", "max_length"),
+    ("length", "length"),
+)
 
 
 def _closed_value_bounds(owner: Any, annotation: type, bound_type: type) -> dict[str, Any] | None:
@@ -837,7 +842,10 @@ def bind_native_plan(owner: Any) -> None:
     """Compile at bind. No peer / unclosed path → ``_native_plan is None``.
 
     One walk. Each closed family keeps its own ``compile_*`` / ``apply_*``
-    pair. An unclosed path does not import the extra.
+    pair: Integer / Float own ``BoundUnit`` values, String / Bytes own
+    ``LengthUnit`` values, IntegerEnum / StringEnum own a member set,
+    Boolean / Decimal are type-door markers. An unclosed path does not
+    import the extra. Do not merge a pair into one door.
     """
     families: tuple[tuple[Any, Any], ...] = (
         (_closed_integer_bounds, _select_integer_bounds),

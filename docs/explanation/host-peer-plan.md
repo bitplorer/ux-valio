@@ -405,7 +405,8 @@ then ``maturin develop --release`` the peer into the current
 interpreter if ``ux_valio_native`` is missing. GitHub Actions has no
 Rust toolchain: ``--ci`` (and ``tests/test_host_peer_measure.py``) skip
 with that reason, exit 0. Native parity tests
-(``tests/test_native_peer.py``) skip without the extra; the rest of
+(``tests/test_native_layout.py`` and ``tests/test_native_<family>.py``)
+skip without the extra; the rest of
 the suite is the stdlib path.
 
 Do not ``from __future__ import annotations`` on the measured ``Box``:
