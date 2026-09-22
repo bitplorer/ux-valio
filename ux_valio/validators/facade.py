@@ -180,11 +180,19 @@ class Validator(ValidateProperty[T]):
             collect_all=collect_all,
         )
         self._active_units = _specified_units(self)
+        # Native bundle ownership: same four slots ``_clear_native`` clears.
+        # Seed None here; ``bind_native_plan`` / ``_clear_native`` are the writers.
+        self._native_plan = None
+        self._native_apply = None
+        self._native_fail = None
+        self._native_apply_host = None
         bind_native_plan(self)
 
     def __set_name__(self, owner: type, name: str) -> None:
         super().__set_name__(owner, name)
-        if getattr(self, "_native_plan", None) is None:
+        # Annotation may arrive at bind (``Validator[int]``, owner hint).
+        # Rebind when still unset; attribute always exists after ``__init__``.
+        if self._native_plan is None:
             bind_native_plan(self)
 
     _watch_assignment = ReassignValidator._watch_assignment
@@ -220,7 +228,7 @@ class Validator(ValidateProperty[T]):
 
     def _apply_specified_path(self, instance: Any, value: Any) -> None:
         """Native closed plan when bound; else host ``_active_units``."""
-        if getattr(self, "_native_plan", None) is not None:
+        if self._native_plan is not None:
             apply_native_bounds(self, value)
             return
         self.validation_path.run(

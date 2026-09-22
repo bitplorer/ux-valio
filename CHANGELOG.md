@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Native-plan ownership clarity (internal only, no behavior change).
+  ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /
+  ``_native_fail`` / ``_native_apply_host`` as ``None`` before
+  ``bind_native_plan(self)`` — the same four slots ``_clear_native``
+  clears. Ownership stays on ``Validator`` once; typed facades inherit
+  that ``__init__``. ``__set_name__`` rebinds when ``_native_plan is
+  None`` (annotation-ready cases such as ``Validator[int]``) without
+  ``getattr(..., None)``. ``bind_native_plan`` / ``_clear_native`` remain
+  the writers. Cap Door B stays off. Date* stays HOLD.
+
 - Bound miss comments (internal clarity only, no behavior change).
   Integer and Float miss arms stay fail-when predicates: ``min_value``
   passes when ``value >= min`` (miss ``<``); ``gt`` passes when
