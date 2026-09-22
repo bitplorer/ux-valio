@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Native peer layout (internal only, no L1 break). The private ``Plan``
+  enum is one variant per family; each variant owns only that family's
+  checks (Integer / Float bounds, String / Bytes length, IntegerEnum /
+  StringEnum member sets, Boolean and Decimal type-door markers).
+  ``apply_integer`` walks ``BoundUnit<i64>`` only, so a length unit
+  cannot be passed into that walk. A plan handed to another family's
+  ``apply_*`` raises ``RuntimeError`` before the walk. Public
+  ``compile_*`` / ``apply_*`` names and signatures are unchanged. Cap
+  Door B stays off. Date* / UUID / Path / Pattern stay HOLD.
+
 - Native Decimal type door: closed ``ux-valio[native]`` plans now cover
   ``DecimalValidator`` when the annotation is ``decimal.Decimal`` or
   the facade coerce union ``decimal.Decimal | str`` and the only

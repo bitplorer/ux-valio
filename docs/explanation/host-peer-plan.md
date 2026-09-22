@@ -385,12 +385,11 @@ once then ``apply_integer`` /
 ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
 ``apply_decimal`` on the
-product peer (``native/``: owned unit list of ``Integer`` or ``Float``
-plus ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
-``Equal``, or ``String`` / ``Bytes`` plus ``MinLength`` / ``MaxLength`` /
-``Length``, or ``IntegerEnum`` plus ``Member``, or ``StringEnum`` plus
-the UTF-8 value set, or ``Boolean`` with no bound unit, or ``Decimal``
-with no bound unit and no scale unit). B is **not** product setattr (no store, no
+product peer (``native/``: private ``Plan`` enum, one variant per
+family — Integer / Float own bound units, String / Bytes own length
+units, IntegerEnum / StringEnum own their member sets, Boolean and
+Decimal are type-door markers; public ``compile_*`` / ``apply_*``
+names unchanged). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
 family; the bar is **≥ 3×** for each. A family below the bar is
 KEEP host for that family (do not claim native).
