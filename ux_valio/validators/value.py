@@ -28,10 +28,12 @@ class MinValueValidator(ValidateProperty):
             return
         min_value = read_bound(self, "min_value")
         gt = read_bound(self, "gt")
+        # Pass when value >= min_value. Miss when value < min_value.
         if min_value is not None and value < min_value:
             raise ValueError(
                 f"{self.name} expect the minimum value of {min_value}, got {value} instead"
             )
+        # Pass when value > gt (exclusive). Miss when value <= gt.
         if gt is not None and value <= gt:
             raise ValueError(
                 f"{self.name} expect a value greater than {gt}, got {value} instead"
@@ -60,10 +62,12 @@ class MaxValueValidator(ValidateProperty):
             return
         max_value = read_bound(self, "max_value")
         lt = read_bound(self, "lt")
+        # Pass when value <= max_value. Miss when value > max_value.
         if max_value is not None and value > max_value:
             raise ValueError(
                 f"{self.name} expect the maximum value of {max_value}, got {value} instead"
             )
+        # Pass when value < lt (exclusive). Miss when value >= lt.
         if lt is not None and value >= lt:
             raise ValueError(
                 f"{self.name} expect a value less than {lt}, got {value} instead"
@@ -74,7 +78,15 @@ class MaxValueValidator(ValidateProperty):
 
 
 class ValueValidator(ValidateProperty):
-    """Inclusive min/max, exclusive gt/lt, exact value/eq. Composes bound checks."""
+    """Inclusive min/max, exclusive gt/lt, exact value/eq. Composes bound checks.
+
+    Each bound compare is the miss (fail-when). ``min_value`` passes when
+    ``value >= min`` and misses when ``value < min``. ``gt`` passes when
+    ``value > gt`` and misses when ``value <= gt``. ``max_value`` passes
+    when ``value <= max`` and misses when ``value > max``. ``lt`` passes
+    when ``value < lt`` and misses when ``value >= lt``. ``value`` / ``eq``
+    pass on equality and miss on ``!=`` (NaN never equals).
+    """
 
     def __init__(
         self,
@@ -133,6 +145,7 @@ class ValueValidator(ValidateProperty):
 
     def _validate_eq_value(self, instance: Any, value: Any) -> None:
         of_value = read_bound(self, "value")
+        # Pass when value == bound. Miss when value != bound (NaN never equals).
         if of_value is not None and value is not None and value != of_value:
             raise ValueError(
                 f"{self.name} expect the value {of_value}, got {value} as value instead"

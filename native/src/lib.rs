@@ -14,7 +14,12 @@
 //! `apply_string_enum(plan, &str)` / `apply_boolean(plan, bool)` /
 //! `apply_decimal(plan, decimal.Decimal)`).
 //! Bound units (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` /
-//! `Equal`) run after numeric extract. Length units (`MinLength` /
+//! `Equal`) run after numeric extract. Each miss arm is fail-when:
+//! `min_value` passes when `value >= bound` (miss `<`); `gt` passes
+//! when `value > bound` (miss `<=`, exclusive); `max_value` passes when
+//! `value <= bound` (miss `>`); `lt` passes when `value < bound` (miss
+//! `>=`, exclusive); `eq` passes when equal (miss `!=`; NaN never
+//! equals). Length units (`MinLength` /
 //! `MaxLength` / `Length`) are shared: String count is Unicode scalar
 //! values (`chars().count()`), matching host `len(str)`; Bytes count is
 //! `len()` of the extracted `&[u8]`, matching host `len(bytes)`.
@@ -247,8 +252,10 @@ mod ux_valio_native {
     /// cannot extract as `f64` raises at this FFI boundary (`OverflowError`
     /// or extract TypeError); host falls through to `ValueValidator`.
     /// Bound units run after extract. IEEE compare (Door A): NaN is
-    /// unordered, so min/max/gt/lt pass; `eq` uses `!=` so NaN never
-    /// matches. Releases the GIL (`Python::detach`).
+    /// unordered, so every fail-when compare (`<`, `>`, `<=`, `>=`) is
+    /// false and min/max/gt/lt pass; `eq` uses `!=` so NaN never
+    /// matches. `gt` still misses on `<=` and `lt` on `>=` for ordered
+    /// values. Releases the GIL (`Python::detach`).
     #[pyfunction]
     fn apply_float(
         py: Python<'_>,

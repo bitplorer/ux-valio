@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Bound miss comments (internal clarity only, no behavior change).
+  Integer and Float miss arms stay fail-when predicates: ``min_value``
+  passes when ``value >= min`` (miss ``<``); ``gt`` passes when
+  ``value > gt`` (miss ``<=``, exclusive); ``max_value`` passes when
+  ``value <= max`` (miss ``>``); ``lt`` passes when ``value < lt``
+  (miss ``>=``, exclusive); ``eq`` misses on ``!=`` (IEEE NaN never
+  equals). Inclusive stays ``min_value`` / ``max_value``; exclusive
+  stays ``gt`` / ``lt``. No new L1 kwarg. Public ``compile_*`` /
+  ``apply_*`` names are unchanged. Cap Door B stays off. Date* stays
+  HOLD.
+
 - Test and host-native layout (internal only, no L1 break). Native
   peer tests are one module per family
   (``tests/test_native_<family>.py``) plus

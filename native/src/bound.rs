@@ -8,18 +8,23 @@ use std::sync::Arc;
 
 use crate::plan::FailKind;
 
-/// Inclusive and exclusive scalar checks. `T` is the door (`i64` or `f64`).
+/// Scalar checks. `T` is the door (`i64` or `f64`).
+///
+/// Each variant's compare in [`scalar_miss`] is a **fail-when** predicate
+/// (the arm is true when the value misses). Inclusive bounds are
+/// `min_value` / `max_value`. Exclusive bounds are `gt` / `lt`.
 #[derive(Clone, Copy)]
 pub(crate) enum BoundUnit<T> {
-    /// Host `min_value`, inclusive ≥.
+    /// Host `min_value`. Pass when `value >= bound`; miss when `value < bound`.
     MinValue(T),
-    /// Host `max_value`, inclusive ≤.
+    /// Host `max_value`. Pass when `value <= bound`; miss when `value > bound`.
     MaxValue(T),
-    /// Host `gt`, exclusive >.
+    /// Host `gt` (exclusive). Pass when `value > bound`; miss when `value <= bound`.
     GreaterThan(T),
-    /// Host `lt`, exclusive <.
+    /// Host `lt` (exclusive). Pass when `value < bound`; miss when `value >= bound`.
     LessThan(T),
-    /// Host `eq`/`value`, exact. IEEE `!=` so NaN never equals NaN.
+    /// Host `eq`/`value`. Pass when `value == bound`; miss when `value != bound`.
+    /// IEEE: NaN never equals.
     Equal(T),
 }
 
@@ -27,13 +32,24 @@ pub(crate) enum BoundUnit<T> {
 /// NaN unordered (min/max/gt/lt pass), `nan != nan` (`eq` fails).
 /// Do not use `total_cmp` — that would be a second policy. One compare
 /// for `i64` and `f64`; the scalar type is the door.
+///
+/// Each arm is the **miss** (fail-when):
+/// `min_value` passes `value >= bound`; `gt` passes `value > bound`
+/// (exclusive, so equal misses); `max_value` passes `value <= bound`;
+/// `lt` passes `value < bound` (exclusive, so equal misses); `eq` passes
+/// only exact equality.
 #[allow(clippy::float_cmp)]
 pub(crate) fn scalar_miss<T: PartialOrd>(kind: FailKind, value: T, bound: T) -> Option<FailKind> {
     let missed = match kind {
+        // pass when value >= bound; miss when value < bound
         FailKind::MinValue => value < bound,
+        // pass when value <= bound; miss when value > bound
         FailKind::MaxValue => value > bound,
+        // pass when value > bound; miss when value <= bound (exclusive)
         FailKind::GreaterThan => value <= bound,
+        // pass when value < bound; miss when value >= bound (exclusive)
         FailKind::LessThan => value >= bound,
+        // pass when value == bound; miss when value != bound (NaN never equals)
         FailKind::Equal => value != bound,
         FailKind::MinLength | FailKind::MaxLength | FailKind::Length | FailKind::NotMember => {
             unreachable!("scalar_miss compares bound units")

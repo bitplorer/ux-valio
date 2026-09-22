@@ -84,7 +84,13 @@ a parallel folder, not inside the layer they depend on.
   ``apply_decimal`` per set. Integer type door is FFI
   ``i64`` extract; Float is FFI ``f64`` extract (IEEE Door A: NaN
   unordered on min/max/gt/lt, ``eq`` uses ``!=`` so NaN never
-  matches). String type door is FFI ``&str`` extract; length is
+  matches). Bound miss arms are fail-when: ``min_value`` passes when
+  ``value >= min`` (miss ``<``); ``gt`` passes when ``value > gt``
+  (miss ``<=``, exclusive); ``max_value`` passes when ``value <= max``
+  (miss ``>``); ``lt`` passes when ``value < lt`` (miss ``>=``,
+  exclusive); ``eq`` misses on ``!=``. Inclusive is ``min_value`` /
+  ``max_value``; exclusive is ``gt`` / ``lt``. String type door is FFI
+  ``&str`` extract; length is
   ``len(str)`` codepoints. Bytes type door is FFI ``&[u8]`` extract;
   length is ``len(bytes)``. IntegerEnum type door is host
   ``isinstance`` of the concrete ``enum.IntEnum``, then FFI ``i64``
