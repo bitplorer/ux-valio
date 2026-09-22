@@ -68,11 +68,16 @@ a parallel folder, not inside the layer they depend on.
   closed String and Bytes length plans, a closed IntegerEnum
   member-set plan, a closed StringEnum UTF-8 member-set plan, a
   closed Boolean type door, and a closed Decimal type door at
-  construct: ``MinValue`` / ``MaxValue`` / ``GreaterThan`` /
-  ``LessThan`` / ``Equal`` and min+max range, plus ``MinLength`` /
-  ``MaxLength`` / ``Length``, plus ``IntegerEnum`` ``Member`` values,
-  plus ``StringEnum`` UTF-8 member values, plus Boolean exact ``bool``,
-  plus Decimal exact ``decimal.Decimal``,
+  construct. Private ``Plan`` is one variant per family (no mixed
+  ``Unit`` bag): Integer / Float own ``BoundUnit`` (shared
+  ``scalar_miss`` / ``compile_bound_plan``), String / Bytes own
+  ``LengthUnit``, IntegerEnum / StringEnum own their member sets,
+  Boolean / Decimal are type-door markers. Checks stay
+  ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
+  ``Equal`` and min+max range, plus ``MinLength`` / ``MaxLength`` /
+  ``Length``, plus the IntegerEnum ``i64`` set, plus StringEnum UTF-8
+  members, plus Boolean exact ``bool``, plus Decimal exact
+  ``decimal.Decimal``,
   compile once, one FFI
   ``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
   ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
