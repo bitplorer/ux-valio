@@ -12,22 +12,29 @@ the type door), or a closed StringEnum member-set plan
 (``StringEnumValidator`` whose annotation is a concrete str-valued
 ``enum.Enum`` and whose only active unit is the type door), or a
 closed Boolean type door (annotation is ``bool`` and the only active
-unit is the type door), compile a plan once. Type door is host-first
-``isinstance`` then FFI extract (``i64`` / ``f64`` / ``&str`` /
-``&[u8]`` / ``bool``); bound / length / member units run after
-extract. StringEnum extract is the member's ``.value`` as UTF-8
-``&str``. Boolean extract is exact ``bool`` (``1`` / ``0`` are not
-coerced). Open TypeValidator / Union / TypedDict / Annotated /
-pattern / plain ``EnumValidator`` stay on the host. A
-``BooleanValidator`` with any extra unit stays on the host. Missing
+unit is the type door), or a closed Decimal type door (annotation is
+``decimal.Decimal`` or the facade coerce union ``decimal.Decimal | str``,
+and the only active unit is the type door), compile a plan once. Type
+door is host-first ``isinstance`` then FFI extract (``i64`` / ``f64`` /
+``&str`` / ``&[u8]`` / ``bool`` / ``decimal.Decimal``); bound / length /
+member units run after extract. StringEnum extract is the member's
+``.value`` as UTF-8 ``&str``. Boolean extract is exact ``bool``
+(``1`` / ``0`` are not coerced). Decimal extract is exact
+``decimal.Decimal`` (``float`` / ``int`` / ``bool`` are not coerced;
+string coerce stays host ``_pre_validate``). No scale unit. Open
+TypeValidator / Union / TypedDict / Annotated / pattern / plain
+``EnumValidator`` stay on the host. A ``BooleanValidator`` or
+``DecimalValidator`` with any extra unit stays on the host. Missing
 or failed extra → host ``_active_units`` path. No import on the hot
 path after that choice. Not Cap Door B.
 """
 
 from __future__ import annotations
 
+import decimal
 import enum
-from typing import Any
+import types
+from typing import Any, Union, get_args, get_origin
 
 from ux_valio.errors import raise_collected
 from ux_valio.validators.leaves import TypeValidator
@@ -247,6 +254,40 @@ def _closed_boolean(owner: Any) -> dict[str, Any] | None:
     return {}
 
 
+def _is_decimal_type_annotation(annotation: Any) -> bool:
+    """Exact ``decimal.Decimal``, or the facade coerce union ``Decimal | str``.
+
+    ``Decimal | None`` and every other union stay on the host. This
+    module does not import facades.
+    """
+    if annotation is decimal.Decimal:
+        return True
+    origin = get_origin(annotation)
+    if origin is not Union and not isinstance(annotation, types.UnionType):
+        return False
+    return frozenset(get_args(annotation)) == frozenset((decimal.Decimal, str))
+
+
+def _closed_decimal(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is Decimal + the type door.
+
+    Annotation is ``decimal.Decimal`` or the coerce union
+    ``decimal.Decimal | str`` (``DecimalValidator``). Only
+    ``TypeValidator`` may be active. Extra bounds (``min_value``,
+    ``required``, choice, ``reassign=False``) stay on the host. No
+    scale kwargs. String coerce stays host ``_pre_validate``; ``float``
+    / ``int`` / ``bool`` are not ``Decimal``. ``DecimalValidator`` is
+    the taught facade; ``Validator[decimal.Decimal]`` with the same
+    closed shape is the same door. This module does not import facades.
+    """
+    if not _is_decimal_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
 def _closed_bytes_length(owner: Any) -> dict[str, int] | None:
     """Compile kwargs when the specified path is Bytes + LengthValidator.
 
@@ -312,6 +353,18 @@ def _apply_host_integer_enum_after_i64_overflow(owner: Any, value: Any) -> None:
     not an L1 "overflow" message. Fall through to host
     ``TypeValidator`` (Door A KEEP wording). A member whose value does
     not fit i64 never compiled (bind stays on the host).
+    """
+    TypeValidator._validate_type(owner, None, value)
+
+
+def _apply_host_decimal_after_extract(owner: Any, value: Any) -> None:
+    """Decimal extract failed before native type-door apply.
+
+    Extract TypeError is a bridge signal, not a public validation miss
+    and not an L1 "overflow" message. Fall through to host
+    ``TypeValidator`` (Door A KEEP wording). ``float`` / ``int`` /
+    ``bool`` miss ``isinstance`` before extract (no float bridge). A
+    raw ``str`` is coerced in host ``_pre_validate`` before apply.
     """
     TypeValidator._validate_type(owner, None, value)
 
@@ -462,6 +515,21 @@ def _raise_host_integer_enum_type_miss(owner: Any, value: Any) -> None:
     ``enum.IntEnum`` extra from ``validate``, not inside this raise.
     """
     _raise_host_enum_type_miss(owner, value)
+
+
+def _raise_host_decimal_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Decimal type door is host-first.
+
+    FFI type is the later ``decimal.Decimal`` extract. ``float`` /
+    ``int`` / ``bool`` miss (no silent float→Decimal). A raw ``str``
+    misses only when the annotation does not accept ``str``; the coerce
+    union accepts ``str`` here and the named extra still requires
+    ``Decimal``. ``None`` is skipped by the caller. The closed plan has
+    no second path unit and no scale unit, so ``collect_all`` does not
+    continue inside this raise (``validate`` still continues into the
+    named extra).
+    """
+    TypeValidator._validate_type(owner, None, value)
 
 
 def _raise_host_boolean_type_miss(owner: Any, value: Any) -> None:
@@ -658,6 +726,33 @@ def apply_native_bytes_length(owner: Any, value: Any) -> None:
     )
 
 
+def apply_native_decimal(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-Decimal stays on host.
+
+    TypeError at ``decimal.Decimal`` extract is a bridge signal (same
+    three buckets as Boolean: validation ``FailKind`` / bridge /
+    peer-infra ``RuntimeError`` naming ``ux_valio_native``). No public
+    L1 "overflow" message. Door A is exact ``decimal.Decimal`` after
+    host string coerce: ``float`` / ``int`` / ``bool`` do not coerce.
+    No scale unit. No bound unit.
+    """
+    if value is None:
+        return
+    if not isinstance(value, decimal.Decimal):
+        _raise_host_decimal_type_miss(owner, value)
+        return
+    try:
+        fail = owner._native_apply(owner._native_plan, value)
+    except TypeError:
+        _apply_host_decimal_after_extract(owner, value)
+        return
+    except Exception as err:
+        raise RuntimeError("ux_valio_native apply failed") from err
+    if fail is None:
+        return
+    _raise_native_bound_miss(owner, fail, value)
+
+
 def apply_native_boolean(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. Non-bool stays on host.
 
@@ -723,6 +818,11 @@ def _select_boolean(peer: Any, bounds: dict[str, Any]) -> _ClosedPair:
     return peer.apply_boolean, apply_native_boolean, peer.compile_boolean, bounds
 
 
+def _select_decimal(peer: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Decimal: ``compile_decimal`` and ``apply_decimal`` stay a pair."""
+    return peer.apply_decimal, apply_native_decimal, peer.compile_decimal, bounds
+
+
 def _select_string_enum(peer: Any, members: list[str]) -> _ClosedPair:
     """Closed StringEnum: ``compile_string_enum`` / ``apply_string_enum`` stay a pair."""
     return (
@@ -747,6 +847,7 @@ def bind_native_plan(owner: Any) -> None:
         (_closed_integer_enum_members, _select_integer_enum),
         (_closed_string_enum_members, _select_string_enum),
         (_closed_boolean, _select_boolean),
+        (_closed_decimal, _select_decimal),
     )
     for detect, select in families:
         payload = detect(owner)

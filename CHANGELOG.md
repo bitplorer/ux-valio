@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Native Decimal type door: closed ``ux-valio[native]`` plans now cover
+  ``DecimalValidator`` when the annotation is ``decimal.Decimal`` or
+  the facade coerce union ``decimal.Decimal | str`` and the only
+  active unit is the type door. ``compile_decimal`` / ``apply_decimal``
+  stay a pair. Door A lock: stored type is ``decimal.Decimal`` only
+  after host ``_pre_validate``; string coerce stays
+  ``DecimalValidator._coerce_str`` (the peer never sees a raw ``str``);
+  ``float`` / ``int`` / ``bool`` miss (no silent float→Decimal, no
+  ``Decimal(float)`` on this door); exact ``Decimal`` instances pass,
+  including ``Decimal("0")``. No ``max_digits`` / ``decimal_places`` /
+  ``quantize`` scale units. Quantize / scale / context / rounding stay
+  HOLD / host. Bounds (min/max/gt/lt/eq) stay host. Extract
+  ``TypeError`` falls through to host ``TypeValidator``. ``None``
+  skips. ``Decimal | None`` and other unions stay host. Measure
+  ``python benches/measure_host_peer.py`` (Decimal **77.09×**, host
+  6155.1 ns/op, native 79.8 ns/op, CPython 3.14.7 / rustc 1.83 / Linux
+  x86_64); do not claim 70× product setattr. Cap Door B stays off.
+  Date* / UUID / Path / plain EnumValidator / Pattern / named facades
+  stay HOLD.
+
 - Native Boolean type door: closed ``ux-valio[native]`` plans now cover
   ``BooleanValidator`` when the annotation is ``bool`` and the only
   active unit is the type door. ``compile_boolean`` / ``apply_boolean``

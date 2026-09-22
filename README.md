@@ -20,7 +20,7 @@ Python ≥ 3.14 (same floor as `ux-compose`).
 ```console
 pip install -e .
 pip install ux-valio[phonenumbers]   # PhoneNumberValidator
-pip install ux-valio[native]         # optional Integer/Float/String/Bytes/IntegerEnum/StringEnum apply peer
+pip install ux-valio[native]         # optional Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean/Decimal apply peer
 ```
 
 From a checkout the native extra is a sibling maturin wheel (`native/`),
@@ -92,7 +92,9 @@ Optional native apply (host decides, peer applies) is mapped in
 `StringValidator(max_length=50)` / `BytesValidator(min_length=1)` /
 `IntegerEnumValidator()` on a concrete `IntEnum` /
 `StringEnumValidator()` on a concrete str-valued `Enum` /
-`BooleanValidator()` (exact `bool`) may compile once and apply in one FFI
+`BooleanValidator()` (exact `bool`) /
+`DecimalValidator()` (exact `decimal.Decimal`; no float bridge, no scale unit)
+may compile once and apply in one FFI
 when `ux-valio[native]` is installed; stdlib Python apply is the default
 without it. Measure with `python benches/measure_host_peer.py` (plan
 apply vs setattr — not a 70× product-setattr claim). Cap Door B stays

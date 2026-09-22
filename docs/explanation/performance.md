@@ -7,6 +7,7 @@ closed Integer or Float bound plan, a closed String or Bytes length plan,
 or a closed IntegerEnum member-set plan,
 or a closed StringEnum UTF-8 member-set plan,
 or a closed Boolean exact-bool type door,
+or a closed Decimal exact-Decimal type door,
 at construct. Cap Door B
 is not on this path.
 
@@ -30,7 +31,9 @@ At construct (`Validator.__init__` / `__set_name__`):
   / `apply_integer_enum`) or a closed StringEnum UTF-8 member set
   (`compile_string_enum` / `apply_string_enum`) or a closed Boolean
   exact-bool type door (`compile_boolean` / `apply_boolean`; `1` / `0`
-  are not coerced). Otherwise the interpreter
+  are not coerced) or a closed Decimal exact-Decimal type door
+  (`compile_decimal` / `apply_decimal`; `float` / `int` / `bool` are
+  not coerced; no scale unit). Otherwise the interpreter
   still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply_*` for
@@ -79,7 +82,8 @@ min+max range) vs `apply_string(plan, &str)`, and each closed Bytes
 length family vs `apply_bytes(plan, &[u8])`, the closed IntegerEnum
 member set vs `apply_integer_enum(plan, i64)`, the closed StringEnum
 UTF-8 member set vs `apply_string_enum(plan, &str)`, and the closed
-Boolean exact-bool type door vs `apply_boolean(plan, bool)`.
+Boolean exact-bool type door vs `apply_boolean(plan, bool)`, and the
+closed Decimal exact-Decimal type door vs `apply_decimal(plan, Decimal)`.
 
 ```console
 python benches/measure_host_peer.py
@@ -108,6 +112,12 @@ Boolean exact-bool re-run on this tip: host **2991.4 ns/op**, native
 **80.0 ns/op**, ratio **37.40×** — **PASS**. Integer / Float / String /
 Bytes stayed ~27–29×, IntegerEnum ~38×, and StringEnum ~31× on that
 same run (still PASS).
+Decimal exact-Decimal re-run on this tip: host **6155.1 ns/op**, native
+**79.8 ns/op**, ratio **77.09×** — **PASS**. Integer / Float / String /
+Bytes stayed ~28–30×, IntegerEnum ~41×, StringEnum ~33×, and Boolean
+~38× on that same run (still PASS). Host setattr includes
+``DecimalValidator`` pre-validate and the named Decimal extra; native
+is plan apply only.
 Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply_integer`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end

@@ -21,6 +21,9 @@ IntegerEnum member set when the field annotation is a concrete `IntEnum`,
 and a closed StringEnum UTF-8 member set when the field annotation is a
 concrete str-valued `Enum`, and a closed Boolean type door when the
 annotation is exact `bool` (`1` / `0` are not coerced),
+and a closed Decimal type door when the annotation is
+`decimal.Decimal` or `decimal.Decimal | str` (`float` / `int` / `bool`
+are not coerced; string coerce stays host; no scale unit),
 once and apply in one FFI; without the extra the same units run in Python.
 Call sites do not change. See [host / peer](../explanation/host-peer-plan.md).
 | `StringValidator` | `str` | names, slugs (without a named identity) |
