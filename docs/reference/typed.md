@@ -19,7 +19,8 @@ assignment** (a `date`, not the string you typed).
 and closed String / Bytes length plans (min/max/exact), and a closed
 IntegerEnum member set when the field annotation is a concrete `IntEnum`,
 and a closed StringEnum UTF-8 member set when the field annotation is a
-concrete str-valued `Enum`,
+concrete str-valued `Enum`, and a closed Boolean type door when the
+annotation is exact `bool` (`1` / `0` are not coerced),
 once and apply in one FFI; without the extra the same units run in Python.
 Call sites do not change. See [host / peer](../explanation/host-peer-plan.md).
 | `StringValidator` | `str` | names, slugs (without a named identity) |
