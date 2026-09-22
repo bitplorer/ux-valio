@@ -2,11 +2,13 @@
 //!
 //! Closed Integer and Float bound plans, closed String and Bytes length
 //! plans, a closed IntegerEnum member-set plan, a closed StringEnum
-//! UTF-8 member-set plan, and a closed Boolean type-door plan. Type door
+//! UTF-8 member-set plan, a closed Boolean type-door plan, and a closed
+//! Decimal type-door plan. Type door
 //! is the FFI extract (`apply_integer(plan, i64)` /
 //! `apply_float(plan, f64)` / `apply_string(plan, &str)` /
 //! `apply_bytes(plan, &[u8])` / `apply_integer_enum(plan, i64)` /
-//! `apply_string_enum(plan, &str)` / `apply_boolean(plan, bool)`).
+//! `apply_string_enum(plan, &str)` / `apply_boolean(plan, bool)` /
+//! `apply_decimal(plan, decimal.Decimal)`).
 //! Bound units (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` /
 //! `Equal`) run after numeric extract. Length units (`MinLength` /
 //! `MaxLength` / `Length`) are shared: String count is Unicode scalar
@@ -99,6 +101,12 @@ enum Unit {
     /// `collect_all` type miss stay host. Not an Integer bound plan
     /// (Python `bool` is `int`, and that stays the Integer door).
     Boolean,
+    /// Plan-shape marker. Type extract is exact `decimal.Decimal`.
+    /// `float` / `int` / `bool` / raw `str` miss (no float bridge, no
+    /// silent float→Decimal). Host `_pre_validate` coerces Decimal
+    /// strings before apply, so this extract never sees a raw `str`
+    /// on the setattr path. No scale unit. `None` stays host.
+    Decimal,
 }
 
 /// Compiled plan. Built once; applied many times.
@@ -200,7 +208,11 @@ fn apply_units(units: &[Unit], value: Bound) -> Result<(), FailKind> {
             Unit::MinLength(_) | Unit::MaxLength(_) | Unit::Length(_) => None,
             // Enum member-set units belong on apply_integer_enum /
             // apply_string_enum. Boolean belongs on apply_boolean.
-            Unit::IntegerEnum | Unit::Member(_) | Unit::StringEnum | Unit::Boolean => None,
+            Unit::IntegerEnum
+            | Unit::Member(_)
+            | Unit::StringEnum
+            | Unit::Boolean
+            | Unit::Decimal => None,
         };
         if let Some(kind) = fail {
             return Err(kind);
@@ -283,7 +295,8 @@ fn apply_length_units(units: &[Unit], counted: usize) -> Result<(), FailKind> {
             | Unit::IntegerEnum
             | Unit::Member(_)
             | Unit::StringEnum
-            | Unit::Boolean => None,
+            | Unit::Boolean
+            | Unit::Decimal => None,
         };
         if let Some(kind) = fail {
             return Err(kind);
@@ -345,10 +358,88 @@ fn apply_boolean_units(units: &[Unit], _value: bool) -> Result<(), FailKind> {
             | Unit::Length(_)
             | Unit::IntegerEnum
             | Unit::Member(_)
+            | Unit::StringEnum
+            | Unit::Decimal => {}
+        }
+    }
+    Ok(())
+}
+
+fn compile_decimal_plan() -> Plan {
+    share_plan(vec![Unit::Decimal])
+}
+
+/// Closed Decimal type door is the `decimal.Decimal` extract. Exact
+/// instances pass, including a zero Decimal. There is no bound unit and
+/// no scale unit. Other units no-op (host never mixes doors). Exhaustive
+/// so a new unit is a compile error.
+#[allow(clippy::single_match)]
+fn apply_decimal_units(units: &[Unit], _value: ExtractedDecimal) -> Result<(), FailKind> {
+    for unit in units {
+        match *unit {
+            Unit::Decimal
+            | Unit::Boolean
+            | Unit::Integer
+            | Unit::Float
+            | Unit::String
+            | Unit::Bytes
+            | Unit::MinValue(_)
+            | Unit::MaxValue(_)
+            | Unit::GreaterThan(_)
+            | Unit::LessThan(_)
+            | Unit::Equal(_)
+            | Unit::MinLength(_)
+            | Unit::MaxLength(_)
+            | Unit::Length(_)
+            | Unit::IntegerEnum
+            | Unit::Member(_)
             | Unit::StringEnum => {}
         }
     }
     Ok(())
+}
+
+/// Exact `decimal.Decimal`. Not `f64`. Not a string coerce.
+struct ExtractedDecimal;
+
+fn cached_decimal_type(py: Python<'_>) -> PyResult<pyo3::Bound<'_, PyAny>> {
+    use pyo3::sync::PyOnceLock;
+
+    static DECIMAL: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+    let cached = DECIMAL.get_or_try_init(py, || {
+        Ok::<_, PyErr>(py.import("decimal")?.getattr("Decimal")?.unbind())
+    })?;
+    Ok(cached.bind(py).clone())
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for ExtractedDecimal {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let decimal_type = cached_decimal_type(obj.py())?;
+        if obj.is_instance(&decimal_type)? {
+            Ok(ExtractedDecimal)
+        } else {
+            Err(decimal_extract_error(obj.py()))
+        }
+    }
+}
+
+/// Extract miss is a Python `TypeError`. Built from the builtin so this
+/// file does not name a reflected type object. Host `isinstance` misses
+/// first; this is the bridge for a direct `apply_decimal` call.
+fn decimal_extract_error(py: Python<'_>) -> PyErr {
+    let cls = match py
+        .import("builtins")
+        .and_then(|builtins| builtins.getattr("TypeError"))
+    {
+        Ok(cls) => cls,
+        Err(err) => return err,
+    };
+    match cls.call1(("argument 'value': expected decimal.Decimal",)) {
+        Ok(err) => PyErr::from_value(err),
+        Err(err) => err,
+    }
 }
 
 fn apply_string_members(members: &[String], value: &str) -> Result<(), FailKind> {
@@ -378,16 +469,18 @@ fn compile_length_plan(
 /// Product peer: `compile_integer(...)` / `compile_float(...)` /
 /// `compile_string(...)` / `compile_bytes(...)` /
 /// `compile_integer_enum(...)` / `compile_string_enum(...)` /
-/// `compile_boolean()` + one-shot `apply_integer` / `apply_float` /
-/// `apply_string` / `apply_bytes` / `apply_integer_enum` /
-/// `apply_string_enum` / `apply_boolean`.
+/// `compile_boolean()` / `compile_decimal()` + one-shot `apply_integer` /
+/// `apply_float` / `apply_string` / `apply_bytes` / `apply_integer_enum` /
+/// `apply_string_enum` / `apply_boolean` / `apply_decimal`.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is `Integer`,
-/// `Float`, `String`, `Bytes`, `IntegerEnum`, `StringEnum`, or
-/// `Boolean`; extract is the FFI argument. Compile kwargs are host
-/// names (`min_value` / `gt` / `max_length` / `length`) or `members`
-/// for an enum set, mapped onto the full-word units. Boolean takes no
-/// kwargs. Not a taught L1 API. Compile and apply stay separate doors.
+/// `Float`, `String`, `Bytes`, `IntegerEnum`, `StringEnum`,
+/// `Boolean`, or `Decimal`; extract is the FFI argument. Compile kwargs
+/// are host names (`min_value` / `gt` / `max_length` / `length`) or
+/// `members` for an enum set, mapped onto the full-word units. Boolean
+/// and Decimal take no kwargs. Decimal extract is exact
+/// `decimal.Decimal` (no float bridge, no scale unit). Not a taught L1
+/// API. Compile and apply stay separate doors.
 #[pymodule]
 mod ux_valio_native {
     use super::*;
@@ -591,5 +684,32 @@ mod ux_valio_native {
     fn apply_boolean(py: Python<'_>, plan: PyRef<'_, Plan>, value: bool) -> Option<FailKind> {
         let units = Arc::clone(&plan.units);
         py.detach(move || apply_boolean_units(&units, value).err())
+    }
+
+    /// Closed Decimal type-door plan. No kwargs. The unit list is the
+    /// `Decimal` shape marker. Not a taught L1 API. Not a Float plan
+    /// (no `f64` bridge) and not a scale plan.
+    #[pyfunction]
+    fn compile_decimal() -> Plan {
+        compile_decimal_plan()
+    }
+
+    /// One-shot Decimal apply. Success is `None` for an exact
+    /// `decimal.Decimal`, including zero.
+    ///
+    /// Closed Decimal type door is this extract. A Python `float`,
+    /// `int`, `bool`, or raw `str` raises at this FFI boundary (extract
+    /// error); host falls through to the host type door. No coerce. No
+    /// `Decimal(float)`. No scale unit. Releases the GIL
+    /// (`Python::detach`) for the unit walk. Compile and apply stay a
+    /// pair.
+    #[pyfunction]
+    fn apply_decimal(
+        py: Python<'_>,
+        plan: PyRef<'_, Plan>,
+        value: ExtractedDecimal,
+    ) -> Option<FailKind> {
+        let units = Arc::clone(&plan.units);
+        py.detach(move || apply_decimal_units(&units, value).err())
     }
 }

@@ -18,7 +18,7 @@ to call, *which* plan, and *how* to raise.
 ```text
 bind / __init__     host compiles specified theory → plan
 set                 host hands (plan, value) once
-                    peer applies  (i64 / f64 / &str / &[u8] / bool extract; bound, length, or member units)
+                    peer applies  (i64 / f64 / &str / &[u8] / bool / Decimal extract; bound, length, or member units)
                     host stores on instance.__dict__
                     host runs hooks, named extras, debug-swallow
 ```
@@ -65,7 +65,8 @@ plus the same length units (byte count, not codepoints) — and
 ``enum.IntEnum`` on the field — and ``StringEnum`` plus the UTF-8
 ``.value`` strings taken from the concrete str-valued ``enum.Enum``
 on the field — and ``Boolean`` as the exact ``bool`` type door
-(no bound unit).
+(no bound unit) — and ``Decimal`` as the exact ``decimal.Decimal``
+type door (no bound unit, no scale unit).
 ``IntegerValidator(min_value=0)``, ``max_value=10``, ``gt=0``,
 ``eq=7``, and ``min_value=0, max_value=10`` compile when the
 annotation is ``int`` and only those bound units are active.
@@ -90,7 +91,13 @@ only active unit is the type door. ``compile_string_enum(members)`` /
 ``BooleanValidator()`` compiles when the annotation is ``bool`` and the
 only active unit is the type door. ``compile_boolean()`` /
 ``apply_boolean(plan, bool)`` stay a pair. ``1`` / ``0`` are not
-coerced. Unclosed
+coerced.
+``DecimalValidator()`` compiles when the annotation is
+``decimal.Decimal`` or the facade coerce union
+``decimal.Decimal | str`` and the only active unit is the type door.
+``compile_decimal()`` / ``apply_decimal(plan, Decimal)`` stay a pair.
+``float`` / ``int`` / ``bool`` are not coerced. String coerce stays
+host ``_pre_validate``. Unclosed
 paths (``required``, ``multiple_of``, pattern, choice, named
 identity, Email, a mixed bound type, Union / TypedDict /
 Annotated) stay on the host. Email / named identity were already
@@ -219,9 +226,46 @@ whose ``.value`` is ``str``):
   ``TypeError``). Integer still treats ``True`` as ``int`` (that door
   is unchanged).
 
-HOLD this tip: Decimal (scale/coerce unlocked), Date/DateTime,
-UUID/Path/IP/plain EnumValidator, Pattern / custom callables, named
-facades, Cap Door B.
+**Decimal type door (Door A lock).** Stored type is ``decimal.Decimal``
+only after host pre-validate. The scale/coerce rules below are locked.
+The measure cleared 3×, so the closed type door ships. Scale does not:
+
+- Host ``DecimalValidator._pre_validate`` coerces Decimal strings
+  (existing ``_coerce_str``). The peer never sees a raw ``str``.
+- **Reject float.** ``float`` / ``int`` / ``bool`` miss the type door.
+  No silent float→Decimal. No ``Decimal(1.23)`` path from float on
+  this door.
+- Exact ``decimal.Decimal`` instances pass, including ``Decimal("0")``
+  (falsy is kept, not replaced by ``None``).
+- **Scale.** Host has no ``max_digits`` / ``decimal_places`` /
+  ``quantize`` kwargs today. Door A does not add scale units. Native
+  applies the Decimal as given. Bound units are in scope only if a
+  later tip closes min/max/gt/lt/eq with Decimal bounds, same family
+  shape as Float. Quantize / scale / context / rounding stay HOLD /
+  host.
+- Cap Door B stays off. One family only. Pattern / Date* / UUID /
+  Path / plain Enum stay off this tip.
+- Pair naming: ``compile_decimal`` / ``apply_decimal`` (intentional
+  pair — do not merge). Host ``_select_decimal`` walks the one-family
+  bind list, same shape as Boolean / Float.
+- String coerce stays host. Peer extract is ``decimal.Decimal`` (or a
+  Rust decimal that matches host compare for closed bounds). No float
+  bridge. ``rust_decimal`` only if a later bound tip needs it for
+  compares.
+- ``FailKind`` / host ``TypeError`` wording matches the other Door A
+  families. Extract miss is a bridge to host ``TypeValidator``, not an
+  L1 overflow message.
+- ``None`` skips. Optional / Union annotations stay host (same as
+  Boolean): ``Decimal | None`` does not match ``DecimalValidator``
+  (bind ``TypeError``). The facade's coerce annotation
+  ``decimal.Decimal | str`` is that host coerce door, not an open
+  union — ``str`` is coerced before apply. Any other union stays host.
+
+HOLD after this tip: Date/DateTime, UUID/Path/IP/plain EnumValidator,
+Pattern / custom callables, named facades, Cap Door B. Decimal scale
+/ quantize / context / rounding stay HOLD. Decimal bounds
+(min/max/gt/lt/eq) stay host until a later tip closes them with
+Decimal bounds.
 
 ## What never leaves the host
 
@@ -240,7 +284,7 @@ facades, Cap Door B.
    apply. ``pip install ux-valio[native]`` installs the ``ux-valio-native``
    wheel (module ``ux_valio_native`` — not a taught import).
 2. Same field default. Same ``annotation``. Same fail-closed errors.
-   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator, BooleanValidator``.
+   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator, BooleanValidator, DecimalValidator``.
 3. Compile at bind, not at set. Host bind walks one family list.
    Each family keeps its ``compile_*`` / ``apply_*`` pair (those doors
    stay separate). Missing peer → host apply (no import
@@ -249,8 +293,9 @@ facades, Cap Door B.
 4. One FFI call per set for the specified scalar plan. Not eight.
 5. ``self`` is a ``PyObject*`` handle. Do not migrate the instance into
    a Rust struct. Extract scalars (``i64`` / ``f64`` / ``&str`` / ``&[u8]``
-   / ``bool``; IntegerEnum is ``i64``; StringEnum is the member
-   ``.value`` as ``&str``; Boolean is exact ``bool``), apply, box back.
+   / ``bool`` / ``decimal.Decimal``; IntegerEnum is ``i64``; StringEnum
+   is the member ``.value`` as ``&str``; Boolean is exact ``bool``;
+   Decimal is exact ``decimal.Decimal``, not ``f64``), apply, box back.
 6. Do not re-implement the library in Rust.
 7. Do not quote the switch-test ratio as end-to-end product setattr.
    The measure compared full host setattr against **plan apply only**.
@@ -277,7 +322,12 @@ facades, Cap Door B.
    extract is the Boolean door (``apply_boolean``). A non-bool raises
    at that extract; host ``isinstance`` misses first, and an extract
    TypeError falls through to host ``TypeValidator`` (no coerce of
-   ``1`` / ``0``, no L1 "overflow" message).
+   ``1`` / ``0``, no L1 "overflow" message). PyO3 ``decimal.Decimal``
+   extract is the Decimal door (``apply_decimal``). A non-Decimal
+   raises at that extract; host ``isinstance`` misses first (``float``
+   / ``int`` / ``bool``), and an extract TypeError falls through to
+   host ``TypeValidator`` (no float bridge, no L1 "overflow" message).
+   String coerce stays host ``_pre_validate``.
    ``FailKind.NotMember`` is the validation bucket
    (host type-door wording, ``match fail:``). Unexpected
    peer/infra is ``RuntimeError`` naming ``ux_valio_native``. Three
@@ -307,6 +357,7 @@ specified ``IntegerValidator(min_value=0)`` / ``FloatValidator(min_value=0.0)``
 / ``IntegerEnumValidator()`` on a concrete ``IntEnum``
 / ``StringEnumValidator()`` on a concrete str-valued ``Enum``
 / ``BooleanValidator()`` (exact ``bool``)
+/ ``DecimalValidator()`` (exact ``decimal.Decimal``; no float bridge)
 setattr stays several times slower than a one-shot native apply of that
 same plan, and the Python compile (``_active_units``, skip TypedDict,
 skip watch) is already in.
@@ -323,18 +374,23 @@ closed ``IntegerValidator`` or ``FloatValidator`` bound plan, a closed
 ``StringValidator`` / ``BytesValidator`` length plan, or a closed
 ``IntegerEnumValidator`` member-set plan, or a closed
 ``StringEnumValidator`` UTF-8 member-set plan, or a closed
-``BooleanValidator`` exact-bool type door. Hot path B is ``compile_integer(...)``
+``BooleanValidator`` exact-bool type door, or a closed
+``DecimalValidator`` exact-Decimal type door (values are ``Decimal``
+instances, so string coerce is not in the apply-only comparison). Hot
+path B is ``compile_integer(...)``
 / ``compile_float(...)`` / ``compile_string(...)`` / ``compile_bytes(...)``
 / ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
-``compile_boolean()``
+``compile_boolean()`` / ``compile_decimal()``
 once then ``apply_integer`` /
 ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
-``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` on the
+``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
+``apply_decimal`` on the
 product peer (``native/``: owned unit list of ``Integer`` or ``Float``
 plus ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
 ``Equal``, or ``String`` / ``Bytes`` plus ``MinLength`` / ``MaxLength`` /
 ``Length``, or ``IntegerEnum`` plus ``Member``, or ``StringEnum`` plus
-the UTF-8 value set, or ``Boolean`` with no bound unit). B is **not** product setattr (no store, no
+the UTF-8 value set, or ``Boolean`` with no bound unit, or ``Decimal``
+with no bound unit and no scale unit). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
 family; the bar is **≥ 3×** for each. A family below the bar is
 KEEP host for that family (do not claim native).
@@ -543,5 +599,43 @@ the same run stayed ~27–29×, IntegerEnum ~38×, and StringEnum ~31×
 python benches/measure_host_peer.py
 ```
 
-HOLD after this tip: Decimal, Date/DateTime, UUID/Path, Pattern, plain
-EnumValidator, named facades, Cap Door B stay off this path.
+HOLD after the Boolean tip was Decimal, measured in the next section.
+
+### Measured (2026-09-22) Decimal type door
+
+Same class of box, one run, 400000 iters after 20000 warmup, values
+``Decimal("1.23")`` / ``Decimal("0")`` / ``Decimal("2.50")`` /
+``Decimal("10")`` / ``Decimal("0.01")`` / ``Decimal("4")``, CPython
+3.14.7, rustc 1.83.0, Linux x86_64 (Intel Xeon, 4 CPUs). Peer is a
+release cdylib (``python -m pip install maturin`` then
+``maturin develop --release`` via
+``python benches/measure_host_peer.py``). Host units were
+``_validate_type`` only. Path A clears the native plan after bind so
+setattr is pure Python (``DecimalValidator`` still runs host string
+coerce and the named Decimal extra; the measured values are already
+``Decimal``, so coerce does not parse). B is ``apply_decimal(plan,
+Decimal)`` only (``Python::detach``). The type door is exact
+``decimal.Decimal`` (smoke: ``apply_decimal(plan, 1.23)`` raises
+``TypeError``; ``float`` / ``int`` / ``bool`` / raw ``str`` are not
+coerced; ``Decimal("0")`` passes). No scale unit. Bar 3×.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| exact Decimal | 6155.1 | 79.8 | **77.09×** |
+
+**Verdict: PASS.** The Decimal exact-Decimal type door cleared the 3×
+bar (77.09×). Native apply here is ~80 ns/op (GIL released), not a 70×
+product setattr claim. Host setattr is slower than the Boolean type
+door because ``DecimalValidator`` still runs ``_pre_validate`` and the
+named Decimal extra on the Python path. Integer / Float / String /
+Bytes families on the same run stayed ~28–30×, IntegerEnum ~41×,
+StringEnum ~33×, and Boolean ~38× (still PASS).
+
+```console
+python benches/measure_host_peer.py
+```
+
+HOLD after this tip: Date/DateTime, UUID/Path, Pattern, plain
+EnumValidator, named facades, Cap Door B stay off this path. Decimal
+scale / quantize / context / rounding stay HOLD. Decimal bounds
+(min/max/gt/lt/eq) stay host.

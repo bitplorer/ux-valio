@@ -5,17 +5,21 @@ Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
 ``IntegerValidator`` / ``FloatValidator`` bound plan, a closed
 ``StringValidator`` / ``BytesValidator`` length plan, a closed
 ``IntegerEnumValidator`` member-set plan, a closed
-``StringEnumValidator`` UTF-8 member-set plan, or a closed
-``BooleanValidator`` exact-bool type door (taught API, soul stays
-Python). Enum and Boolean path A clear the native plan after bind so
-the loop is pure Python setattr.
+``StringEnumValidator`` UTF-8 member-set plan, a closed
+``BooleanValidator`` exact-bool type door, or a closed
+``DecimalValidator`` exact-Decimal type door (taught API, soul stays
+Python). Enum, Boolean, and Decimal path A clear the native plan after
+bind so the loop is pure Python setattr. Decimal values are exact
+``Decimal`` instances (string coerce is host ``_pre_validate``, not
+this apply-only comparison).
 
 Hot path B: ``compile_integer(...)`` / ``compile_float(...)`` /
 ``compile_string(...)`` / ``compile_bytes(...)`` /
 ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
-``compile_boolean()`` once, then
+``compile_boolean()`` / ``compile_decimal()`` once, then
 ``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
-``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` on the
+``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
+``apply_decimal`` on the
 ``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
 store/raise. Not Cap Door B.
@@ -23,8 +27,10 @@ store/raise. Not Cap Door B.
 Families: MinValue, MaxValue, GreaterThan, LessThan, Equal, min+max
 range — once for Integer, once for Float — plus String and Bytes
 MinLength / MaxLength / Length / min+max range, plus one IntegerEnum
-member set, one StringEnum UTF-8 member set, and one Boolean exact
-``bool`` type door (no coerce of ``1`` / ``0``). Switch bar:
+member set, one StringEnum UTF-8 member set, one Boolean exact
+``bool`` type door (no coerce of ``1`` / ``0``), and one Decimal exact
+``decimal.Decimal`` type door (no coerce of ``float`` / ``int`` /
+``bool``; no scale unit). Switch bar:
 FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
 below the bar is not claimed native (KEEP host for that family).
 
@@ -35,6 +41,7 @@ Usage::
 """
 
 import argparse
+import decimal
 import enum
 import os
 import platform
@@ -62,6 +69,16 @@ PASSING_LEN3 = ("abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc")
 PASSING_A_H_B = (b"a", b"b", b"c", b"d", b"e", b"f", b"g", b"h")
 PASSING_LEN3_B = (b"abc", b"abc", b"abc", b"abc", b"abc", b"abc", b"abc", b"abc")
 PASSING_BOOL = (True, False, True, False, True, False, True, False)
+PASSING_DECIMAL = (
+    decimal.Decimal("1.23"),
+    decimal.Decimal("0"),
+    decimal.Decimal("2.50"),
+    decimal.Decimal("10"),
+    decimal.Decimal("0.01"),
+    decimal.Decimal("1.23"),
+    decimal.Decimal("0"),
+    decimal.Decimal("4"),
+)
 
 
 @dataclass(frozen=True)
@@ -162,6 +179,16 @@ class _MeasureShade(enum.Enum):
 
 
 _MEASURE_SHADE_VALUES = tuple(_MeasureShade)
+
+
+def _decimal_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="DecimalValidator",
+        compile_attr="compile_decimal",
+        apply_attr="apply_decimal",
+        annotation=decimal.Decimal,
+        **kwargs,
+    )
 
 
 def _boolean_family(**kwargs: Any) -> PlanFamily:
@@ -459,6 +486,21 @@ BOOLEAN_FAMILIES = (
     ),
 )
 
+DECIMAL_FAMILIES = (
+    _decimal_family(
+        name="Decimal.Type",
+        field_kwargs={},
+        compile_kwargs={},
+        values=PASSING_DECIMAL,
+        seed=decimal.Decimal("0"),
+        smoke_ok=decimal.Decimal("1.23"),
+        smoke_miss=1.23,
+        smoke_kind="Extract",
+        label="Decimal exact Decimal",
+        smoke_raises=TypeError,
+    ),
+)
+
 FAMILIES = (
     INTEGER_FAMILIES
     + FLOAT_FAMILIES
@@ -467,6 +509,7 @@ FAMILIES = (
     + INTEGER_ENUM_FAMILIES
     + STRING_ENUM_FAMILIES
     + BOOLEAN_FAMILIES
+    + DECIMAL_FAMILIES
 )
 
 
@@ -557,6 +600,7 @@ def _load_facades() -> dict[str, Any]:
         from ux_valio import (
             BooleanValidator,
             BytesValidator,
+            DecimalValidator,
             FloatValidator,
             IntegerEnumValidator,
             IntegerValidator,
@@ -576,6 +620,7 @@ def _load_facades() -> dict[str, Any]:
         "IntegerEnumValidator": IntegerEnumValidator,
         "StringEnumValidator": StringEnumValidator,
         "BooleanValidator": BooleanValidator,
+        "DecimalValidator": DecimalValidator,
     }
 
 
@@ -587,12 +632,22 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
 
     facade = facades[family.facade]
     field = facade(**family.field_kwargs)
-    if family.facade in ("IntegerEnumValidator", "StringEnumValidator", "BooleanValidator"):
-        # Bind first (enum plans compile at ``__set_name__``; Boolean may
-        # compile at construct), then drop the plan so path A is pure
-        # Python setattr.
+    if family.facade in (
+        "IntegerEnumValidator",
+        "StringEnumValidator",
+        "BooleanValidator",
+        "DecimalValidator",
+    ):
+        # Bind first (enum plans compile at ``__set_name__``; Boolean and
+        # Decimal may compile at construct), then drop the plan so path A
+        # is pure Python setattr.
         namespace = {"__annotations__": {"n": family.annotation}, "n": field}
-        box_name = "BoolBox" if family.annotation is bool else "EnumBox"
+        if family.annotation is bool:
+            box_name = "BoolBox"
+        elif family.annotation is decimal.Decimal:
+            box_name = "DecimalBox"
+        else:
+            box_name = "EnumBox"
         box_type = dataclass(type(box_name, (), namespace))
         _clear_native(field)
         return box_type(n=family.seed)
@@ -686,6 +741,23 @@ def _smoke_extract_miss(family: PlanFamily, plan: Any, apply_fn: Any) -> str:
                 f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, 0) "
                 f"returned {coerced!r}; int 0 must not coerce to False"
             )
+    if family.annotation is decimal.Decimal:
+        zero = decimal.Decimal("0")
+        zero_ok = apply_fn(plan, zero)
+        if zero_ok is not None:
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, Decimal('0')) "
+                f"returned {zero_ok!r}, expected None"
+            )
+        for bad in (1.23, 1, True, "1.23"):
+            try:
+                coerced = apply_fn(plan, bad)
+            except family.smoke_raises:
+                continue
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {bad!r}) "
+                f"returned {coerced!r}; float/int/bool/str must not coerce to Decimal"
+            )
     try:
         raised = apply_fn(plan, family.smoke_miss)
     except family.smoke_raises:
@@ -750,7 +822,8 @@ def _report_header(skip_reason: str | None) -> None:
         "Bytes length units (MinLength/MaxLength/Length/range, byte count); "
         "IntegerEnum i64 member set (compile_integer_enum / apply_integer_enum); "
         "StringEnum UTF-8 member set (compile_string_enum / apply_string_enum); "
-        "Boolean exact bool (compile_boolean / apply_boolean)"
+        "Boolean exact bool (compile_boolean / apply_boolean); "
+        "Decimal exact Decimal (compile_decimal / apply_decimal; no float bridge)"
     )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
@@ -841,6 +914,13 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
     ]
     boolean_failed = [family.name for family, unlocked, _ratio in boolean if not unlocked]
     boolean_passed = [family.name for family, unlocked, _ratio in boolean if unlocked]
+    decimal = [
+        (family, unlocked, ratio)
+        for family, unlocked, ratio in results
+        if family.facade == "DecimalValidator"
+    ]
+    decimal_failed = [family.name for family, unlocked, _ratio in decimal if not unlocked]
+    decimal_passed = [family.name for family, unlocked, _ratio in decimal if unlocked]
     if any(not unlocked for _family, unlocked, _ratio in integer):
         print(
             f"SUMMARY: FAIL (KEEP Python) Integer families below {SWITCH_BAR:.1f}×: "
@@ -910,10 +990,17 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
             + ". Do not claim native for Boolean. Exact bool type door stays on the host."
         )
         return 1
+    if decimal_failed or not decimal_passed:
+        print(
+            f"SUMMARY: Decimal KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(decimal_failed or ["(no Decimal family)"])
+            + ". Do not claim native for Decimal. Exact Decimal type door stays on the host."
+        )
+        return 1
     print(
-        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed + boolean_passed)} each >= "
+        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed + boolean_passed + decimal_passed)} each >= "
         f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr). "
-        "Boolean exact bool type door met the bar."
+        "Decimal exact Decimal type door met the bar."
     )
     return 0
 
@@ -921,7 +1008,7 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Measure Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean "
+            "Measure Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean/Decimal "
             "setattr vs native plan apply."
         )
     )
