@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Validator native slot pair (internal only, no behavior change).
+  ``_native_plan`` and ``_native_fail_kind`` stay. The four slots are
+  plan | apply (Rust FFI) | run (Python closed entry) | fail_kind:
+  product-PyO3 Rust door is ``_native_apply`` (was ``_native_ffi``);
+  closed-family Python door is ``_native_run`` (was ``_native_entry``).
+  Both renames land together. Public ``compile_*`` / ``apply_*`` names
+  are unchanged. Cap Door B stays off. Date* / UUID / Path / IP stay
+  HOLD.
+
 - Native path fold (internal only, no behavior change). Eight
   ``_apply_host_*_after_*`` bridges collapse to ``_bridge_to_value`` /
   ``_bridge_to_length`` / ``_bridge_to_type``. Enum type-miss thin

@@ -18,10 +18,11 @@ At construct (`Validator.__init__` / `__set_name__`):
 - specified default-path units (`_active_units`) — type always; length,
   value, pattern, choice, `reassign`, `multiple_of` only when you passed
   them
-- native bundle slots (`_native_plan` / `_native_ffi` / `_native_fail_kind` /
-  `_native_entry`) seeded `None` on `Validator` before
-  `bind_native_plan`. Product-PyO3 apply stays `_native_ffi`. Closed-family
-  host entry is `_native_entry`. `__set_name__` rebinds when
+- native bundle slots are plan | apply (Rust FFI) | run (Python closed
+  entry) | fail_kind (`_native_plan` / `_native_apply` / `_native_fail_kind` /
+  `_native_run`) seeded `None` on `Validator` before
+  `bind_native_plan`. Product-PyO3 Rust door stays `_native_apply`.
+  Closed-family Python door is `_native_run`. `__set_name__` rebinds when
   the plan is still `None` (annotation-ready cases)
 - named-facade extra (GSTIN checksum, Luhn, …) as one function after
   that path

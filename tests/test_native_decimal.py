@@ -82,14 +82,14 @@ def test_decimal_compiles_once_at_bind():
 
     plan = field._native_plan
     assert plan is not None
-    assert field._native_ffi is native.apply_decimal
-    assert field._native_ffi is not native.apply_float
+    assert field._native_apply is native.apply_decimal
+    assert field._native_apply is not native.apply_float
     assert field.annotation == decimal.Decimal | str
     box = Box(amount=decimal.Decimal("0"))
     box.amount = decimal.Decimal("1.23")
     assert box.amount == decimal.Decimal("1.23")
     assert field._native_plan is plan
-    assert field._native_ffi is native.apply_decimal
+    assert field._native_apply is native.apply_decimal
 
 
 @needs_native
@@ -97,13 +97,13 @@ def test_one_ffi_apply_decimal_per_set():
     field = DecimalValidator(debug=True, name="n")
     assert field._native_plan is not None
     calls: list[object] = []
-    orig = field._native_ffi
+    orig = field._native_apply
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_ffi = counted
+    field._native_apply = counted
 
     class Box:
         pass
@@ -165,8 +165,8 @@ def test_native_decimal_uses_apply_decimal_not_float_apply():
     import ux_valio_native as native
 
     field = DecimalValidator(debug=True, name="n")
-    assert field._native_ffi is native.apply_decimal
-    assert field._native_ffi is not native.apply_float
+    assert field._native_apply is native.apply_decimal
+    assert field._native_apply is not native.apply_float
     plan = native.compile_decimal()
     assert native.apply_decimal(plan, decimal.Decimal("1.23")) is None
     assert native.apply_decimal(plan, decimal.Decimal("0")) is None
@@ -220,7 +220,7 @@ def test_validator_decimal_subscript_compiles_at_set_name():
     field.__set_name__(Owner, "n")
     assert field.annotation is decimal.Decimal
     assert field._native_plan is not None
-    assert field._native_ffi is native.apply_decimal
+    assert field._native_apply is native.apply_decimal
     assert _assign(field, decimal.Decimal("0"))[3] == decimal.Decimal("0")
     assert _assign(field, 1.23)[1] is TypeError
     assert _assign(field, "1.23")[1] is TypeError
@@ -311,7 +311,7 @@ def test_decimal_extract_type_error_falls_through_to_host():
     def boom(plan, value):
         raise TypeError("extract")
 
-    native._native_ffi = boom
+    native._native_apply = boom
     assert _assign(native, decimal.Decimal("1.23"))[3] == decimal.Decimal("1.23")
     assert _assign(native, decimal.Decimal("0"))[3] == decimal.Decimal("0")
     assert _assign(host, decimal.Decimal("0"))[3] == decimal.Decimal("0")
@@ -344,7 +344,7 @@ def test_unexpected_decimal_native_apply_raises_runtime_error():
     def boom(plan, value):
         raise ValueError("native exploded")
 
-    field._native_ffi = boom
+    field._native_apply = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, decimal.Decimal("1.23"))
     assert isinstance(caught.value.__cause__, ValueError)

@@ -306,9 +306,9 @@ def _closed_bytes_length(owner: Any) -> dict[str, int] | None:
 def _clear_native(owner: Any) -> None:
     """One host-fallback clear for the bind-time native bundle."""
     owner._native_plan = None
-    owner._native_ffi = None
+    owner._native_apply = None
     owner._native_fail_kind = None
-    owner._native_entry = None
+    owner._native_run = None
 
 
 def _bridge_to_value(owner: Any, value: Any) -> None:
@@ -539,7 +539,7 @@ def _apply_native_closed(
         raise_type_miss(owner, value)
         return
     try:
-        fail = owner._native_ffi(owner._native_plan, value)
+        fail = owner._native_apply(owner._native_plan, value)
     except extract_errors:
         after_overflow(owner, value)
         return
@@ -618,7 +618,7 @@ def apply_native_string_enum(owner: Any, value: Any) -> None:
         _bridge_to_type(owner, value)
         return
     try:
-        fail = owner._native_ffi(owner._native_plan, raw)
+        fail = owner._native_apply(owner._native_plan, raw)
     except (OverflowError, UnicodeError):
         _bridge_to_type(owner, value)
         return
@@ -681,7 +681,7 @@ def apply_native_decimal(owner: Any, value: Any) -> None:
         _raise_host_decimal_type_miss(owner, value)
         return
     try:
-        fail = owner._native_ffi(owner._native_plan, value)
+        fail = owner._native_apply(owner._native_plan, value)
     except TypeError:
         _bridge_to_type(owner, value)
         return
@@ -712,16 +712,16 @@ def apply_native_boolean(owner: Any, value: Any) -> None:
 
 
 def apply_native_bounds(owner: Any, value: Any) -> None:
-    """Call the bind-time family entry. Unset bundle is a caller bug.
+    """Call the bind-time family run. Unset bundle is a caller bug.
 
-    ``_native_ffi`` is the product-PyO3 apply. ``_native_entry`` is
-    the closed-family host entry (``apply_native_integer_bounds`` and
+    ``_native_apply`` is the product-PyO3 Rust FFI. ``_native_run`` is
+    the closed-family Python entry (``apply_native_integer_bounds`` and
     the other family doors).
     """
-    entry = owner._native_entry
-    if entry is None:
+    run = owner._native_run
+    if run is None:
         raise RuntimeError("ux_valio_native apply failed")
-    entry(owner, value)
+    run(owner, value)
 
 
 type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
@@ -834,9 +834,9 @@ def bind_native_plan(owner: Any) -> None:
         if native is None:
             _clear_native(owner)
             return
-        apply, entry, compile_fn, kwargs = select(native, payload)
-        owner._native_ffi = apply
-        owner._native_entry = entry
+        apply, run, compile_fn, kwargs = select(native, payload)
+        owner._native_apply = apply
+        owner._native_run = run
         _bind_compiled_plan(owner, native, compile_fn, kwargs)
         return
     _clear_native(owner)
