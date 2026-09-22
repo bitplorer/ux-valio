@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Optional native apply peer. Not a taught import.
+"""Optional native apply (product PyO3 ``ux_valio_native``). Not a taught import.
 
 One module. A private split is worth it only when opening that file
 shows one family's walk. Closed detectors, apply, and the bind list
@@ -41,26 +41,26 @@ from ux_valio.validators.leaves import TypeValidator
 from ux_valio.validators.length import LengthValidator
 from ux_valio.validators.value import ValueValidator
 
-_peer: Any | None = None
+_native_mod: Any | None = None
 _probed = False
 
 
-def _load_native_peer() -> Any | None:
+def _load_native() -> Any | None:
     """Import the extra once. Failed install is host apply, not a hot-path error."""
-    global _peer, _probed
+    global _native_mod, _probed
     if _probed:
-        return _peer
+        return _native_mod
     try:
-        import ux_valio_native as peer
+        import ux_valio_native as native
     except ImportError:
         _probed = True
-        _peer = None
+        _native_mod = None
         return None
     except Exception as err:
         raise RuntimeError("ux_valio_native import failed") from err
     _probed = True
-    _peer = peer
-    return _peer
+    _native_mod = native
+    return _native_mod
 
 
 # Host stores ``eq=`` as ``value``. Compile kwargs are BoundUnit names
@@ -306,98 +306,47 @@ def _closed_bytes_length(owner: Any) -> dict[str, int] | None:
 def _clear_native(owner: Any) -> None:
     """One host-fallback clear for the bind-time native bundle."""
     owner._native_plan = None
-    owner._native_apply = None
-    owner._native_fail = None
-    owner._native_closed_apply = None
+    owner._native_ffi = None
+    owner._native_fail_kind = None
+    owner._native_entry = None
 
 
-def _apply_host_value_after_i64_overflow(owner: Any, value: Any) -> None:
-    """i64 extract failed before native bound apply.
+def _bridge_to_value(owner: Any, value: Any) -> None:
+    """Extract miss before native value/bound apply.
 
-    OverflowError is a bridge signal, not a public validation miss.
-    Fall through to host ``ValueValidator`` (Door A KEEP wording).
-    """
-    ValueValidator._validate_value(owner, None, value)
-
-
-def _apply_host_value_after_f64_overflow(owner: Any, value: Any) -> None:
-    """f64 extract failed before native bound apply.
-
-    OverflowError is a bridge signal, not a public validation miss
-    and not an L1 "overflow" message. Fall through to host
+    OverflowError is a bridge signal, not a public validation miss and
+    not an L1 "overflow" message. Fall through to host
     ``ValueValidator`` (Door A KEEP wording).
     """
     ValueValidator._validate_value(owner, None, value)
 
 
-def _apply_host_length_after_str_extract(owner: Any, value: Any) -> None:
-    """UTF-8 extract failed before native length apply.
+def _bridge_to_length(owner: Any, value: Any) -> None:
+    """Extract miss before native length apply.
 
-    OverflowError / UnicodeEncodeError is a bridge signal, not a public
-    validation miss and not an L1 "overflow" message. Fall through to
-    host ``LengthValidator`` (Door A KEEP wording, ``len(str)``).
+    OverflowError / UnicodeEncodeError / extract TypeError is a bridge
+    signal, not a public validation miss and not an L1 "overflow"
+    message. Fall through to host ``LengthValidator`` (Door A KEEP
+    wording, ``len(str)`` or ``len(bytes)``).
     """
     LengthValidator._validate_length(owner, None, value)
 
 
-def _apply_host_string_enum_after_str_extract(owner: Any, value: Any) -> None:
-    """UTF-8 extract failed before native member-set apply.
+def _bridge_to_type(owner: Any, value: Any) -> None:
+    """Extract miss before native type-door or member-set apply.
 
-    OverflowError / UnicodeError is a bridge signal, not a public
-    validation miss and not an L1 "overflow" message. Fall through to
-    host ``TypeValidator`` (Door A KEEP wording). A member whose value
-    is not UTF-8 never compiled (bind stays on the host).
+    OverflowError / UnicodeError / extract TypeError is a bridge
+    signal, not a public validation miss and not an L1 "overflow"
+    message. Fall through to host ``TypeValidator`` (Door A KEEP
+    wording). A member whose value does not fit the FFI type never
+    compiled (bind stays on the host).
     """
     TypeValidator._validate_type(owner, None, value)
-
-
-def _apply_host_integer_enum_after_i64_overflow(owner: Any, value: Any) -> None:
-    """i64 extract failed before native member-set apply.
-
-    OverflowError is a bridge signal, not a public validation miss and
-    not an L1 "overflow" message. Fall through to host
-    ``TypeValidator`` (Door A KEEP wording). A member whose value does
-    not fit i64 never compiled (bind stays on the host).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
-def _apply_host_decimal_after_extract(owner: Any, value: Any) -> None:
-    """Decimal extract failed before native type-door apply.
-
-    Extract TypeError is a bridge signal, not a public validation miss
-    and not an L1 "overflow" message. Fall through to host
-    ``TypeValidator`` (Door A KEEP wording). ``float`` / ``int`` /
-    ``bool`` miss ``isinstance`` before extract (no float bridge). A
-    raw ``str`` is coerced in host ``_pre_validate`` before apply.
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
-def _apply_host_boolean_after_extract(owner: Any, value: Any) -> None:
-    """bool extract failed before native type-door apply.
-
-    Extract TypeError is a bridge signal, not a public validation miss
-    and not an L1 "overflow" message. Fall through to host
-    ``TypeValidator`` (Door A KEEP wording). ``1`` / ``0`` miss
-    ``isinstance`` before extract (no coerce).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
-def _apply_host_length_after_bytes_extract(owner: Any, value: Any) -> None:
-    """bytes extract failed before native length apply.
-
-    OverflowError / extract TypeError is a bridge signal, not a public
-    validation miss and not an L1 "overflow" message. Fall through to
-    host ``LengthValidator`` (Door A KEEP wording, ``len(bytes)``).
-    """
-    LengthValidator._validate_length(owner, None, value)
 
 
 def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
-    """Map peer ``FailKind`` to Door A KEEP wording. Unexpected kind is infra."""
-    kinds = owner._native_fail
+    """Map native ``FailKind`` to Door A KEEP wording. Unexpected kind is infra."""
+    kinds = owner._native_fail_kind
     match fail:
         case kinds.MinValue:
             min_value = owner.min_value
@@ -489,37 +438,20 @@ def _raise_host_string_type_miss(owner: Any, value: Any) -> None:
 
 
 def _raise_host_enum_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording for a closed IntegerEnum or StringEnum plan."""
+    """KEEP TypeError wording for a closed IntegerEnum or StringEnum plan.
+
+    Closed enum type door is host-first. IntegerEnum FFI type is the
+    later ``i64`` extract; StringEnum is ``&str`` of ``value.value``.
+    The concrete enum on the field is the member class, so a plain
+    ``int`` / ``str`` / ``bool`` / another enum misses here — including
+    another enum whose value collides with a member. ``None`` is
+    skipped by the caller. ``collect_all`` continues into the named
+    enum extra from ``validate``, not inside this raise.
+    """
     raise TypeError(
         f"{owner.name} expect {owner.annotation} type, "
         f"got {type(value).__name__} type instead"
     )
-
-
-def _raise_host_string_enum_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed StringEnum type door is host-first.
-
-    FFI type is the later ``&str`` extract of ``value.value``. The
-    concrete enum on the field is the member class, so a plain ``str``
-    (including one equal to a member value), ``bytes``, ``int``,
-    ``bool``, or another enum misses here. ``None`` is skipped by the
-    caller. ``collect_all`` continues into the named str-Enum extra
-    from ``validate``, not inside this raise.
-    """
-    _raise_host_enum_type_miss(owner, value)
-
-
-def _raise_host_integer_enum_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed IntegerEnum type door is host-first.
-
-    FFI type is the later ``i64`` extract. The concrete ``enum.IntEnum``
-    on the field is the member class, so a plain ``int``, ``bool``,
-    ``str``, or another enum misses here — including another
-    ``IntEnum`` whose integer collides with a member value. ``None`` is
-    skipped by the caller. ``collect_all`` continues into the named
-    ``enum.IntEnum`` extra from ``validate``, not inside this raise.
-    """
-    _raise_host_enum_type_miss(owner, value)
 
 
 def _raise_host_decimal_type_miss(owner: Any, value: Any) -> None:
@@ -578,10 +510,12 @@ def _raise_host_closed_type_miss(owner: Any, value: Any, continue_unit: Any) -> 
     raise_collected(errors, name=owner.name)
 
 
-def _bind_compiled_plan(owner: Any, peer: Any, compile_fn: Any, bounds: dict[str, Any]) -> None:
+def _bind_compiled_plan(
+    owner: Any, native: Any, compile_fn: Any, bounds: dict[str, Any]
+) -> None:
     try:
         owner._native_plan = compile_fn(**bounds)
-        owner._native_fail = peer.FailKind
+        owner._native_fail_kind = native.FailKind
     except OverflowError:
         _clear_native(owner)
         return
@@ -605,7 +539,7 @@ def _apply_native_closed(
         raise_type_miss(owner, value)
         return
     try:
-        fail = owner._native_apply(owner._native_plan, value)
+        fail = owner._native_ffi(owner._native_plan, value)
     except extract_errors:
         after_overflow(owner, value)
         return
@@ -623,7 +557,7 @@ def apply_native_integer_bounds(owner: Any, value: Any) -> None:
         value,
         int,
         _raise_host_integer_type_miss,
-        _apply_host_value_after_i64_overflow,
+        _bridge_to_value,
     )
 
 
@@ -631,7 +565,7 @@ def apply_native_float_bounds(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. f64 extract miss stays on host.
 
     OverflowError at ``f64`` extract is a bridge signal (same three
-    buckets as Integer: validation / bridge / peer-infra
+    buckets as Integer: validation / bridge / native-infra
     ``RuntimeError`` naming ``ux_valio_native``). No public L1
     "overflow" message. Door A NaN/inf is IEEE compare, not a fourth
     bucket.
@@ -641,7 +575,7 @@ def apply_native_float_bounds(owner: Any, value: Any) -> None:
         value,
         float,
         _raise_host_float_type_miss,
-        _apply_host_value_after_f64_overflow,
+        _bridge_to_value,
     )
 
 
@@ -650,7 +584,7 @@ def apply_native_string_length(owner: Any, value: Any) -> None:
 
     OverflowError / UnicodeEncodeError at ``&str`` extract is a bridge
     signal (same three buckets as Integer/Float: validation / bridge /
-    peer-infra ``RuntimeError`` naming ``ux_valio_native``). No public
+    native-infra ``RuntimeError`` naming ``ux_valio_native``). No public
     L1 "overflow" message. Door A length is ``len(str)`` codepoints.
     """
     _apply_native_closed(
@@ -658,7 +592,7 @@ def apply_native_string_length(owner: Any, value: Any) -> None:
         value,
         str,
         _raise_host_string_type_miss,
-        _apply_host_length_after_str_extract,
+        _bridge_to_length,
         (OverflowError, UnicodeError),
     )
 
@@ -669,7 +603,7 @@ def apply_native_string_enum(owner: Any, value: Any) -> None:
     The FFI argument is ``value.value`` (UTF-8 ``&str``), not the enum
     object. OverflowError / UnicodeError at ``&str`` extract is a
     bridge signal (same three buckets as String length: validation
-    ``FailKind`` / bridge / peer-infra ``RuntimeError`` naming
+    ``FailKind`` / bridge / native-infra ``RuntimeError`` naming
     ``ux_valio_native``). No public L1 "overflow" message. Door A
     membership is the concrete enum class first, then exact UTF-8
     equality with the compiled member values.
@@ -677,16 +611,16 @@ def apply_native_string_enum(owner: Any, value: Any) -> None:
     if value is None:
         return
     if not isinstance(value, owner.annotation):
-        _raise_host_string_enum_type_miss(owner, value)
+        _raise_host_enum_type_miss(owner, value)
         return
     raw = value.value
     if type(raw) is not str:
-        _apply_host_string_enum_after_str_extract(owner, value)
+        _bridge_to_type(owner, value)
         return
     try:
-        fail = owner._native_apply(owner._native_plan, raw)
+        fail = owner._native_ffi(owner._native_plan, raw)
     except (OverflowError, UnicodeError):
-        _apply_host_string_enum_after_str_extract(owner, value)
+        _bridge_to_type(owner, value)
         return
     except Exception as err:
         raise RuntimeError("ux_valio_native apply failed") from err
@@ -699,7 +633,7 @@ def apply_native_integer_enum(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. Out-of-i64 ints stay on host.
 
     OverflowError at ``i64`` extract is a bridge signal (same three
-    buckets as Integer: validation ``FailKind`` / bridge / peer-infra
+    buckets as Integer: validation ``FailKind`` / bridge / native-infra
     ``RuntimeError`` naming ``ux_valio_native``). No public L1
     "overflow" message. Door A membership is the concrete enum class
     first, then exact ``i64`` equality with the compiled member values.
@@ -708,8 +642,8 @@ def apply_native_integer_enum(owner: Any, value: Any) -> None:
         owner,
         value,
         owner.annotation,
-        _raise_host_integer_enum_type_miss,
-        _apply_host_integer_enum_after_i64_overflow,
+        _raise_host_enum_type_miss,
+        _bridge_to_type,
     )
 
 
@@ -718,7 +652,7 @@ def apply_native_bytes_length(owner: Any, value: Any) -> None:
 
     OverflowError / extract TypeError at ``&[u8]`` extract is a bridge
     signal (same three buckets as Integer/Float/String: validation /
-    bridge / peer-infra ``RuntimeError`` naming ``ux_valio_native``).
+    bridge / native-infra ``RuntimeError`` naming ``ux_valio_native``).
     No public L1 "overflow" message. Door A length is ``len(bytes)``.
     """
     _apply_native_closed(
@@ -726,7 +660,7 @@ def apply_native_bytes_length(owner: Any, value: Any) -> None:
         value,
         bytes,
         _raise_host_bytes_type_miss,
-        _apply_host_length_after_bytes_extract,
+        _bridge_to_length,
         (OverflowError, TypeError),
     )
 
@@ -736,7 +670,7 @@ def apply_native_decimal(owner: Any, value: Any) -> None:
 
     TypeError at ``decimal.Decimal`` extract is a bridge signal (same
     three buckets as Boolean: validation ``FailKind`` / bridge /
-    peer-infra ``RuntimeError`` naming ``ux_valio_native``). No public
+    native-infra ``RuntimeError`` naming ``ux_valio_native``). No public
     L1 "overflow" message. Door A is exact ``decimal.Decimal`` after
     host string coerce: ``float`` / ``int`` / ``bool`` do not coerce.
     No scale unit. No bound unit.
@@ -747,9 +681,9 @@ def apply_native_decimal(owner: Any, value: Any) -> None:
         _raise_host_decimal_type_miss(owner, value)
         return
     try:
-        fail = owner._native_apply(owner._native_plan, value)
+        fail = owner._native_ffi(owner._native_plan, value)
     except TypeError:
-        _apply_host_decimal_after_extract(owner, value)
+        _bridge_to_type(owner, value)
         return
     except Exception as err:
         raise RuntimeError("ux_valio_native apply failed") from err
@@ -762,7 +696,7 @@ def apply_native_boolean(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. Non-bool stays on host.
 
     TypeError at ``bool`` extract is a bridge signal (same three
-    buckets as Integer: validation ``FailKind`` / bridge / peer-infra
+    buckets as Integer: validation ``FailKind`` / bridge / native-infra
     ``RuntimeError`` naming ``ux_valio_native``). No public L1
     "overflow" message. Door A is exact ``bool``: ``True`` and
     ``False`` pass; ``1`` and ``0`` do not coerce. No bound unit.
@@ -772,79 +706,109 @@ def apply_native_boolean(owner: Any, value: Any) -> None:
         value,
         bool,
         _raise_host_boolean_type_miss,
-        _apply_host_boolean_after_extract,
+        _bridge_to_type,
         TypeError,
     )
 
 
 def apply_native_bounds(owner: Any, value: Any) -> None:
-    """Call the bind-time closed host apply. Unset bundle is a caller bug.
+    """Call the bind-time family entry. Unset bundle is a caller bug.
 
-    ``_native_apply`` is the peer FFI apply. ``_native_closed_apply`` is
-    the closed-family host apply (``apply_native_integer_bounds`` and
+    ``_native_ffi`` is the product-PyO3 apply. ``_native_entry`` is
+    the closed-family host entry (``apply_native_integer_bounds`` and
     the other family doors).
     """
-    closed_apply = owner._native_closed_apply
-    if closed_apply is None:
+    entry = owner._native_entry
+    if entry is None:
         raise RuntimeError("ux_valio_native apply failed")
-    closed_apply(owner, value)
+    entry(owner, value)
 
 
 type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
 
 
-def _select_integer_bounds(peer: Any, bounds: dict[str, int]) -> _ClosedPair:
+def _select_integer_bounds(native: Any, bounds: dict[str, int]) -> _ClosedPair:
     """Closed Integer: ``compile_integer`` and ``apply_integer`` stay a pair."""
-    return peer.apply_integer, apply_native_integer_bounds, peer.compile_integer, bounds
+    return (
+        native.apply_integer,
+        apply_native_integer_bounds,
+        native.compile_integer,
+        bounds,
+    )
 
 
-def _select_float_bounds(peer: Any, bounds: dict[str, float]) -> _ClosedPair:
+def _select_float_bounds(native: Any, bounds: dict[str, float]) -> _ClosedPair:
     """Closed Float: ``compile_float`` and ``apply_float`` stay a pair."""
-    return peer.apply_float, apply_native_float_bounds, peer.compile_float, bounds
+    return (
+        native.apply_float,
+        apply_native_float_bounds,
+        native.compile_float,
+        bounds,
+    )
 
 
-def _select_string_length(peer: Any, bounds: dict[str, int]) -> _ClosedPair:
+def _select_string_length(native: Any, bounds: dict[str, int]) -> _ClosedPair:
     """Closed String: ``compile_string`` and ``apply_string`` stay a pair."""
-    return peer.apply_string, apply_native_string_length, peer.compile_string, bounds
+    return (
+        native.apply_string,
+        apply_native_string_length,
+        native.compile_string,
+        bounds,
+    )
 
 
-def _select_bytes_length(peer: Any, bounds: dict[str, int]) -> _ClosedPair:
+def _select_bytes_length(native: Any, bounds: dict[str, int]) -> _ClosedPair:
     """Closed Bytes: ``compile_bytes`` and ``apply_bytes`` stay a pair."""
-    return peer.apply_bytes, apply_native_bytes_length, peer.compile_bytes, bounds
+    return (
+        native.apply_bytes,
+        apply_native_bytes_length,
+        native.compile_bytes,
+        bounds,
+    )
 
 
-def _select_integer_enum(peer: Any, members: list[int]) -> _ClosedPair:
+def _select_integer_enum(native: Any, members: list[int]) -> _ClosedPair:
     """Closed IntegerEnum: ``compile_integer_enum`` / ``apply_integer_enum`` stay a pair."""
     return (
-        peer.apply_integer_enum,
+        native.apply_integer_enum,
         apply_native_integer_enum,
-        peer.compile_integer_enum,
+        native.compile_integer_enum,
         {"members": members},
     )
 
 
-def _select_boolean(peer: Any, bounds: dict[str, Any]) -> _ClosedPair:
+def _select_boolean(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed Boolean: ``compile_boolean`` and ``apply_boolean`` stay a pair."""
-    return peer.apply_boolean, apply_native_boolean, peer.compile_boolean, bounds
+    return (
+        native.apply_boolean,
+        apply_native_boolean,
+        native.compile_boolean,
+        bounds,
+    )
 
 
-def _select_decimal(peer: Any, bounds: dict[str, Any]) -> _ClosedPair:
+def _select_decimal(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed Decimal: ``compile_decimal`` and ``apply_decimal`` stay a pair."""
-    return peer.apply_decimal, apply_native_decimal, peer.compile_decimal, bounds
+    return (
+        native.apply_decimal,
+        apply_native_decimal,
+        native.compile_decimal,
+        bounds,
+    )
 
 
-def _select_string_enum(peer: Any, members: list[str]) -> _ClosedPair:
+def _select_string_enum(native: Any, members: list[str]) -> _ClosedPair:
     """Closed StringEnum: ``compile_string_enum`` / ``apply_string_enum`` stay a pair."""
     return (
-        peer.apply_string_enum,
+        native.apply_string_enum,
         apply_native_string_enum,
-        peer.compile_string_enum,
+        native.compile_string_enum,
         {"members": members},
     )
 
 
 def bind_native_plan(owner: Any) -> None:
-    """Compile at bind. No peer / unclosed path → ``_native_plan is None``.
+    """Compile at bind. No native module / unclosed path → ``_native_plan is None``.
 
     One walk. Each closed family keeps its own ``compile_*`` / ``apply_*``
     pair: Integer / Float own ``BoundUnit`` values, String / Bytes own
@@ -866,13 +830,13 @@ def bind_native_plan(owner: Any) -> None:
         payload = detect(owner)
         if payload is None:
             continue
-        peer = _load_native_peer()
-        if peer is None:
+        native = _load_native()
+        if native is None:
             _clear_native(owner)
             return
-        apply, closed_apply, compile_fn, kwargs = select(peer, payload)
-        owner._native_apply = apply
-        owner._native_closed_apply = closed_apply
-        _bind_compiled_plan(owner, peer, compile_fn, kwargs)
+        apply, entry, compile_fn, kwargs = select(native, payload)
+        owner._native_ffi = apply
+        owner._native_entry = entry
+        _bind_compiled_plan(owner, native, compile_fn, kwargs)
         return
     _clear_native(owner)

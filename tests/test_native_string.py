@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Native peer: String length plans (``Plan::String`` / ``LengthUnit``).
+"""Native module: String length plans (``Plan::String`` / ``LengthUnit``).
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
@@ -12,7 +12,7 @@ from tests.native_support import (
     _assign,
     _assign_eq,
     _force_host,
-    _peer_rust,
+    _native_rust,
     host_native_source,
     needs_native,
 )
@@ -27,7 +27,7 @@ from ux_valio import (
 
 def test_closed_string_type_door_is_str_extract():
     """String type is UTF-8 extract. Length is codepoints (chars), not bytes."""
-    rust = _peer_rust()
+    rust = _native_rust()
     native_py = host_native_source()
     assert "fn compile_string" in rust
     assert "fn apply_string" in rust
@@ -36,7 +36,7 @@ def test_closed_string_type_door_is_str_extract():
     assert "grapheme" not in rust.lower()
     assert "_closed_string_length" in native_py
     assert "apply_native_string_length" in native_py
-    assert "_apply_host_length_after_str_extract" in native_py
+    assert "_bridge_to_length" in native_py
     assert 'raise ValueError("overflow' not in native_py
     assert "PyO3 str Overflow" not in native_py
     assert "public overflow" not in native_py
@@ -197,7 +197,7 @@ def test_string_length_door_a_wording_on_host(kwargs, samples):
 def test_string_min_length_compiles_once_at_bind():
     field = StringValidator(min_length=1, debug=True, name="n")
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
 
@@ -210,7 +210,7 @@ def test_string_min_length_compiles_once_at_bind():
     box.n = "ab"
     box.n = "abc"
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -223,13 +223,13 @@ def test_one_ffi_apply_string_per_set():
 
     assert field._native_plan is not None
     calls: list[str] = []
-    orig = field._native_apply
+    orig = field._native_ffi
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_apply = counted
+    field._native_ffi = counted
     box = Box(n="a")
     box.n = "b"
     box.n = "c"
@@ -256,13 +256,13 @@ def test_validator_str_subscript_binds_at_set_name():
 def test_closed_string_length_compiles_once(kwargs, samples):
     field = StringValidator(debug=True, name="n", **kwargs)
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
     passing = next(value for value, fragment in samples if fragment is None)
     field.validate(None, passing)
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -291,14 +291,14 @@ def test_native_string_parity_with_host_path(kwargs, samples):
 
 @needs_native
 def test_native_string_uses_apply_string_not_numeric_apply():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = StringValidator(min_length=1, debug=True, name="n")
-    assert field._native_apply is peer.apply_string
+    assert field._native_ffi is native.apply_string
     integer = IntegerValidator(min_value=0, debug=True, name="n")
-    assert integer._native_apply is peer.apply_integer
+    assert integer._native_ffi is native.apply_integer
     floating = FloatValidator(min_value=0.0, debug=True, name="n")
-    assert floating._native_apply is peer.apply_float
+    assert floating._native_ffi is native.apply_float
 
 
 @needs_native
@@ -379,7 +379,7 @@ def test_str_extract_overflow_falls_through_to_host():
     def boom(plan, value):
         raise OverflowError("str extract")
 
-    native._native_apply = boom
+    native._native_ffi = boom
     assert _assign(native, "a") == ("ok", None, None, "a")
     assert _assign_eq(_assign(native, "a"), _assign(host, "a"))
     miss = _assign(native, "")
@@ -444,9 +444,9 @@ def test_integer_float_string_paths_unchanged_with_bytes_plans():
     assert floating._native_plan is not None
     assert text._native_plan is not None
     assert blob._native_plan is not None
-    assert integer._native_apply is not blob._native_apply
-    assert floating._native_apply is not blob._native_apply
-    assert text._native_apply is not blob._native_apply
+    assert integer._native_ffi is not blob._native_ffi
+    assert floating._native_ffi is not blob._native_ffi
+    assert text._native_ffi is not blob._native_ffi
     assert _assign(integer, 1) == ("ok", None, None, 1)
     assert _assign(floating, 1.0) == ("ok", None, None, 1.0)
     assert _assign(text, "a") == ("ok", None, None, "a")
@@ -454,11 +454,11 @@ def test_integer_float_string_paths_unchanged_with_bytes_plans():
 
 
 @needs_native
-def test_unexpected_string_peer_bind_raises_runtime_error(monkeypatch):
+def test_unexpected_string_native_bind_raises_runtime_error(monkeypatch):
     import ux_valio_native
 
     def boom(**kwargs):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     monkeypatch.setattr(ux_valio_native, "compile_string", boom)
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
@@ -469,14 +469,14 @@ def test_unexpected_string_peer_bind_raises_runtime_error(monkeypatch):
 
 
 @needs_native
-def test_unexpected_string_peer_apply_raises_runtime_error():
+def test_unexpected_string_native_apply_raises_runtime_error():
     field = StringValidator(min_length=1, debug=True, name="n")
     assert field._native_plan is not None
 
     def boom(plan, value):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
-    field._native_apply = boom
+    field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, "a")
     assert isinstance(caught.value.__cause__, ValueError)
@@ -484,11 +484,11 @@ def test_unexpected_string_peer_apply_raises_runtime_error():
 
 @needs_native
 def test_failkind_exposes_string_full_word_names():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
-    assert hasattr(peer.FailKind, "MinLength")
-    assert hasattr(peer.FailKind, "MaxLength")
-    assert hasattr(peer.FailKind, "Length")
-    assert not hasattr(peer.FailKind, "MinLen")
-    assert not hasattr(peer.FailKind, "MaxLen")
-    assert not hasattr(peer.FailKind, "Len")
+    assert hasattr(native.FailKind, "MinLength")
+    assert hasattr(native.FailKind, "MaxLength")
+    assert hasattr(native.FailKind, "Length")
+    assert not hasattr(native.FailKind, "MinLen")
+    assert not hasattr(native.FailKind, "MaxLen")
+    assert not hasattr(native.FailKind, "Len")

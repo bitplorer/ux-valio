@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Native peer: Integer bound plans (``Plan::Integer`` / ``BoundUnit<i64>``).
+"""Native module: Integer bound plans (``Plan::Integer`` / ``BoundUnit<i64>``).
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
@@ -13,7 +13,7 @@ from tests.native_support import (
     _assign,
     _assign_eq,
     _force_host,
-    _peer_rust,
+    _native_rust,
     host_native_source,
     needs_native,
 )
@@ -37,7 +37,7 @@ def test_integer_min_value_works_on_stdlib_path():
 
 def test_closed_integer_type_door_is_ffi_extract():
     """Integer type is i64 extract. Open TypeValidator stays on the host."""
-    rust = _peer_rust()
+    rust = _native_rust()
     native_py = host_native_source()
     assert re.search(r"value: i64", rust)
     assert "fn compile_integer" in rust
@@ -168,7 +168,7 @@ _TYPE_AND_OVERFLOW_SAMPLES = ("x", None, True, False, 1.5, object(), 2**70, -(2*
 def test_integer_min_value_compiles_once_at_bind():
     field = IntegerValidator(min_value=0, debug=True, name="n")
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
 
@@ -181,7 +181,7 @@ def test_integer_min_value_compiles_once_at_bind():
     box.n = 3
     box.n = 7
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -194,13 +194,13 @@ def test_one_ffi_apply_per_set():
 
     assert field._native_plan is not None
     calls: list[int] = []
-    orig = field._native_apply
+    orig = field._native_ffi
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_apply = counted
+    field._native_ffi = counted
     box = Box(n=1)
     box.n = 2
     box.n = 3
@@ -227,13 +227,13 @@ def test_validator_int_subscript_binds_at_set_name():
 def test_closed_integer_bounds_compile_once(kwargs, samples):
     field = IntegerValidator(debug=True, name="n", **kwargs)
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
     passing = next(value for value, fragment in samples if fragment is None)
     field.validate(None, passing)
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -346,20 +346,20 @@ def test_native_custom_validator_still_runs():
 
 @needs_native
 def test_failkind_exposes_full_word_names():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
-    assert hasattr(peer.FailKind, "GreaterThan")
-    assert hasattr(peer.FailKind, "LessThan")
-    assert hasattr(peer.FailKind, "Equal")
-    assert not hasattr(peer.FailKind, "Gt")
-    assert not hasattr(peer.FailKind, "Lt")
-    assert not hasattr(peer.FailKind, "Eq")
+    assert hasattr(native.FailKind, "GreaterThan")
+    assert hasattr(native.FailKind, "LessThan")
+    assert hasattr(native.FailKind, "Equal")
+    assert not hasattr(native.FailKind, "Gt")
+    assert not hasattr(native.FailKind, "Lt")
+    assert not hasattr(native.FailKind, "Eq")
 
 
 def test_host_bridge_drops_i64_bit_length_precheck():
     """PyO3 i64 extract is the range oracle. No host bit_length gate."""
     native_py = host_native_source()
-    rust = _peer_rust()
+    rust = _native_rust()
     assert "_I64_BITS" not in native_py
     assert "bit_length" not in native_py
     assert "_native_fail_type" not in native_py
@@ -482,11 +482,11 @@ def test_bool_as_int_matches_host_path():
 
 
 @needs_native
-def test_unexpected_peer_bind_raises_runtime_error_with_ux_valio_native(monkeypatch):
+def test_unexpected_native_bind_raises_runtime_error_with_ux_valio_native(monkeypatch):
     import ux_valio_native
 
     def boom(**kwargs):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     monkeypatch.setattr(ux_valio_native, "compile_integer", boom)
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
@@ -497,14 +497,14 @@ def test_unexpected_peer_bind_raises_runtime_error_with_ux_valio_native(monkeypa
 
 
 @needs_native
-def test_unexpected_peer_apply_raises_runtime_error_with_ux_valio_native():
+def test_unexpected_native_apply_raises_runtime_error_with_ux_valio_native():
     field = IntegerValidator(min_value=0, debug=True, name="n")
     assert field._native_plan is not None
 
     def boom(plan, value):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
-    field._native_apply = boom
+    field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, 1)
     assert isinstance(caught.value.__cause__, ValueError)

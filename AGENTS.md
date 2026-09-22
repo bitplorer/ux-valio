@@ -119,12 +119,12 @@ a parallel folder, not inside the layer they depend on.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_select_*``); do not merge a pair into one door
   and do not restore a per-family copy of the bind steps.
-  ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /
-  ``_native_fail`` / ``_native_closed_apply`` as ``None`` before
+  ``Validator.__init__`` seeds ``_native_plan`` / ``_native_ffi`` /
+  ``_native_fail_kind`` / ``_native_entry`` as ``None`` before
   ``bind_native_plan`` (same four slots ``_clear_native`` clears).
-  Peer FFI apply stays ``_native_apply``. Closed host apply
+  Product-PyO3 apply stays ``_native_ffi``. Closed-family host entry
   (``apply_native_integer_bounds`` and the other family doors) is
-  ``_native_closed_apply``.
+  ``_native_entry``.
   Ownership is on ``Validator`` once — do not scatter those assigns on
   typed facades. ``bind_native_plan`` / ``_clear_native`` remain the
   writers; ``__set_name__`` rebinds when ``_native_plan is None``. Host
@@ -348,21 +348,14 @@ New private helpers are verbs that name the action:
 `apply_native_bytes_length`, `apply_native_integer_enum`,
 `apply_native_string_enum`, `apply_native_boolean`,
 `apply_native_decimal`,
-`_load_native_peer`, `_closed_integer_bounds`, `_closed_float_bounds`,
+`_load_native`, `_closed_integer_bounds`, `_closed_float_bounds`,
 `_closed_string_length`, `_closed_bytes_length`, `_closed_integer_enum_members`,
 `_closed_string_enum_members`, `_closed_boolean`, `_closed_decimal`,
 `_is_decimal_type_annotation`,
 `_closed_length`, `_closed_value_bounds`, `_bind_compiled_plan`, `_apply_native_closed`,
-`_clear_native`, `_apply_host_value_after_i64_overflow`,
-`_apply_host_value_after_f64_overflow`, `_apply_host_length_after_str_extract`,
-`_apply_host_length_after_bytes_extract`,
-`_apply_host_integer_enum_after_i64_overflow`,
-`_apply_host_string_enum_after_str_extract`,
-`_apply_host_boolean_after_extract`,
-`_apply_host_decimal_after_extract`,
+`_clear_native`, `_bridge_to_value`, `_bridge_to_length`, `_bridge_to_type`,
 `_raise_native_bound_miss`, `_raise_host_integer_type_miss`,
 `_raise_host_float_type_miss`, `_raise_host_string_type_miss`, `_raise_host_bytes_type_miss`,
-`_raise_host_integer_enum_type_miss`, `_raise_host_string_enum_type_miss`,
 `_raise_host_boolean_type_miss`, `_raise_host_decimal_type_miss`,
 `_raise_host_enum_type_miss`, `_raise_host_closed_type_miss`,
 `_select_integer_bounds`, `_select_float_bounds`, `_select_string_length`,
@@ -379,7 +372,16 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `add_pre_validate_process`, `add_pre_validate`, `add_validator`, `process_pre_validate`, `add_task_post_set`, `_init_hooks`, `_load_compose_types`,
 `apply_native_integer_min_value`, `_closed_integer_min_value`,
 `_register_compose_types`, `_Opt.read`, `_Of._bind_kwargs`,
-`_Of._merged_attr`, `Lookup`, `_log`, `bound_value`, `door_a`).
+`_Of._merged_attr`, `Lookup`, `_log`, `bound_value`, `door_a`,
+`_load_native_peer`, `_peer`, `_apply_host_value_after_i64_overflow`,
+`_apply_host_value_after_f64_overflow`, `_apply_host_length_after_str_extract`,
+`_apply_host_length_after_bytes_extract`,
+`_apply_host_integer_enum_after_i64_overflow`,
+`_apply_host_string_enum_after_str_extract`,
+`_apply_host_boolean_after_extract`,
+`_apply_host_decimal_after_extract`,
+`_raise_host_integer_enum_type_miss`, `_raise_host_string_enum_type_miss`,
+`_native_apply`, `_native_closed_apply`, `_native_fail`).
 Noun-only names that hide the action are not
 added. Names should fit any caller library — not a one-app
 nickname, not a slogan.

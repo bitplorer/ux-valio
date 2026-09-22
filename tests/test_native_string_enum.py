@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Native peer: StringEnum UTF-8 member-set plans (``Plan::StringEnum``).
+"""Native module: StringEnum UTF-8 member-set plans (``Plan::StringEnum``).
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
@@ -16,7 +16,7 @@ from tests.native_support import (
     _bind_enum_field,
     _enum_door,
     _force_host,
-    _peer_rust,
+    _native_rust,
     host_native_source,
     needs_native,
 )
@@ -109,7 +109,7 @@ def test_string_enum_l1_has_no_members_kwarg():
 
 def test_closed_string_enum_type_door_is_str_extract():
     """StringEnum type is UTF-8 extract. Compile and apply stay a pair."""
-    rust = _peer_rust()
+    rust = _native_rust()
     native_py = host_native_source()
     assert "fn compile_string_enum" in rust
     assert "fn apply_string_enum" in rust
@@ -117,8 +117,9 @@ def test_closed_string_enum_type_door_is_str_extract():
     assert "fn compile_and_apply" not in rust
     assert "_closed_string_enum_members" in native_py
     assert "apply_native_string_enum" in native_py
-    assert "_raise_host_string_enum_type_miss" in native_py
-    assert "_apply_host_string_enum_after_str_extract" in native_py
+    assert "_raise_host_enum_type_miss" in native_py
+    assert "_raise_host_string_enum_type_miss" not in native_py
+    assert "_bridge_to_type" in native_py
     assert "kinds.NotMember" in native_py
     assert not re.search(r"if fail == kinds\.", native_py)
     assert "members=" not in (ROOT / "ux_valio" / "facades" / "typed.py").read_text()
@@ -133,7 +134,7 @@ def test_string_enum_compiles_once_at_bind():
         n: _Tint = field
 
     plan = field._native_plan
-    apply = field._native_apply
+    apply = field._native_ffi
     assert plan is not None
     assert apply is not None
     assert field.annotation is _Tint
@@ -142,7 +143,7 @@ def test_string_enum_compiles_once_at_bind():
     box.n = _Tint.EMPTY
     assert box.n is _Tint.EMPTY
     assert field._native_plan is plan
-    assert field._native_apply is apply
+    assert field._native_ffi is apply
 
 
 @needs_native
@@ -150,13 +151,13 @@ def test_one_ffi_apply_string_enum_per_set():
     field = _bind_enum_field(_Tint, cls=StringEnumValidator)
     assert field._native_plan is not None
     calls: list[object] = []
-    orig = field._native_apply
+    orig = field._native_ffi
 
     def counted(plan, value):
         calls.append(value)
         return orig(plan, value)
 
-    field._native_apply = counted
+    field._native_ffi = counted
 
     class Box:
         pass
@@ -242,40 +243,40 @@ def test_native_string_enum_parity_with_host():
 
 @needs_native
 def test_native_string_enum_uses_apply_string_enum_not_string_apply():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = _bind_enum_field(_Tint, cls=StringEnumValidator)
-    assert field._native_apply is peer.apply_string_enum
-    assert field._native_apply is not peer.apply_string
-    assert field._native_apply is not peer.apply_integer_enum
+    assert field._native_ffi is native.apply_string_enum
+    assert field._native_ffi is not native.apply_string
+    assert field._native_ffi is not native.apply_integer_enum
     text = StringValidator(min_length=1, debug=True, name="n")
-    assert text._native_apply is peer.apply_string
+    assert text._native_ffi is native.apply_string
     integer_enum = _bind_enum_field(_Rank)
-    assert integer_enum._native_apply is peer.apply_integer_enum
-    assert hasattr(peer.FailKind, "NotMember")
-    plan = peer.compile_string_enum(members=["pale", "deep", "", "café", "cafe\u0301"])
-    assert peer.apply_string_enum(plan, "pale") is None
-    assert peer.apply_string_enum(plan, "") is None
-    assert peer.apply_string_enum(plan, "café") is None
-    assert peer.apply_string_enum(plan, "cafe\u0301") is None
-    assert peer.apply_string_enum(plan, "cafe") is peer.FailKind.NotMember
-    assert peer.apply_string_enum(plan, "PALE") is peer.FailKind.NotMember
-    assert peer.apply_string_enum(plan, "pale ") is peer.FailKind.NotMember
-    assert peer.apply_string_enum(plan, _Tint.PALE.value) is None
-    empty = peer.compile_string_enum(members=[])
-    assert peer.apply_string_enum(empty, "pale") is peer.FailKind.NotMember
+    assert integer_enum._native_ffi is native.apply_integer_enum
+    assert hasattr(native.FailKind, "NotMember")
+    plan = native.compile_string_enum(members=["pale", "deep", "", "café", "cafe\u0301"])
+    assert native.apply_string_enum(plan, "pale") is None
+    assert native.apply_string_enum(plan, "") is None
+    assert native.apply_string_enum(plan, "café") is None
+    assert native.apply_string_enum(plan, "cafe\u0301") is None
+    assert native.apply_string_enum(plan, "cafe") is native.FailKind.NotMember
+    assert native.apply_string_enum(plan, "PALE") is native.FailKind.NotMember
+    assert native.apply_string_enum(plan, "pale ") is native.FailKind.NotMember
+    assert native.apply_string_enum(plan, _Tint.PALE.value) is None
+    empty = native.compile_string_enum(members=[])
+    assert native.apply_string_enum(empty, "pale") is native.FailKind.NotMember
 
 
 @needs_native
 def test_string_enum_not_member_failkind_uses_type_door_wording():
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     field = _bind_enum_field(_Tint, cls=StringEnumValidator)
 
     def always_miss(plan, value):
-        return peer.FailKind.NotMember
+        return native.FailKind.NotMember
 
-    field._native_apply = always_miss
+    field._native_ffi = always_miss
     got = _assign(field, _Tint.PALE)
     assert got[1] is TypeError
     assert got[2] == "n expect <enum '_Tint'> type, got _Tint type instead"
@@ -309,12 +310,12 @@ def test_string_enum_unclosed_and_other_facades_stay_on_host():
     assert subclass._native_plan is None
     lone = _bind_enum_field(_LoneTint, cls=StringEnumValidator)
     assert lone._native_plan is None
-    import ux_valio_native as peer
+    import ux_valio_native as native
 
     boolean = BooleanValidator(debug=True, name="n")
     assert boolean._native_plan is not None
-    assert boolean._native_apply is peer.apply_boolean
-    assert boolean._native_apply is not peer.apply_string_enum
+    assert boolean._native_ffi is native.apply_boolean
+    assert boolean._native_ffi is not native.apply_string_enum
     open_validator = Validator[_Tint](debug=True, name="n")
 
     class OpenOwner:
@@ -451,7 +452,7 @@ def test_string_enum_extract_unicode_error_falls_through_to_host():
     def boom(plan, value):
         raise UnicodeEncodeError("utf-8", "\ud800", 0, 1, "surrogates not allowed")
 
-    native._native_apply = boom
+    native._native_ffi = boom
     assert _enum_door(native, host, _Tint.PALE)[3] is _Tint.PALE
     miss = _enum_door(native, host, "pale")
     assert miss[1] is ValidationErrors
@@ -461,11 +462,11 @@ def test_string_enum_extract_unicode_error_falls_through_to_host():
 
 
 @needs_native
-def test_unexpected_string_enum_peer_bind_raises_runtime_error(monkeypatch):
+def test_unexpected_string_enum_native_bind_raises_runtime_error(monkeypatch):
     import ux_valio_native
 
     def boom(**kwargs):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
     monkeypatch.setattr(ux_valio_native, "compile_string_enum", boom)
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
@@ -476,14 +477,14 @@ def test_unexpected_string_enum_peer_bind_raises_runtime_error(monkeypatch):
 
 
 @needs_native
-def test_unexpected_string_enum_peer_apply_raises_runtime_error():
+def test_unexpected_string_enum_native_apply_raises_runtime_error():
     field = _bind_enum_field(_Tint, cls=StringEnumValidator)
     assert field._native_plan is not None
 
     def boom(plan, value):
-        raise ValueError("peer exploded")
+        raise ValueError("native exploded")
 
-    field._native_apply = boom
+    field._native_ffi = boom
     with pytest.raises(RuntimeError, match="ux_valio_native") as caught:
         field.validate(None, _Tint.PALE)
     assert isinstance(caught.value.__cause__, ValueError)

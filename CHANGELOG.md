@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Native path fold (internal only, no behavior change). Eight
+  ``_apply_host_*_after_*`` bridges collapse to ``_bridge_to_value`` /
+  ``_bridge_to_length`` / ``_bridge_to_type``. Enum type-miss thin
+  aliases drop; call ``_raise_host_enum_type_miss`` directly. Product
+  PyO3 load is ``_load_native`` / ``_native_mod`` / ``as native`` (was
+  ``_load_native_peer`` / ``_peer`` / ``as peer``). Teaching names the
+  native module, not Cap Host/Peer. Private Rust helpers
+  ``apply_i64_members`` / ``apply_str_members`` (was ``apply_member_units``
+  / ``apply_string_members``). Public ``compile_*`` / ``apply_*`` and
+  family ``apply_native_*`` stay. Cap Door B stays off. Date* HOLD.
+
+- Validator native slot rename (internal only, no behavior change).
+  ``_native_plan`` stays. Product-PyO3 apply is ``_native_ffi`` (was
+  ``_native_apply``). Host family entry is ``_native_entry`` (was
+  ``_native_closed_apply``). Fail enum type is ``_native_fail_kind``
+  (was ``_native_fail``). ``Closed`` stays only on detectors
+  (``_closed_*``). Public ``compile_*`` / ``apply_*`` names are
+  unchanged. Cap Door B stays off. Date* / UUID / Path / IP stay HOLD.
+
 - Closed-host-apply slot name (internal only, no behavior change).
   The fourth Validator native slot is ``_native_closed_apply``: the
   closed-family host apply (``apply_native_integer_bounds``,

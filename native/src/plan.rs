@@ -67,7 +67,7 @@ pub(crate) enum Plan {
     Decimal,
 }
 
-/// Frozen peer object. Python name is `Plan`. The body is one [`Plan`]
+/// Frozen native plan object. Python name is `Plan`. The body is one [`Plan`]
 /// variant. Apply clones the `Arc` inside that variant.
 #[pyclass(frozen, name = "Plan")]
 pub(crate) struct PyPlan {
@@ -79,12 +79,12 @@ pub(crate) fn share_plan(body: Plan) -> PyPlan {
 }
 
 /// Host never applies a plan through another family's door. A direct
-/// call that does is a peer `RuntimeError` (fail closed).
+/// call that does is a native-module `RuntimeError` (fail closed).
 pub(crate) fn unexpected_family(door: &str) -> PyErr {
     PyRuntimeError::new_err(format!("{door} plan family mismatch"))
 }
 
-pub(crate) fn apply_member_units(members: &[i64], value: i64) -> Result<(), FailKind> {
+pub(crate) fn apply_i64_members(members: &[i64], value: i64) -> Result<(), FailKind> {
     if members.iter().any(|member| *member == value) {
         Ok(())
     } else {
@@ -92,7 +92,7 @@ pub(crate) fn apply_member_units(members: &[i64], value: i64) -> Result<(), Fail
     }
 }
 
-pub(crate) fn apply_string_members(members: &[String], value: &str) -> Result<(), FailKind> {
+pub(crate) fn apply_str_members(members: &[String], value: &str) -> Result<(), FailKind> {
     if members.iter().any(|member| member == value) {
         Ok(())
     } else {
