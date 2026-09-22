@@ -118,7 +118,13 @@ a parallel folder, not inside the layer they depend on.
   off. One family. Pattern / Date* / UUID / Path / plain Enum stay off.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_select_*``); do not merge a pair into one door
-  and do not restore a per-family copy of the bind steps. Host
+  and do not restore a per-family copy of the bind steps.
+  ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /
+  ``_native_fail`` / ``_native_apply_host`` as ``None`` before
+  ``bind_native_plan`` (same four slots ``_clear_native`` clears);
+  ownership is on ``Validator`` once — do not scatter those assigns on
+  typed facades. ``bind_native_plan`` / ``_clear_native`` remain the
+  writers; ``__set_name__`` rebinds when ``_native_plan is None``. Host
   ``_native.py`` stays one file. Closed detectors, apply, and the
   bind list are the same walk for every family. A private module is
   allowed only when opening it shows one family's walk. Do not mirror

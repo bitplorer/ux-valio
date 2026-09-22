@@ -18,6 +18,10 @@ At construct (`Validator.__init__` / `__set_name__`):
 - specified default-path units (`_active_units`) — type always; length,
   value, pattern, choice, `reassign`, `multiple_of` only when you passed
   them
+- native bundle slots (`_native_plan` / `_native_apply` / `_native_fail` /
+  `_native_apply_host`) seeded `None` on `Validator` before
+  `bind_native_plan`; `__set_name__` rebinds when the plan is still
+  `None` (annotation-ready cases)
 - named-facade extra (GSTIN checksum, Luhn, …) as one function after
   that path
 - Pattern `re.compile` on the finder
