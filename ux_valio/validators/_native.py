@@ -462,8 +462,10 @@ class _FamilyDoor(NamedTuple):
         if not isinstance(value, expected):
             self.type_miss(owner, value)
             return
+        extract = self.extract
+        payload = value if extract is _extract_same else extract(value)
         try:
-            fail = owner._native_apply(owner._native_plan, self.extract(value))
+            fail = owner._native_apply(owner._native_plan, payload)
         except self.extract_errors:
             self.bridge(owner, value)
             return

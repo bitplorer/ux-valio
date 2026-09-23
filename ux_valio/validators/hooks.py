@@ -22,6 +22,29 @@ from ux_valio.validators.async_bridge import (
 from ux_valio.errors import continue_or_raise, raise_collected
 
 
+# One bit per hang phase. Set phases are the ones ``__set__`` must not skip.
+_PHASE_PRE_VALIDATE = 1
+_PHASE_POST_VALIDATE = 2
+_PHASE_POST_SET = 4
+_PHASE_PRE_GET = 8
+_PHASE_POST_GET = 16
+_PHASE_PRE_DELETE = 32
+_PHASE_POST_DELETE = 64
+_PHASE_VALIDATOR = 128
+_SET_PHASE_MASK = (
+    _PHASE_PRE_VALIDATE | _PHASE_POST_VALIDATE | _PHASE_POST_SET | _PHASE_VALIDATOR
+)
+_PHASE_BITS = {
+    "pre_validate": _PHASE_PRE_VALIDATE,
+    "post_validate": _PHASE_POST_VALIDATE,
+    "post_set": _PHASE_POST_SET,
+    "pre_get": _PHASE_PRE_GET,
+    "post_get": _PHASE_POST_GET,
+    "pre_delete": _PHASE_PRE_DELETE,
+    "post_delete": _PHASE_POST_DELETE,
+}
+
+
 class HookHost:
     """Processor and task registries on the validating descriptor.
 
@@ -128,6 +151,7 @@ class HookHost:
         self._tasks: dict[str, dict[str, list[Callable[..., Any]]]] = {
             phase: defaultdict(list) for phase in self._processors
         }
+        self._phase_mask = 0
         self._hooks_hung = False
         super().__init__(*args, **kwargs)
 
@@ -136,77 +160,106 @@ class HookHost:
         bucket: dict[str, list[Callable[..., Any]]],
         func: Callable[..., Any],
         namespace: type | str | None = None,
-
+        phase_bit: int = 0,
     ) -> Callable[..., Any]:
         key = HookHost._resolve_owner_key(
             func, namespace, getattr(self, "_owner", None)
         )
         bucket[key].append(func)
+        self._phase_mask |= phase_bit
         self._hooks_hung = True
         return func
 
     def validator(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Check during ``validate()``. Return ignored."""
-        return self._register(self._custom_validators, func, namespace)
+        return self._register(
+            self._custom_validators, func, namespace, _PHASE_VALIDATOR
+        )
 
     def pre_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform before validate. Return is stored (inside ``_run_pre_set``)."""
-        return self._register(self._processors["pre_validate"], func, namespace)
+        return self._register(
+            self._processors["pre_validate"], func, namespace, _PHASE_PRE_VALIDATE
+        )
 
     def post_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after validate. Return is stored (inside ``_run_pre_set``)."""
-        return self._register(self._processors["post_validate"], func, namespace)
+        return self._register(
+            self._processors["post_validate"], func, namespace, _PHASE_POST_VALIDATE
+        )
 
     def post_set(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after store. Return is not stored."""
-        return self._register(self._processors["post_set"], func, namespace)
+        return self._register(
+            self._processors["post_set"], func, namespace, _PHASE_POST_SET
+        )
 
     def pre_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform before read. Return is not the stored value."""
-        return self._register(self._processors["pre_get"], func, namespace)
+        return self._register(
+            self._processors["pre_get"], func, namespace, _PHASE_PRE_GET
+        )
 
     def post_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after read. Return is not the stored value."""
-        return self._register(self._processors["post_get"], func, namespace)
+        return self._register(
+            self._processors["post_get"], func, namespace, _PHASE_POST_GET
+        )
 
     def pre_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform before delete. Return is not stored."""
-        return self._register(self._processors["pre_delete"], func, namespace)
+        return self._register(
+            self._processors["pre_delete"], func, namespace, _PHASE_PRE_DELETE
+        )
 
     def post_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Transform after delete. Return is not stored."""
-        return self._register(self._processors["post_delete"], func, namespace)
+        return self._register(
+            self._processors["post_delete"], func, namespace, _PHASE_POST_DELETE
+        )
 
     def task_pre_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect before validate. Return ignored. Setter does not wait."""
-        return self._register(self._tasks["pre_validate"], func, namespace)
+        return self._register(
+            self._tasks["pre_validate"], func, namespace, _PHASE_PRE_VALIDATE
+        )
 
     def task_post_validate(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect after validate. Return ignored. Setter does not wait."""
-        return self._register(self._tasks["post_validate"], func, namespace)
+        return self._register(
+            self._tasks["post_validate"], func, namespace, _PHASE_POST_VALIDATE
+        )
 
     def task_post_set(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background after store (email). Return ignored. Setter does not wait.
 
         Persist/reserve that must fail-closed hangs on ``post_set``.
         """
-        return self._register(self._tasks["post_set"], func, namespace)
+        return self._register(
+            self._tasks["post_set"], func, namespace, _PHASE_POST_SET
+        )
 
     def task_pre_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect before read. Return ignored. Setter does not wait."""
-        return self._register(self._tasks["pre_get"], func, namespace)
+        return self._register(self._tasks["pre_get"], func, namespace, _PHASE_PRE_GET)
 
     def task_post_get(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect after read. Return ignored. Setter does not wait."""
-        return self._register(self._tasks["post_get"], func, namespace)
+        return self._register(
+            self._tasks["post_get"], func, namespace, _PHASE_POST_GET
+        )
 
     def task_pre_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect before delete. Return ignored. Setter does not wait."""
-        return self._register(self._tasks["pre_delete"], func, namespace)
+        return self._register(
+            self._tasks["pre_delete"], func, namespace, _PHASE_PRE_DELETE
+        )
 
     def task_post_delete(self, func: Callable[..., Any], namespace: type | str | None = None) -> Callable[..., Any]:
         """Background side effect after delete. Return ignored. Setter does not wait."""
-        return self._register(self._tasks["post_delete"], func, namespace)
+        return self._register(
+            self._tasks["post_delete"], func, namespace, _PHASE_POST_DELETE
+        )
 
     def _run_processors(self, phase: str, instance: Any, value: Any) -> Any:
         hooks = self._processors[phase]
@@ -236,7 +289,9 @@ class HookHost:
         wait_tasks_impl(timeout)
 
     def _process_then_tasks(self, phase: str, instance: Any, value: Any) -> Any:
-        if not self._hooks_hung:
+        # Empty phase: no owner-key walk. A get/delete hang does not
+        # make set walk ``pre_validate`` / ``post_validate`` / ``post_set``.
+        if (self._phase_mask & _PHASE_BITS[phase]) == 0:
             return value
         value = self._run_processors(phase, instance, value)
         self._run_tasks(phase, instance, value)

@@ -606,7 +606,9 @@ class Property(Generic[_StoreT]):
             value = self._run_pre_set(obj, value)
             self._store_on_instance(obj, value)
             self.errors.clear()
-            self._emit_log("info", f"{type(obj).__name__}.{self.name}: set")
+            logger = self.logger
+            if logger and logger is not True:
+                self._emit_log("info", f"{type(obj).__name__}.{self.name}: set")
             self._run_post_set(obj, value)
         except Exception as err:
             self._swallow_or_raise(err)
@@ -629,7 +631,9 @@ class Property(Generic[_StoreT]):
         try:
             self._run_pre_get(obj, self.name)
             value = self._read_from_instance(obj)
-            self._emit_log("info", f"{type(obj).__name__}.{self.name}: get")
+            logger = self.logger
+            if logger and logger is not True:
+                self._emit_log("info", f"{type(obj).__name__}.{self.name}: get")
             return value
         except Exception as err:
             in_flight = err
@@ -649,7 +653,9 @@ class Property(Generic[_StoreT]):
         try:
             self._run_pre_delete(obj, self.name)
             self._drop_from_instance(obj)
-            self._emit_log("info", f"{type(obj).__name__}.{self.name}: delete")
+            logger = self.logger
+            if logger and logger is not True:
+                self._emit_log("info", f"{type(obj).__name__}.{self.name}: delete")
             self._run_post_delete(obj, self.name)
         except Exception as err:
             self._swallow_or_raise(err)
