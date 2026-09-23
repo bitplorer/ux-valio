@@ -330,18 +330,26 @@ class RequiredValidator(ValidateProperty):
 class PatternValidator(ValidateProperty):
     def __init__(self, pattern: Any = None, **kwargs: Any) -> None:
         self.pattern = pattern
-        self._compiled: re.Pattern[Any] | None = None
-        self._compiled_source: Any = object()
+        # Host regex cache, same pair as ``Validator``. Unrelated to
+        # native ``compile_*`` / ``apply_*``.
+        self._pattern_compiled: re.Pattern[Any] | None = None
+        self._pattern_source: Any = object()
         super().__init__(**kwargs)
 
     def _compiled_finder(self: Any, source: str | bytes) -> re.Pattern[Any]:
+        """Return the cached ``re.Pattern`` for ``source``.
 
-        compiled = getattr(self, "_compiled", None)
-        if compiled is not None and source == getattr(self, "_compiled_source", object()):
+        ``_pattern_compiled`` is that pattern. ``_pattern_source`` is
+        the source it was built from, or a sentinel before the first
+        compile. Host regex cache only — unrelated to native
+        ``compile_*`` / ``apply_*``.
+        """
+        compiled = getattr(self, "_pattern_compiled", None)
+        if compiled is not None and source == getattr(self, "_pattern_source", object()):
             return compiled
         compiled = re.compile(source)
-        self._compiled = compiled
-        self._compiled_source = source
+        self._pattern_compiled = compiled
+        self._pattern_source = source
         return compiled
 
     def _validate_pattern(self, instance: Any, value: Any) -> None:

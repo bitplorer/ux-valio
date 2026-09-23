@@ -248,6 +248,11 @@ a parallel folder, not inside the layer they depend on.
   (``expect a sized value``), not the raw ``object of type 'int' has no len()``.
   `EmailValidator` identity fullmatch uses the same compiled pattern as
   the findall path (``PatternValidator._compiled_finder``).
+  Host regex cache is the pair ``_pattern_source`` (source string or
+  unset sentinel) and ``_pattern_compiled`` (cached ``re.Pattern``) on
+  both ``Validator`` and ``PatternValidator``. That cache is unrelated
+  to native ``compile_*`` / ``apply_*``. Do not fold it into public
+  ``pattern``. Do not use ``_pattern_compiled_source``.
   `post_get` in `__get__` `finally` records a secondary error and does
   not replace an in-flight exception.
   Annotation is a store invariant: `post_validate` may transform,
@@ -417,7 +422,8 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_apply_host_boolean_after_extract`,
 `_apply_host_decimal_after_extract`,
 `_raise_host_integer_enum_type_miss`, `_raise_host_string_enum_type_miss`,
-`_native_closed_apply`, `_native_fail`).
+`_native_closed_apply`, `_native_fail`, `_compiled`, `_compiled_source`,
+`_pattern_compiled_source`).
 Noun-only names that hide the action are not
 added. Names should fit any caller library — not a one-app
 nickname, not a slogan.
