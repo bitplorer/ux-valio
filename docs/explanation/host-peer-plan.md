@@ -1085,3 +1085,23 @@ HOLD after this tip: plain EnumValidator, Pattern / custom
 callables, named facades, Cap Door B. Path bounds and
 ``path_exists`` stay host. UUID and IP closed-family HOLD stays
 cleared. No follow-up remains on this Path concern.
+
+### Measured (2026-09-23) straight-line set
+
+A closed native plan with no set-phase hang (`pre_validate`,
+`post_validate`, `post_set`, `validator`, and their `task_*`) applies
+once and stores on ``instance.__dict__``. A miss uses the full
+descriptor. Registered hangs still run in Python. This is not Cap
+Door B and not a hang compiled to Rust.
+
+Same box as the product-setattr check: CPython 3.14.7, rustc 1.83,
+Linux x86_64. Switch harness, 30_000 iters after 4_000 warmup:
+Integer / Float / String / Bytes host setattr about **350–360 ns/op**,
+native apply about **82–90 ns/op**, ratio about **4.0–4.4×** — still
+**PASS** the 3× bar. Earlier tables that list those families around
+24–30× are the pre-straight-line runs. Product setattr with no hangs
+(warmup 4_000, median of 7 × 80_000) was **0.348 µs**. A get-only
+``pre_get`` did not put set back on the long path (**0.352 µs**).
+Empty ``pre_validate`` + ``post_validate`` (both ``return value``)
+stayed **3.543 µs**; thin hangs stayed **3.590 µs**. Do not read the
+4× switch ratio as a 70× product setattr claim.

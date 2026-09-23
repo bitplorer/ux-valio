@@ -60,9 +60,12 @@ At construct (`Validator.__init__` / `__set_name__`):
   Otherwise the interpreter
   still walks `_active_units`
 
-At set, the interpreter walks that short tuple (or one FFI `apply_*` for
-the closed native plan), then process hangs, then store on
-`instance.__dict__`, then `post_set` / spawn `task_*`.
+At set, a closed native plan with no set-phase hang (`pre_validate`,
+`post_validate`, `post_set`, `validator`, and their `task_*`) applies
+once and stores on `instance.__dict__`. A miss uses the full descriptor.
+Registered hangs still run in Python, in that same order, and their
+return rules are unchanged. Without the extra, the interpreter walks
+`_active_units`, then those hangs, then store, then `post_set`.
 
 Mutating `min_value` after construct does nothing to the path. Pass
 bounds at construct.
@@ -71,11 +74,11 @@ bounds at construct.
 
 | work | when | note |
 |---|---|---|
-| specified units | every set | the loop you actually want |
-| native `apply_*` | every set when the closed plan bound | one FFI; host still stores and raises |
-| named extra | every set on that facade | checksums are cheap vs I/O |
-| `pre_validate` / `post_validate` | every set | your code; keep it small |
-| `post_set` | every successful set | persist/reserve; fail-closed |
+| specified units | every set that is not a closed native straight line | the loop you actually want |
+| native `apply_*` | every set when the closed plan is bound | one FFI; store stays on the host; a miss uses the full descriptor |
+| named extra | every set on that facade | checksums are cheap vs I/O; these facades are not the straight line |
+| `pre_validate` / `post_validate` | when that phase is registered | your code; an empty phase is not walked |
+| `post_set` | when that phase is registered, after a successful store | persist/reserve; fail-closed; return is not stored |
 | `task_*` | spawn, setter does not wait | I/O belongs here |
 | `collect_all=True` | failures | continues remaining concerns; one failure still re-raises as itself |
 | `logger=True` | every get/set/delete | info lines; leave OFF in tight loops |
@@ -88,9 +91,13 @@ a library bag.
 ## Versus Pydantic
 
 Pydantic-core compiles a Rust plan and applies scalars natively.
-ux-valio’s unconstrained `int` set is several Python calls (descriptor
-`__set__`, specified units, store). Named identities (email, GSTIN) are
-already competitive in Python — do not start a peer there.
+With `ux-valio[native]`, a closed int field and no set-phase hangs is
+one native apply plus store (median about 0.35 µs on one Linux x86_64
+box; empty pre/post validate hangs on that box stayed about 3.5 µs).
+Without the extra, or when a set-phase hang is registered, the set is
+still the Python descriptor (`__set__`, specified units, store). Hangs
+stay Python. Named identities (email, GSTIN) stay Python — do not start
+a peer there.
 
 A peer that calls back into Python **per unit** is slower than today.
 One crossing per set, or none.
@@ -169,10 +176,20 @@ ratio **43.52×** — **PASS**. Integer / Float stayed ~28–29×, String
 ~38×, Decimal ~76×, Date ~77×, DateTime ~78×, and Uuid ~74× on that
 same run (still PASS). Host setattr includes the named IP parser;
 native is plan apply only.
+
 Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply_integer`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end
-after host store/raise. CI without Rust skips
+after host store/raise. The Integer / Float / String / Bytes host
+figures above are from before the straight-line set. A later run on
+2026-09-23 (30_000 iters after 4_000 warmup, CPython 3.14.7, rustc
+1.83, Linux x86_64) measured those four families at about **350–360
+ns/op** host setattr and about **82–90 ns/op** native apply, ratio
+about **4.0–4.4×**, still **PASS** on the 3× bar. That host number is
+apply plus store with no set-phase hangs, not a 70× product claim.
+Empty `pre_validate` + `post_validate` hangs stayed about 3.5 µs.
+Families that clear the plan after bind are unchanged. Hangs are not
+compiled to Rust. CI without Rust skips
 (`python benches/measure_host_peer.py --ci`). Full notes, install, and
 rejected shapes: [host / peer](host-peer-plan.md).
 

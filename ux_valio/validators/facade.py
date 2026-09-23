@@ -14,6 +14,7 @@ from ux_valio.descriptor import _UNSET
 from ux_valio.errors import continue_or_raise, raise_collected, run_steps
 from ux_valio.validators._native import apply_native_bounds, bind_native_plan
 from ux_valio.validators.base import ValidateProperty
+from ux_valio.validators.hooks import _SET_PHASE_MASK
 from ux_valio.validators.leaves import (
     ChoiceValidator,
     MultipleValidator,
@@ -194,6 +195,43 @@ class Validator(ValidateProperty[T]):
         self._native_fail_kind = None
         self._native_run = None
         bind_native_plan(self)
+        # Shape is fixed at construct: no coerce, no named extra, stock
+        # pre-set pipeline. ``_native_run`` / phase mask / logger stay live.
+        self._straight_eligible = (
+            type(self)._validate_named_facade is Validator._validate_named_facade
+            and type(self)._pre_validate is ValidateProperty._pre_validate
+            and type(self)._run_pre_set is ValidateProperty._run_pre_set
+        )
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        """Closed native set when no set-phase hang can change the value.
+
+        Failure uses the full descriptor so collect-all messages stay
+        the host wording. Get/delete hangs do not take this off the
+        straight line. Coercing facades and named extras stay on the
+        full pipeline.
+        """
+        run = self._native_run
+        if (
+            run is not None
+            and self._straight_eligible
+            and (self._phase_mask & _SET_PHASE_MASK) == 0
+            and value is not None
+            and value is not self
+            and self.name is not None
+            and self.reassign is not False
+            and not self.logger
+        ):
+            try:
+                run(self, value)
+                obj.__dict__[self.name] = value
+            except Exception:
+                ValidateProperty.__set__(self, obj, value)
+                return
+            if self.errors:
+                self.errors.clear()
+            return
+        ValidateProperty.__set__(self, obj, value)
 
     def __set_name__(self, owner: type, name: str) -> None:
         super().__set_name__(owner, name)

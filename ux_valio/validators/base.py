@@ -62,7 +62,14 @@ class ValidateProperty(HookHost, Property[T], ABC):
         self._notify_pre_set(obj)
         value = self._pre_validate(obj, value)
         self.validate(instance=obj, value=value)
+        checked = value
         value = self._post_validate(obj, value)
+        # Closed native apply already ran the type door. ``post_validate``
+        # that returns the same object cannot smuggle a new type or a
+        # named-facade lie, so the second gates stay on the slow path
+        # only when the stored object changed or no native plan is bound.
+        if value is checked and getattr(self, "_native_plan", None) is not None:
+            return value
         self._reject_store_type_mismatch(value)
         self._reject_store_identity(value)
         return value
