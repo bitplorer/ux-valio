@@ -3,7 +3,7 @@
 //! [`PyPlan`] is the frozen object Python calls `Plan`. It holds one
 //! [`Plan`] variant — Integer bounds, Float bounds, String length, Bytes
 //! length, an IntegerEnum member set, a StringEnum member set, or a
-//! Boolean / Decimal / Date / DateTime type-door marker. There is no
+//! Boolean / Decimal / Date / DateTime / Uuid type-door marker. There is no
 //! shared unit bag.
 
 use std::sync::Arc;
@@ -73,6 +73,9 @@ pub(crate) enum Plan {
     /// Exact `datetime.datetime` extract. A plain `datetime.date` does
     /// not extract. No bound unit. String coerce stays on the host.
     DateTime,
+    /// Exact `uuid.UUID` extract. A raw `str` does not extract. No
+    /// bound unit. String coerce stays on the host.
+    Uuid,
 }
 
 /// Frozen native plan object. Python name is `Plan`. The body is one [`Plan`]

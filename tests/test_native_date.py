@@ -26,7 +26,6 @@ from ux_valio import (
     IPv4Validator,
     IPv6Validator,
     PathValidator,
-    UUIDValidator,
     ValidationErrors,
     Validator,
 )
@@ -57,7 +56,6 @@ def test_closed_date_type_door_is_date_extract():
     assert "fn compile_and_apply" not in rust
     assert not re.search(r"\bfn compile\(", rust)
     assert not re.search(r"\bfn apply\(", rust)
-    assert "fn compile_uuid" not in rust
     assert "fn compile_path" not in rust
     assert "fn compile_ip" not in rust
     assert "_closed_date" in native_py
@@ -185,7 +183,6 @@ def test_date_unclosed_stays_on_host():
     assert DateValidator(required=True, debug=True, name="n")._native_plan is None
     assert DateValidator(reassign=False, debug=True, name="n")._native_plan is None
     assert DateValidator(in_choice=(opened,), debug=True, name="n")._native_plan is None
-    assert UUIDValidator(debug=True, name="n")._native_plan is None
     assert PathValidator(debug=True, name="n")._native_plan is None
     assert IPv4Validator(debug=True, name="n")._native_plan is None
     assert IPv6Validator(debug=True, name="n")._native_plan is None

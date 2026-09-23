@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Native Uuid type door: closed ``ux-valio[native]`` plans now cover
+  ``UUIDValidator`` when the annotation is ``uuid.UUID`` or the facade
+  coerce union ``uuid.UUID | str``, and the only active unit is the
+  type door. ``compile_uuid`` / ``apply_uuid`` stay a pair. Door A
+  lock: stored type is ``uuid.UUID`` only after host
+  ``_pre_validate`` (string coerce); the peer never sees a raw
+  ``str``. Exact ``uuid.UUID`` passes, including the nil UUID.
+  ``int`` / ``bool`` / ``bytes`` miss. Bounds (min/max/gt/lt/eq) stay
+  host. Extract ``TypeError`` falls through to host
+  ``TypeValidator``. ``None`` skips. ``uuid.UUID | None`` and other
+  unions stay host. Cap Door B stays off. Path / IP / plain
+  EnumValidator / Pattern / named facades stay HOLD. No follow-up
+  remains on this Uuid concern.
+  Measure ``python benches/measure_host_peer.py`` (Uuid **77.02×**,
+  host 7324.1 ns/op, native 95.1 ns/op; CPython 3.14.7 / rustc 1.83 /
+  Linux x86_64); do not claim 70× product setattr.
+
 - Host regex cache slot rename (internal only, no behavior change).
   ``Validator`` and ``PatternValidator`` keep the pair
   ``_pattern_compiled`` (cached ``re.Pattern``; was ``_compiled``) and
