@@ -6,7 +6,7 @@ shows one family's walk and nothing else. Shared detectors, bridges,
 and the bind table still serve every family, so they stay here.
 Each Door A family is one contiguous section. ``bind_native_plan``
 walks ``_FAMILY_DOORS`` (a private frozen ``_FamilyDoor`` row:
-closed detector, compile attr, apply attr, host run). That row is
+``closed`` / ``compile`` / ``apply`` / ``run``). That row is
 not a product type door and not a class-per-type mirror of Rust
 ``Plan``. This is not a ``plan`` / ``bound`` / ``length`` mirror
 of the Rust crate.
@@ -365,33 +365,30 @@ type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
 class _FamilyDoor(NamedTuple):
     """Private bind row for one closed family. Not a product type door.
 
-    ``closed`` detects the family. ``compile_attr`` / ``apply_attr``
-    name the Rust pair. ``run`` is the host closed entry. ``pack``
-    turns a member list into compile kwargs; omitted means the
-    detector payload is already those kwargs.
+    ``closed`` detects the family. ``compile`` / ``apply`` name the
+    Rust pair. ``run`` is the host closed entry. A member list is
+    compile kwargs ``members=``; any other payload is already those
+    kwargs.
     """
 
     closed: Any
-    compile_attr: str
-    apply_attr: str
+    compile: str
+    apply: str
     run: Any
-    pack: Any = None
 
-
-def _pack_members(members: list[int] | list[str]) -> dict[str, Any]:
-    """Compile kwargs for an IntegerEnum or StringEnum member set."""
-    return {"members": members}
-
-
-def _fill_door(door: _FamilyDoor, native: Any, payload: Any) -> _ClosedPair:
-    """Build the compile / apply / run triple for one closed family."""
-    kwargs = payload if door.pack is None else door.pack(payload)
-    return (
-        getattr(native, door.apply_attr),
-        door.run,
-        getattr(native, door.compile_attr),
-        kwargs,
-    )
+    def _select(self, native: Any, payload: Any) -> _ClosedPair:
+        """Pair for this row. Compile and apply stay separate."""
+        kwargs: dict[str, Any]
+        if isinstance(payload, list):
+            kwargs = {"members": payload}
+        else:
+            kwargs = payload
+        return (
+            getattr(native, self.apply),
+            self.run,
+            getattr(native, self.compile),
+            kwargs,
+        )
 
 
 # --- Integer ---
@@ -427,15 +424,15 @@ def apply_native_integer_bounds(owner: Any, value: Any) -> None:
 
 _INTEGER_DOOR = _FamilyDoor(
     closed=_closed_integer_bounds,
-    compile_attr="compile_integer",
-    apply_attr="apply_integer",
+    compile="compile_integer",
+    apply="apply_integer",
     run=apply_native_integer_bounds,
 )
 
 
 def _select_integer_bounds(native: Any, bounds: dict[str, int]) -> _ClosedPair:
     """Closed Integer: ``compile_integer`` and ``apply_integer`` stay a pair."""
-    return _fill_door(_INTEGER_DOOR, native, bounds)
+    return _INTEGER_DOOR._select(native, bounds)
 
 
 # --- Float ---
@@ -482,15 +479,15 @@ def apply_native_float_bounds(owner: Any, value: Any) -> None:
 
 _FLOAT_DOOR = _FamilyDoor(
     closed=_closed_float_bounds,
-    compile_attr="compile_float",
-    apply_attr="apply_float",
+    compile="compile_float",
+    apply="apply_float",
     run=apply_native_float_bounds,
 )
 
 
 def _select_float_bounds(native: Any, bounds: dict[str, float]) -> _ClosedPair:
     """Closed Float: ``compile_float`` and ``apply_float`` stay a pair."""
-    return _fill_door(_FLOAT_DOOR, native, bounds)
+    return _FLOAT_DOOR._select(native, bounds)
 
 
 # --- String ---
@@ -536,15 +533,15 @@ def apply_native_string_length(owner: Any, value: Any) -> None:
 
 _STRING_DOOR = _FamilyDoor(
     closed=_closed_string_length,
-    compile_attr="compile_string",
-    apply_attr="apply_string",
+    compile="compile_string",
+    apply="apply_string",
     run=apply_native_string_length,
 )
 
 
 def _select_string_length(native: Any, bounds: dict[str, int]) -> _ClosedPair:
     """Closed String: ``compile_string`` and ``apply_string`` stay a pair."""
-    return _fill_door(_STRING_DOOR, native, bounds)
+    return _STRING_DOOR._select(native, bounds)
 
 
 # --- Bytes ---
@@ -591,15 +588,15 @@ def apply_native_bytes_length(owner: Any, value: Any) -> None:
 
 _BYTES_DOOR = _FamilyDoor(
     closed=_closed_bytes_length,
-    compile_attr="compile_bytes",
-    apply_attr="apply_bytes",
+    compile="compile_bytes",
+    apply="apply_bytes",
     run=apply_native_bytes_length,
 )
 
 
 def _select_bytes_length(native: Any, bounds: dict[str, int]) -> _ClosedPair:
     """Closed Bytes: ``compile_bytes`` and ``apply_bytes`` stay a pair."""
-    return _fill_door(_BYTES_DOOR, native, bounds)
+    return _BYTES_DOOR._select(native, bounds)
 
 
 # --- IntegerEnum ---
@@ -663,16 +660,15 @@ def apply_native_integer_enum(owner: Any, value: Any) -> None:
 
 _INTEGER_ENUM_DOOR = _FamilyDoor(
     closed=_closed_integer_enum_members,
-    compile_attr="compile_integer_enum",
-    apply_attr="apply_integer_enum",
+    compile="compile_integer_enum",
+    apply="apply_integer_enum",
     run=apply_native_integer_enum,
-    pack=_pack_members,
 )
 
 
 def _select_integer_enum(native: Any, members: list[int]) -> _ClosedPair:
     """Closed IntegerEnum: ``compile_integer_enum`` / ``apply_integer_enum`` stay a pair."""
-    return _fill_door(_INTEGER_ENUM_DOOR, native, members)
+    return _INTEGER_ENUM_DOOR._select(native, members)
 
 
 # --- StringEnum ---
@@ -756,16 +752,15 @@ def apply_native_string_enum(owner: Any, value: Any) -> None:
 
 _STRING_ENUM_DOOR = _FamilyDoor(
     closed=_closed_string_enum_members,
-    compile_attr="compile_string_enum",
-    apply_attr="apply_string_enum",
+    compile="compile_string_enum",
+    apply="apply_string_enum",
     run=apply_native_string_enum,
-    pack=_pack_members,
 )
 
 
 def _select_string_enum(native: Any, members: list[str]) -> _ClosedPair:
     """Closed StringEnum: ``compile_string_enum`` / ``apply_string_enum`` stay a pair."""
-    return _fill_door(_STRING_ENUM_DOOR, native, members)
+    return _STRING_ENUM_DOOR._select(native, members)
 
 
 # --- Boolean ---
@@ -824,15 +819,15 @@ def apply_native_boolean(owner: Any, value: Any) -> None:
 
 _BOOLEAN_DOOR = _FamilyDoor(
     closed=_closed_boolean,
-    compile_attr="compile_boolean",
-    apply_attr="apply_boolean",
+    compile="compile_boolean",
+    apply="apply_boolean",
     run=apply_native_boolean,
 )
 
 
 def _select_boolean(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed Boolean: ``compile_boolean`` and ``apply_boolean`` stay a pair."""
-    return _fill_door(_BOOLEAN_DOOR, native, bounds)
+    return _BOOLEAN_DOOR._select(native, bounds)
 
 
 # --- Decimal ---
@@ -916,15 +911,15 @@ def apply_native_decimal(owner: Any, value: Any) -> None:
 
 _DECIMAL_DOOR = _FamilyDoor(
     closed=_closed_decimal,
-    compile_attr="compile_decimal",
-    apply_attr="apply_decimal",
+    compile="compile_decimal",
+    apply="apply_decimal",
     run=apply_native_decimal,
 )
 
 
 def _select_decimal(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed Decimal: ``compile_decimal`` and ``apply_decimal`` stay a pair."""
-    return _fill_door(_DECIMAL_DOOR, native, bounds)
+    return _DECIMAL_DOOR._select(native, bounds)
 
 
 # --- Date ---
@@ -1006,15 +1001,15 @@ def apply_native_date(owner: Any, value: Any) -> None:
 
 _DATE_DOOR = _FamilyDoor(
     closed=_closed_date,
-    compile_attr="compile_date",
-    apply_attr="apply_date",
+    compile="compile_date",
+    apply="apply_date",
     run=apply_native_date,
 )
 
 
 def _select_date(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed Date: ``compile_date`` and ``apply_date`` stay a pair."""
-    return _fill_door(_DATE_DOOR, native, bounds)
+    return _DATE_DOOR._select(native, bounds)
 
 
 # --- DateTime ---
@@ -1091,15 +1086,15 @@ def apply_native_datetime(owner: Any, value: Any) -> None:
 
 _DATETIME_DOOR = _FamilyDoor(
     closed=_closed_datetime,
-    compile_attr="compile_datetime",
-    apply_attr="apply_datetime",
+    compile="compile_datetime",
+    apply="apply_datetime",
     run=apply_native_datetime,
 )
 
 
 def _select_datetime(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed DateTime: ``compile_datetime`` and ``apply_datetime`` stay a pair."""
-    return _fill_door(_DATETIME_DOOR, native, bounds)
+    return _DATETIME_DOOR._select(native, bounds)
 
 
 # --- UUID ---
@@ -1175,15 +1170,15 @@ def apply_native_uuid(owner: Any, value: Any) -> None:
 
 _UUID_DOOR = _FamilyDoor(
     closed=_closed_uuid,
-    compile_attr="compile_uuid",
-    apply_attr="apply_uuid",
+    compile="compile_uuid",
+    apply="apply_uuid",
     run=apply_native_uuid,
 )
 
 
 def _select_uuid(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed Uuid: ``compile_uuid`` and ``apply_uuid`` stay a pair."""
-    return _fill_door(_UUID_DOOR, native, bounds)
+    return _UUID_DOOR._select(native, bounds)
 
 
 # --- IP ---
@@ -1299,15 +1294,15 @@ def apply_native_ip(owner: Any, value: Any) -> None:
 
 _IP_DOOR = _FamilyDoor(
     closed=_closed_ip,
-    compile_attr="compile_ip",
-    apply_attr="apply_ip",
+    compile="compile_ip",
+    apply="apply_ip",
     run=apply_native_ip,
 )
 
 
 def _select_ip(native: Any, bounds: dict[str, str]) -> _ClosedPair:
     """Closed IP: ``compile_ip`` and ``apply_ip`` stay a pair."""
-    return _fill_door(_IP_DOOR, native, bounds)
+    return _IP_DOOR._select(native, bounds)
 
 
 # --- Path ---
@@ -1387,15 +1382,15 @@ def apply_native_path(owner: Any, value: Any) -> None:
 
 _PATH_DOOR = _FamilyDoor(
     closed=_closed_path,
-    compile_attr="compile_path",
-    apply_attr="apply_path",
+    compile="compile_path",
+    apply="apply_path",
     run=apply_native_path,
 )
 
 
 def _select_path(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed Path: ``compile_path`` and ``apply_path`` stay a pair."""
-    return _fill_door(_PATH_DOOR, native, bounds)
+    return _PATH_DOOR._select(native, bounds)
 
 
 # --- Bind walk ---
@@ -1450,7 +1445,7 @@ def bind_native_plan(owner: Any) -> None:
         if native is None:
             _clear_native(owner)
             return
-        apply, run, compile_fn, kwargs = _fill_door(door, native, payload)
+        apply, run, compile_fn, kwargs = door._select(native, payload)
         owner._native_apply = apply
         owner._native_run = run
         _bind_compiled_plan(owner, native, compile_fn, kwargs)

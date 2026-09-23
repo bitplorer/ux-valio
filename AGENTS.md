@@ -198,7 +198,8 @@ a parallel folder, not inside the layer they depend on.
   Cap Door B off. Plain Enum / Pattern stay off.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_FAMILY_DOORS``; each row is a private
-  ``_FamilyDoor`` and ``_select_*`` fills that row); do not merge a
+  ``_FamilyDoor`` of ``closed`` / ``compile`` / ``apply`` / ``run``,
+  and ``_select_*`` calls that row); do not merge a
   pair into one door and do not restore a per-family copy of the
   bind steps.
   ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /
@@ -473,7 +474,7 @@ New private helpers are verbs that name the action:
 `_select_date`, `_select_datetime`, `_select_uuid`, `_select_ip`,
 `_select_path`,
 `_ClosedPair`,
-`_FamilyDoor`, `_fill_door`, `_pack_members`,
+`_FamilyDoor`, `_FamilyDoor._select`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,

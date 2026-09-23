@@ -364,6 +364,11 @@ def test_native_families_are_contiguous_sections():
     """
     native_py = host_native_source()
     assert "class _FamilyDoor" in native_py
+    assert "def _select(" in native_py
+    assert "compile_attr" not in native_py
+    assert "apply_attr" not in native_py
+    assert "def _fill_door" not in native_py
+    assert "def _pack_members" not in native_py
     assert "compile_cap" not in native_py
     assert "apply_cap" not in native_py
     assert "class IntegerNative" not in native_py

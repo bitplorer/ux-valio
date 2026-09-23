@@ -4,7 +4,7 @@
 
 - Host ``_native.py`` groups each Door A family in one section and
   binds through private ``_FAMILY_DOORS`` (``_FamilyDoor`` row:
-  closed detector, compile attr, apply attr, host run). Living slots
+  ``closed`` / ``compile`` / ``apply`` / ``run``). Living slots
   stay ``_native_plan`` / ``_native_apply`` / ``_native_run`` /
   ``_native_fail_kind``. Cap Door B stays off. Closed-plan behaviour
   is unchanged.
