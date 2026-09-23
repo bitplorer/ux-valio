@@ -197,8 +197,10 @@ a parallel folder, not inside the layer they depend on.
   coerce door. Extra units on ``PathValidator`` stay on the host.
   Cap Door B off. Plain Enum / Pattern stay off.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
-  one family list (``_select_*``); do not merge a pair into one door
-  and do not restore a per-family copy of the bind steps.
+  one family list (``_FAMILY_DOORS``; each row is a private
+  ``_FamilyDoor`` and ``_select_*`` fills that row); do not merge a
+  pair into one door and do not restore a per-family copy of the
+  bind steps.
   ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /
   ``_native_fail_kind`` / ``_native_run`` as ``None`` before
   ``bind_native_plan`` (same four slots ``_clear_native`` clears).
@@ -210,9 +212,13 @@ a parallel folder, not inside the layer they depend on.
   Ownership is on ``Validator`` once — do not scatter those assigns on
   typed facades. ``bind_native_plan`` / ``_clear_native`` remain the
   writers; ``__set_name__`` rebinds when ``_native_plan is None``. Host
-  ``_native.py`` stays one file. Closed detectors, apply, and the
-  bind list are the same walk for every family. A private module is
-  allowed only when opening it shows one family's walk. Do not mirror
+  ``_native.py`` stays one file. Each Door A family is one contiguous
+  section (closed detector, family-only helpers, ``apply_native_*``,
+  ``_select_*``). Shared detectors, bridges, and ``_FAMILY_DOORS``
+  stay outside those sections. A private module is allowed only when
+  opening that file shows one family's walk and nothing else.
+  ``_FamilyDoor`` is the private frozen bind row, not a class-per-type
+  product surface. Do not mirror
   Rust ``plan`` / ``bound`` / ``length`` into ``_native_closed.py`` /
   ``_native_apply.py``. Tests are ``tests/test_native_layout.py`` (public ``compile_*`` /
   ``apply_*`` presence, bare ``compile`` / ``apply`` absence,
@@ -467,6 +473,7 @@ New private helpers are verbs that name the action:
 `_select_date`, `_select_datetime`, `_select_uuid`, `_select_ip`,
 `_select_path`,
 `_ClosedPair`,
+`_FamilyDoor`, `_fill_door`, `_pack_members`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,

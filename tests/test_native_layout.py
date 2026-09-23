@@ -207,13 +207,206 @@ def test_field_path_has_no_cap_door_b_or_json_plan():
 def test_host_native_is_one_file():
     """Private modules only when one file is one family walk.
 
-    Closed / apply / select siblings mix every family. That split
-    stays out. ``_native.py`` is the host door.
+    Family sections share one bind table. That split stays out.
+    ``_native.py`` is the host door.
     """
     validators = ROOT / "ux_valio" / "validators"
     assert (validators / "_native.py").is_file()
     extra = sorted(path.name for path in validators.glob("_native_*.py"))
     assert extra == []
+
+
+_FAMILY_SECTIONS = (
+    (
+        "# --- Integer ---",
+        (
+            "def _closed_integer_bounds(",
+            "def _raise_host_integer_type_miss(",
+            "def apply_native_integer_bounds(",
+            "_INTEGER_DOOR",
+            "def _select_integer_bounds(",
+        ),
+    ),
+    (
+        "# --- Float ---",
+        (
+            "def _closed_float_bounds(",
+            "def _raise_host_float_type_miss(",
+            "def apply_native_float_bounds(",
+            "_FLOAT_DOOR",
+            "def _select_float_bounds(",
+        ),
+    ),
+    (
+        "# --- String ---",
+        (
+            "def _closed_string_length(",
+            "def _raise_host_string_type_miss(",
+            "def apply_native_string_length(",
+            "_STRING_DOOR",
+            "def _select_string_length(",
+        ),
+    ),
+    (
+        "# --- Bytes ---",
+        (
+            "def _closed_bytes_length(",
+            "def _raise_host_bytes_type_miss(",
+            "def apply_native_bytes_length(",
+            "_BYTES_DOOR",
+            "def _select_bytes_length(",
+        ),
+    ),
+    (
+        "# --- IntegerEnum ---",
+        (
+            "def _closed_integer_enum_members(",
+            "def apply_native_integer_enum(",
+            "_INTEGER_ENUM_DOOR",
+            "def _select_integer_enum(",
+        ),
+    ),
+    (
+        "# --- StringEnum ---",
+        (
+            "def _closed_string_enum_members(",
+            "def apply_native_string_enum(",
+            "_STRING_ENUM_DOOR",
+            "def _select_string_enum(",
+        ),
+    ),
+    (
+        "# --- Boolean ---",
+        (
+            "def _closed_boolean(",
+            "def _raise_host_boolean_type_miss(",
+            "def apply_native_boolean(",
+            "_BOOLEAN_DOOR",
+            "def _select_boolean(",
+        ),
+    ),
+    (
+        "# --- Decimal ---",
+        (
+            "def _is_decimal_type_annotation(",
+            "def _closed_decimal(",
+            "def _raise_host_decimal_type_miss(",
+            "def apply_native_decimal(",
+            "_DECIMAL_DOOR",
+            "def _select_decimal(",
+        ),
+    ),
+    (
+        "# --- Date ---",
+        (
+            "def _is_date_type_annotation(",
+            "def _closed_date(",
+            "def _raise_host_date_type_miss(",
+            "def apply_native_date(",
+            "_DATE_DOOR",
+            "def _select_date(",
+        ),
+    ),
+    (
+        "# --- DateTime ---",
+        (
+            "def _is_datetime_type_annotation(",
+            "def _closed_datetime(",
+            "def _raise_host_datetime_type_miss(",
+            "def apply_native_datetime(",
+            "_DATETIME_DOOR",
+            "def _select_datetime(",
+        ),
+    ),
+    (
+        "# --- UUID ---",
+        (
+            "def _is_uuid_type_annotation(",
+            "def _closed_uuid(",
+            "def _raise_host_uuid_type_miss(",
+            "def apply_native_uuid(",
+            "_UUID_DOOR",
+            "def _select_uuid(",
+        ),
+    ),
+    (
+        "# --- IP ---",
+        (
+            "def _read_ip_facade(",
+            "def _reject_ip_string(",
+            "def _bridge_to_ip(",
+            "def _closed_ip(",
+            "def _raise_host_ip_type_miss(",
+            "def apply_native_ip(",
+            "_IP_DOOR",
+            "def _select_ip(",
+        ),
+    ),
+    (
+        "# --- Path ---",
+        (
+            "def _is_path_type_annotation(",
+            "def _closed_path(",
+            "def _raise_host_path_type_miss(",
+            "def apply_native_path(",
+            "_PATH_DOOR",
+            "def _select_path(",
+        ),
+    ),
+)
+
+
+def test_native_families_are_contiguous_sections():
+    """Each Door A family is one banner. Shared helpers stay outside.
+
+    ``_FamilyDoor`` is the private bind row. Cap stays absent.
+    No class-per-type product surface.
+    """
+    native_py = host_native_source()
+    assert "class _FamilyDoor" in native_py
+    assert "compile_cap" not in native_py
+    assert "apply_cap" not in native_py
+    assert "class IntegerNative" not in native_py
+    assert "class FloatNative" not in native_py
+    starts = [native_py.index(banner) for banner, _names in _FAMILY_SECTIONS]
+    assert starts == sorted(starts)
+    bind_at = native_py.index("# --- Bind walk ---")
+    assert bind_at > starts[-1]
+    for name in (
+        "def _closed_value_bounds(",
+        "def _closed_length(",
+        "def _is_stored_or_str_annotation(",
+        "def _raise_native_bound_miss(",
+        "def _raise_host_enum_type_miss(",
+        "def _apply_native_closed(",
+    ):
+        assert native_py.index(name) < starts[0], name
+    for index, (banner, names) in enumerate(_FAMILY_SECTIONS):
+        end = starts[index + 1] if index + 1 < len(starts) else bind_at
+        section = native_py[starts[index] : end]
+        for name in names:
+            assert name in section, (banner, name)
+    table = native_py[native_py.index("_FAMILY_DOORS") : native_py.index("def apply_native_bounds(")]
+    cursor = -1
+    for door_name in (
+        "_INTEGER_DOOR",
+        "_FLOAT_DOOR",
+        "_STRING_DOOR",
+        "_BYTES_DOOR",
+        "_INTEGER_ENUM_DOOR",
+        "_STRING_ENUM_DOOR",
+        "_BOOLEAN_DOOR",
+        "_DECIMAL_DOOR",
+        "_DATE_DOOR",
+        "_DATETIME_DOOR",
+        "_UUID_DOOR",
+        "_IP_DOOR",
+        "_PATH_DOOR",
+    ):
+        at = table.index(door_name)
+        assert at > cursor
+        cursor = at
+    assert native_py.index("def bind_native_plan(") > bind_at
 
 
 def test_closed_apply_slot_is_seeded_on_validator():

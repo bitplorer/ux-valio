@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Host ``_native.py`` groups each Door A family in one section and
+  binds through private ``_FAMILY_DOORS`` (``_FamilyDoor`` row:
+  closed detector, compile attr, apply attr, host run). Living slots
+  stay ``_native_plan`` / ``_native_apply`` / ``_native_run`` /
+  ``_native_fail_kind``. Cap Door B stays off. Closed-plan behaviour
+  is unchanged.
+
 - Native Path type door: closed ``ux-valio[native]`` plans now cover
   ``PathValidator`` when the annotation is ``pathlib.Path`` or the
   facade coerce union ``pathlib.Path | str``, and the only active
