@@ -3,8 +3,8 @@
 //! [`PyPlan`] is the frozen object Python calls `Plan`. It holds one
 //! [`Plan`] variant — Integer bounds, Float bounds, String length, Bytes
 //! length, an IntegerEnum member set, a StringEnum member set, or a
-//! Boolean / Decimal / Date / DateTime / Uuid type-door marker. There is no
-//! shared unit bag.
+//! Boolean / Decimal / Date / DateTime / Uuid type-door marker, or an
+//! IP string-identity kind. There is no shared unit bag.
 
 use std::sync::Arc;
 
@@ -45,6 +45,10 @@ pub(crate) enum FailKind {
     /// a compiled member value. Host formats the KEEP type-door
     /// `TypeError`.
     NotMember = 9,
+    /// Host IP string identity: the extracted `str` is not an address
+    /// of the compiled kind (`ipv4` / `ipv6` / `ip`). Host formats the
+    /// KEEP `ValueError`.
+    NotIp = 10,
 }
 
 /// One compiled family. The variant's payload is the only check list
@@ -76,6 +80,20 @@ pub(crate) enum Plan {
     /// Exact `uuid.UUID` extract. A raw `str` does not extract. No
     /// bound unit. String coerce stays on the host.
     Uuid,
+    /// `str` extract, then IPv4 / IPv6 / either identity. The stored
+    /// value stays that string. No bound unit.
+    Ip(IpKind),
+}
+
+/// Which stdlib parser the IP plan mirrors.
+///
+/// `V4` is `ipaddress.IPv4Address`, `V6` is `ipaddress.IPv6Address`,
+/// `Either` is `ipaddress.ip_address` (v4, then v6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum IpKind {
+    V4,
+    V6,
+    Either,
 }
 
 /// Frozen native plan object. Python name is `Plan`. The body is one [`Plan`]

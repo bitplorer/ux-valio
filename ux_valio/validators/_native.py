@@ -9,13 +9,14 @@ are the same walk for every family, so they stay here. This is not a
 ``Plan`` is one variant per family. Integer / Float own ``BoundUnit``
 values. String / Bytes own ``LengthUnit`` values. IntegerEnum /
 StringEnum own a member set. Boolean / Decimal / Date / DateTime /
-Uuid are type-door markers. There is no shared unit bag.
+Uuid are type-door markers. IP owns an address kind (``ipv4`` /
+``ipv6`` / ``ip``) and checks a ``str``. There is no shared unit bag.
 
 Bind-time choice: when ``ux_valio_native`` is importable and the
 specified path is one closed family, compile that variant once.
 Type door is host-first ``isinstance`` then FFI extract (``i64`` /
 ``f64`` / ``&str`` / ``&[u8]`` / ``bool`` / ``decimal.Decimal`` /
-``datetime.date`` / ``datetime.datetime`` / ``uuid.UUID``);
+``datetime.date`` / ``datetime.datetime`` / ``uuid.UUID`` / ``str`` for IP);
 bound / length / member checks run after extract. StringEnum
 extract is the member's ``.value`` as UTF-8 ``&str``. Boolean
 extract is exact ``bool`` (``1`` / ``0`` are not coerced). Decimal
@@ -27,10 +28,14 @@ subclasses ``date``; ``DateValidator`` still rejects it in the
 named extra). DateTime extract is ``datetime.datetime`` (a plain
 ``date`` does not). Uuid extract is ``uuid.UUID`` (a raw ``str``
 does not). String coerce for Date, DateTime, and Uuid stays host
-``_pre_validate``. Open TypeValidator / Union / TypedDict /
-Annotated / pattern / plain ``EnumValidator`` / Path / IP
+``_pre_validate``. IP facades do not coerce: the stored value is
+the given string, and ``apply_ip`` mirrors ``ipaddress.IPv4Address``
+/ ``IPv6Address`` / ``ip_address`` on that string (``FailKind.NotIp``).
+Open TypeValidator / Union / TypedDict /
+Annotated / pattern / plain ``EnumValidator`` / Path
 stay on the host. A ``BooleanValidator``, ``DecimalValidator``,
-``DateValidator``, ``DateTimeValidator``, or ``UUIDValidator`` with
+``DateValidator``, ``DateTimeValidator``, ``UUIDValidator``,
+``IPv4Validator``, ``IPv6Validator``, or ``IPAddressValidator`` with
 any extra unit stays on the host. Missing or failed extra → host
 ``_active_units`` path. No import on the hot path after that
 choice. Each family keeps its own ``compile_*`` / ``apply_*`` pair.
@@ -42,6 +47,7 @@ from __future__ import annotations
 import datetime
 import decimal
 import enum
+import ipaddress
 import types
 import uuid
 from typing import Any, Union, get_args, get_origin
@@ -92,6 +98,15 @@ _HOST_LENGTH_TO_COMPILE = (
     ("max_length", "max_length"),
     ("length", "length"),
 )
+
+# Living IP facades store ``str``. The stdlib types are the parsers,
+# not the stored type. This module does not import facades; the class
+# is the one in ``ux_valio.facades.typed``.
+_IP_FACADES = {
+    "IPv4Validator": ("ipv4", ipaddress.IPv4Address, "IPv4 address"),
+    "IPv6Validator": ("ipv6", ipaddress.IPv6Address, "IPv6 address"),
+    "IPAddressValidator": ("ip", ipaddress.ip_address, "IP address"),
+}
 
 
 def _closed_value_bounds(owner: Any, annotation: type, bound_type: type) -> dict[str, Any] | None:
@@ -364,6 +379,37 @@ def _closed_uuid(owner: Any) -> dict[str, Any] | None:
     return {}
 
 
+def _read_ip_facade(owner: Any) -> tuple[str, Any, str] | None:
+    """``(kind, parser, label)`` for a closed IP facade. Else ``None``.
+
+    Kind is the ``compile_ip`` argument (``ipv4`` / ``ipv6`` / ``ip``).
+    The parser and label match ``_reject_unless_ip`` on the facade.
+    """
+    if type(owner).__module__ != "ux_valio.facades.typed":
+        return None
+    return _IP_FACADES.get(type(owner).__qualname__)
+
+
+def _closed_ip(owner: Any) -> dict[str, str] | None:
+    """Compile kwargs when the path is an IP facade + the type door.
+
+    Annotation must be ``str``. Only ``TypeValidator`` may be active.
+    Extra bounds (``max_length``, ``required``, choice, pattern,
+    ``reassign=False``) stay on the host. The stored value stays the
+    given string: there is no ``_pre_validate`` coerce to
+    ``ipaddress`` objects. ``StringValidator`` is not this door.
+    """
+    spec = _read_ip_facade(owner)
+    if spec is None:
+        return None
+    if getattr(owner, "annotation", None) is not str:
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {"kind": spec[0]}
+
+
 def _closed_datetime(owner: Any) -> dict[str, Any] | None:
     """Empty compile kwargs when the path is ``datetime.datetime`` + the type door.
 
@@ -441,6 +487,33 @@ def _bridge_to_length(owner: Any, value: Any) -> None:
     LengthValidator._validate_length(owner, None, value)
 
 
+def _bridge_to_ip(owner: Any, value: Any) -> None:
+    """Extract miss before native IP apply.
+
+    UnicodeError / extract TypeError on a value the host already
+    accepted as ``str`` is a bridge signal, not an L1 "overflow"
+    message. Fall through to the same stdlib parser the facade uses
+    (``IPv4Address`` / ``IPv6Address`` / ``ip_address``) so the KEEP
+    ``ValueError`` wording does not fork.
+    """
+    spec = _read_ip_facade(owner)
+    if spec is None:
+        raise RuntimeError("ux_valio_native apply failed")
+    _reject_ip_string(owner, value, spec[1], spec[2])
+
+
+def _reject_ip_string(owner: Any, value: Any, parser: Any, label: str) -> None:
+    """KEEP IP ``ValueError`` wording. Same text as ``_reject_unless_ip``."""
+    if value is None:
+        return
+    try:
+        parser(value)
+    except (ValueError, ipaddress.AddressValueError) as err:
+        raise ValueError(
+            f"{owner.name} expects a valid {label}, got {value} as value instead"
+        ) from err
+
+
 def _bridge_to_type(owner: Any, value: Any) -> None:
     """Extract miss before native type-door or member-set apply.
 
@@ -506,6 +579,16 @@ def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
             raise TypeError(
                 f"{owner.name} expect {owner.annotation} type, "
                 f"got {type(value).__name__} type instead"
+            )
+        case kinds.NotIp:
+            spec = _read_ip_facade(owner)
+            if spec is None:
+                raise RuntimeError(
+                    f"ux_valio_native apply returned unexpected fail kind {fail!r}"
+                )
+            _reject_ip_string(owner, value, spec[1], spec[2])
+            raise RuntimeError(
+                f"ux_valio_native apply returned unexpected fail kind {fail!r}"
             )
         case _:
             raise RuntimeError(
@@ -575,6 +658,18 @@ def _raise_host_date_type_miss(owner: Any, value: Any) -> None:
     caller. The closed plan has no second path unit, so
     ``collect_all`` does not continue inside this raise (``validate``
     still continues into the named extra).
+    """
+    TypeValidator._validate_type(owner, None, value)
+
+
+def _raise_host_ip_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed IP type door is host-first.
+
+    FFI type is the later ``str`` extract. ``int`` / ``bytes`` /
+    ``ipaddress`` objects miss here. A ``str`` does not. ``None`` is
+    skipped by the caller. The closed plan has no second path unit,
+    so ``collect_all`` does not continue inside this raise
+    (``validate`` still continues into the named extra for a non-str).
     """
     TypeValidator._validate_type(owner, None, value)
 
@@ -873,6 +968,34 @@ def apply_native_uuid(owner: Any, value: Any) -> None:
     _raise_native_bound_miss(owner, fail, value)
 
 
+def apply_native_ip(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-str stays on host.
+
+    UnicodeError / TypeError at ``str`` extract is a bridge signal
+    (same three buckets as String length: validation ``FailKind`` /
+    bridge / native-infra ``RuntimeError`` naming ``ux_valio_native``).
+    No public L1 "overflow" message. Door A is the given string: a
+    valid address passes and is stored unchanged; an invalid address
+    is ``FailKind.NotIp``. ``int`` / ``bytes`` are not coerced. No
+    bound unit.
+    """
+    if value is None:
+        return
+    if not isinstance(value, str):
+        _raise_host_ip_type_miss(owner, value)
+        return
+    try:
+        fail = owner._native_apply(owner._native_plan, value)
+    except (UnicodeError, OverflowError, TypeError):
+        _bridge_to_ip(owner, value)
+        return
+    except Exception as err:
+        raise RuntimeError("ux_valio_native apply failed") from err
+    if fail is None:
+        return
+    _raise_native_bound_miss(owner, fail, value)
+
+
 def apply_native_datetime(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. Non-datetime stays on host.
 
@@ -1041,6 +1164,16 @@ def _select_uuid(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     )
 
 
+def _select_ip(native: Any, bounds: dict[str, str]) -> _ClosedPair:
+    """Closed IP: ``compile_ip`` and ``apply_ip`` stay a pair."""
+    return (
+        native.apply_ip,
+        apply_native_ip,
+        native.compile_ip,
+        bounds,
+    )
+
+
 def _select_datetime(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed DateTime: ``compile_datetime`` and ``apply_datetime`` stay a pair."""
     return (
@@ -1077,7 +1210,8 @@ def bind_native_plan(owner: Any) -> None:
     One walk. Each closed family keeps its own ``compile_*`` / ``apply_*``
     pair: Integer / Float own ``BoundUnit`` values, String / Bytes own
     ``LengthUnit`` values, IntegerEnum / StringEnum own a member set,
-    Boolean / Decimal / Date / DateTime / Uuid are type-door markers. An
+    Boolean / Decimal / Date / DateTime / Uuid are type-door markers.
+    IP owns an address kind and checks a ``str``. An
     unclosed path does not import the extra. Do not merge a pair into
     one door.
     """
@@ -1093,6 +1227,7 @@ def bind_native_plan(owner: Any) -> None:
         (_closed_date, _select_date),
         (_closed_datetime, _select_datetime),
         (_closed_uuid, _select_uuid),
+        (_closed_ip, _select_ip),
     )
     for detect, select in families:
         payload = detect(owner)

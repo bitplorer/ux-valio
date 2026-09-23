@@ -3,8 +3,8 @@
 
 ``Plan`` is one variant per family (``BoundUnit`` / ``LengthUnit`` /
 member set / Boolean, Decimal, Date, DateTime, and Uuid type-door
-markers). No shared unit bag. Path / IP stay HOLD. Cap Door B
-stays off.
+markers / an IP string-identity kind). No shared unit bag. Path
+stays HOLD. Cap Door B stays off.
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
@@ -67,6 +67,8 @@ _PUBLIC_DOORS = (
     "apply_datetime",
     "compile_uuid",
     "apply_uuid",
+    "compile_ip",
+    "apply_ip",
 )
 
 _ABSENT_DOORS = (
@@ -74,8 +76,6 @@ _ABSENT_DOORS = (
     "apply",
     "compile_path",
     "apply_path",
-    "compile_ip",
-    "apply_ip",
     "compile_cap",
     "apply_cap",
 )
@@ -85,7 +85,7 @@ _ABSENT_DOORS = (
 def test_bare_compile_and_apply_are_absent_on_the_native_module():
     """Hard cut: doors are family-named. No alias remains.
 
-    Path / IP stay HOLD. Cap Door B stays off this native module.
+    Path stays HOLD. Cap Door B stays off this native module.
     """
     import ux_valio_native as native
 
@@ -121,12 +121,12 @@ def test_bare_compile_and_apply_are_absent_on_the_native_module():
     assert "fn compile_uuid" in rust
     assert "fn apply_uuid" in rust
     assert "Plan::Uuid" in rust
+    assert "fn compile_ip" in rust
+    assert "fn apply_ip" in rust
+    assert "Plan::Ip" in rust
     assert "fn compile_path" not in rust
     assert "fn apply_path" not in rust
     assert "Plan::Path" not in rust
-    assert "fn compile_ip" not in rust
-    assert "fn apply_ip" not in rust
-    assert "Plan::Ip" not in rust
 
 
 @needs_native
@@ -163,6 +163,7 @@ def test_apply_door_rejects_a_different_family():
             native.compile_uuid(),
             uuid.UUID("12345678-1234-5678-1234-567812345678"),
         ),
+        ("apply_ip", native.compile_ip("ipv4"), "127.0.0.1"),
     )
     for door, plan, sample in doors:
         assert getattr(native, door)(plan, sample) is None

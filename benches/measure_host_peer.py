@@ -9,23 +9,29 @@ Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
 ``BooleanValidator`` exact-bool type door, a closed
 ``DecimalValidator`` exact-Decimal type door, a closed
 ``DateValidator`` date type door, a closed
-``DateTimeValidator`` datetime type door, or a closed
-``UUIDValidator`` UUID type door (taught API, soul stays
-Python). Enum, Boolean, Decimal, Date, DateTime, and UUID path A
+``DateTimeValidator`` datetime type door, a closed
+``UUIDValidator`` UUID type door, or a closed
+``IPv4Validator`` / ``IPv6Validator`` / ``IPAddressValidator``
+string-identity door (taught API, soul stays
+Python). Enum, Boolean, Decimal, Date, DateTime, UUID, and IP path A
 clear the native plan after bind so the loop is pure Python setattr.
 Decimal values are exact ``Decimal`` instances, Date / DateTime
 values are exact ``date`` / ``datetime`` instances, and UUID values
 are exact ``uuid.UUID`` instances (string coerce is host
-``_pre_validate``, not this apply-only comparison).
+``_pre_validate``, not this apply-only comparison). IP values
+are the given address strings (the facades do not coerce to
+``ipaddress`` objects).
 
 Hot path B: ``compile_integer(...)`` / ``compile_float(...)`` /
 ``compile_string(...)`` / ``compile_bytes(...)`` /
 ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
 ``compile_boolean()`` / ``compile_decimal()`` /
-``compile_date()`` / ``compile_datetime()`` / ``compile_uuid()`` once, then
+``compile_date()`` / ``compile_datetime()`` / ``compile_uuid()`` /
+``compile_ip(kind)`` once, then
 ``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
-``apply_decimal`` / ``apply_date`` / ``apply_datetime`` / ``apply_uuid`` on the
+``apply_decimal`` / ``apply_date`` / ``apply_datetime`` / ``apply_uuid`` /
+``apply_ip`` on the
 ``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
 store/raise. Not Cap Door B.
@@ -40,8 +46,10 @@ member set, one StringEnum UTF-8 member set, one Boolean exact
 (``datetime.datetime`` extracts because it subclasses ``date``; raw
 ``str`` does not coerce), and one DateTime ``datetime.datetime`` type
 door (a plain ``date`` does not extract; raw ``str`` does not coerce),
-and one Uuid ``uuid.UUID`` type door (raw ``str`` / ``int`` / ``bool`` /
-``bytes`` do not coerce).
+one Uuid ``uuid.UUID`` type door (raw ``str`` / ``int`` / ``bool`` /
+``bytes`` do not coerce), and one IP string-identity door per
+facade (``ipv4`` / ``ipv6`` / ``ip``; the stored value stays the
+given string; ``int`` / ``bytes`` are not coerced).
 Switch bar:
 FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
 below the bar is not claimed native (KEEP host for that family).
@@ -122,6 +130,36 @@ PASSING_UUID = (
     uuid.UUID("550e8400-e29b-41d4-a716-446655440000"),
     uuid.UUID("01234567-89ab-cdef-0123-456789abcdef"),
     uuid.UUID("12345678-1234-5678-1234-567812345678"),
+)
+PASSING_IPV4 = (
+    "127.0.0.1",
+    "0.0.0.0",
+    "255.255.255.255",
+    "10.0.0.1",
+    "192.168.0.1",
+    "8.8.8.8",
+    "1.2.3.4",
+    "127.0.0.1",
+)
+PASSING_IPV6 = (
+    "::1",
+    "::",
+    "1::",
+    "fe80::1%eth0",
+    "::ffff:192.0.2.1",
+    "2001:db8::1",
+    "0:0:0:0:0:0:0:1",
+    "2001:DB8::1",
+)
+PASSING_IP = (
+    "127.0.0.1",
+    "::1",
+    "0.0.0.0",
+    "2001:db8::",
+    "10.1.2.3",
+    "fe80::1%1",
+    "::ffff:192.0.2.1",
+    "8.8.4.4",
 )
 
 
@@ -231,6 +269,36 @@ def _date_family(**kwargs: Any) -> PlanFamily:
         compile_attr="compile_date",
         apply_attr="apply_date",
         annotation=datetime.date,
+        **kwargs,
+    )
+
+
+def _ipv4_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="IPv4Validator",
+        compile_attr="compile_ip",
+        apply_attr="apply_ip",
+        annotation=str,
+        **kwargs,
+    )
+
+
+def _ipv6_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="IPv6Validator",
+        compile_attr="compile_ip",
+        apply_attr="apply_ip",
+        annotation=str,
+        **kwargs,
+    )
+
+
+def _ip_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="IPAddressValidator",
+        compile_attr="compile_ip",
+        apply_attr="apply_ip",
+        annotation=str,
         **kwargs,
     )
 
@@ -620,6 +688,42 @@ UUID_FAMILIES = (
     ),
 )
 
+IP_FAMILIES = (
+    _ipv4_family(
+        name="IPv4.Identity",
+        field_kwargs={},
+        compile_kwargs={"kind": "ipv4"},
+        values=PASSING_IPV4,
+        seed="127.0.0.1",
+        smoke_ok="127.0.0.1",
+        smoke_miss="::1",
+        smoke_kind="NotIp",
+        label="IPv4 string identity",
+    ),
+    _ipv6_family(
+        name="IPv6.Identity",
+        field_kwargs={},
+        compile_kwargs={"kind": "ipv6"},
+        values=PASSING_IPV6,
+        seed="::1",
+        smoke_ok="::1",
+        smoke_miss="127.0.0.1",
+        smoke_kind="NotIp",
+        label="IPv6 string identity",
+    ),
+    _ip_family(
+        name="IP.Identity",
+        field_kwargs={},
+        compile_kwargs={"kind": "ip"},
+        values=PASSING_IP,
+        seed="127.0.0.1",
+        smoke_ok="::1",
+        smoke_miss="not-an-ip",
+        smoke_kind="NotIp",
+        label="IP string identity",
+    ),
+)
+
 FAMILIES = (
     INTEGER_FAMILIES
     + FLOAT_FAMILIES
@@ -632,6 +736,7 @@ FAMILIES = (
     + DATE_FAMILIES
     + DATETIME_FAMILIES
     + UUID_FAMILIES
+    + IP_FAMILIES
 )
 
 
@@ -725,6 +830,9 @@ def _load_facades() -> dict[str, Any]:
             DateTimeValidator,
             DateValidator,
             DecimalValidator,
+            IPAddressValidator,
+            IPv4Validator,
+            IPv6Validator,
             UUIDValidator,
             FloatValidator,
             IntegerEnumValidator,
@@ -749,6 +857,9 @@ def _load_facades() -> dict[str, Any]:
         "DateValidator": DateValidator,
         "DateTimeValidator": DateTimeValidator,
         "UUIDValidator": UUIDValidator,
+        "IPv4Validator": IPv4Validator,
+        "IPv6Validator": IPv6Validator,
+        "IPAddressValidator": IPAddressValidator,
     }
 
 
@@ -768,9 +879,12 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
         "DateValidator",
         "DateTimeValidator",
         "UUIDValidator",
+        "IPv4Validator",
+        "IPv6Validator",
+        "IPAddressValidator",
     ):
         # Bind first (enum plans compile at ``__set_name__``; Boolean,
-        # Decimal, Date, DateTime, and UUID may compile at construct), then
+        # Decimal, Date, DateTime, UUID, and IP may compile at construct), then
         # drop the plan so path A is pure Python setattr.
         namespace = {"__annotations__": {"n": family.annotation}, "n": field}
         if family.annotation is bool:
@@ -783,6 +897,12 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
             box_name = "DateTimeBox"
         elif family.annotation is uuid.UUID:
             box_name = "UuidBox"
+        elif family.facade in (
+            "IPv4Validator",
+            "IPv6Validator",
+            "IPAddressValidator",
+        ):
+            box_name = "IpBox"
         else:
             box_name = "EnumBox"
         box_type = dataclass(type(box_name, (), namespace))
@@ -1013,7 +1133,9 @@ def _report_header(skip_reason: str | None) -> None:
         "Date datetime.date (compile_date / apply_date; str stays host); "
         "DateTime datetime.datetime (compile_datetime / apply_datetime; "
         "plain date misses); "
-        "Uuid uuid.UUID (compile_uuid / apply_uuid; str stays host)"
+        "Uuid uuid.UUID (compile_uuid / apply_uuid; str stays host); "
+        "IP string identity (compile_ip / apply_ip; stored str; "
+        "NotIp on a bad address)"
     )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
@@ -1229,10 +1351,24 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
             + ". Do not claim native for Uuid. Uuid type door stays on the host."
         )
         return 1
+    ips = [
+        (family, unlocked, ratio)
+        for family, unlocked, ratio in results
+        if family.facade in ("IPv4Validator", "IPv6Validator", "IPAddressValidator")
+    ]
+    ip_failed = [family.name for family, unlocked, _ratio in ips if not unlocked]
+    ip_passed = [family.name for family, unlocked, _ratio in ips if unlocked]
+    if ip_failed or not ip_passed:
+        print(
+            f"SUMMARY: IP KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(ip_failed or ["(no IP family)"])
+            + ". Do not claim native for IP. IP string identity stays on the host."
+        )
+        return 1
     print(
-        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed + boolean_passed + decimal_passed + date_passed + clock_passed + uuid_passed)} each >= "
+        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed + boolean_passed + decimal_passed + date_passed + clock_passed + uuid_passed + ip_passed)} each >= "
         f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr). "
-        "Date, DateTime, and Uuid type doors met the bar."
+        "Date, DateTime, Uuid type doors, and IP string identity met the bar."
     )
     return 0
 
@@ -1241,7 +1377,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Measure Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean/"
-            "Decimal/Date/DateTime/Uuid setattr vs native plan apply."
+            "Decimal/Date/DateTime/Uuid/IP setattr vs native plan apply."
         )
     )
     parser.add_argument(

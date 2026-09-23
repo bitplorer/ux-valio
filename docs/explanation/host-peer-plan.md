@@ -132,7 +132,14 @@ or the facade coerce union ``uuid.UUID | str`` and the only active
 unit is the type door. ``compile_uuid()`` /
 ``apply_uuid(plan, uuid)`` stay a pair. String coerce stays host
 ``_pre_validate``. Exact ``uuid.UUID`` passes, including the nil
-UUID. ``int`` / ``bool`` / ``bytes`` do not coerce. Unclosed
+UUID. ``int`` / ``bool`` / ``bytes`` do not coerce.
+``IPv4Validator()`` / ``IPv6Validator()`` / ``IPAddressValidator()``
+compile when the annotation is ``str`` and the only active unit is
+the type door. ``compile_ip(kind)`` / ``apply_ip(plan, str)`` stay
+a pair. ``kind`` is ``ipv4`` / ``ipv6`` / ``ip``. The stored value
+stays the given string. There is no ``_pre_validate`` coerce to
+``ipaddress`` objects. ``IPv4Address`` / ``IPv6Address`` /
+``ip_address`` are the parsers that kind mirrors. Unclosed
 paths (``required``, ``multiple_of``, pattern, choice, named
 identity, Email, a mixed bound type, Union / TypedDict /
 Annotated) stay on the host. Email / named identity were already
@@ -361,9 +368,40 @@ after host pre-validate. One family. Bounds do not:
   stays host. The facade coerce annotation ``uuid.UUID | str`` is
   the host coerce door.
 
-HOLD after this tip: Path/IP, plain EnumValidator, Pattern /
-custom callables, named facades, Cap Door B. Uuid bounds stay host.
-No follow-up remains on this Uuid concern.
+HOLD after the Uuid tip was Path/IP. IP shipped in the next
+paragraphs. Path stayed off that path. Uuid bounds stay host. No
+follow-up remains on this Uuid concern.
+
+**IP string identity (Door A lock).** Stored value is the given
+string. One family. The measure cleared 3×, so the closed
+string-identity door ships. The three facades differ only by parser:
+
+- Living surface is ``IPv4Validator`` / ``IPv6Validator`` /
+  ``IPAddressValidator`` (``StringValidator``). They do not store
+  ``ipaddress.IPv4Address`` or ``IPv6Address``. There is no
+  ``IPAddress`` type. There is no ``_pre_validate`` coerce.
+- Host ``isinstance`` of ``str`` is first. FFI extract is ``&str``.
+  ``compile_ip(kind)`` / ``apply_ip`` stay a pair. ``kind`` is
+  ``ipv4`` (``IPv4Address``), ``ipv6`` (``IPv6Address``), or
+  ``ip`` (``ip_address``, v4 then v6).
+- Strings those parsers accept pass, including ``::``,
+  IPv4-mapped IPv6, and ``fe80::1%eth0``. The stored text is not
+  rewritten. Invalid strings are ``FailKind.NotIp``. Host wording
+  stays ``expects a valid … address, got … as value instead``.
+- ``int`` / ``bytes`` / ``ipaddress`` objects miss the type door.
+  A non-str still runs the named extra so ``collect_all`` matches
+  the host. ``None`` skips.
+- **Extra units.** Length, pattern, choice, ``required``, and
+  ``reassign=False`` stay on the host. ``StringValidator`` is not
+  this door.
+- Cap Door B stays off. One family only (IP). Path / plain Enum /
+  Pattern stay off this tip.
+- Pair naming: ``compile_ip`` / ``apply_ip``. Host ``_select_ip``
+  walks the one-family bind list, same shape as Uuid.
+
+HOLD after this tip: Path, plain EnumValidator, Pattern /
+custom callables, named facades, Cap Door B. No follow-up remains
+on this IP concern.
 
 ## What never leaves the host
 
@@ -443,6 +481,11 @@ No follow-up remains on this Uuid concern.
    ``isinstance`` misses first (``int`` / ``bool`` / ``bytes`` /
    raw ``str``), and an extract TypeError falls through to host
    ``TypeValidator``. String coerce stays host ``_pre_validate``.
+   PyO3 ``&str`` extract is the IP door (``apply_ip``). A non-str
+   raises at that extract; host ``isinstance`` misses first
+   (``int`` / ``bytes``). An invalid address is
+   ``FailKind.NotIp`` (host KEEP ``ValueError``). The stored value
+   stays the given string. No coerce to ``ipaddress`` objects.
    ``FailKind.NotMember`` is the validation bucket
    (host type-door wording, ``match fail:``). Unexpected
    peer/infra is ``RuntimeError`` naming ``ux_valio_native``. Three
@@ -476,6 +519,8 @@ specified ``IntegerValidator(min_value=0)`` / ``FloatValidator(min_value=0.0)``
 / ``DateValidator()`` (``datetime.date``; string coerce stays host)
 / ``DateTimeValidator()`` (``datetime.datetime``; a plain ``date`` misses)
 / ``UUIDValidator()`` (``uuid.UUID``; string coerce stays host)
+/ ``IPv4Validator()`` / ``IPv6Validator()`` / ``IPAddressValidator()``
+(given string; ``compile_ip(kind)`` / ``apply_ip``)
 setattr stays several times slower than a one-shot native apply of that
 same plan, and the Python compile (``_active_units``, skip TypedDict,
 skip watch) is already in.
@@ -500,21 +545,25 @@ closed ``DateValidator`` date type door, or a closed
 ``datetime`` instances, so string coerce is not in the apply-only
 comparison), or a closed ``UUIDValidator`` UUID type door (values
 are ``uuid.UUID`` instances, so string coerce is not in the
-apply-only comparison). Hot
+apply-only comparison), or a closed IP string-identity door
+(values are the given address strings; the facades do not coerce
+to ``ipaddress`` objects). Hot
 path B is ``compile_integer(...)``
 / ``compile_float(...)`` / ``compile_string(...)`` / ``compile_bytes(...)``
 / ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
 ``compile_boolean()`` / ``compile_decimal()`` /
-``compile_date()`` / ``compile_datetime()`` / ``compile_uuid()``
+``compile_date()`` / ``compile_datetime()`` / ``compile_uuid()`` /
+``compile_ip(kind)``
 once then ``apply_integer`` /
 ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
 ``apply_decimal`` / ``apply_date`` / ``apply_datetime`` /
-``apply_uuid`` on the
+``apply_uuid`` / ``apply_ip`` on the
 product peer (``native/``: private ``Plan`` enum, one variant per
 family — Integer / Float own bound units, String / Bytes own length
 units, IntegerEnum / StringEnum own their member sets, Boolean,
-Decimal, Date, and DateTime are type-door markers; public
+Decimal, Date, DateTime, and Uuid are type-door markers, IP owns
+an address kind; public
 ``compile_*`` / ``apply_*`` names unchanged). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
 family; the bar is **≥ 3×** for each. A family below the bar is
@@ -870,7 +919,62 @@ extra on the Python path. Integer / Float stayed ~29–30×, String
 python benches/measure_host_peer.py
 ```
 
-HOLD after this tip: Path/IP, plain EnumValidator, Pattern /
-custom callables, named facades, Cap Door B. Uuid bounds
-(min/max/gt/lt/eq) stay host. No follow-up remains on this Uuid
-concern.
+HOLD after the Uuid tip was Path/IP. IP shipped below. Path stayed
+off that path. Uuid bounds (min/max/gt/lt/eq) stay host. No
+follow-up remains on this Uuid concern.
+
+**IP string identity (Door A lock).** Stored value is the given
+string. One family. The measure cleared 3×, so the closed
+string-identity door ships. Length and other extra units do not:
+
+- Living facades store the given string. ``IPv4Address`` /
+  ``IPv6Address`` / ``ip_address`` are the parsers, not the stored
+  type. No ``_pre_validate`` coerce.
+- Host ``isinstance`` of ``str``, then ``apply_ip``. ``kind`` is
+  ``ipv4`` / ``ipv6`` / ``ip``. Invalid strings are
+  ``FailKind.NotIp``.
+- ``int`` / ``bytes`` miss. Scoped IPv6 and IPv4-mapped addresses
+  that the stdlib parser accepts pass. The stored text is not
+  rewritten.
+- Cap Door B stays off. One family only (IP). Path / plain Enum /
+  Pattern stay off this tip.
+- Pair naming: ``compile_ip`` / ``apply_ip``. Host ``_select_ip``.
+
+### Measured (2026-09-23) IP string identity
+
+Same class of box, one run, 400000 iters after 20000 warmup, values
+are the given address strings (the facades do not coerce to
+``ipaddress`` objects). CPython 3.14.7, rustc 1.83.0, Linux x86_64.
+Peer is a release cdylib (``python -m pip install maturin`` then
+``maturin develop --release`` via
+``python benches/measure_host_peer.py``). Host units were
+``_validate_type`` only. Path A clears the native plan after bind so
+setattr is pure Python (the named extra still parses the string).
+B is ``apply_ip(plan, str)`` only (``Python::detach``). Smoke:
+``apply_ip`` on a bad address returns ``FailKind.NotIp`` (``::1``
+misses ipv4, ``127.0.0.1`` misses ipv6, ``not-an-ip`` misses ip).
+``int`` / ``bytes`` are not coerced. No length unit. Bar 3×.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| IPv4 string | 5743.4 | 142.5 | **40.32×** |
+| IPv6 string | 6653.4 | 178.0 | **37.39×** |
+| either string | 7336.2 | 168.6 | **43.52×** |
+
+**Verdict: PASS.** All three IP families cleared the 3× bar
+(37.39×–43.52×). Native apply here is ~143–178 ns/op (GIL
+released), not a 70× product setattr claim. Host setattr still
+runs the named parser on the Python path. Integer / Float stayed
+~28–29×, String ~27–29×, Bytes ~27–29×, IntegerEnum ~40×,
+StringEnum ~32×, Boolean ~38×, Decimal ~76×, Date ~77×, DateTime
+~78×, and Uuid ~74× on that same run (still PASS). CPython 3.14.7
+/ rustc 1.83.0 / Linux x86_64.
+
+```console
+python benches/measure_host_peer.py
+```
+
+HOLD after this tip: Path, plain EnumValidator, Pattern /
+custom callables, named facades, Cap Door B. IP length / pattern /
+choice / ``required`` / ``reassign=False`` stay host. No follow-up
+remains on this IP concern.

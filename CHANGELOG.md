@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- Native IP string identity: closed ``ux-valio[native]`` plans now
+  cover ``IPv4Validator``, ``IPv6Validator``, and
+  ``IPAddressValidator`` when the annotation is ``str`` and the only
+  active unit is the type door. ``compile_ip`` / ``apply_ip`` stay a
+  pair. ``kind`` is ``ipv4`` / ``ipv6`` / ``ip``. Door A lock: the
+  stored value stays the given string. There is no
+  ``_pre_validate`` coerce to ``ipaddress`` objects.
+  ``IPv4Address`` / ``IPv6Address`` / ``ip_address`` are the parsers
+  the kind mirrors, not a stored type. Exact strings those parsers
+  accept pass, including ``::``, IPv4-mapped IPv6, and
+  ``fe80::1%eth0``. The stored text is not rewritten. ``int`` /
+  ``bytes`` / ``ipaddress`` objects miss the type door. Invalid
+  strings are ``FailKind.NotIp``; the host keeps the existing
+  ``ValueError`` sentence. Extract miss on a ``str`` bridges to
+  that parser. ``None`` skips. Length, pattern, choice,
+  ``required``, and ``reassign=False`` stay host.
+  ``StringValidator`` is not this door. Cap Door B stays off. Path
+  / plain EnumValidator / Pattern / named facades stay HOLD. No
+  follow-up remains on this IP concern.
+  Measure ``python benches/measure_host_peer.py`` (IPv4 **40.32×**,
+  host 5743.4 ns/op, native 142.5 ns/op; IPv6 **37.39×**, host
+  6653.4 ns/op, native 178.0 ns/op; IP **43.52×**, host 7336.2 ns/op,
+  native 168.6 ns/op; CPython 3.14.7 / rustc 1.83 / Linux x86_64);
+  do not claim 70× product setattr.
+
 - Native Uuid type door: closed ``ux-valio[native]`` plans now cover
   ``UUIDValidator`` when the annotation is ``uuid.UUID`` or the facade
   coerce union ``uuid.UUID | str``, and the only active unit is the

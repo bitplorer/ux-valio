@@ -11,6 +11,9 @@ or a closed Decimal exact-Decimal type door,
 or a closed Date ``datetime.date`` type door,
 or a closed DateTime ``datetime.datetime`` type door,
 or a closed Uuid ``uuid.UUID`` type door,
+or a closed IP string-identity door (``IPv4Validator`` /
+``IPv6Validator`` / ``IPAddressValidator``; the stored value stays
+the given string),
 at construct. Cap Door B
 is not on this path.
 
@@ -48,7 +51,10 @@ At construct (`Validator.__init__` / `__set_name__`):
   DateTime type door (`compile_datetime` / `apply_datetime`; a plain
   `date` misses; string coerce stays host) or a closed Uuid type door
   (`compile_uuid` / `apply_uuid`; string coerce stays host; exact
-  `uuid.UUID` including the nil UUID passes). Otherwise the interpreter
+  `uuid.UUID` including the nil UUID passes) or a closed IP
+  string-identity door (`compile_ip` / `apply_ip`; the stored value
+  stays the given string; `FailKind.NotIp` on a bad address).
+  Otherwise the interpreter
   still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply_*` for
@@ -101,7 +107,8 @@ Boolean exact-bool type door vs `apply_boolean(plan, bool)`, and the
 closed Decimal exact-Decimal type door vs `apply_decimal(plan, Decimal)`,
 and the closed Date type door vs `apply_date(plan, date)`, and the
 closed DateTime type door vs `apply_datetime(plan, datetime)`, and the
-closed Uuid type door vs `apply_uuid(plan, uuid)`.
+closed Uuid type door vs `apply_uuid(plan, uuid)`, and the closed
+IP string-identity door vs `apply_ip(plan, str)`.
 
 ```console
 python benches/measure_host_peer.py
@@ -150,6 +157,15 @@ Uuid exact-UUID re-run on this tip: host **7324.1 ns/op**, native
 ~34×, Boolean ~40×, Decimal ~77×, Date ~78×, and DateTime ~85× on
 that same run (still PASS). Host setattr includes ``UUIDValidator``
 pre-validate and the named extra; native is plan apply only.
+IP string-identity re-run on this tip: IPv4 host **5743.4 ns/op**,
+native **142.5 ns/op**, ratio **40.32×** — **PASS**. IPv6 host
+**6653.4 ns/op**, native **178.0 ns/op**, ratio **37.39×** —
+**PASS**. IP (either) host **7336.2 ns/op**, native **168.6 ns/op**,
+ratio **43.52×** — **PASS**. Integer / Float stayed ~28–29×, String
+~27–29×, Bytes ~27–29×, IntegerEnum ~40×, StringEnum ~32×, Boolean
+~38×, Decimal ~76×, Date ~77×, DateTime ~78×, and Uuid ~74× on that
+same run (still PASS). Host setattr includes the named IP parser;
+native is plan apply only.
 Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply_integer`` uses
 ``Python::detach``). Do not claim the product extra is 70× end-to-end

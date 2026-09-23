@@ -4,7 +4,8 @@
 //! family's checks: Integer / Float own [`bound::BoundUnit`] values,
 //! String / Bytes own [`length::LengthUnit`] values, IntegerEnum owns
 //! an `i64` member set, StringEnum owns a UTF-8 member set, Boolean,
-//! Decimal, Date, DateTime, and Uuid are type-door markers. `apply_integer`
+//! Decimal, Date, DateTime, and Uuid are type-door markers. IP owns an
+//! address-kind (`ipv4` / `ipv6` / `ip`) and checks a `str`. `apply_integer`
 //! clones the integer
 //! bounds and walks those — a length unit is the wrong type, so it
 //! cannot be passed into that walk.
@@ -16,7 +17,8 @@
 //! `apply_decimal(plan, decimal.Decimal)` /
 //! `apply_date(plan, datetime.date)` /
 //! `apply_datetime(plan, datetime.datetime)` /
-//! `apply_uuid(plan, uuid.UUID)`).
+//! `apply_uuid(plan, uuid.UUID)` /
+//! `apply_ip(plan, &str)`).
 //! Bound units (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` /
 //! `Equal`) run after numeric extract. Each miss arm is fail-when:
 //! `min_value` passes when `value >= bound` (miss `<`); `gt` passes
@@ -39,12 +41,15 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 
 use bound::{apply_bound_units, compile_bound_plan};
+use ip::ip_miss;
 use length::{apply_length_units, compile_length_plan};
 use plan::{
-    apply_i64_members, apply_str_members, share_plan, unexpected_family, FailKind, Plan, PyPlan,
+    apply_i64_members, apply_str_members, share_plan, unexpected_family, FailKind, IpKind, Plan,
+    PyPlan,
 };
 
 mod bound;
+mod ip;
 mod length;
 mod plan;
 
@@ -235,24 +240,34 @@ fn compile_uuid_plan() -> PyPlan {
     share_plan(Plan::Uuid)
 }
 
+fn compile_ip_plan(kind: IpKind) -> PyPlan {
+    share_plan(Plan::Ip(kind))
+}
+
 /// Product native module: `compile_integer(...)` / `compile_float(...)` /
 /// `compile_string(...)` / `compile_bytes(...)` /
 /// `compile_integer_enum(...)` / `compile_string_enum(...)` /
 /// `compile_boolean()` / `compile_decimal()` / `compile_date()` /
-/// `compile_datetime()` / `compile_uuid()` + one-shot `apply_integer` /
+/// `compile_datetime()` / `compile_uuid()` / `compile_ip(kind)` + one-shot
+/// `apply_integer` /
 /// `apply_float` / `apply_string` / `apply_bytes` / `apply_integer_enum` /
 /// `apply_string_enum` / `apply_boolean` / `apply_decimal` /
-/// `apply_date` / `apply_datetime` / `apply_uuid`.
+/// `apply_date` / `apply_datetime` / `apply_uuid` / `apply_ip`.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is the [`Plan`]
 /// variant; extract is the FFI argument. Compile kwargs are host names
 /// (`min_value` / `gt` / `max_length` / `length`) or `members` for an
-/// enum set. Boolean, Decimal, Date, DateTime, and Uuid take no kwargs.
+/// enum set, or `kind` (`ipv4` / `ipv6` / `ip`) for IP. Boolean, Decimal,
+/// Date, DateTime, and Uuid take no kwargs. IP `kind` selects the
+/// stdlib string parser (`IPv4Address` / `IPv6Address` / `ip_address`).
 /// Decimal extract is exact `decimal.Decimal` (no float bridge, no scale
 /// unit). Date extract is `datetime.date` (`datetime.datetime` extracts
 /// because it subclasses `date`). DateTime extract is
 /// `datetime.datetime` (a plain `date` does not). Uuid extract is
-/// exact `uuid.UUID` (a raw `str` does not). String coerce stays
+/// exact `uuid.UUID` (a raw `str` does not). IP extract is `&str`;
+/// the kind's parser then accepts or returns `FailKind::NotIp`.
+/// The host stores that string (no coerce to `ipaddress` objects).
+/// String coerce for Date, DateTime, and Uuid stays
 /// host. Not a taught L1 API. Compile and apply stay separate doors. A
 /// plan handed to another family's apply raises `RuntimeError` (the
 /// walk is not run).
@@ -359,7 +374,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_integer")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_integer")),
         };
         Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
@@ -391,7 +407,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_float")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_float")),
         };
         Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
@@ -421,7 +438,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_string")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_string")),
         };
         let char_len = value.chars().count();
         Ok(py.detach(move || apply_length_units(&units, char_len).err()))
@@ -452,7 +470,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_bytes")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_bytes")),
         };
         let byte_len = value.len();
         Ok(py.detach(move || apply_length_units(&units, byte_len).err()))
@@ -492,7 +511,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_integer_enum")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_integer_enum")),
         };
         Ok(py.detach(move || apply_i64_members(&members, value).err()))
     }
@@ -535,7 +555,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_string_enum")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_string_enum")),
         };
         let owned = value.to_owned();
         Ok(py.detach(move || apply_str_members(&members, &owned).err()))
@@ -574,7 +595,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_boolean")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_boolean")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -613,7 +635,8 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Date
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_decimal")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_decimal")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -654,7 +677,8 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_date")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_date")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -693,7 +717,8 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal
             | Plan::Date
-            | Plan::Uuid => return Err(unexpected_family("apply_datetime")),
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_datetime")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -732,9 +757,61 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal
             | Plan::Date
-            | Plan::DateTime => return Err(unexpected_family("apply_uuid")),
+            | Plan::DateTime
+            | Plan::Ip(_) => return Err(unexpected_family("apply_uuid")),
         }
         let _ = value;
         Ok(py.detach(|| None))
+    }
+
+    /// Closed IP string-identity plan. `kind` is `ipv4`, `ipv6`, or
+    /// `ip` (either). Not a taught L1 API. Not a String length plan.
+    /// The host stores the given string; this plan does not coerce.
+    #[pyfunction]
+    fn compile_ip(kind: &str) -> PyResult<PyPlan> {
+        let parsed = match kind {
+            "ipv4" => IpKind::V4,
+            "ipv6" => IpKind::V6,
+            "ip" => IpKind::Either,
+            _ => {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "compile_ip kind must be ipv4, ipv6, or ip",
+                ))
+            }
+        };
+        Ok(compile_ip_plan(parsed))
+    }
+
+    /// One-shot IP apply. Success is `None` for a string the compiled
+    /// kind accepts. A miss is `FailKind::NotIp`.
+    ///
+    /// Closed IP door is this `&str` extract, then the stdlib string
+    /// rules for `IPv4Address` / `IPv6Address` / `ip_address`. A
+    /// non-string raises at this FFI boundary (extract error); host
+    /// falls through to the host type door. `int` / `bytes` are not
+    /// coerced. No bound unit. Releases the GIL (`Python::detach`)
+    /// for the parse. Compile and apply stay a pair.
+    #[pyfunction]
+    fn apply_ip(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: &str,
+    ) -> PyResult<Option<FailKind>> {
+        let kind = match &plan.body {
+            Plan::Ip(kind) => *kind,
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_ip")),
+        };
+        let owned = value.to_owned();
+        Ok(py.detach(move || ip_miss(kind, &owned)))
     }
 }
