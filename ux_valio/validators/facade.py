@@ -158,8 +158,12 @@ class Validator(ValidateProperty[T]):
             )
         self.required = required
         self.pattern = pattern
-        self._compiled = None
-        self._compiled_source = object()
+        # Host regex cache, same pair as ``PatternValidator``.
+        # ``_pattern_compiled`` is the ``re.Pattern``; ``_pattern_source``
+        # is the source it was built from. Unrelated to native
+        # ``compile_*`` / ``apply_*``.
+        self._pattern_compiled = None
+        self._pattern_source = object()
         self.reassign = reassign
         self._assignment_counts: dict[int, int] = {}
         self._assignment_alive: dict[int, Any] = {}

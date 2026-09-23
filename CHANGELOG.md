@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Host regex cache slot rename (internal only, no behavior change).
+  ``Validator`` and ``PatternValidator`` keep the pair
+  ``_pattern_compiled`` (cached ``re.Pattern``; was ``_compiled``) and
+  ``_pattern_source`` (source string or unset sentinel; was
+  ``_compiled_source``). That pair is the host regex cache only —
+  unrelated to native ``compile_*`` / ``apply_*``. Public ``pattern``
+  stays the source. ``_compiled_finder`` still fills the pair. Do not
+  fold the cache into ``pattern`` or name it
+  ``_pattern_compiled_source``. Native slots and public ``compile_*`` /
+  ``apply_*`` are unchanged. Cap Door B stays off. UUID / Path / IP
+  stay HOLD.
+
 - Native Date and DateTime type doors: closed ``ux-valio[native]``
   plans now cover ``DateValidator`` when the annotation is
   ``datetime.date`` or the facade coerce union ``datetime.date | str``,

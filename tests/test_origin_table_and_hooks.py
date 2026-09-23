@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Locks for origin table, hook adder table, and Pattern compile-at-bind."""
+"""Locks for origin table, hook adder table, and the host regex cache."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -180,24 +180,46 @@ def test_hook_tables_on_host_origin_tables_beside_is_instance_of():
     assert not hasattr(hooks_mod, "hook_bags_used")
 
 
-def test_pattern_compile_is_cached_on_owner():
+def _assert_retired_pattern_cache_names(owner) -> None:
+    assert not hasattr(owner, "_compiled")
+    assert not hasattr(owner, "_compiled_source")
+
+
+def test_host_regex_cache_reuses_pattern_for_the_same_source():
     field = PatternValidator(pattern=r"ab+", name="code")
     field._validate_pattern(None, "abb")
-    first = field._compiled
+    first = field._pattern_compiled
+    assert field._pattern_source == r"ab+"
     field._validate_pattern(None, "abbb")
-    assert field._compiled is first
+    assert field._pattern_compiled is first
+
+    field.pattern = r"a+"
+    field._validate_pattern(None, "aaa")
+    assert field._pattern_source == r"a+"
+    assert field._pattern_compiled is not first
+    _assert_retired_pattern_cache_names(field)
+
+    blob = PatternValidator(pattern=b"ab+", name="blob")
+    blob._validate_pattern(None, b"abb")
+    cached = blob._pattern_compiled
+    assert blob._pattern_source == b"ab+"
+    blob._validate_pattern(None, b"abbb")
+    assert blob._pattern_compiled is cached
+    _assert_retired_pattern_cache_names(blob)
 
 
-def test_email_identity_reuses_compiled_finder():
+def test_email_identity_reuses_pattern_cache():
     from ux_valio import EmailValidator
 
     field = EmailValidator(debug=True, name="email")
     field.validate(None, "user@example.com")
-    first = field._compiled
+    first = field._pattern_compiled
     assert first is not None
+    assert field._pattern_source == field.pattern.pattern
     field.validate(None, "other@example.com")
-    assert field._compiled is first
+    assert field._pattern_compiled is first
     assert first.fullmatch("user@example.com") is not None
+    _assert_retired_pattern_cache_names(field)
 
 
 def test_facade_pattern_path_uses_owner_cache():
@@ -207,7 +229,16 @@ def test_facade_pattern_path_uses_owner_cache():
 
     Row(sku="ABC")
     desc = Row.__dict__["sku"]
-    assert desc._compiled is not None
-    compiled = desc._compiled
+    assert desc._pattern_compiled is not None
+    compiled = desc._pattern_compiled
+    assert desc._pattern_source == r"[A-Z]{3}"
     Row(sku="XYZ")
-    assert desc._compiled is compiled
+    assert desc._pattern_compiled is compiled
+    for slot in (
+        "_native_plan",
+        "_native_apply",
+        "_native_run",
+        "_native_fail_kind",
+    ):
+        assert hasattr(desc, slot)
+    _assert_retired_pattern_cache_names(desc)

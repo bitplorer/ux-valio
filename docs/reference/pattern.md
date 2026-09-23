@@ -16,6 +16,12 @@ facade that fullmatches (email, GSTIN).
 requires the whole string to be an addr-spec:
 `"prefix user@example.com suffix"` is rejected.
 
+The host caches that regex on the private pair `_pattern_compiled`
+(`re.Pattern`) and `_pattern_source` (the source it was built from, or
+a sentinel before the first compile). That cache is host-only. It is
+unrelated to native `compile_*` / `apply_*`. Public `pattern` stays
+the source.
+
 Pattern `&` / `|` is fail-closed on a missing fragment or mixed
 `str`/`bytes`; same-kind bytes fragments concatenate as bytes.
 `count_min > count_max` is constructor `ValueError`. A bytes pattern
