@@ -221,40 +221,36 @@ _FAMILY_SECTIONS = (
         "# --- Integer ---",
         (
             "def _closed_integer_bounds(",
-            "def _raise_host_integer_type_miss(",
             "def apply_native_integer_bounds(",
             "_INTEGER_DOOR",
-            "def _select_integer_bounds(",
+            "_raise_host_value_type_miss",
         ),
     ),
     (
         "# --- Float ---",
         (
             "def _closed_float_bounds(",
-            "def _raise_host_float_type_miss(",
             "def apply_native_float_bounds(",
             "_FLOAT_DOOR",
-            "def _select_float_bounds(",
+            "_raise_host_value_type_miss",
         ),
     ),
     (
         "# --- String ---",
         (
             "def _closed_string_length(",
-            "def _raise_host_string_type_miss(",
             "def apply_native_string_length(",
             "_STRING_DOOR",
-            "def _select_string_length(",
+            "_raise_host_length_type_miss",
         ),
     ),
     (
         "# --- Bytes ---",
         (
             "def _closed_bytes_length(",
-            "def _raise_host_bytes_type_miss(",
             "def apply_native_bytes_length(",
             "_BYTES_DOOR",
-            "def _select_bytes_length(",
+            "_raise_host_length_type_miss",
         ),
     ),
     (
@@ -263,7 +259,7 @@ _FAMILY_SECTIONS = (
             "def _closed_integer_enum_members(",
             "def apply_native_integer_enum(",
             "_INTEGER_ENUM_DOOR",
-            "def _select_integer_enum(",
+            "_read_owner_annotation",
         ),
     ),
     (
@@ -272,7 +268,7 @@ _FAMILY_SECTIONS = (
             "def _closed_string_enum_members(",
             "def apply_native_string_enum(",
             "_STRING_ENUM_DOOR",
-            "def _select_string_enum(",
+            "value.value",
         ),
     ),
     (
@@ -282,7 +278,6 @@ _FAMILY_SECTIONS = (
             "def _raise_host_boolean_type_miss(",
             "def apply_native_boolean(",
             "_BOOLEAN_DOOR",
-            "def _select_boolean(",
         ),
     ),
     (
@@ -293,7 +288,6 @@ _FAMILY_SECTIONS = (
             "def _raise_host_decimal_type_miss(",
             "def apply_native_decimal(",
             "_DECIMAL_DOOR",
-            "def _select_decimal(",
         ),
     ),
     (
@@ -304,7 +298,6 @@ _FAMILY_SECTIONS = (
             "def _raise_host_date_type_miss(",
             "def apply_native_date(",
             "_DATE_DOOR",
-            "def _select_date(",
         ),
     ),
     (
@@ -315,7 +308,6 @@ _FAMILY_SECTIONS = (
             "def _raise_host_datetime_type_miss(",
             "def apply_native_datetime(",
             "_DATETIME_DOOR",
-            "def _select_datetime(",
         ),
     ),
     (
@@ -326,7 +318,6 @@ _FAMILY_SECTIONS = (
             "def _raise_host_uuid_type_miss(",
             "def apply_native_uuid(",
             "_UUID_DOOR",
-            "def _select_uuid(",
         ),
     ),
     (
@@ -339,7 +330,7 @@ _FAMILY_SECTIONS = (
             "def _raise_host_ip_type_miss(",
             "def apply_native_ip(",
             "_IP_DOOR",
-            "def _select_ip(",
+            "NotIp",
         ),
     ),
     (
@@ -350,7 +341,6 @@ _FAMILY_SECTIONS = (
             "def _raise_host_path_type_miss(",
             "def apply_native_path(",
             "_PATH_DOOR",
-            "def _select_path(",
         ),
     ),
 )
@@ -365,6 +355,8 @@ def test_native_families_are_contiguous_sections():
     native_py = host_native_source()
     assert "class _FamilyDoor" in native_py
     assert "def _select(" in native_py
+    assert "def _select_" not in native_py
+    assert "def _run_closed(" in native_py
     assert "compile_attr" not in native_py
     assert "apply_attr" not in native_py
     assert "def _fill_door" not in native_py
@@ -380,17 +372,31 @@ def test_native_families_are_contiguous_sections():
     for name in (
         "def _closed_value_bounds(",
         "def _closed_length(",
+        "def _closed_type_door(",
         "def _is_stored_or_str_annotation(",
         "def _raise_native_bound_miss(",
+        "def _raise_host_value_type_miss(",
+        "def _raise_host_length_type_miss(",
         "def _raise_host_enum_type_miss(",
-        "def _apply_native_closed(",
+        "def _read_owner_annotation(",
+        "def _run_closed(",
     ):
         assert native_py.index(name) < starts[0], name
+    for gone in (
+        "def _apply_native_closed(",
+        "def _raise_host_integer_type_miss(",
+        "def _raise_host_float_type_miss(",
+        "def _raise_host_string_type_miss(",
+        "def _raise_host_bytes_type_miss(",
+    ):
+        assert gone not in native_py, gone
     for index, (banner, names) in enumerate(_FAMILY_SECTIONS):
         end = starts[index + 1] if index + 1 < len(starts) else bind_at
         section = native_py[starts[index] : end]
         for name in names:
             assert name in section, (banner, name)
+        if banner == "# --- StringEnum ---":
+            assert "_run_closed" not in section
     table = native_py[native_py.index("_FAMILY_DOORS") : native_py.index("def apply_native_bounds(")]
     cursor = -1
     for door_name in (

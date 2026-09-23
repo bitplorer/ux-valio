@@ -59,7 +59,7 @@ def test_closed_integer_type_door_is_ffi_extract():
         "PyType",
     ):
         assert token not in rust, token
-    assert "_raise_host_integer_type_miss" in native_py
+    assert "_raise_host_value_type_miss" in native_py
     assert "isinstance(value, expected)" in native_py
     assert "if value is None:" in native_py
 

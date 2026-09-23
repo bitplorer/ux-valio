@@ -87,7 +87,8 @@ def test_closed_path_type_door_is_path_extract():
     assert "fn compile_enum" not in rust
     assert "fn compile_pattern" not in rust
     assert "_closed_path" in native_py
-    assert "_select_path" in native_py
+    assert "_PATH_DOOR" in native_py
+    assert "def _select_path(" not in native_py
     assert "apply_native_path" in native_py
     assert "_raise_host_path_type_miss" in native_py
     assert "_bridge_to_type" in native_py

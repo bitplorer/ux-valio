@@ -296,8 +296,8 @@ The measure cleared 3×, so the closed type door ships. Scale does not:
 - Cap Door B stays off. One family only. Pattern / Date* / UUID /
   Path / plain Enum stay off this tip.
 - Pair naming: ``compile_decimal`` / ``apply_decimal`` (intentional
-  pair — do not merge). Host ``_select_decimal`` fills that
-  ``_FAMILY_DOORS`` row, same shape as Boolean / Float.
+  pair — do not merge). Host ``_DECIMAL_DOOR`` is that
+  ``_FAMILY_DOORS`` row (``door._select``), same shape as Boolean / Float.
 - String coerce stays host. Peer extract is ``decimal.Decimal`` (or a
   Rust decimal that matches host compare for closed bounds). No float
   bridge. ``rust_decimal`` only if a later bound tip needs it for
@@ -342,8 +342,8 @@ type doors ship. Bounds do not:
   UUID / Path / IP / plain Enum / Pattern stay off this tip.
 - Pair naming: ``compile_date`` / ``apply_date`` and
   ``compile_datetime`` / ``apply_datetime`` (intentional pairs — do
-  not merge). Host ``_select_date`` / ``_select_datetime`` fill those
-  ``_FAMILY_DOORS`` rows, same shape as Decimal.
+  not merge). Host ``_DATE_DOOR`` / ``_DATETIME_DOOR`` are those
+  ``_FAMILY_DOORS`` rows (``door._select``), same shape as Decimal.
 - String coerce stays host. No calendar arithmetic in Rust.
 - ``FailKind`` / host ``TypeError`` wording matches the other Door A
   families. Extract miss is a bridge to host ``TypeValidator``, not
@@ -370,7 +370,7 @@ after host pre-validate. One family. Bounds do not:
 - Cap Door B stays off. One family only (Uuid). Path / IP / plain
   Enum / Pattern stay off this tip.
 - Pair naming: ``compile_uuid`` / ``apply_uuid``. Host
-  ``_select_uuid`` fills that ``_FAMILY_DOORS`` row, same shape as Date.
+  ``_UUID_DOOR`` is that ``_FAMILY_DOORS`` row (``door._select``), same shape as Date.
 - String coerce stays host. ``None`` skips. ``uuid.UUID | None``
   stays host. The facade coerce annotation ``uuid.UUID | str`` is
   the host coerce door.
@@ -403,8 +403,8 @@ string-identity door ships. The three facades differ only by parser:
   this door.
 - Cap Door B stays off. One family only (IP). Path / plain Enum /
   Pattern stay off this tip.
-- Pair naming: ``compile_ip`` / ``apply_ip``. Host ``_select_ip``
-  fills that ``_FAMILY_DOORS`` row, same shape as Uuid.
+- Pair naming: ``compile_ip`` / ``apply_ip``. Host ``_IP_DOOR``
+  is that ``_FAMILY_DOORS`` row (``door._select``), same shape as Uuid.
 
 HOLD after the IP tip was Path. Path shipped in the next
 paragraphs. IP length / pattern / choice / ``required`` /
@@ -430,7 +430,7 @@ only after host pre-validate. One family. Bounds and
 - Cap Door B stays off. One family only (Path). Plain Enum /
   Pattern stay off this tip.
 - Pair naming: ``compile_path`` / ``apply_path``. Host
-  ``_select_path`` fills that ``_FAMILY_DOORS`` row, same shape as
+  ``_PATH_DOOR`` is that ``_FAMILY_DOORS`` row (``door._select``), same shape as
   Uuid.
 - String coerce stays host. ``None`` skips. ``pathlib.Path | None``
   stays host. The facade coerce annotation ``pathlib.Path | str``
@@ -924,8 +924,8 @@ closed type door ships. Bounds do not:
 - Cap Door B stays off. One family only (Uuid). Path / IP / plain
   Enum / Pattern stay off this tip.
 - Pair naming: ``compile_uuid`` / ``apply_uuid`` (intentional pair —
-  do not merge). Host ``_select_uuid`` fills that ``_FAMILY_DOORS``
-  row, same shape as Date.
+  do not merge). Host ``_UUID_DOOR`` is that ``_FAMILY_DOORS``
+  row (``door._select``), same shape as Date.
 - String coerce stays host. No UUID parsing in Rust.
 - ``FailKind`` / host ``TypeError`` wording matches the other Door A
   families. Extract miss is a bridge to host ``TypeValidator``, not
@@ -988,7 +988,7 @@ string-identity door ships. Length and other extra units do not:
   rewritten.
 - Cap Door B stays off. One family only (IP). Path / plain Enum /
   Pattern stay off this tip.
-- Pair naming: ``compile_ip`` / ``apply_ip``. Host ``_select_ip``.
+- Pair naming: ``compile_ip`` / ``apply_ip``. Host ``_IP_DOOR``.
 
 ### Measured (2026-09-23) IP string identity
 
@@ -1040,7 +1040,7 @@ so the closed type door ships. Bounds and ``path_exists`` do not:
 - Cap Door B stays off. One family only (Path). Plain Enum /
   Pattern stay off this tip.
 - Pair naming: ``compile_path`` / ``apply_path``. Host
-  ``_select_path``.
+  ``_PATH_DOOR``.
 
 ### Measured (2026-09-23) Path type door
 
