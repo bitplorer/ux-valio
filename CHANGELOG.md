@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Host ``_native.py`` drops the unused ``_FamilyDoor.run`` slot.
+  Every closed family stores ``door._run_closed`` on ``_native_run``.
+  ``_select`` returns apply, compile, and kwargs. Closed-plan
+  behaviour is unchanged.
+
 - Host ``_native.py`` drops ``apply_native_string_enum``.
   ``_FamilyDoor.extract`` defaults to identity; StringEnum sets
   ``attrgetter("value")`` and ``_run_closed`` passes that payload

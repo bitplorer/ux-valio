@@ -198,10 +198,11 @@ a parallel folder, not inside the layer they depend on.
   Cap Door B off. Plain Enum / Pattern stay off.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_FAMILY_DOORS``; each row is a private
-  ``_FamilyDoor`` of ``closed`` / ``compile`` / ``apply`` / ``run`` /
+  ``_FamilyDoor`` of ``closed`` / ``compile`` / ``apply`` /
   ``extract``, plus ``expected`` / ``type_miss`` / ``bridge`` /
-  ``extract_errors`` when apply is ``_run_closed``). Bind calls
-  that row's ``_select``. There is no per-family ``_select_*``.
+  ``extract_errors``). Bind stores ``door._run_closed`` and calls
+  that row's ``_select``. There is no row ``run`` slot and no
+  per-family ``_select_*``.
   Do not merge a pair into one door and do not restore a
   per-family copy of the bind steps.
   ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /

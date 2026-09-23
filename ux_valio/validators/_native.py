@@ -6,10 +6,10 @@ shows one family's walk and nothing else. Shared detectors, bridges,
 and the bind table still serve every family, so they stay here.
 Each Door A family is one contiguous section. ``bind_native_plan``
 walks ``_FAMILY_DOORS`` (a private frozen ``_FamilyDoor`` row:
-``closed`` / ``compile`` / ``apply`` / ``run`` / ``extract``, and
-``expected`` / ``type_miss`` / ``bridge`` / ``extract_errors``
-when apply is ``_run_closed``). Bind calls that row's ``_select``.
-Every closed family stores ``door._run_closed`` on ``_native_run``.
+``closed`` / ``compile`` / ``apply`` / ``extract``, and
+``expected`` / ``type_miss`` / ``bridge`` / ``extract_errors``).
+Bind calls that row's ``_select`` and stores ``door._run_closed``
+on ``_native_run``.
 ``extract`` is identity except StringEnum, which passes
 ``attrgetter("value")`` so apply receives the member string.
 Constant closed detectors are ``functools.partial`` of the shared
@@ -410,16 +410,16 @@ def _extract_same(value: Any) -> Any:
     return value
 
 
-type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
+type _ClosedPair = tuple[Any, Any, dict[str, Any]]
 
 
 class _FamilyDoor(NamedTuple):
     """Private bind row for one closed family. Not a product type door.
 
     ``closed`` detects the family. ``compile`` / ``apply`` name the
-    Rust pair. Omitted ``run`` means bind stores this row's
-    ``_run_closed``. ``extract`` maps the host value to the FFI
-    payload (identity, or ``attrgetter("value")`` for StringEnum).
+    Rust pair. Bind stores this row's ``_run_closed``. ``extract``
+    maps the host value to the FFI payload (identity, or
+    ``attrgetter("value")`` for StringEnum).
     ``expected`` is the host ``isinstance`` type, or a callable of
     ``owner`` when that type is the annotation (IntegerEnum /
     StringEnum). ``type_miss`` formats the KEEP TypeError.
@@ -431,7 +431,6 @@ class _FamilyDoor(NamedTuple):
     closed: Any
     compile: str
     apply: str
-    run: Any = None
     expected: Any = None
     type_miss: Any = None
     bridge: Any = None
@@ -439,7 +438,7 @@ class _FamilyDoor(NamedTuple):
     extract: Any = _extract_same
 
     def _select(self, native: Any, payload: Any) -> _ClosedPair:
-        """Pair for this row. Compile and apply stay separate."""
+        """Apply, compile, and kwargs for this row. Compile and apply stay separate."""
         kwargs: dict[str, Any]
         if isinstance(payload, list):
             kwargs = {"members": payload}
@@ -447,7 +446,6 @@ class _FamilyDoor(NamedTuple):
             kwargs = payload
         return (
             getattr(native, self.apply),
-            self.run,
             getattr(native, self.compile),
             kwargs,
         )
@@ -933,12 +931,9 @@ def bind_native_plan(owner: Any) -> None:
         if native is None:
             _clear_native(owner)
             return
-        apply, run, compile_fn, kwargs = door._select(native, payload)
+        apply, compile_fn, kwargs = door._select(native, payload)
         owner._native_apply = apply
-        if run is None:
-            owner._native_run = door._run_closed
-        else:
-            owner._native_run = run
+        owner._native_run = door._run_closed
         _bind_compiled_plan(owner, native, compile_fn, kwargs)
         return
     _clear_native(owner)
