@@ -116,8 +116,8 @@ a parallel folder, not inside the layer they depend on.
   ``bool`` only: ``1`` / ``0`` are not coerced. ``True`` and ``False``
   both pass. Extra units on ``BooleanValidator`` stay on the host.
   Decimal type door is host ``isinstance`` of ``decimal.Decimal``, then
-  FFI Decimal extract (``compile_decimal`` / ``apply_decimal``, via
-  ``_select_decimal``). Stored type is ``decimal.Decimal`` only after
+  FFI Decimal extract (``compile_decimal`` / ``apply_decimal``, on
+  ``_DECIMAL_DOOR``). Stored type is ``decimal.Decimal`` only after
   host ``_pre_validate``. ``_coerce_str`` stays host (peer never sees
   raw ``str``). Reject ``float`` / ``int`` / ``bool`` (no silent
   float→Decimal, no ``Decimal(float)`` on this door). Exact
@@ -129,8 +129,8 @@ a parallel folder, not inside the layer they depend on.
   coerce annotation ``decimal.Decimal | str`` is the host coerce door.
   Extra units on ``DecimalValidator`` stay on the host.
   Date type door is host ``isinstance`` of ``datetime.date``, then
-  FFI date extract (``compile_date`` / ``apply_date``, via
-  ``_select_date``). Stored type is ``datetime.date`` only after
+  FFI date extract (``compile_date`` / ``apply_date``, on
+  ``_DATE_DOOR``). Stored type is ``datetime.date`` only after
   host ``_pre_validate`` (EU ``YYYY-MM-DD`` / IND ``DD-MM-YYYY``).
   The peer never sees a raw ``str``. ``datetime.datetime`` extracts
   on this door because it subclasses ``date``; ``DateValidator``
@@ -143,7 +143,7 @@ a parallel folder, not inside the layer they depend on.
   Extra units on ``DateValidator`` stay on the host.
   DateTime type door is host ``isinstance`` of ``datetime.datetime``,
   then FFI datetime extract (``compile_datetime`` /
-  ``apply_datetime``, via ``_select_datetime``). Stored type is
+  ``apply_datetime``, on ``_DATETIME_DOOR``). Stored type is
   ``datetime.datetime`` only after host ``_pre_validate`` (ISO
   ``fromisoformat``). The peer never sees a raw ``str``. A plain
   ``datetime.date`` misses. Exact ``datetime.datetime`` passes,
@@ -153,8 +153,8 @@ a parallel folder, not inside the layer they depend on.
   annotation ``datetime.datetime | str`` is the host coerce door.
   Extra units on ``DateTimeValidator`` stay on the host.
   Uuid type door is host ``isinstance`` of ``uuid.UUID``, then
-  FFI UUID extract (``compile_uuid`` / ``apply_uuid``, via
-  ``_select_uuid``). Stored type is ``uuid.UUID`` only after
+  FFI UUID extract (``compile_uuid`` / ``apply_uuid``, on
+  ``_UUID_DOOR``). Stored type is ``uuid.UUID`` only after
   host ``_pre_validate`` (``uuid.UUID`` on a string). The peer
   never sees a raw ``str``. ``int`` / ``bool`` / ``bytes`` / raw
   ``str`` miss when the annotation is exact ``uuid.UUID``. Exact
@@ -165,8 +165,8 @@ a parallel folder, not inside the layer they depend on.
   is the host coerce door. Extra units on ``UUIDValidator`` stay on
   the host.
   IP string identity is host ``isinstance`` of ``str``, then FFI
-  ``&str`` extract (``compile_ip`` / ``apply_ip``, via
-  ``_select_ip``). Living facades are ``IPv4Validator`` /
+  ``&str`` extract (``compile_ip`` / ``apply_ip``, on
+  ``_IP_DOOR``). Living facades are ``IPv4Validator`` /
   ``IPv6Validator`` / ``IPAddressValidator``. They store the given
   string. There is no ``_pre_validate`` coerce to ``ipaddress``
   objects. ``IPv4Address`` / ``IPv6Address`` / ``ip_address`` are
@@ -181,8 +181,8 @@ a parallel folder, not inside the layer they depend on.
   ``reassign=False``) stay on the host. ``StringValidator`` is not
   this door.
   Path type door is host ``isinstance`` of ``pathlib.Path``, then
-  FFI Path extract (``compile_path`` / ``apply_path``, via
-  ``_select_path``). Stored type is ``pathlib.Path`` only after
+  FFI Path extract (``compile_path`` / ``apply_path``, on
+  ``_PATH_DOOR``). Stored type is ``pathlib.Path`` only after
   host ``_pre_validate`` (``pathlib.Path`` on a string). The peer
   never sees a raw ``str``. ``int`` / ``bool`` / ``bytes`` /
   ``pathlib.PurePath`` / raw ``str`` miss when the annotation is
@@ -199,9 +199,11 @@ a parallel folder, not inside the layer they depend on.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_FAMILY_DOORS``; each row is a private
   ``_FamilyDoor`` of ``closed`` / ``compile`` / ``apply`` / ``run``,
-  and ``_select_*`` calls that row); do not merge a
-  pair into one door and do not restore a per-family copy of the
-  bind steps.
+  plus ``expected`` / ``type_miss`` / ``bridge`` /
+  ``extract_errors`` when apply is ``_run_closed``). Bind calls
+  that row's ``_select``. There is no per-family ``_select_*``.
+  Do not merge a pair into one door and do not restore a
+  per-family copy of the bind steps.
   ``Validator.__init__`` seeds ``_native_plan`` / ``_native_apply`` /
   ``_native_fail_kind`` / ``_native_run`` as ``None`` before
   ``bind_native_plan`` (same four slots ``_clear_native`` clears).
@@ -215,8 +217,10 @@ a parallel folder, not inside the layer they depend on.
   writers; ``__set_name__`` rebinds when ``_native_plan is None``. Host
   ``_native.py`` stays one file. Each Door A family is one contiguous
   section (closed detector, family-only helpers, ``apply_native_*``,
-  ``_select_*``). Shared detectors, bridges, and ``_FAMILY_DOORS``
-  stay outside those sections. A private module is allowed only when
+  the ``_FamilyDoor`` row). ``_closed_type_door`` and
+  ``_run_closed`` are defined outside those sections, with the
+  other shared detectors and bridges. ``_FAMILY_DOORS`` stays
+  outside too. A private module is allowed only when
   opening that file shows one family's walk and nothing else.
   ``_FamilyDoor`` is the private frozen bind row, not a class-per-type
   product surface. Do not mirror
@@ -459,22 +463,18 @@ New private helpers are verbs that name the action:
 `_is_uuid_type_annotation`,
 `_is_path_type_annotation`,
 `_is_stored_or_str_annotation`,
-`_closed_length`, `_closed_value_bounds`, `_bind_compiled_plan`, `_apply_native_closed`,
+`_closed_length`, `_closed_value_bounds`, `_closed_type_door`, `_bind_compiled_plan`,
 `_clear_native`, `_bridge_to_value`, `_bridge_to_length`, `_bridge_to_type`,
-`_raise_native_bound_miss`, `_raise_host_integer_type_miss`,
-`_raise_host_float_type_miss`, `_raise_host_string_type_miss`, `_raise_host_bytes_type_miss`,
+`_raise_native_bound_miss`, `_raise_host_value_type_miss`,
+`_raise_host_length_type_miss`,
 `_raise_host_boolean_type_miss`, `_raise_host_decimal_type_miss`,
 `_raise_host_date_type_miss`, `_raise_host_datetime_type_miss`,
 `_raise_host_uuid_type_miss`, `_raise_host_ip_type_miss`,
 `_raise_host_path_type_miss`,
 `_raise_host_enum_type_miss`, `_raise_host_closed_type_miss`,
-`_select_integer_bounds`, `_select_float_bounds`, `_select_string_length`,
-`_select_bytes_length`, `_select_integer_enum`, `_select_string_enum`,
-`_select_boolean`, `_select_decimal`,
-`_select_date`, `_select_datetime`, `_select_uuid`, `_select_ip`,
-`_select_path`,
+`_read_owner_annotation`,
 `_ClosedPair`,
-`_FamilyDoor`, `_FamilyDoor._select`,
+`_FamilyDoor`, `_FamilyDoor._select`, `_FamilyDoor._run_closed`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_namespace`, `merge_opt`, `opt_of`, `hook_bags_used` as a module name,
@@ -494,6 +494,14 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `_apply_host_boolean_after_extract`,
 `_apply_host_decimal_after_extract`,
 `_raise_host_integer_enum_type_miss`, `_raise_host_string_enum_type_miss`,
+`_raise_host_integer_type_miss`, `_raise_host_float_type_miss`,
+`_raise_host_string_type_miss`, `_raise_host_bytes_type_miss`,
+`_apply_native_closed`,
+`_select_integer_bounds`, `_select_float_bounds`, `_select_string_length`,
+`_select_bytes_length`, `_select_integer_enum`, `_select_string_enum`,
+`_select_boolean`, `_select_decimal`,
+`_select_date`, `_select_datetime`, `_select_uuid`, `_select_ip`,
+`_select_path`,
 `_native_closed_apply`, `_native_fail`, `_compiled`, `_compiled_source`,
 `_pattern_compiled_source`).
 Noun-only names that hide the action are not

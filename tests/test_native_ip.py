@@ -120,7 +120,8 @@ def test_closed_ip_door_is_string_identity():
     assert not re.search(r"\bfn compile\(", rust)
     assert not re.search(r"\bfn apply\(", rust)
     assert "_closed_ip" in native_py
-    assert "_select_ip" in native_py
+    assert "_IP_DOOR" in native_py
+    assert "def _select_ip(" not in native_py
     assert "apply_native_ip" in native_py
     assert "_raise_host_ip_type_miss" in native_py
     assert "_bridge_to_ip" in native_py

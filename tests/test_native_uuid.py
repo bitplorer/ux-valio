@@ -64,7 +64,8 @@ def test_closed_uuid_type_door_is_uuid_extract():
     assert not re.search(r"\bfn compile\(", rust)
     assert not re.search(r"\bfn apply\(", rust)
     assert "_closed_uuid" in native_py
-    assert "_select_uuid" in native_py
+    assert "_UUID_DOOR" in native_py
+    assert "def _select_uuid(" not in native_py
     assert "apply_native_uuid" in native_py
     assert "_raise_host_uuid_type_miss" in native_py
     assert "_bridge_to_type" in native_py

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Host ``_native.py`` drops per-family ``_select_*`` passthroughs.
+  ``bind_native_plan`` calls ``_FamilyDoor._select`` on the row.
+  Isinstance families apply through ``_FamilyDoor._run_closed``
+  (``expected`` / ``type_miss`` / ``bridge`` / ``extract_errors``).
+  Empty type-door compile kwargs share ``_closed_type_door``.
+  Integer and Float share ``_raise_host_value_type_miss``. String
+  and Bytes share ``_raise_host_length_type_miss``. StringEnum
+  still applies ``value.value``. IP ``NotIp`` and decimal/date
+  annotation checks stay. Living slots stay ``_native_plan`` /
+  ``_native_apply`` / ``_native_run`` / ``_native_fail_kind``.
+  Cap Door B stays off. Closed-plan behaviour is unchanged.
+
 - Host ``_native.py`` groups each Door A family in one section and
   binds through private ``_FAMILY_DOORS`` (``_FamilyDoor`` row:
   ``closed`` / ``compile`` / ``apply`` / ``run``). Living slots

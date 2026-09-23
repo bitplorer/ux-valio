@@ -59,7 +59,8 @@ def test_closed_decimal_type_door_is_decimal_extract():
     assert "rust_decimal" not in rust
     assert "rust_decimal" not in cargo
     assert "_closed_decimal" in native_py
-    assert "_select_decimal" in native_py
+    assert "_DECIMAL_DOOR" in native_py
+    assert "def _select_decimal(" not in native_py
     assert "apply_native_decimal" in native_py
     assert "_raise_host_decimal_type_miss" in native_py
     assert "_bridge_to_type" in native_py
