@@ -164,9 +164,12 @@ and a closed Uuid type door (`compile_uuid` / `apply_uuid`; string
 coerce stays host), and a closed IP string-identity door
 (`compile_ip` / `apply_ip`; `IPv4Validator` / `IPv6Validator` /
 `IPAddressValidator` store the given string; no coerce to
-`ipaddress` objects).
-Pattern and named identity stay on the host. Next: Path,
-Pattern, plain EnumValidator stay off this path. Decimal scale /
+`ipaddress` objects), and a closed Path type door
+(`compile_path` / `apply_path`; string coerce stays host;
+`path_exists` stays host; `PurePath` misses).
+Pattern and named identity stay on the host. Next: Pattern and
+plain EnumValidator stay off this path. Decimal scale /
 quantize stays HOLD. Date and DateTime bounds stay host. Uuid
-bounds stay host. IP length / pattern / choice stay host. No
-follow-up remains on this IP concern.
+bounds stay host. IP length / pattern / choice stay host. Path
+bounds and `path_exists` stay host. No follow-up remains on this
+Path concern.

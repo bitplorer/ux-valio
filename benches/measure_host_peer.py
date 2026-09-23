@@ -10,28 +10,30 @@ Hot path A: many ``setattr``s on a dataclass ``Box`` field with a closed
 ``DecimalValidator`` exact-Decimal type door, a closed
 ``DateValidator`` date type door, a closed
 ``DateTimeValidator`` datetime type door, a closed
-``UUIDValidator`` UUID type door, or a closed
+``UUIDValidator`` UUID type door, a closed
 ``IPv4Validator`` / ``IPv6Validator`` / ``IPAddressValidator``
-string-identity door (taught API, soul stays
-Python). Enum, Boolean, Decimal, Date, DateTime, UUID, and IP path A
-clear the native plan after bind so the loop is pure Python setattr.
-Decimal values are exact ``Decimal`` instances, Date / DateTime
-values are exact ``date`` / ``datetime`` instances, and UUID values
-are exact ``uuid.UUID`` instances (string coerce is host
+string-identity door, or a closed ``PathValidator`` Path type door
+(taught API, soul stays
+Python). Enum, Boolean, Decimal, Date, DateTime, UUID, IP, and Path
+path A clear the native plan after bind so the loop is pure Python
+setattr. Decimal values are exact ``Decimal`` instances, Date /
+DateTime values are exact ``date`` / ``datetime`` instances, UUID
+values are exact ``uuid.UUID`` instances, and Path values are exact
+``pathlib.Path`` instances (string coerce is host
 ``_pre_validate``, not this apply-only comparison). IP values
 are the given address strings (the facades do not coerce to
-``ipaddress`` objects).
+``ipaddress`` objects). ``path_exists`` is not in this comparison.
 
 Hot path B: ``compile_integer(...)`` / ``compile_float(...)`` /
 ``compile_string(...)`` / ``compile_bytes(...)`` /
 ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
 ``compile_boolean()`` / ``compile_decimal()`` /
 ``compile_date()`` / ``compile_datetime()`` / ``compile_uuid()`` /
-``compile_ip(kind)`` once, then
+``compile_ip(kind)`` / ``compile_path()`` once, then
 ``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
 ``apply_decimal`` / ``apply_date`` / ``apply_datetime`` / ``apply_uuid`` /
-``apply_ip`` on the
+``apply_ip`` / ``apply_path`` on the
 ``ux_valio_native`` peer. That is
 plan apply only — not a claim that product setattr is 70× after host
 store/raise. Not Cap Door B.
@@ -47,9 +49,11 @@ member set, one StringEnum UTF-8 member set, one Boolean exact
 ``str`` does not coerce), and one DateTime ``datetime.datetime`` type
 door (a plain ``date`` does not extract; raw ``str`` does not coerce),
 one Uuid ``uuid.UUID`` type door (raw ``str`` / ``int`` / ``bool`` /
-``bytes`` do not coerce), and one IP string-identity door per
+``bytes`` do not coerce), one IP string-identity door per
 facade (``ipv4`` / ``ipv6`` / ``ip``; the stored value stays the
-given string; ``int`` / ``bytes`` are not coerced).
+given string; ``int`` / ``bytes`` are not coerced), and one Path
+``pathlib.Path`` type door (raw ``str`` / ``int`` / ``bool`` /
+``bytes`` / ``PurePath`` do not coerce; ``path_exists`` stays host).
 Switch bar:
 FAIL (KEEP Python) unless host ns/op is >= 3× native ns/op. A family
 below the bar is not claimed native (KEEP host for that family).
@@ -65,6 +69,7 @@ import datetime
 import decimal
 import enum
 import os
+import pathlib
 import platform
 import shutil
 import subprocess
@@ -160,6 +165,16 @@ PASSING_IP = (
     "fe80::1%1",
     "::ffff:192.0.2.1",
     "8.8.4.4",
+)
+PASSING_PATH = (
+    pathlib.Path("/tmp/ux-valio-a"),
+    pathlib.Path("folder/file"),
+    pathlib.Path("."),
+    pathlib.Path(""),
+    pathlib.Path("/var/tmp"),
+    pathlib.Path("a"),
+    pathlib.Path("/tmp/ux-valio-b"),
+    pathlib.Path("rel"),
 )
 
 
@@ -299,6 +314,16 @@ def _ip_family(**kwargs: Any) -> PlanFamily:
         compile_attr="compile_ip",
         apply_attr="apply_ip",
         annotation=str,
+        **kwargs,
+    )
+
+
+def _path_family(**kwargs: Any) -> PlanFamily:
+    return PlanFamily(
+        facade="PathValidator",
+        compile_attr="compile_path",
+        apply_attr="apply_path",
+        annotation=pathlib.Path,
         **kwargs,
     )
 
@@ -724,6 +749,21 @@ IP_FAMILIES = (
     ),
 )
 
+PATH_FAMILIES = (
+    _path_family(
+        name="Path.Type",
+        field_kwargs={},
+        compile_kwargs={},
+        values=PASSING_PATH,
+        seed=pathlib.Path("/tmp/ux-valio-a"),
+        smoke_ok=pathlib.Path("/tmp/ux-valio-a"),
+        smoke_miss="/tmp/ux-valio-a",
+        smoke_kind="Extract",
+        label="Path pathlib.Path",
+        smoke_raises=TypeError,
+    ),
+)
+
 FAMILIES = (
     INTEGER_FAMILIES
     + FLOAT_FAMILIES
@@ -737,6 +777,7 @@ FAMILIES = (
     + DATETIME_FAMILIES
     + UUID_FAMILIES
     + IP_FAMILIES
+    + PATH_FAMILIES
 )
 
 
@@ -833,6 +874,7 @@ def _load_facades() -> dict[str, Any]:
             IPAddressValidator,
             IPv4Validator,
             IPv6Validator,
+            PathValidator,
             UUIDValidator,
             FloatValidator,
             IntegerEnumValidator,
@@ -860,6 +902,7 @@ def _load_facades() -> dict[str, Any]:
         "IPv4Validator": IPv4Validator,
         "IPv6Validator": IPv6Validator,
         "IPAddressValidator": IPAddressValidator,
+        "PathValidator": PathValidator,
     }
 
 
@@ -882,10 +925,11 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
         "IPv4Validator",
         "IPv6Validator",
         "IPAddressValidator",
+        "PathValidator",
     ):
         # Bind first (enum plans compile at ``__set_name__``; Boolean,
-        # Decimal, Date, DateTime, UUID, and IP may compile at construct), then
-        # drop the plan so path A is pure Python setattr.
+        # Decimal, Date, DateTime, UUID, IP, and Path may compile at
+        # construct), then drop the plan so path A is pure Python setattr.
         namespace = {"__annotations__": {"n": family.annotation}, "n": field}
         if family.annotation is bool:
             box_name = "BoolBox"
@@ -897,6 +941,8 @@ def _make_box(facades: dict[str, Any], family: PlanFamily) -> Any:
             box_name = "DateTimeBox"
         elif family.annotation is uuid.UUID:
             box_name = "UuidBox"
+        elif family.annotation is pathlib.Path:
+            box_name = "PathBox"
         elif family.facade in (
             "IPv4Validator",
             "IPv6Validator",
@@ -1064,6 +1110,30 @@ def _smoke_extract_miss(family: PlanFamily, plan: Any, apply_fn: Any) -> str:
                 f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {bad!r}) "
                 f"returned {coerced!r}; str/int/bool/bytes must not coerce to UUID"
             )
+    if family.annotation is pathlib.Path:
+        empty = pathlib.Path("")
+        empty_ok = apply_fn(plan, empty)
+        if empty_ok is not None:
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, Path('')) "
+                f"returned {empty_ok!r}, expected None"
+            )
+        for bad in (
+            "/tmp/ux-valio-a",
+            pathlib.PurePath("/tmp/pure"),
+            1,
+            True,
+            b"/tmp",
+        ):
+            try:
+                coerced = apply_fn(plan, bad)
+            except family.smoke_raises:
+                continue
+            raise SystemExit(
+                f"SMOKE FAIL {family.name}: {family.apply_attr}(plan, {bad!r}) "
+                f"returned {coerced!r}; str/PurePath/int/bool/bytes must not "
+                "coerce to Path"
+            )
     try:
         raised = apply_fn(plan, family.smoke_miss)
     except family.smoke_raises:
@@ -1135,7 +1205,9 @@ def _report_header(skip_reason: str | None) -> None:
         "plain date misses); "
         "Uuid uuid.UUID (compile_uuid / apply_uuid; str stays host); "
         "IP string identity (compile_ip / apply_ip; stored str; "
-        "NotIp on a bad address)"
+        "NotIp on a bad address); "
+        "Path pathlib.Path (compile_path / apply_path; str stays host; "
+        "path_exists stays host)"
     )
     print(f"bar:      FAIL unless host ns/op >= {SWITCH_BAR:.1f}× native ns/op")
     print("scope:    not Cap Door B; B is plan-apply-only (not 70× product setattr)")
@@ -1365,10 +1437,24 @@ def measure(iters: int, warmup: int, peer: Any, facades: dict[str, Any]) -> int:
             + ". Do not claim native for IP. IP string identity stays on the host."
         )
         return 1
+    paths = [
+        (family, unlocked, ratio)
+        for family, unlocked, ratio in results
+        if family.facade == "PathValidator"
+    ]
+    path_failed = [family.name for family, unlocked, _ratio in paths if not unlocked]
+    path_passed = [family.name for family, unlocked, _ratio in paths if unlocked]
+    if path_failed or not path_passed:
+        print(
+            f"SUMMARY: Path KEEP host (below {SWITCH_BAR:.1f}×): "
+            + ", ".join(path_failed or ["(no Path family)"])
+            + ". Do not claim native for Path. Path type door stays on the host."
+        )
+        return 1
     print(
-        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed + boolean_passed + decimal_passed + date_passed + clock_passed + uuid_passed + ip_passed)} each >= "
+        f"SUMMARY: PASS — {', '.join(int_passed + float_passed + string_passed + bytes_passed + enum_passed + string_enum_passed + boolean_passed + decimal_passed + date_passed + clock_passed + uuid_passed + ip_passed + path_passed)} each >= "
         f"{SWITCH_BAR:.1f}× (plan-apply-only; not 70× product setattr). "
-        "Date, DateTime, Uuid type doors, and IP string identity met the bar."
+        "Date, DateTime, Uuid, and Path type doors, and IP string identity met the bar."
     )
     return 0
 
@@ -1377,7 +1463,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Measure Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean/"
-            "Decimal/Date/DateTime/Uuid/IP setattr vs native plan apply."
+            "Decimal/Date/DateTime/Uuid/IP/Path setattr vs native plan apply."
         )
     )
     parser.add_argument(

@@ -63,8 +63,9 @@ a parallel folder, not inside the layer they depend on.
   Boolean exact-bool type-door apply, Decimal exact-Decimal
   type-door apply, Date ``datetime.date`` type-door apply,
   DateTime ``datetime.datetime`` type-door apply,
-  Uuid ``uuid.UUID`` type-door apply, and
-  IP string-identity apply).
+  Uuid ``uuid.UUID`` type-door apply,
+  IP string-identity apply, and
+  Path ``pathlib.Path`` type-door apply).
   Optional extra
   ``ux-valio[native]`` (sibling crate ``native/``, module
   ``ux_valio_native``) binds closed Integer and Float bound plans,
@@ -72,13 +73,14 @@ a parallel folder, not inside the layer they depend on.
   member-set plan, a closed StringEnum UTF-8 member-set plan, a
   closed Boolean type door, a closed Decimal type door, a closed
   Date type door, a closed DateTime type door, a closed
-  Uuid type door, and a closed IP string-identity plan at
+  Uuid type door, a closed IP string-identity plan, and a closed
+  Path type door at
   construct. Private ``Plan`` is one variant per family (no mixed
   ``Unit`` bag): Integer / Float own ``BoundUnit`` (shared
   ``scalar_miss`` / ``compile_bound_plan``), String / Bytes own
   ``LengthUnit``, IntegerEnum / StringEnum own their member sets,
-  Boolean / Decimal / Date / DateTime / Uuid are type-door markers,
-  IP owns an address kind (``ipv4`` / ``ipv6`` / ``ip``). Checks stay
+  Boolean / Decimal / Date / DateTime / Uuid / Path are type-door
+  markers, IP owns an address kind (``ipv4`` / ``ipv6`` / ``ip``). Checks stay
   ``MinValue`` / ``MaxValue`` / ``GreaterThan`` / ``LessThan`` /
   ``Equal`` and min+max range, plus ``MinLength`` / ``MaxLength`` /
   ``Length``, plus the IntegerEnum ``i64`` set, plus StringEnum UTF-8
@@ -86,12 +88,13 @@ a parallel folder, not inside the layer they depend on.
   ``decimal.Decimal``, plus Date ``datetime.date``, plus DateTime
   ``datetime.datetime``, plus Uuid exact ``uuid.UUID``,
   plus IP string identity (``IPv4Address`` / ``IPv6Address`` /
-  ``ip_address`` on the given ``str``),
+  ``ip_address`` on the given ``str``), plus Path exact
+  ``pathlib.Path``,
   compile once, one FFI
   ``apply_integer`` / ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
   ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
   ``apply_decimal`` / ``apply_date`` / ``apply_datetime`` /
-  ``apply_uuid`` / ``apply_ip`` per set. Integer type door is FFI
+  ``apply_uuid`` / ``apply_ip`` / ``apply_path`` per set. Integer type door is FFI
   ``i64`` extract; Float is FFI ``f64`` extract (IEEE Door A: NaN
   unordered on min/max/gt/lt, ``eq`` uses ``!=`` so NaN never
   matches). Bound miss arms are fail-when: ``min_value`` passes when
@@ -176,8 +179,23 @@ a parallel folder, not inside the layer they depend on.
   Extract miss on a ``str`` bridges to that same parser. ``None``
   skips. Extra units (length, pattern, choice, ``required``,
   ``reassign=False``) stay on the host. ``StringValidator`` is not
-  this door. Cap Door B
-  off. Path / plain Enum / Pattern stay off.
+  this door.
+  Path type door is host ``isinstance`` of ``pathlib.Path``, then
+  FFI Path extract (``compile_path`` / ``apply_path``, via
+  ``_select_path``). Stored type is ``pathlib.Path`` only after
+  host ``_pre_validate`` (``pathlib.Path`` on a string). The peer
+  never sees a raw ``str``. ``int`` / ``bool`` / ``bytes`` /
+  ``pathlib.PurePath`` / raw ``str`` miss when the annotation is
+  exact ``pathlib.Path``. Exact ``pathlib.Path`` passes, including
+  a subclass (``PosixPath`` is a ``Path``). No resolve, no
+  absolute, no filesystem check. ``path_exists`` stays the named
+  extra (``FileNotFoundError``). Bounds (min/max/gt/lt/eq),
+  length, choice, ``required``, and ``reassign=False`` stay host.
+  Extract miss is a bridge to host ``TypeValidator``. ``None``
+  skips. ``pathlib.Path | None`` and other unions stay host. The
+  facade coerce annotation ``pathlib.Path | str`` is the host
+  coerce door. Extra units on ``PathValidator`` stay on the host.
+  Cap Door B off. Plain Enum / Pattern stay off.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_select_*``); do not merge a pair into one door
   and do not restore a per-family copy of the bind steps.
@@ -198,7 +216,7 @@ a parallel folder, not inside the layer they depend on.
   Rust ``plan`` / ``bound`` / ``length`` into ``_native_closed.py`` /
   ``_native_apply.py``. Tests are ``tests/test_native_layout.py`` (public ``compile_*`` /
   ``apply_*`` presence, bare ``compile`` / ``apply`` absence,
-  cross-family ``RuntimeError``, Cap OFF, Path HOLD) plus
+  cross-family ``RuntimeError``, Cap OFF, plain Enum / Pattern HOLD) plus
   ``tests/test_native_<family>.py``. Helpers live in
   ``tests/native_support.py``. Do not recombine
   ``tests/test_native_peer.py``. Open
@@ -421,15 +439,18 @@ New private helpers are verbs that name the action:
 `apply_native_datetime`,
 `apply_native_uuid`,
 `apply_native_ip`,
+`apply_native_path`,
 `_load_native`, `_closed_integer_bounds`, `_closed_float_bounds`,
 `_closed_string_length`, `_closed_bytes_length`, `_closed_integer_enum_members`,
 `_closed_string_enum_members`, `_closed_boolean`, `_closed_decimal`,
 `_closed_date`, `_closed_datetime`, `_closed_uuid`, `_closed_ip`,
+`_closed_path`,
 `_read_ip_facade`, `_reject_ip_string`, `_bridge_to_ip`,
 `_skip_native_ip_extra`, `_run_with_native_ip_extra_skip`,
 `_is_decimal_type_annotation`,
 `_is_date_type_annotation`, `_is_datetime_type_annotation`,
 `_is_uuid_type_annotation`,
+`_is_path_type_annotation`,
 `_is_stored_or_str_annotation`,
 `_closed_length`, `_closed_value_bounds`, `_bind_compiled_plan`, `_apply_native_closed`,
 `_clear_native`, `_bridge_to_value`, `_bridge_to_length`, `_bridge_to_type`,
@@ -438,11 +459,13 @@ New private helpers are verbs that name the action:
 `_raise_host_boolean_type_miss`, `_raise_host_decimal_type_miss`,
 `_raise_host_date_type_miss`, `_raise_host_datetime_type_miss`,
 `_raise_host_uuid_type_miss`, `_raise_host_ip_type_miss`,
+`_raise_host_path_type_miss`,
 `_raise_host_enum_type_miss`, `_raise_host_closed_type_miss`,
 `_select_integer_bounds`, `_select_float_bounds`, `_select_string_length`,
 `_select_bytes_length`, `_select_integer_enum`, `_select_string_enum`,
 `_select_boolean`, `_select_decimal`,
 `_select_date`, `_select_datetime`, `_select_uuid`, `_select_ip`,
+`_select_path`,
 `_ClosedPair`,
 `Validator._apply_specified_path`.
 Do not reintroduce leftover aliases (`_named_extra`, `bound`,

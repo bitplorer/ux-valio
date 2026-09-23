@@ -21,7 +21,6 @@ from tests.native_support import (
 from ux_valio import (
     DateValidator,
     EnumValidator,
-    PathValidator,
     UUIDValidator,
     ValidationErrors,
     Validator,
@@ -64,7 +63,6 @@ def test_closed_uuid_type_door_is_uuid_extract():
     assert "fn compile_and_apply" not in rust
     assert not re.search(r"\bfn compile\(", rust)
     assert not re.search(r"\bfn apply\(", rust)
-    assert "fn compile_path" not in rust
     assert "_closed_uuid" in native_py
     assert "_select_uuid" in native_py
     assert "apply_native_uuid" in native_py
@@ -193,7 +191,6 @@ def test_uuid_unclosed_stays_on_host():
     assert UUIDValidator(required=True, debug=True, name="n")._native_plan is None
     assert UUIDValidator(reassign=False, debug=True, name="n")._native_plan is None
     assert UUIDValidator(in_choice=(_SAMPLE,), debug=True, name="n")._native_plan is None
-    assert PathValidator(debug=True, name="n")._native_plan is None
     assert EnumValidator(debug=True, name="n")._native_plan is None
     open_union = Validator[uuid.UUID | int](debug=True, name="n")
     assert open_union._native_plan is None

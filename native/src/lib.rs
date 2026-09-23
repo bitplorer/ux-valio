@@ -4,8 +4,9 @@
 //! family's checks: Integer / Float own [`bound::BoundUnit`] values,
 //! String / Bytes own [`length::LengthUnit`] values, IntegerEnum owns
 //! an `i64` member set, StringEnum owns a UTF-8 member set, Boolean,
-//! Decimal, Date, DateTime, and Uuid are type-door markers. IP owns an
-//! address-kind (`ipv4` / `ipv6` / `ip`) and checks a `str`. `apply_integer`
+//! Decimal, Date, DateTime, Uuid, and Path are type-door markers. IP
+//! owns an address-kind (`ipv4` / `ipv6` / `ip`) and checks a `str`.
+//! `apply_integer`
 //! clones the integer
 //! bounds and walks those — a length unit is the wrong type, so it
 //! cannot be passed into that walk.
@@ -18,7 +19,8 @@
 //! `apply_date(plan, datetime.date)` /
 //! `apply_datetime(plan, datetime.datetime)` /
 //! `apply_uuid(plan, uuid.UUID)` /
-//! `apply_ip(plan, &str)`).
+//! `apply_ip(plan, &str)` /
+//! `apply_path(plan, pathlib.Path)`).
 //! Bound units (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` /
 //! `Equal`) run after numeric extract. Each miss arm is fail-when:
 //! `min_value` passes when `value >= bound` (miss `<`); `gt` passes
@@ -171,6 +173,33 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExtractedUuid {
     }
 }
 
+/// Exact `pathlib.Path`. A subclass passes (`is_instance`). `PurePath`
+/// does not. Not a string coerce. Not a filesystem check.
+struct ExtractedPath;
+
+fn cached_path_type(py: Python<'_>) -> PyResult<pyo3::Bound<'_, PyAny>> {
+    use pyo3::sync::PyOnceLock;
+
+    static PATH: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+    let cached = PATH.get_or_try_init(py, || {
+        Ok::<_, PyErr>(py.import("pathlib")?.getattr("Path")?.unbind())
+    })?;
+    Ok(cached.bind(py).clone())
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for ExtractedPath {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let path_type = cached_path_type(obj.py())?;
+        if obj.is_instance(&path_type)? {
+            Ok(ExtractedPath)
+        } else {
+            Err(extract_type_error(obj.py(), "pathlib.Path"))
+        }
+    }
+}
+
 /// Extract miss is a Python `TypeError`. Built from the builtin so this
 /// file does not name a reflected type object. Host `isinstance` misses
 /// first; this is the bridge for a direct `apply_*` call.
@@ -244,21 +273,27 @@ fn compile_ip_plan(kind: IpKind) -> PyPlan {
     share_plan(Plan::Ip(kind))
 }
 
+fn compile_path_plan() -> PyPlan {
+    share_plan(Plan::Path)
+}
+
 /// Product native module: `compile_integer(...)` / `compile_float(...)` /
 /// `compile_string(...)` / `compile_bytes(...)` /
 /// `compile_integer_enum(...)` / `compile_string_enum(...)` /
 /// `compile_boolean()` / `compile_decimal()` / `compile_date()` /
-/// `compile_datetime()` / `compile_uuid()` / `compile_ip(kind)` + one-shot
+/// `compile_datetime()` / `compile_uuid()` / `compile_ip(kind)` /
+/// `compile_path()` + one-shot
 /// `apply_integer` /
 /// `apply_float` / `apply_string` / `apply_bytes` / `apply_integer_enum` /
 /// `apply_string_enum` / `apply_boolean` / `apply_decimal` /
-/// `apply_date` / `apply_datetime` / `apply_uuid` / `apply_ip`.
+/// `apply_date` / `apply_datetime` / `apply_uuid` / `apply_ip` /
+/// `apply_path`.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is the [`Plan`]
 /// variant; extract is the FFI argument. Compile kwargs are host names
 /// (`min_value` / `gt` / `max_length` / `length`) or `members` for an
 /// enum set, or `kind` (`ipv4` / `ipv6` / `ip`) for IP. Boolean, Decimal,
-/// Date, DateTime, and Uuid take no kwargs. IP `kind` selects the
+/// Date, DateTime, Uuid, and Path take no kwargs. IP `kind` selects the
 /// stdlib string parser (`IPv4Address` / `IPv6Address` / `ip_address`).
 /// Decimal extract is exact `decimal.Decimal` (no float bridge, no scale
 /// unit). Date extract is `datetime.date` (`datetime.datetime` extracts
@@ -267,7 +302,9 @@ fn compile_ip_plan(kind: IpKind) -> PyPlan {
 /// exact `uuid.UUID` (a raw `str` does not). IP extract is `&str`;
 /// the kind's parser then accepts or returns `FailKind::NotIp`.
 /// The host stores that string (no coerce to `ipaddress` objects).
-/// String coerce for Date, DateTime, and Uuid stays
+/// Path extract is exact `pathlib.Path` (a raw `str` does not;
+/// `pathlib.PurePath` does not; a subclass does). String coerce for
+/// Date, DateTime, Uuid, and Path stays host. `path_exists` stays
 /// host. Not a taught L1 API. Compile and apply stay separate doors. A
 /// plan handed to another family's apply raises `RuntimeError` (the
 /// walk is not run).
@@ -375,7 +412,8 @@ mod ux_valio_native {
             | Plan::Date
             | Plan::DateTime
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_integer")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_integer")),
         };
         Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
@@ -408,7 +446,8 @@ mod ux_valio_native {
             | Plan::Date
             | Plan::DateTime
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_float")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_float")),
         };
         Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
@@ -439,7 +478,8 @@ mod ux_valio_native {
             | Plan::Date
             | Plan::DateTime
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_string")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_string")),
         };
         let char_len = value.chars().count();
         Ok(py.detach(move || apply_length_units(&units, char_len).err()))
@@ -471,7 +511,8 @@ mod ux_valio_native {
             | Plan::Date
             | Plan::DateTime
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_bytes")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_bytes")),
         };
         let byte_len = value.len();
         Ok(py.detach(move || apply_length_units(&units, byte_len).err()))
@@ -512,7 +553,8 @@ mod ux_valio_native {
             | Plan::Date
             | Plan::DateTime
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_integer_enum")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_integer_enum")),
         };
         Ok(py.detach(move || apply_i64_members(&members, value).err()))
     }
@@ -556,7 +598,8 @@ mod ux_valio_native {
             | Plan::Date
             | Plan::DateTime
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_string_enum")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_string_enum")),
         };
         let owned = value.to_owned();
         Ok(py.detach(move || apply_str_members(&members, &owned).err()))
@@ -596,7 +639,8 @@ mod ux_valio_native {
             | Plan::Date
             | Plan::DateTime
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_boolean")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_boolean")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -636,7 +680,8 @@ mod ux_valio_native {
             | Plan::Date
             | Plan::DateTime
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_decimal")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_decimal")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -678,7 +723,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::DateTime
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_date")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_date")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -718,7 +764,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::Uuid
-            | Plan::Ip(_) => return Err(unexpected_family("apply_datetime")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_datetime")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -758,7 +805,8 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::DateTime
-            | Plan::Ip(_) => return Err(unexpected_family("apply_uuid")),
+            | Plan::Ip(_)
+            | Plan::Path => return Err(unexpected_family("apply_uuid")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -809,9 +857,52 @@ mod ux_valio_native {
             | Plan::Decimal
             | Plan::Date
             | Plan::DateTime
-            | Plan::Uuid => return Err(unexpected_family("apply_ip")),
+            | Plan::Uuid
+            | Plan::Path => return Err(unexpected_family("apply_ip")),
         };
         let owned = value.to_owned();
         Ok(py.detach(move || ip_miss(kind, &owned)))
+    }
+
+    /// Closed Path type-door plan. No kwargs. The variant is the
+    /// `Path` marker. Not a taught L1 API. Not a String plan.
+    /// String coerce stays on the host. `path_exists` stays on the host.
+    #[pyfunction]
+    fn compile_path() -> PyPlan {
+        compile_path_plan()
+    }
+
+    /// One-shot Path apply. Success is `None` for a `pathlib.Path`,
+    /// including a subclass.
+    ///
+    /// Closed Path type door is this extract. A Python `str`, `int`,
+    /// `bool`, `bytes`, or `pathlib.PurePath` raises at this FFI
+    /// boundary (extract error); host falls through to the host type
+    /// door. No string coerce. No filesystem check. No bound unit.
+    /// Releases the GIL (`Python::detach`). Compile and apply stay a
+    /// pair.
+    #[pyfunction]
+    fn apply_path(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: ExtractedPath,
+    ) -> PyResult<Option<FailKind>> {
+        match &plan.body {
+            Plan::Path => {}
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime
+            | Plan::Uuid
+            | Plan::Ip(_) => return Err(unexpected_family("apply_path")),
+        }
+        let _ = value;
+        Ok(py.detach(|| None))
     }
 }

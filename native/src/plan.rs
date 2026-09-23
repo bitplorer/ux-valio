@@ -3,8 +3,8 @@
 //! [`PyPlan`] is the frozen object Python calls `Plan`. It holds one
 //! [`Plan`] variant — Integer bounds, Float bounds, String length, Bytes
 //! length, an IntegerEnum member set, a StringEnum member set, or a
-//! Boolean / Decimal / Date / DateTime / Uuid type-door marker, or an
-//! IP string-identity kind. There is no shared unit bag.
+//! Boolean / Decimal / Date / DateTime / Uuid / Path type-door marker,
+//! or an IP string-identity kind. There is no shared unit bag.
 
 use std::sync::Arc;
 
@@ -83,6 +83,10 @@ pub(crate) enum Plan {
     /// `str` extract, then IPv4 / IPv6 / either identity. The stored
     /// value stays that string. No bound unit.
     Ip(IpKind),
+    /// Exact `pathlib.Path` extract. A raw `str` does not extract.
+    /// `pathlib.PurePath` is not a `Path`. No bound unit. No
+    /// filesystem check. String coerce stays on the host.
+    Path,
 }
 
 /// Which stdlib parser the IP plan mirrors.

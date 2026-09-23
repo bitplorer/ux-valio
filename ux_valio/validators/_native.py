@@ -9,14 +9,16 @@ are the same walk for every family, so they stay here. This is not a
 ``Plan`` is one variant per family. Integer / Float own ``BoundUnit``
 values. String / Bytes own ``LengthUnit`` values. IntegerEnum /
 StringEnum own a member set. Boolean / Decimal / Date / DateTime /
-Uuid are type-door markers. IP owns an address kind (``ipv4`` /
-``ipv6`` / ``ip``) and checks a ``str``. There is no shared unit bag.
+Uuid / Path are type-door markers. IP owns an address kind
+(``ipv4`` / ``ipv6`` / ``ip``) and checks a ``str``. There is no
+shared unit bag.
 
 Bind-time choice: when ``ux_valio_native`` is importable and the
 specified path is one closed family, compile that variant once.
 Type door is host-first ``isinstance`` then FFI extract (``i64`` /
 ``f64`` / ``&str`` / ``&[u8]`` / ``bool`` / ``decimal.Decimal`` /
-``datetime.date`` / ``datetime.datetime`` / ``uuid.UUID`` / ``str`` for IP);
+``datetime.date`` / ``datetime.datetime`` / ``uuid.UUID`` /
+``pathlib.Path`` / ``str`` for IP);
 bound / length / member checks run after extract. StringEnum
 extract is the member's ``.value`` as UTF-8 ``&str``. Boolean
 extract is exact ``bool`` (``1`` / ``0`` are not coerced). Decimal
@@ -27,16 +29,20 @@ extract is exact ``decimal.Decimal`` (``float`` / ``int`` /
 subclasses ``date``; ``DateValidator`` still rejects it in the
 named extra). DateTime extract is ``datetime.datetime`` (a plain
 ``date`` does not). Uuid extract is ``uuid.UUID`` (a raw ``str``
-does not). String coerce for Date, DateTime, and Uuid stays host
-``_pre_validate``. IP facades do not coerce: the stored value is
-the given string, and ``apply_ip`` mirrors ``ipaddress.IPv4Address``
-/ ``IPv6Address`` / ``ip_address`` on that string (``FailKind.NotIp``).
+does not). Path extract is ``pathlib.Path`` (a raw ``str`` does
+not; ``pathlib.PurePath`` does not). String coerce for Date,
+DateTime, Uuid, and Path stays host ``_pre_validate``.
+``path_exists`` stays host. IP facades do not coerce: the stored
+value is the given string, and ``apply_ip`` mirrors
+``ipaddress.IPv4Address`` / ``IPv6Address`` / ``ip_address`` on
+that string (``FailKind.NotIp``).
 Open TypeValidator / Union / TypedDict /
-Annotated / pattern / plain ``EnumValidator`` / Path
+Annotated / pattern / plain ``EnumValidator``
 stay on the host. A ``BooleanValidator``, ``DecimalValidator``,
 ``DateValidator``, ``DateTimeValidator``, ``UUIDValidator``,
-``IPv4Validator``, ``IPv6Validator``, or ``IPAddressValidator`` with
-any extra unit stays on the host. Missing or failed extra → host
+``PathValidator``, ``IPv4Validator``, ``IPv6Validator``, or
+``IPAddressValidator`` with any extra unit stays on the host.
+Missing or failed extra → host
 ``_active_units`` path. No import on the hot path after that
 choice. Each family keeps its own ``compile_*`` / ``apply_*`` pair.
 Not Cap Door B.
@@ -48,6 +54,7 @@ import datetime
 import decimal
 import enum
 import ipaddress
+import pathlib
 import types
 import uuid
 from typing import Any, Union, get_args, get_origin
@@ -318,6 +325,16 @@ def _is_uuid_type_annotation(annotation: Any) -> bool:
     return _is_stored_or_str_annotation(annotation, uuid.UUID)
 
 
+def _is_path_type_annotation(annotation: Any) -> bool:
+    """Exact ``pathlib.Path``, or the facade coerce union ``Path | str``.
+
+    ``Path | None`` and every other union stay on the host.
+    ``pathlib.PurePath`` is not this annotation. This module does not
+    import facades.
+    """
+    return _is_stored_or_str_annotation(annotation, pathlib.Path)
+
+
 def _is_datetime_type_annotation(annotation: Any) -> bool:
     """Exact ``datetime.datetime``, or the facade coerce union ``datetime | str``.
 
@@ -408,6 +425,26 @@ def _closed_ip(owner: Any) -> dict[str, str] | None:
     if units != (TypeValidator._validate_type,):
         return None
     return {"kind": spec[0]}
+
+
+def _closed_path(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is ``pathlib.Path`` + the type door.
+
+    Annotation is ``pathlib.Path`` or the coerce union
+    ``pathlib.Path | str`` (``PathValidator``). Only ``TypeValidator``
+    may be active. Extra bounds (``min_value``, ``required``, choice,
+    ``reassign=False``) stay on the host. String coerce stays host
+    ``_pre_validate``. ``path_exists`` is not a path unit: the
+    filesystem check stays the named extra. ``PathValidator`` is the
+    taught facade; ``Validator[pathlib.Path]`` with the same closed
+    shape is the same door. This module does not import facades.
+    """
+    if not _is_path_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
 
 
 def _closed_datetime(owner: Any) -> dict[str, Any] | None:
@@ -670,6 +707,21 @@ def _raise_host_ip_type_miss(owner: Any, value: Any) -> None:
     skipped by the caller. The closed plan has no second path unit,
     so ``collect_all`` does not continue inside this raise
     (``validate`` still continues into the named extra for a non-str).
+    """
+    TypeValidator._validate_type(owner, None, value)
+
+
+def _raise_host_path_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Path type door is host-first.
+
+    FFI type is the later ``pathlib.Path`` extract. ``int`` / ``bool``
+    / ``bytes`` / ``pathlib.PurePath`` miss. A raw ``str`` misses only
+    when the annotation does not accept ``str``; the coerce union
+    accepts ``str`` here and ``_pre_validate`` has already built a
+    ``Path``. ``None`` is skipped by the caller. The closed plan has
+    no second path unit, so ``collect_all`` does not continue inside
+    this raise (``validate`` still continues into the named extra,
+    including ``path_exists``).
     """
     TypeValidator._validate_type(owner, None, value)
 
@@ -942,6 +994,33 @@ def apply_native_date(owner: Any, value: Any) -> None:
     _raise_native_bound_miss(owner, fail, value)
 
 
+def apply_native_path(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-Path stays on host.
+
+    TypeError at ``pathlib.Path`` extract is a bridge signal (same
+    three buckets as Uuid: validation ``FailKind`` / bridge /
+    native-infra ``RuntimeError`` naming ``ux_valio_native``). No
+    public L1 "overflow" message. Door A is ``pathlib.Path`` after
+    host string coerce. ``int`` / ``bool`` / ``bytes`` /
+    ``pathlib.PurePath`` miss. No filesystem check. No bound unit.
+    """
+    if value is None:
+        return
+    if not isinstance(value, pathlib.Path):
+        _raise_host_path_type_miss(owner, value)
+        return
+    try:
+        fail = owner._native_apply(owner._native_plan, value)
+    except TypeError:
+        _bridge_to_type(owner, value)
+        return
+    except Exception as err:
+        raise RuntimeError("ux_valio_native apply failed") from err
+    if fail is None:
+        return
+    _raise_native_bound_miss(owner, fail, value)
+
+
 def apply_native_uuid(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. Non-UUID stays on host.
 
@@ -1154,6 +1233,16 @@ def _select_date(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     )
 
 
+def _select_path(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Path: ``compile_path`` and ``apply_path`` stay a pair."""
+    return (
+        native.apply_path,
+        apply_native_path,
+        native.compile_path,
+        bounds,
+    )
+
+
 def _select_uuid(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed Uuid: ``compile_uuid`` and ``apply_uuid`` stay a pair."""
     return (
@@ -1210,8 +1299,8 @@ def bind_native_plan(owner: Any) -> None:
     One walk. Each closed family keeps its own ``compile_*`` / ``apply_*``
     pair: Integer / Float own ``BoundUnit`` values, String / Bytes own
     ``LengthUnit`` values, IntegerEnum / StringEnum own a member set,
-    Boolean / Decimal / Date / DateTime / Uuid are type-door markers.
-    IP owns an address kind and checks a ``str``. An
+    Boolean / Decimal / Date / DateTime / Uuid / Path are type-door
+    markers. IP owns an address kind and checks a ``str``. An
     unclosed path does not import the extra. Do not merge a pair into
     one door.
     """
@@ -1228,6 +1317,7 @@ def bind_native_plan(owner: Any) -> None:
         (_closed_datetime, _select_datetime),
         (_closed_uuid, _select_uuid),
         (_closed_ip, _select_ip),
+        (_closed_path, _select_path),
     )
     for detect, select in families:
         payload = detect(owner)

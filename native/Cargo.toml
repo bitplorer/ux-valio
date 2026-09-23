@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2021"
 license = "MIT"
 publish = false
-description = "Optional PyO3 native module: compile once + apply Integer/Float bounds, String/Bytes length, IntegerEnum/StringEnum member sets, Boolean/Decimal/Date/DateTime/Uuid type doors, and IP string identity. ux-valio[native]."
+description = "Optional PyO3 native module: compile once + apply Integer/Float bounds, String/Bytes length, IntegerEnum/StringEnum member sets, Boolean/Decimal/Date/DateTime/Uuid/Path type doors, and IP string identity. ux-valio[native]."
 rust-version = "1.83"
 
 [lib]
