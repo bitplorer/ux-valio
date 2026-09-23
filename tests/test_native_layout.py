@@ -443,7 +443,7 @@ def test_closed_apply_slot_is_seeded_on_validator():
 
     ``Validator.__init__`` seeds it ``None``. Product-PyO3 Rust FFI stays
     ``_native_apply``. ``bind_native_plan`` writes ``door._run_closed``
-    onto ``_native_run`` when the row has no quirk run.
+    onto ``_native_run``. There is no row ``run`` slot.
     ``apply_native_bounds`` reads the attribute directly.
     """
     plain = IntegerValidator(debug=True, name="n")
@@ -458,6 +458,8 @@ def test_closed_apply_slot_is_seeded_on_validator():
     assert 'getattr(owner, "_native_run"' not in native_py
     assert "run = owner._native_run" in native_py
     assert "owner._native_run = door._run_closed" in native_py
+    assert "owner._native_run = run" not in native_py
+    assert "self.run" not in native_py
 
 
 @needs_native
