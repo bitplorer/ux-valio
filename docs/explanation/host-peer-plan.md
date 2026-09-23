@@ -296,8 +296,8 @@ The measure cleared 3×, so the closed type door ships. Scale does not:
 - Cap Door B stays off. One family only. Pattern / Date* / UUID /
   Path / plain Enum stay off this tip.
 - Pair naming: ``compile_decimal`` / ``apply_decimal`` (intentional
-  pair — do not merge). Host ``_select_decimal`` walks the one-family
-  bind list, same shape as Boolean / Float.
+  pair — do not merge). Host ``_select_decimal`` fills that
+  ``_FAMILY_DOORS`` row, same shape as Boolean / Float.
 - String coerce stays host. Peer extract is ``decimal.Decimal`` (or a
   Rust decimal that matches host compare for closed bounds). No float
   bridge. ``rust_decimal`` only if a later bound tip needs it for
@@ -342,8 +342,8 @@ type doors ship. Bounds do not:
   UUID / Path / IP / plain Enum / Pattern stay off this tip.
 - Pair naming: ``compile_date`` / ``apply_date`` and
   ``compile_datetime`` / ``apply_datetime`` (intentional pairs — do
-  not merge). Host ``_select_date`` / ``_select_datetime`` walk the
-  one-family bind list, same shape as Decimal.
+  not merge). Host ``_select_date`` / ``_select_datetime`` fill those
+  ``_FAMILY_DOORS`` rows, same shape as Decimal.
 - String coerce stays host. No calendar arithmetic in Rust.
 - ``FailKind`` / host ``TypeError`` wording matches the other Door A
   families. Extract miss is a bridge to host ``TypeValidator``, not
@@ -370,7 +370,7 @@ after host pre-validate. One family. Bounds do not:
 - Cap Door B stays off. One family only (Uuid). Path / IP / plain
   Enum / Pattern stay off this tip.
 - Pair naming: ``compile_uuid`` / ``apply_uuid``. Host
-  ``_select_uuid`` walks the one-family bind list, same shape as Date.
+  ``_select_uuid`` fills that ``_FAMILY_DOORS`` row, same shape as Date.
 - String coerce stays host. ``None`` skips. ``uuid.UUID | None``
   stays host. The facade coerce annotation ``uuid.UUID | str`` is
   the host coerce door.
@@ -404,7 +404,7 @@ string-identity door ships. The three facades differ only by parser:
 - Cap Door B stays off. One family only (IP). Path / plain Enum /
   Pattern stay off this tip.
 - Pair naming: ``compile_ip`` / ``apply_ip``. Host ``_select_ip``
-  walks the one-family bind list, same shape as Uuid.
+  fills that ``_FAMILY_DOORS`` row, same shape as Uuid.
 
 HOLD after the IP tip was Path. Path shipped in the next
 paragraphs. IP length / pattern / choice / ``required`` /
@@ -430,7 +430,7 @@ only after host pre-validate. One family. Bounds and
 - Cap Door B stays off. One family only (Path). Plain Enum /
   Pattern stay off this tip.
 - Pair naming: ``compile_path`` / ``apply_path``. Host
-  ``_select_path`` walks the one-family bind list, same shape as
+  ``_select_path`` fills that ``_FAMILY_DOORS`` row, same shape as
   Uuid.
 - String coerce stays host. ``None`` skips. ``pathlib.Path | None``
   stays host. The facade coerce annotation ``pathlib.Path | str``
@@ -459,7 +459,8 @@ concern. UUID and IP closed-family HOLD stays cleared.
    wheel (module ``ux_valio_native`` — not a taught import).
 2. Same field default. Same ``annotation``. Same fail-closed errors.
    L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator, BooleanValidator, DecimalValidator, DateValidator, DateTimeValidator, UUIDValidator``.
-3. Compile at bind, not at set. Host bind walks one family list.
+3. Compile at bind, not at set. Host bind walks one family list
+   (``_FAMILY_DOORS``).
    Each family keeps its ``compile_*`` / ``apply_*`` pair (those doors
    stay separate). Missing peer → host apply (no import
    error on the hot path after a failed extra install: bind-time
@@ -923,8 +924,8 @@ closed type door ships. Bounds do not:
 - Cap Door B stays off. One family only (Uuid). Path / IP / plain
   Enum / Pattern stay off this tip.
 - Pair naming: ``compile_uuid`` / ``apply_uuid`` (intentional pair —
-  do not merge). Host ``_select_uuid`` walks the one-family bind
-  list, same shape as Date.
+  do not merge). Host ``_select_uuid`` fills that ``_FAMILY_DOORS``
+  row, same shape as Date.
 - String coerce stays host. No UUID parsing in Rust.
 - ``FailKind`` / host ``TypeError`` wording matches the other Door A
   families. Extract miss is a bridge to host ``TypeValidator``, not

@@ -2,9 +2,14 @@
 """Optional native apply (product PyO3 ``ux_valio_native``). Not a taught import.
 
 One module. A private split is worth it only when opening that file
-shows one family's walk. Closed detectors, apply, and the bind list
-are the same walk for every family, so they stay here. This is not a
-``plan`` / ``bound`` / ``length`` mirror of the Rust crate.
+shows one family's walk and nothing else. Shared detectors, bridges,
+and the bind table still serve every family, so they stay here.
+Each Door A family is one contiguous section. ``bind_native_plan``
+walks ``_FAMILY_DOORS`` (a private frozen ``_FamilyDoor`` row:
+``closed`` / ``compile`` / ``apply`` / ``run``). That row is
+not a product type door and not a class-per-type mirror of Rust
+``Plan``. This is not a ``plan`` / ``bound`` / ``length`` mirror
+of the Rust crate.
 
 ``Plan`` is one variant per family. Integer / Float own ``BoundUnit``
 values. String / Bytes own ``LengthUnit`` values. IntegerEnum /
@@ -57,7 +62,7 @@ import ipaddress
 import pathlib
 import types
 import uuid
-from typing import Any, Union, get_args, get_origin
+from typing import Any, NamedTuple, Union, get_args, get_origin
 
 from ux_valio.errors import raise_collected
 from ux_valio.validators.leaves import TypeValidator
@@ -106,15 +111,6 @@ _HOST_LENGTH_TO_COMPILE = (
     ("length", "length"),
 )
 
-# Living IP facades store ``str``. The stdlib types are the parsers,
-# not the stored type. This module does not import facades; the class
-# is the one in ``ux_valio.facades.typed``.
-_IP_FACADES = {
-    "IPv4Validator": ("ipv4", ipaddress.IPv4Address, "IPv4 address"),
-    "IPv6Validator": ("ipv6", ipaddress.IPv6Address, "IPv6 address"),
-    "IPAddressValidator": ("ip", ipaddress.ip_address, "IP address"),
-}
-
 
 def _closed_value_bounds(owner: Any, annotation: type, bound_type: type) -> dict[str, Any] | None:
     """Compile kwargs when the specified path is annotation + ValueValidator bounds."""
@@ -137,21 +133,6 @@ def _closed_value_bounds(owner: Any, annotation: type, bound_type: type) -> dict
     if not bounds:
         return None
     return bounds
-
-
-def _closed_integer_bounds(owner: Any) -> dict[str, int] | None:
-    """Compile kwargs when the specified path is Integer + ValueValidator bounds."""
-    return _closed_value_bounds(owner, int, int)
-
-
-def _closed_float_bounds(owner: Any) -> dict[str, float] | None:
-    """Compile kwargs when the specified path is Float + ValueValidator bounds.
-
-    Bounds must be ``float`` (not ``int``). ``FloatValidator(min_value=0)``
-    stays on the host, same exact-type lock as Integer rejecting a float
-    bound. NaN / ±inf are ``float`` and compile.
-    """
-    return _closed_value_bounds(owner, float, float)
 
 
 def _closed_length(owner: Any, annotation: type) -> dict[str, int] | None:
@@ -181,170 +162,6 @@ def _closed_length(owner: Any, annotation: type) -> dict[str, int] | None:
     return bounds
 
 
-def _closed_string_length(owner: Any) -> dict[str, int] | None:
-    """Compile kwargs when the specified path is String + LengthValidator.
-
-    Annotation must be ``str``. Bounds must be ``int`` (not ``bool`` /
-    ``float``). List / pattern / required stay on the host. Count is
-    ``len(str)`` codepoints.
-    """
-    return _closed_length(owner, str)
-
-
-def _closed_integer_enum_members(owner: Any) -> list[int] | None:
-    """Member ``i64`` values when the path is ``IntegerEnumValidator`` + type.
-
-    Annotation must be a concrete ``enum.IntEnum`` (not ``enum.IntEnum``
-    itself, not a union). Every member ``.value`` must be an exact ``int``
-    (``bool`` stays on the host). Extra bounds stay on the host. Plain
-    ``EnumValidator`` / ``StringEnumValidator`` / ``Validator[SomeIntEnum]``
-    stay on the host — this module does not import facades; the facade is
-    the class in ``ux_valio.facades.typed``. StringEnum is
-    ``_closed_string_enum_members``, not this function.
-    """
-    if type(owner).__module__ != "ux_valio.facades.typed":
-        return None
-    if type(owner).__qualname__ != "IntegerEnumValidator":
-        return None
-    annotation = getattr(owner, "annotation", None)
-    if not isinstance(annotation, type) or not issubclass(annotation, enum.IntEnum):
-        return None
-    if annotation is enum.IntEnum:
-        return None
-    units = getattr(owner, "_active_units", None)
-    if units != (TypeValidator._validate_type,):
-        return None
-    members: list[int] = []
-    seen: set[int] = set()
-    for member in annotation:
-        raw = member.value
-        if type(raw) is not int:
-            return None
-        if raw in seen:
-            continue
-        seen.add(raw)
-        members.append(raw)
-    if not members:
-        return None
-    return members
-
-
-def _closed_string_enum_members(owner: Any) -> list[str] | None:
-    """UTF-8 member values when the path is ``StringEnumValidator`` + type.
-
-    Annotation must be a concrete ``enum.Enum`` (not ``enum.Enum`` itself,
-    not a union, not bare ``enum.StrEnum`` with no members). Every member
-    ``.value`` must be an exact ``str`` (a ``str`` subclass stays on the
-    host) that encodes as UTF-8 (a lone surrogate stays on the host).
-    Extra bounds stay on the host. Plain ``EnumValidator`` /
-    ``IntegerEnumValidator`` / ``Validator[SomeStrEnum]`` stay on the
-    host — this module does not import facades; the facade is the class
-    in ``ux_valio.facades.typed``. ``BooleanValidator`` is
-    ``_closed_boolean``, not this function.
-    """
-    if type(owner).__module__ != "ux_valio.facades.typed":
-        return None
-    if type(owner).__qualname__ != "StringEnumValidator":
-        return None
-    annotation = getattr(owner, "annotation", None)
-    if not isinstance(annotation, type) or not issubclass(annotation, enum.Enum):
-        return None
-    if annotation is enum.Enum:
-        return None
-    units = getattr(owner, "_active_units", None)
-    if units != (TypeValidator._validate_type,):
-        return None
-    members: list[str] = []
-    seen: set[str] = set()
-    for member in annotation:
-        raw = member.value
-        if type(raw) is not str:
-            return None
-        try:
-            raw.encode("utf-8")
-        except UnicodeEncodeError:
-            return None
-        if raw in seen:
-            continue
-        seen.add(raw)
-        members.append(raw)
-    if not members:
-        return None
-    return members
-
-
-def _closed_boolean(owner: Any) -> dict[str, Any] | None:
-    """Empty compile kwargs when the path is exact ``bool`` + the type door.
-
-    Annotation must be ``bool`` (not ``bool | None``, not ``int``). Only
-    ``TypeValidator`` may be active. Extra bounds (``min_value``,
-    ``required``, choice, ``reassign=False``) stay on the host. No
-    coerce: ``1`` / ``0`` are not ``bool``. ``BooleanValidator`` is the
-    taught facade; ``Validator[bool]`` with the same closed shape is the
-    same door. This module does not import facades.
-    """
-    if getattr(owner, "annotation", None) is not bool:
-        return None
-    units = getattr(owner, "_active_units", None)
-    if units != (TypeValidator._validate_type,):
-        return None
-    return {}
-
-
-def _is_decimal_type_annotation(annotation: Any) -> bool:
-    """Exact ``decimal.Decimal``, or the facade coerce union ``Decimal | str``.
-
-    ``Decimal | None`` and every other union stay on the host. This
-    module does not import facades.
-    """
-    if annotation is decimal.Decimal:
-        return True
-    origin = get_origin(annotation)
-    if origin is not Union and not isinstance(annotation, types.UnionType):
-        return False
-    return frozenset(get_args(annotation)) == frozenset((decimal.Decimal, str))
-
-
-def _is_date_type_annotation(annotation: Any) -> bool:
-    """Exact ``datetime.date``, or the facade coerce union ``date | str``.
-
-    ``date | None`` and every other union stay on the host.
-    ``datetime.datetime`` is not this annotation (that is
-    ``_is_datetime_type_annotation``). This module does not import
-    facades.
-    """
-    return _is_stored_or_str_annotation(annotation, datetime.date)
-
-
-def _is_uuid_type_annotation(annotation: Any) -> bool:
-    """Exact ``uuid.UUID``, or the facade coerce union ``UUID | str``.
-
-    ``UUID | None`` and every other union stay on the host. This
-    module does not import facades.
-    """
-    return _is_stored_or_str_annotation(annotation, uuid.UUID)
-
-
-def _is_path_type_annotation(annotation: Any) -> bool:
-    """Exact ``pathlib.Path``, or the facade coerce union ``Path | str``.
-
-    ``Path | None`` and every other union stay on the host.
-    ``pathlib.PurePath`` is not this annotation. This module does not
-    import facades.
-    """
-    return _is_stored_or_str_annotation(annotation, pathlib.Path)
-
-
-def _is_datetime_type_annotation(annotation: Any) -> bool:
-    """Exact ``datetime.datetime``, or the facade coerce union ``datetime | str``.
-
-    ``datetime | None`` and every other union stay on the host. A
-    plain ``datetime.date`` annotation is ``_is_date_type_annotation``.
-    This module does not import facades.
-    """
-    return _is_stored_or_str_annotation(annotation, datetime.datetime)
-
-
 def _is_stored_or_str_annotation(annotation: Any, stored: type) -> bool:
     """Exact ``stored``, or the coerce union ``stored | str``.
 
@@ -356,143 +173,6 @@ def _is_stored_or_str_annotation(annotation: Any, stored: type) -> bool:
     if origin is not Union and not isinstance(annotation, types.UnionType):
         return False
     return frozenset(get_args(annotation)) == frozenset((stored, str))
-
-
-def _closed_date(owner: Any) -> dict[str, Any] | None:
-    """Empty compile kwargs when the path is ``datetime.date`` + the type door.
-
-    Annotation is ``datetime.date`` or the coerce union
-    ``datetime.date | str`` (``DateValidator``). Only ``TypeValidator``
-    may be active. Extra bounds (``min_value``, ``required``, choice,
-    ``reassign=False``) stay on the host. String coerce stays host
-    ``_pre_validate``. ``DateValidator`` is the taught facade;
-    ``Validator[datetime.date]`` with the same closed shape is the
-    same door. This module does not import facades.
-    """
-    if not _is_date_type_annotation(getattr(owner, "annotation", None)):
-        return None
-    units = getattr(owner, "_active_units", None)
-    if units != (TypeValidator._validate_type,):
-        return None
-    return {}
-
-
-def _closed_uuid(owner: Any) -> dict[str, Any] | None:
-    """Empty compile kwargs when the path is ``uuid.UUID`` + the type door.
-
-    Annotation is ``uuid.UUID`` or the coerce union ``uuid.UUID | str``
-    (``UUIDValidator``). Only ``TypeValidator`` may be active. Extra
-    bounds (``min_value``, ``required``, choice, ``reassign=False``)
-    stay on the host. String coerce stays host ``_pre_validate``.
-    ``UUIDValidator`` is the taught facade; ``Validator[uuid.UUID]``
-    with the same closed shape is the same door. This module does not
-    import facades.
-    """
-    if not _is_uuid_type_annotation(getattr(owner, "annotation", None)):
-        return None
-    units = getattr(owner, "_active_units", None)
-    if units != (TypeValidator._validate_type,):
-        return None
-    return {}
-
-
-def _read_ip_facade(owner: Any) -> tuple[str, Any, str] | None:
-    """``(kind, parser, label)`` for a closed IP facade. Else ``None``.
-
-    Kind is the ``compile_ip`` argument (``ipv4`` / ``ipv6`` / ``ip``).
-    The parser and label match ``_reject_unless_ip`` on the facade.
-    """
-    if type(owner).__module__ != "ux_valio.facades.typed":
-        return None
-    return _IP_FACADES.get(type(owner).__qualname__)
-
-
-def _closed_ip(owner: Any) -> dict[str, str] | None:
-    """Compile kwargs when the path is an IP facade + the type door.
-
-    Annotation must be ``str``. Only ``TypeValidator`` may be active.
-    Extra bounds (``max_length``, ``required``, choice, pattern,
-    ``reassign=False``) stay on the host. The stored value stays the
-    given string: there is no ``_pre_validate`` coerce to
-    ``ipaddress`` objects. ``StringValidator`` is not this door.
-    """
-    spec = _read_ip_facade(owner)
-    if spec is None:
-        return None
-    if getattr(owner, "annotation", None) is not str:
-        return None
-    units = getattr(owner, "_active_units", None)
-    if units != (TypeValidator._validate_type,):
-        return None
-    return {"kind": spec[0]}
-
-
-def _closed_path(owner: Any) -> dict[str, Any] | None:
-    """Empty compile kwargs when the path is ``pathlib.Path`` + the type door.
-
-    Annotation is ``pathlib.Path`` or the coerce union
-    ``pathlib.Path | str`` (``PathValidator``). Only ``TypeValidator``
-    may be active. Extra bounds (``min_value``, ``required``, choice,
-    ``reassign=False``) stay on the host. String coerce stays host
-    ``_pre_validate``. ``path_exists`` is not a path unit: the
-    filesystem check stays the named extra. ``PathValidator`` is the
-    taught facade; ``Validator[pathlib.Path]`` with the same closed
-    shape is the same door. This module does not import facades.
-    """
-    if not _is_path_type_annotation(getattr(owner, "annotation", None)):
-        return None
-    units = getattr(owner, "_active_units", None)
-    if units != (TypeValidator._validate_type,):
-        return None
-    return {}
-
-
-def _closed_datetime(owner: Any) -> dict[str, Any] | None:
-    """Empty compile kwargs when the path is ``datetime.datetime`` + the type door.
-
-    Annotation is ``datetime.datetime`` or the coerce union
-    ``datetime.datetime | str`` (``DateTimeValidator``). Only
-    ``TypeValidator`` may be active. Extra bounds stay on the host.
-    String coerce stays host ``_pre_validate``. A plain ``date``
-    annotation is ``_closed_date``. This module does not import
-    facades.
-    """
-    if not _is_datetime_type_annotation(getattr(owner, "annotation", None)):
-        return None
-    units = getattr(owner, "_active_units", None)
-    if units != (TypeValidator._validate_type,):
-        return None
-    return {}
-
-
-def _closed_decimal(owner: Any) -> dict[str, Any] | None:
-    """Empty compile kwargs when the path is Decimal + the type door.
-
-    Annotation is ``decimal.Decimal`` or the coerce union
-    ``decimal.Decimal | str`` (``DecimalValidator``). Only
-    ``TypeValidator`` may be active. Extra bounds (``min_value``,
-    ``required``, choice, ``reassign=False``) stay on the host. No
-    scale kwargs. String coerce stays host ``_pre_validate``; ``float``
-    / ``int`` / ``bool`` are not ``Decimal``. ``DecimalValidator`` is
-    the taught facade; ``Validator[decimal.Decimal]`` with the same
-    closed shape is the same door. This module does not import facades.
-    """
-    if not _is_decimal_type_annotation(getattr(owner, "annotation", None)):
-        return None
-    units = getattr(owner, "_active_units", None)
-    if units != (TypeValidator._validate_type,):
-        return None
-    return {}
-
-
-def _closed_bytes_length(owner: Any) -> dict[str, int] | None:
-    """Compile kwargs when the specified path is Bytes + LengthValidator.
-
-    Annotation must be ``bytes``. Bounds must be ``int`` (not ``bool`` /
-    ``float``). Pattern / custom / String stay on the host. Count is
-    ``len(bytes)`` (byte length), not Unicode codepoints.
-    """
-    return _closed_length(owner, bytes)
 
 
 def _clear_native(owner: Any) -> None:
@@ -522,33 +202,6 @@ def _bridge_to_length(owner: Any, value: Any) -> None:
     wording, ``len(str)`` or ``len(bytes)``).
     """
     LengthValidator._validate_length(owner, None, value)
-
-
-def _bridge_to_ip(owner: Any, value: Any) -> None:
-    """Extract miss before native IP apply.
-
-    UnicodeError / extract TypeError on a value the host already
-    accepted as ``str`` is a bridge signal, not an L1 "overflow"
-    message. Fall through to the same stdlib parser the facade uses
-    (``IPv4Address`` / ``IPv6Address`` / ``ip_address``) so the KEEP
-    ``ValueError`` wording does not fork.
-    """
-    spec = _read_ip_facade(owner)
-    if spec is None:
-        raise RuntimeError("ux_valio_native apply failed")
-    _reject_ip_string(owner, value, spec[1], spec[2])
-
-
-def _reject_ip_string(owner: Any, value: Any, parser: Any, label: str) -> None:
-    """KEEP IP ``ValueError`` wording. Same text as ``_reject_unless_ip``."""
-    if value is None:
-        return
-    try:
-        parser(value)
-    except (ValueError, ipaddress.AddressValueError) as err:
-        raise ValueError(
-            f"{owner.name} expects a valid {label}, got {value} as value instead"
-        ) from err
 
 
 def _bridge_to_type(owner: Any, value: Any) -> None:
@@ -633,37 +286,20 @@ def _raise_native_bound_miss(owner: Any, fail: Any, value: Any) -> None:
             )
 
 
-def _raise_host_integer_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Integer type door is host-first.
-
-    FFI type is the later ``i64`` extract (bound ``FailKind`` map runs
-    after). Python ``True`` is ``int`` (load-bearing) so it never
-    reaches here. ``None`` is skipped by the caller. ``collect_all``
-    continues into host ``ValueValidator``. Open TypeValidator stays
-    on the host — not a native FailKind.
-    """
-    _raise_host_closed_type_miss(owner, value, ValueValidator._validate_value)
-
-
-def _raise_host_float_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Float type door is host-first.
-
-    FFI type is the later ``f64`` extract. Python ``int`` / ``bool``
-    are not ``float`` (KEEP). ``None`` is skipped by the caller.
-    ``collect_all`` continues into host ``ValueValidator``. NaN / ±inf
-    are ``float`` and reach apply.
-    """
-    _raise_host_closed_type_miss(owner, value, ValueValidator._validate_value)
-
-
-def _raise_host_string_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed String type door is host-first.
-
-    FFI type is the later ``&str`` extract. Python ``bytes`` / ``int``
-    are not ``str`` (KEEP). ``None`` is skipped by the caller.
-    ``collect_all`` continues into host ``LengthValidator``.
-    """
-    _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
+def _raise_host_closed_type_miss(owner: Any, value: Any, continue_unit: Any) -> None:
+    """KEEP TypeError wording for a closed Integer, Float, String, or Bytes plan."""
+    err = TypeError(
+        f"{owner.name} expect {owner.annotation} type, "
+        f"got {type(value).__name__} type instead"
+    )
+    if not owner.collect_all:
+        raise err
+    errors: list[BaseException] = [err]
+    try:
+        continue_unit(owner, None, value)
+    except Exception as second:
+        errors.append(second)
+    raise_collected(errors, name=owner.name)
 
 
 def _raise_host_enum_type_miss(owner: Any, value: Any) -> None:
@@ -681,134 +317,6 @@ def _raise_host_enum_type_miss(owner: Any, value: Any) -> None:
         f"{owner.name} expect {owner.annotation} type, "
         f"got {type(value).__name__} type instead"
     )
-
-
-def _raise_host_date_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Date type door is host-first.
-
-    FFI type is the later ``datetime.date`` extract. ``int`` / ``str`` /
-    ``bool`` miss. A ``datetime.datetime`` is a ``date`` and does not
-    miss here (``DateValidator`` rejects it in the named extra). A raw
-    ``str`` misses only when the annotation does not accept ``str``;
-    the coerce union accepts ``str`` here and ``_pre_validate`` has
-    already parsed a calendar string. ``None`` is skipped by the
-    caller. The closed plan has no second path unit, so
-    ``collect_all`` does not continue inside this raise (``validate``
-    still continues into the named extra).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
-def _raise_host_ip_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed IP type door is host-first.
-
-    FFI type is the later ``str`` extract. ``int`` / ``bytes`` /
-    ``ipaddress`` objects miss here. A ``str`` does not. ``None`` is
-    skipped by the caller. The closed plan has no second path unit,
-    so ``collect_all`` does not continue inside this raise
-    (``validate`` still continues into the named extra for a non-str).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
-def _raise_host_path_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Path type door is host-first.
-
-    FFI type is the later ``pathlib.Path`` extract. ``int`` / ``bool``
-    / ``bytes`` / ``pathlib.PurePath`` miss. A raw ``str`` misses only
-    when the annotation does not accept ``str``; the coerce union
-    accepts ``str`` here and ``_pre_validate`` has already built a
-    ``Path``. ``None`` is skipped by the caller. The closed plan has
-    no second path unit, so ``collect_all`` does not continue inside
-    this raise (``validate`` still continues into the named extra,
-    including ``path_exists``).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
-def _raise_host_uuid_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Uuid type door is host-first.
-
-    FFI type is the later ``uuid.UUID`` extract. ``int`` / ``bool`` /
-    ``bytes`` miss. A raw ``str`` misses only when the annotation
-    does not accept ``str``; the coerce union accepts ``str`` here
-    and ``_pre_validate`` has already parsed a UUID string. ``None``
-    is skipped by the caller. The closed plan has no second path
-    unit, so ``collect_all`` does not continue inside this raise
-    (``validate`` still continues into the named extra).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
-def _raise_host_datetime_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed DateTime type door is host-first.
-
-    FFI type is the later ``datetime.datetime`` extract. A plain
-    ``datetime.date`` / ``int`` / ``str`` / ``bool`` miss. A raw
-    ``str`` misses only when the annotation does not accept ``str``;
-    the coerce union accepts ``str`` here and ``_pre_validate`` has
-    already parsed an ISO string. ``None`` is skipped by the caller.
-    The closed plan has no second path unit, so ``collect_all`` does
-    not continue inside this raise (``validate`` still continues into
-    the named extra).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
-def _raise_host_decimal_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Decimal type door is host-first.
-
-    FFI type is the later ``decimal.Decimal`` extract. ``float`` /
-    ``int`` / ``bool`` miss (no silent float→Decimal). A raw ``str``
-    misses only when the annotation does not accept ``str``; the coerce
-    union accepts ``str`` here and the named extra still requires
-    ``Decimal``. ``None`` is skipped by the caller. The closed plan has
-    no second path unit and no scale unit, so ``collect_all`` does not
-    continue inside this raise (``validate`` still continues into the
-    named extra).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
-def _raise_host_boolean_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Boolean type door is host-first.
-
-    FFI type is the later ``bool`` extract. Python ``int`` (``1`` /
-    ``0``) is not ``bool`` (KEEP; no coerce). ``None`` is skipped by
-    the caller. The closed plan has no second path unit, so
-    ``collect_all`` does not continue inside this raise.
-    """
-    raise TypeError(
-        f"{owner.name} expect {owner.annotation} type, "
-        f"got {type(value).__name__} type instead"
-    )
-
-
-def _raise_host_bytes_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Bytes type door is host-first.
-
-    FFI type is the later ``&[u8]`` extract. Python ``str`` /
-    ``bytearray`` / ``int`` are not ``bytes`` (KEEP). ``None`` is
-    skipped by the caller. ``collect_all`` continues into host
-    ``LengthValidator``.
-    """
-    _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
-
-
-def _raise_host_closed_type_miss(owner: Any, value: Any, continue_unit: Any) -> None:
-    """KEEP TypeError wording for a closed Integer, Float, String, or Bytes plan."""
-    err = TypeError(
-        f"{owner.name} expect {owner.annotation} type, "
-        f"got {type(value).__name__} type instead"
-    )
-    if not owner.collect_all:
-        raise err
-    errors: list[BaseException] = [err]
-    try:
-        continue_unit(owner, None, value)
-    except Exception as second:
-        errors.append(second)
-    raise_collected(errors, name=owner.name)
 
 
 def _bind_compiled_plan(
@@ -851,6 +359,58 @@ def _apply_native_closed(
     _raise_native_bound_miss(owner, fail, value)
 
 
+type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
+
+
+class _FamilyDoor(NamedTuple):
+    """Private bind row for one closed family. Not a product type door.
+
+    ``closed`` detects the family. ``compile`` / ``apply`` name the
+    Rust pair. ``run`` is the host closed entry. A member list is
+    compile kwargs ``members=``; any other payload is already those
+    kwargs.
+    """
+
+    closed: Any
+    compile: str
+    apply: str
+    run: Any
+
+    def _select(self, native: Any, payload: Any) -> _ClosedPair:
+        """Pair for this row. Compile and apply stay separate."""
+        kwargs: dict[str, Any]
+        if isinstance(payload, list):
+            kwargs = {"members": payload}
+        else:
+            kwargs = payload
+        return (
+            getattr(native, self.apply),
+            self.run,
+            getattr(native, self.compile),
+            kwargs,
+        )
+
+
+# --- Integer ---
+
+
+def _closed_integer_bounds(owner: Any) -> dict[str, int] | None:
+    """Compile kwargs when the specified path is Integer + ValueValidator bounds."""
+    return _closed_value_bounds(owner, int, int)
+
+
+def _raise_host_integer_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Integer type door is host-first.
+
+    FFI type is the later ``i64`` extract (bound ``FailKind`` map runs
+    after). Python ``True`` is ``int`` (load-bearing) so it never
+    reaches here. ``None`` is skipped by the caller. ``collect_all``
+    continues into host ``ValueValidator``. Open TypeValidator stays
+    on the host — not a native FailKind.
+    """
+    _raise_host_closed_type_miss(owner, value, ValueValidator._validate_value)
+
+
 def apply_native_integer_bounds(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. Out-of-i64 ints stay on host."""
     _apply_native_closed(
@@ -860,6 +420,43 @@ def apply_native_integer_bounds(owner: Any, value: Any) -> None:
         _raise_host_integer_type_miss,
         _bridge_to_value,
     )
+
+
+_INTEGER_DOOR = _FamilyDoor(
+    closed=_closed_integer_bounds,
+    compile="compile_integer",
+    apply="apply_integer",
+    run=apply_native_integer_bounds,
+)
+
+
+def _select_integer_bounds(native: Any, bounds: dict[str, int]) -> _ClosedPair:
+    """Closed Integer: ``compile_integer`` and ``apply_integer`` stay a pair."""
+    return _INTEGER_DOOR._select(native, bounds)
+
+
+# --- Float ---
+
+
+def _closed_float_bounds(owner: Any) -> dict[str, float] | None:
+    """Compile kwargs when the specified path is Float + ValueValidator bounds.
+
+    Bounds must be ``float`` (not ``int``). ``FloatValidator(min_value=0)``
+    stays on the host, same exact-type lock as Integer rejecting a float
+    bound. NaN / ±inf are ``float`` and compile.
+    """
+    return _closed_value_bounds(owner, float, float)
+
+
+def _raise_host_float_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Float type door is host-first.
+
+    FFI type is the later ``f64`` extract. Python ``int`` / ``bool``
+    are not ``float`` (KEEP). ``None`` is skipped by the caller.
+    ``collect_all`` continues into host ``ValueValidator``. NaN / ±inf
+    are ``float`` and reach apply.
+    """
+    _raise_host_closed_type_miss(owner, value, ValueValidator._validate_value)
 
 
 def apply_native_float_bounds(owner: Any, value: Any) -> None:
@@ -880,6 +477,42 @@ def apply_native_float_bounds(owner: Any, value: Any) -> None:
     )
 
 
+_FLOAT_DOOR = _FamilyDoor(
+    closed=_closed_float_bounds,
+    compile="compile_float",
+    apply="apply_float",
+    run=apply_native_float_bounds,
+)
+
+
+def _select_float_bounds(native: Any, bounds: dict[str, float]) -> _ClosedPair:
+    """Closed Float: ``compile_float`` and ``apply_float`` stay a pair."""
+    return _FLOAT_DOOR._select(native, bounds)
+
+
+# --- String ---
+
+
+def _closed_string_length(owner: Any) -> dict[str, int] | None:
+    """Compile kwargs when the specified path is String + LengthValidator.
+
+    Annotation must be ``str``. Bounds must be ``int`` (not ``bool`` /
+    ``float``). List / pattern / required stay on the host. Count is
+    ``len(str)`` codepoints.
+    """
+    return _closed_length(owner, str)
+
+
+def _raise_host_string_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed String type door is host-first.
+
+    FFI type is the later ``&str`` extract. Python ``bytes`` / ``int``
+    are not ``str`` (KEEP). ``None`` is skipped by the caller.
+    ``collect_all`` continues into host ``LengthValidator``.
+    """
+    _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
+
+
 def apply_native_string_length(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. UTF-8 extract miss stays on host.
 
@@ -896,6 +529,193 @@ def apply_native_string_length(owner: Any, value: Any) -> None:
         _bridge_to_length,
         (OverflowError, UnicodeError),
     )
+
+
+_STRING_DOOR = _FamilyDoor(
+    closed=_closed_string_length,
+    compile="compile_string",
+    apply="apply_string",
+    run=apply_native_string_length,
+)
+
+
+def _select_string_length(native: Any, bounds: dict[str, int]) -> _ClosedPair:
+    """Closed String: ``compile_string`` and ``apply_string`` stay a pair."""
+    return _STRING_DOOR._select(native, bounds)
+
+
+# --- Bytes ---
+
+
+def _closed_bytes_length(owner: Any) -> dict[str, int] | None:
+    """Compile kwargs when the specified path is Bytes + LengthValidator.
+
+    Annotation must be ``bytes``. Bounds must be ``int`` (not ``bool`` /
+    ``float``). Pattern / custom / String stay on the host. Count is
+    ``len(bytes)`` (byte length), not Unicode codepoints.
+    """
+    return _closed_length(owner, bytes)
+
+
+def _raise_host_bytes_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Bytes type door is host-first.
+
+    FFI type is the later ``&[u8]`` extract. Python ``str`` /
+    ``bytearray`` / ``int`` are not ``bytes`` (KEEP). ``None`` is
+    skipped by the caller. ``collect_all`` continues into host
+    ``LengthValidator``.
+    """
+    _raise_host_closed_type_miss(owner, value, LengthValidator._validate_length)
+
+
+def apply_native_bytes_length(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. bytes extract miss stays on host.
+
+    OverflowError / extract TypeError at ``&[u8]`` extract is a bridge
+    signal (same three buckets as Integer/Float/String: validation /
+    bridge / native-infra ``RuntimeError`` naming ``ux_valio_native``).
+    No public L1 "overflow" message. Door A length is ``len(bytes)``.
+    """
+    _apply_native_closed(
+        owner,
+        value,
+        bytes,
+        _raise_host_bytes_type_miss,
+        _bridge_to_length,
+        (OverflowError, TypeError),
+    )
+
+
+_BYTES_DOOR = _FamilyDoor(
+    closed=_closed_bytes_length,
+    compile="compile_bytes",
+    apply="apply_bytes",
+    run=apply_native_bytes_length,
+)
+
+
+def _select_bytes_length(native: Any, bounds: dict[str, int]) -> _ClosedPair:
+    """Closed Bytes: ``compile_bytes`` and ``apply_bytes`` stay a pair."""
+    return _BYTES_DOOR._select(native, bounds)
+
+
+# --- IntegerEnum ---
+
+
+def _closed_integer_enum_members(owner: Any) -> list[int] | None:
+    """Member ``i64`` values when the path is ``IntegerEnumValidator`` + type.
+
+    Annotation must be a concrete ``enum.IntEnum`` (not ``enum.IntEnum``
+    itself, not a union). Every member ``.value`` must be an exact ``int``
+    (``bool`` stays on the host). Extra bounds stay on the host. Plain
+    ``EnumValidator`` / ``StringEnumValidator`` / ``Validator[SomeIntEnum]``
+    stay on the host — this module does not import facades; the facade is
+    the class in ``ux_valio.facades.typed``. StringEnum is
+    ``_closed_string_enum_members``, not this function.
+    """
+    if type(owner).__module__ != "ux_valio.facades.typed":
+        return None
+    if type(owner).__qualname__ != "IntegerEnumValidator":
+        return None
+    annotation = getattr(owner, "annotation", None)
+    if not isinstance(annotation, type) or not issubclass(annotation, enum.IntEnum):
+        return None
+    if annotation is enum.IntEnum:
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    members: list[int] = []
+    seen: set[int] = set()
+    for member in annotation:
+        raw = member.value
+        if type(raw) is not int:
+            return None
+        if raw in seen:
+            continue
+        seen.add(raw)
+        members.append(raw)
+    if not members:
+        return None
+    return members
+
+
+def apply_native_integer_enum(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Out-of-i64 ints stay on host.
+
+    OverflowError at ``i64`` extract is a bridge signal (same three
+    buckets as Integer: validation ``FailKind`` / bridge / native-infra
+    ``RuntimeError`` naming ``ux_valio_native``). No public L1
+    "overflow" message. Door A membership is the concrete enum class
+    first, then exact ``i64`` equality with the compiled member values.
+    """
+    _apply_native_closed(
+        owner,
+        value,
+        owner.annotation,
+        _raise_host_enum_type_miss,
+        _bridge_to_type,
+    )
+
+
+_INTEGER_ENUM_DOOR = _FamilyDoor(
+    closed=_closed_integer_enum_members,
+    compile="compile_integer_enum",
+    apply="apply_integer_enum",
+    run=apply_native_integer_enum,
+)
+
+
+def _select_integer_enum(native: Any, members: list[int]) -> _ClosedPair:
+    """Closed IntegerEnum: ``compile_integer_enum`` / ``apply_integer_enum`` stay a pair."""
+    return _INTEGER_ENUM_DOOR._select(native, members)
+
+
+# --- StringEnum ---
+
+
+def _closed_string_enum_members(owner: Any) -> list[str] | None:
+    """UTF-8 member values when the path is ``StringEnumValidator`` + type.
+
+    Annotation must be a concrete ``enum.Enum`` (not ``enum.Enum`` itself,
+    not a union, not bare ``enum.StrEnum`` with no members). Every member
+    ``.value`` must be an exact ``str`` (a ``str`` subclass stays on the
+    host) that encodes as UTF-8 (a lone surrogate stays on the host).
+    Extra bounds stay on the host. Plain ``EnumValidator`` /
+    ``IntegerEnumValidator`` / ``Validator[SomeStrEnum]`` stay on the
+    host — this module does not import facades; the facade is the class
+    in ``ux_valio.facades.typed``. ``BooleanValidator`` is
+    ``_closed_boolean``, not this function.
+    """
+    if type(owner).__module__ != "ux_valio.facades.typed":
+        return None
+    if type(owner).__qualname__ != "StringEnumValidator":
+        return None
+    annotation = getattr(owner, "annotation", None)
+    if not isinstance(annotation, type) or not issubclass(annotation, enum.Enum):
+        return None
+    if annotation is enum.Enum:
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    members: list[str] = []
+    seen: set[str] = set()
+    for member in annotation:
+        raw = member.value
+        if type(raw) is not str:
+            return None
+        try:
+            raw.encode("utf-8")
+        except UnicodeEncodeError:
+            return None
+        if raw in seen:
+            continue
+        seen.add(raw)
+        members.append(raw)
+    if not members:
+        return None
+    return members
 
 
 def apply_native_string_enum(owner: Any, value: Any) -> None:
@@ -930,40 +750,225 @@ def apply_native_string_enum(owner: Any, value: Any) -> None:
     _raise_native_bound_miss(owner, fail, value)
 
 
-def apply_native_integer_enum(owner: Any, value: Any) -> None:
-    """One FFI apply. Host formats KEEP wording. Out-of-i64 ints stay on host.
+_STRING_ENUM_DOOR = _FamilyDoor(
+    closed=_closed_string_enum_members,
+    compile="compile_string_enum",
+    apply="apply_string_enum",
+    run=apply_native_string_enum,
+)
 
-    OverflowError at ``i64`` extract is a bridge signal (same three
+
+def _select_string_enum(native: Any, members: list[str]) -> _ClosedPair:
+    """Closed StringEnum: ``compile_string_enum`` / ``apply_string_enum`` stay a pair."""
+    return _STRING_ENUM_DOOR._select(native, members)
+
+
+# --- Boolean ---
+
+
+def _closed_boolean(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is exact ``bool`` + the type door.
+
+    Annotation must be ``bool`` (not ``bool | None``, not ``int``). Only
+    ``TypeValidator`` may be active. Extra bounds (``min_value``,
+    ``required``, choice, ``reassign=False``) stay on the host. No
+    coerce: ``1`` / ``0`` are not ``bool``. ``BooleanValidator`` is the
+    taught facade; ``Validator[bool]`` with the same closed shape is the
+    same door. This module does not import facades.
+    """
+    if getattr(owner, "annotation", None) is not bool:
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
+def _raise_host_boolean_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Boolean type door is host-first.
+
+    FFI type is the later ``bool`` extract. Python ``int`` (``1`` /
+    ``0``) is not ``bool`` (KEEP; no coerce). ``None`` is skipped by
+    the caller. The closed plan has no second path unit, so
+    ``collect_all`` does not continue inside this raise.
+    """
+    raise TypeError(
+        f"{owner.name} expect {owner.annotation} type, "
+        f"got {type(value).__name__} type instead"
+    )
+
+
+def apply_native_boolean(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-bool stays on host.
+
+    TypeError at ``bool`` extract is a bridge signal (same three
     buckets as Integer: validation ``FailKind`` / bridge / native-infra
     ``RuntimeError`` naming ``ux_valio_native``). No public L1
-    "overflow" message. Door A membership is the concrete enum class
-    first, then exact ``i64`` equality with the compiled member values.
+    "overflow" message. Door A is exact ``bool``: ``True`` and
+    ``False`` pass; ``1`` and ``0`` do not coerce. No bound unit.
     """
     _apply_native_closed(
         owner,
         value,
-        owner.annotation,
-        _raise_host_enum_type_miss,
+        bool,
+        _raise_host_boolean_type_miss,
         _bridge_to_type,
+        TypeError,
     )
 
 
-def apply_native_bytes_length(owner: Any, value: Any) -> None:
-    """One FFI apply. Host formats KEEP wording. bytes extract miss stays on host.
+_BOOLEAN_DOOR = _FamilyDoor(
+    closed=_closed_boolean,
+    compile="compile_boolean",
+    apply="apply_boolean",
+    run=apply_native_boolean,
+)
 
-    OverflowError / extract TypeError at ``&[u8]`` extract is a bridge
-    signal (same three buckets as Integer/Float/String: validation /
-    bridge / native-infra ``RuntimeError`` naming ``ux_valio_native``).
-    No public L1 "overflow" message. Door A length is ``len(bytes)``.
+
+def _select_boolean(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Boolean: ``compile_boolean`` and ``apply_boolean`` stay a pair."""
+    return _BOOLEAN_DOOR._select(native, bounds)
+
+
+# --- Decimal ---
+
+
+def _is_decimal_type_annotation(annotation: Any) -> bool:
+    """Exact ``decimal.Decimal``, or the facade coerce union ``Decimal | str``.
+
+    ``Decimal | None`` and every other union stay on the host. This
+    module does not import facades.
     """
-    _apply_native_closed(
-        owner,
-        value,
-        bytes,
-        _raise_host_bytes_type_miss,
-        _bridge_to_length,
-        (OverflowError, TypeError),
-    )
+    if annotation is decimal.Decimal:
+        return True
+    origin = get_origin(annotation)
+    if origin is not Union and not isinstance(annotation, types.UnionType):
+        return False
+    return frozenset(get_args(annotation)) == frozenset((decimal.Decimal, str))
+
+
+def _closed_decimal(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is Decimal + the type door.
+
+    Annotation is ``decimal.Decimal`` or the coerce union
+    ``decimal.Decimal | str`` (``DecimalValidator``). Only
+    ``TypeValidator`` may be active. Extra bounds (``min_value``,
+    ``required``, choice, ``reassign=False``) stay on the host. No
+    scale kwargs. String coerce stays host ``_pre_validate``; ``float``
+    / ``int`` / ``bool`` are not ``Decimal``. ``DecimalValidator`` is
+    the taught facade; ``Validator[decimal.Decimal]`` with the same
+    closed shape is the same door. This module does not import facades.
+    """
+    if not _is_decimal_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
+def _raise_host_decimal_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Decimal type door is host-first.
+
+    FFI type is the later ``decimal.Decimal`` extract. ``float`` /
+    ``int`` / ``bool`` miss (no silent float→Decimal). A raw ``str``
+    misses only when the annotation does not accept ``str``; the coerce
+    union accepts ``str`` here and the named extra still requires
+    ``Decimal``. ``None`` is skipped by the caller. The closed plan has
+    no second path unit and no scale unit, so ``collect_all`` does not
+    continue inside this raise (``validate`` still continues into the
+    named extra).
+    """
+    TypeValidator._validate_type(owner, None, value)
+
+
+def apply_native_decimal(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-Decimal stays on host.
+
+    TypeError at ``decimal.Decimal`` extract is a bridge signal (same
+    three buckets as Boolean: validation ``FailKind`` / bridge /
+    native-infra ``RuntimeError`` naming ``ux_valio_native``). No public
+    L1 "overflow" message. Door A is exact ``decimal.Decimal`` after
+    host string coerce: ``float`` / ``int`` / ``bool`` do not coerce.
+    No scale unit. No bound unit.
+    """
+    if value is None:
+        return
+    if not isinstance(value, decimal.Decimal):
+        _raise_host_decimal_type_miss(owner, value)
+        return
+    try:
+        fail = owner._native_apply(owner._native_plan, value)
+    except TypeError:
+        _bridge_to_type(owner, value)
+        return
+    except Exception as err:
+        raise RuntimeError("ux_valio_native apply failed") from err
+    if fail is None:
+        return
+    _raise_native_bound_miss(owner, fail, value)
+
+
+_DECIMAL_DOOR = _FamilyDoor(
+    closed=_closed_decimal,
+    compile="compile_decimal",
+    apply="apply_decimal",
+    run=apply_native_decimal,
+)
+
+
+def _select_decimal(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Decimal: ``compile_decimal`` and ``apply_decimal`` stay a pair."""
+    return _DECIMAL_DOOR._select(native, bounds)
+
+
+# --- Date ---
+
+
+def _is_date_type_annotation(annotation: Any) -> bool:
+    """Exact ``datetime.date``, or the facade coerce union ``date | str``.
+
+    ``date | None`` and every other union stay on the host.
+    ``datetime.datetime`` is not this annotation (that is
+    ``_is_datetime_type_annotation``). This module does not import
+    facades.
+    """
+    return _is_stored_or_str_annotation(annotation, datetime.date)
+
+
+def _closed_date(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is ``datetime.date`` + the type door.
+
+    Annotation is ``datetime.date`` or the coerce union
+    ``datetime.date | str`` (``DateValidator``). Only ``TypeValidator``
+    may be active. Extra bounds (``min_value``, ``required``, choice,
+    ``reassign=False``) stay on the host. String coerce stays host
+    ``_pre_validate``. ``DateValidator`` is the taught facade;
+    ``Validator[datetime.date]`` with the same closed shape is the
+    same door. This module does not import facades.
+    """
+    if not _is_date_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
+def _raise_host_date_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Date type door is host-first.
+
+    FFI type is the later ``datetime.date`` extract. ``int`` / ``str`` /
+    ``bool`` miss. A ``datetime.datetime`` is a ``date`` and does not
+    miss here (``DateValidator`` rejects it in the named extra). A raw
+    ``str`` misses only when the annotation does not accept ``str``;
+    the coerce union accepts ``str`` here and ``_pre_validate`` has
+    already parsed a calendar string. ``None`` is skipped by the
+    caller. The closed plan has no second path unit, so
+    ``collect_all`` does not continue inside this raise (``validate``
+    still continues into the named extra).
+    """
+    TypeValidator._validate_type(owner, None, value)
 
 
 def apply_native_date(owner: Any, value: Any) -> None:
@@ -994,20 +999,78 @@ def apply_native_date(owner: Any, value: Any) -> None:
     _raise_native_bound_miss(owner, fail, value)
 
 
-def apply_native_path(owner: Any, value: Any) -> None:
-    """One FFI apply. Host formats KEEP wording. Non-Path stays on host.
+_DATE_DOOR = _FamilyDoor(
+    closed=_closed_date,
+    compile="compile_date",
+    apply="apply_date",
+    run=apply_native_date,
+)
 
-    TypeError at ``pathlib.Path`` extract is a bridge signal (same
-    three buckets as Uuid: validation ``FailKind`` / bridge /
+
+def _select_date(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Date: ``compile_date`` and ``apply_date`` stay a pair."""
+    return _DATE_DOOR._select(native, bounds)
+
+
+# --- DateTime ---
+
+
+def _is_datetime_type_annotation(annotation: Any) -> bool:
+    """Exact ``datetime.datetime``, or the facade coerce union ``datetime | str``.
+
+    ``datetime | None`` and every other union stay on the host. A
+    plain ``datetime.date`` annotation is ``_is_date_type_annotation``.
+    This module does not import facades.
+    """
+    return _is_stored_or_str_annotation(annotation, datetime.datetime)
+
+
+def _closed_datetime(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is ``datetime.datetime`` + the type door.
+
+    Annotation is ``datetime.datetime`` or the coerce union
+    ``datetime.datetime | str`` (``DateTimeValidator``). Only
+    ``TypeValidator`` may be active. Extra bounds stay on the host.
+    String coerce stays host ``_pre_validate``. A plain ``date``
+    annotation is ``_closed_date``. This module does not import
+    facades.
+    """
+    if not _is_datetime_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
+def _raise_host_datetime_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed DateTime type door is host-first.
+
+    FFI type is the later ``datetime.datetime`` extract. A plain
+    ``datetime.date`` / ``int`` / ``str`` / ``bool`` miss. A raw
+    ``str`` misses only when the annotation does not accept ``str``;
+    the coerce union accepts ``str`` here and ``_pre_validate`` has
+    already parsed an ISO string. ``None`` is skipped by the caller.
+    The closed plan has no second path unit, so ``collect_all`` does
+    not continue inside this raise (``validate`` still continues into
+    the named extra).
+    """
+    TypeValidator._validate_type(owner, None, value)
+
+
+def apply_native_datetime(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-datetime stays on host.
+
+    TypeError at ``datetime.datetime`` extract is a bridge signal (same
+    three buckets as Date: validation ``FailKind`` / bridge /
     native-infra ``RuntimeError`` naming ``ux_valio_native``). No
-    public L1 "overflow" message. Door A is ``pathlib.Path`` after
-    host string coerce. ``int`` / ``bool`` / ``bytes`` /
-    ``pathlib.PurePath`` miss. No filesystem check. No bound unit.
+    public L1 "overflow" message. Door A is ``datetime.datetime`` after
+    host string coerce. A plain ``datetime.date`` misses. No bound unit.
     """
     if value is None:
         return
-    if not isinstance(value, pathlib.Path):
-        _raise_host_path_type_miss(owner, value)
+    if not isinstance(value, datetime.datetime):
+        _raise_host_datetime_type_miss(owner, value)
         return
     try:
         fail = owner._native_apply(owner._native_plan, value)
@@ -1019,6 +1082,64 @@ def apply_native_path(owner: Any, value: Any) -> None:
     if fail is None:
         return
     _raise_native_bound_miss(owner, fail, value)
+
+
+_DATETIME_DOOR = _FamilyDoor(
+    closed=_closed_datetime,
+    compile="compile_datetime",
+    apply="apply_datetime",
+    run=apply_native_datetime,
+)
+
+
+def _select_datetime(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed DateTime: ``compile_datetime`` and ``apply_datetime`` stay a pair."""
+    return _DATETIME_DOOR._select(native, bounds)
+
+
+# --- UUID ---
+
+
+def _is_uuid_type_annotation(annotation: Any) -> bool:
+    """Exact ``uuid.UUID``, or the facade coerce union ``UUID | str``.
+
+    ``UUID | None`` and every other union stay on the host. This
+    module does not import facades.
+    """
+    return _is_stored_or_str_annotation(annotation, uuid.UUID)
+
+
+def _closed_uuid(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is ``uuid.UUID`` + the type door.
+
+    Annotation is ``uuid.UUID`` or the coerce union ``uuid.UUID | str``
+    (``UUIDValidator``). Only ``TypeValidator`` may be active. Extra
+    bounds (``min_value``, ``required``, choice, ``reassign=False``)
+    stay on the host. String coerce stays host ``_pre_validate``.
+    ``UUIDValidator`` is the taught facade; ``Validator[uuid.UUID]``
+    with the same closed shape is the same door. This module does not
+    import facades.
+    """
+    if not _is_uuid_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
+def _raise_host_uuid_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Uuid type door is host-first.
+
+    FFI type is the later ``uuid.UUID`` extract. ``int`` / ``bool`` /
+    ``bytes`` miss. A raw ``str`` misses only when the annotation
+    does not accept ``str``; the coerce union accepts ``str`` here
+    and ``_pre_validate`` has already parsed a UUID string. ``None``
+    is skipped by the caller. The closed plan has no second path
+    unit, so ``collect_all`` does not continue inside this raise
+    (``validate`` still continues into the named extra).
+    """
+    TypeValidator._validate_type(owner, None, value)
 
 
 def apply_native_uuid(owner: Any, value: Any) -> None:
@@ -1045,6 +1166,102 @@ def apply_native_uuid(owner: Any, value: Any) -> None:
     if fail is None:
         return
     _raise_native_bound_miss(owner, fail, value)
+
+
+_UUID_DOOR = _FamilyDoor(
+    closed=_closed_uuid,
+    compile="compile_uuid",
+    apply="apply_uuid",
+    run=apply_native_uuid,
+)
+
+
+def _select_uuid(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Uuid: ``compile_uuid`` and ``apply_uuid`` stay a pair."""
+    return _UUID_DOOR._select(native, bounds)
+
+
+# --- IP ---
+
+
+# Living IP facades store ``str``. The stdlib types are the parsers,
+# not the stored type. This module does not import facades; the class
+# is the one in ``ux_valio.facades.typed``.
+_IP_FACADES = {
+    "IPv4Validator": ("ipv4", ipaddress.IPv4Address, "IPv4 address"),
+    "IPv6Validator": ("ipv6", ipaddress.IPv6Address, "IPv6 address"),
+    "IPAddressValidator": ("ip", ipaddress.ip_address, "IP address"),
+}
+
+
+def _read_ip_facade(owner: Any) -> tuple[str, Any, str] | None:
+    """``(kind, parser, label)`` for a closed IP facade. Else ``None``.
+
+    Kind is the ``compile_ip`` argument (``ipv4`` / ``ipv6`` / ``ip``).
+    The parser and label match ``_reject_unless_ip`` on the facade.
+    """
+    if type(owner).__module__ != "ux_valio.facades.typed":
+        return None
+    return _IP_FACADES.get(type(owner).__qualname__)
+
+
+def _reject_ip_string(owner: Any, value: Any, parser: Any, label: str) -> None:
+    """KEEP IP ``ValueError`` wording. Same text as ``_reject_unless_ip``."""
+    if value is None:
+        return
+    try:
+        parser(value)
+    except (ValueError, ipaddress.AddressValueError) as err:
+        raise ValueError(
+            f"{owner.name} expects a valid {label}, got {value} as value instead"
+        ) from err
+
+
+def _bridge_to_ip(owner: Any, value: Any) -> None:
+    """Extract miss before native IP apply.
+
+    UnicodeError / extract TypeError on a value the host already
+    accepted as ``str`` is a bridge signal, not an L1 "overflow"
+    message. Fall through to the same stdlib parser the facade uses
+    (``IPv4Address`` / ``IPv6Address`` / ``ip_address``) so the KEEP
+    ``ValueError`` wording does not fork.
+    """
+    spec = _read_ip_facade(owner)
+    if spec is None:
+        raise RuntimeError("ux_valio_native apply failed")
+    _reject_ip_string(owner, value, spec[1], spec[2])
+
+
+def _closed_ip(owner: Any) -> dict[str, str] | None:
+    """Compile kwargs when the path is an IP facade + the type door.
+
+    Annotation must be ``str``. Only ``TypeValidator`` may be active.
+    Extra bounds (``max_length``, ``required``, choice, pattern,
+    ``reassign=False``) stay on the host. The stored value stays the
+    given string: there is no ``_pre_validate`` coerce to
+    ``ipaddress`` objects. ``StringValidator`` is not this door.
+    """
+    spec = _read_ip_facade(owner)
+    if spec is None:
+        return None
+    if getattr(owner, "annotation", None) is not str:
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {"kind": spec[0]}
+
+
+def _raise_host_ip_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed IP type door is host-first.
+
+    FFI type is the later ``str`` extract. ``int`` / ``bytes`` /
+    ``ipaddress`` objects miss here. A ``str`` does not. ``None`` is
+    skipped by the caller. The closed plan has no second path unit,
+    so ``collect_all`` does not continue inside this raise
+    (``validate`` still continues into the named extra for a non-str).
+    """
+    TypeValidator._validate_type(owner, None, value)
 
 
 def apply_native_ip(owner: Any, value: Any) -> None:
@@ -1075,19 +1292,81 @@ def apply_native_ip(owner: Any, value: Any) -> None:
     _raise_native_bound_miss(owner, fail, value)
 
 
-def apply_native_datetime(owner: Any, value: Any) -> None:
-    """One FFI apply. Host formats KEEP wording. Non-datetime stays on host.
+_IP_DOOR = _FamilyDoor(
+    closed=_closed_ip,
+    compile="compile_ip",
+    apply="apply_ip",
+    run=apply_native_ip,
+)
 
-    TypeError at ``datetime.datetime`` extract is a bridge signal (same
-    three buckets as Date: validation ``FailKind`` / bridge /
+
+def _select_ip(native: Any, bounds: dict[str, str]) -> _ClosedPair:
+    """Closed IP: ``compile_ip`` and ``apply_ip`` stay a pair."""
+    return _IP_DOOR._select(native, bounds)
+
+
+# --- Path ---
+
+
+def _is_path_type_annotation(annotation: Any) -> bool:
+    """Exact ``pathlib.Path``, or the facade coerce union ``Path | str``.
+
+    ``Path | None`` and every other union stay on the host.
+    ``pathlib.PurePath`` is not this annotation. This module does not
+    import facades.
+    """
+    return _is_stored_or_str_annotation(annotation, pathlib.Path)
+
+
+def _closed_path(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is ``pathlib.Path`` + the type door.
+
+    Annotation is ``pathlib.Path`` or the coerce union
+    ``pathlib.Path | str`` (``PathValidator``). Only ``TypeValidator``
+    may be active. Extra bounds (``min_value``, ``required``, choice,
+    ``reassign=False``) stay on the host. String coerce stays host
+    ``_pre_validate``. ``path_exists`` is not a path unit: the
+    filesystem check stays the named extra. ``PathValidator`` is the
+    taught facade; ``Validator[pathlib.Path]`` with the same closed
+    shape is the same door. This module does not import facades.
+    """
+    if not _is_path_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
+def _raise_host_path_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Path type door is host-first.
+
+    FFI type is the later ``pathlib.Path`` extract. ``int`` / ``bool``
+    / ``bytes`` / ``pathlib.PurePath`` miss. A raw ``str`` misses only
+    when the annotation does not accept ``str``; the coerce union
+    accepts ``str`` here and ``_pre_validate`` has already built a
+    ``Path``. ``None`` is skipped by the caller. The closed plan has
+    no second path unit, so ``collect_all`` does not continue inside
+    this raise (``validate`` still continues into the named extra,
+    including ``path_exists``).
+    """
+    TypeValidator._validate_type(owner, None, value)
+
+
+def apply_native_path(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-Path stays on host.
+
+    TypeError at ``pathlib.Path`` extract is a bridge signal (same
+    three buckets as Uuid: validation ``FailKind`` / bridge /
     native-infra ``RuntimeError`` naming ``ux_valio_native``). No
-    public L1 "overflow" message. Door A is ``datetime.datetime`` after
-    host string coerce. A plain ``datetime.date`` misses. No bound unit.
+    public L1 "overflow" message. Door A is ``pathlib.Path`` after
+    host string coerce. ``int`` / ``bool`` / ``bytes`` /
+    ``pathlib.PurePath`` miss. No filesystem check. No bound unit.
     """
     if value is None:
         return
-    if not isinstance(value, datetime.datetime):
-        _raise_host_datetime_type_miss(owner, value)
+    if not isinstance(value, pathlib.Path):
+        _raise_host_path_type_miss(owner, value)
         return
     try:
         fail = owner._native_apply(owner._native_plan, value)
@@ -1101,50 +1380,37 @@ def apply_native_datetime(owner: Any, value: Any) -> None:
     _raise_native_bound_miss(owner, fail, value)
 
 
-def apply_native_decimal(owner: Any, value: Any) -> None:
-    """One FFI apply. Host formats KEEP wording. Non-Decimal stays on host.
-
-    TypeError at ``decimal.Decimal`` extract is a bridge signal (same
-    three buckets as Boolean: validation ``FailKind`` / bridge /
-    native-infra ``RuntimeError`` naming ``ux_valio_native``). No public
-    L1 "overflow" message. Door A is exact ``decimal.Decimal`` after
-    host string coerce: ``float`` / ``int`` / ``bool`` do not coerce.
-    No scale unit. No bound unit.
-    """
-    if value is None:
-        return
-    if not isinstance(value, decimal.Decimal):
-        _raise_host_decimal_type_miss(owner, value)
-        return
-    try:
-        fail = owner._native_apply(owner._native_plan, value)
-    except TypeError:
-        _bridge_to_type(owner, value)
-        return
-    except Exception as err:
-        raise RuntimeError("ux_valio_native apply failed") from err
-    if fail is None:
-        return
-    _raise_native_bound_miss(owner, fail, value)
+_PATH_DOOR = _FamilyDoor(
+    closed=_closed_path,
+    compile="compile_path",
+    apply="apply_path",
+    run=apply_native_path,
+)
 
 
-def apply_native_boolean(owner: Any, value: Any) -> None:
-    """One FFI apply. Host formats KEEP wording. Non-bool stays on host.
+def _select_path(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Path: ``compile_path`` and ``apply_path`` stay a pair."""
+    return _PATH_DOOR._select(native, bounds)
 
-    TypeError at ``bool`` extract is a bridge signal (same three
-    buckets as Integer: validation ``FailKind`` / bridge / native-infra
-    ``RuntimeError`` naming ``ux_valio_native``). No public L1
-    "overflow" message. Door A is exact ``bool``: ``True`` and
-    ``False`` pass; ``1`` and ``0`` do not coerce. No bound unit.
-    """
-    _apply_native_closed(
-        owner,
-        value,
-        bool,
-        _raise_host_boolean_type_miss,
-        _bridge_to_type,
-        TypeError,
-    )
+
+# --- Bind walk ---
+
+
+_FAMILY_DOORS: tuple[_FamilyDoor, ...] = (
+    _INTEGER_DOOR,
+    _FLOAT_DOOR,
+    _STRING_DOOR,
+    _BYTES_DOOR,
+    _INTEGER_ENUM_DOOR,
+    _STRING_ENUM_DOOR,
+    _BOOLEAN_DOOR,
+    _DECIMAL_DOOR,
+    _DATE_DOOR,
+    _DATETIME_DOOR,
+    _UUID_DOOR,
+    _IP_DOOR,
+    _PATH_DOOR,
+)
 
 
 def apply_native_bounds(owner: Any, value: Any) -> None:
@@ -1160,174 +1426,26 @@ def apply_native_bounds(owner: Any, value: Any) -> None:
     run(owner, value)
 
 
-type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
-
-
-def _select_integer_bounds(native: Any, bounds: dict[str, int]) -> _ClosedPair:
-    """Closed Integer: ``compile_integer`` and ``apply_integer`` stay a pair."""
-    return (
-        native.apply_integer,
-        apply_native_integer_bounds,
-        native.compile_integer,
-        bounds,
-    )
-
-
-def _select_float_bounds(native: Any, bounds: dict[str, float]) -> _ClosedPair:
-    """Closed Float: ``compile_float`` and ``apply_float`` stay a pair."""
-    return (
-        native.apply_float,
-        apply_native_float_bounds,
-        native.compile_float,
-        bounds,
-    )
-
-
-def _select_string_length(native: Any, bounds: dict[str, int]) -> _ClosedPair:
-    """Closed String: ``compile_string`` and ``apply_string`` stay a pair."""
-    return (
-        native.apply_string,
-        apply_native_string_length,
-        native.compile_string,
-        bounds,
-    )
-
-
-def _select_bytes_length(native: Any, bounds: dict[str, int]) -> _ClosedPair:
-    """Closed Bytes: ``compile_bytes`` and ``apply_bytes`` stay a pair."""
-    return (
-        native.apply_bytes,
-        apply_native_bytes_length,
-        native.compile_bytes,
-        bounds,
-    )
-
-
-def _select_integer_enum(native: Any, members: list[int]) -> _ClosedPair:
-    """Closed IntegerEnum: ``compile_integer_enum`` / ``apply_integer_enum`` stay a pair."""
-    return (
-        native.apply_integer_enum,
-        apply_native_integer_enum,
-        native.compile_integer_enum,
-        {"members": members},
-    )
-
-
-def _select_boolean(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
-    """Closed Boolean: ``compile_boolean`` and ``apply_boolean`` stay a pair."""
-    return (
-        native.apply_boolean,
-        apply_native_boolean,
-        native.compile_boolean,
-        bounds,
-    )
-
-
-def _select_date(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
-    """Closed Date: ``compile_date`` and ``apply_date`` stay a pair."""
-    return (
-        native.apply_date,
-        apply_native_date,
-        native.compile_date,
-        bounds,
-    )
-
-
-def _select_path(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
-    """Closed Path: ``compile_path`` and ``apply_path`` stay a pair."""
-    return (
-        native.apply_path,
-        apply_native_path,
-        native.compile_path,
-        bounds,
-    )
-
-
-def _select_uuid(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
-    """Closed Uuid: ``compile_uuid`` and ``apply_uuid`` stay a pair."""
-    return (
-        native.apply_uuid,
-        apply_native_uuid,
-        native.compile_uuid,
-        bounds,
-    )
-
-
-def _select_ip(native: Any, bounds: dict[str, str]) -> _ClosedPair:
-    """Closed IP: ``compile_ip`` and ``apply_ip`` stay a pair."""
-    return (
-        native.apply_ip,
-        apply_native_ip,
-        native.compile_ip,
-        bounds,
-    )
-
-
-def _select_datetime(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
-    """Closed DateTime: ``compile_datetime`` and ``apply_datetime`` stay a pair."""
-    return (
-        native.apply_datetime,
-        apply_native_datetime,
-        native.compile_datetime,
-        bounds,
-    )
-
-
-def _select_decimal(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
-    """Closed Decimal: ``compile_decimal`` and ``apply_decimal`` stay a pair."""
-    return (
-        native.apply_decimal,
-        apply_native_decimal,
-        native.compile_decimal,
-        bounds,
-    )
-
-
-def _select_string_enum(native: Any, members: list[str]) -> _ClosedPair:
-    """Closed StringEnum: ``compile_string_enum`` / ``apply_string_enum`` stay a pair."""
-    return (
-        native.apply_string_enum,
-        apply_native_string_enum,
-        native.compile_string_enum,
-        {"members": members},
-    )
-
-
 def bind_native_plan(owner: Any) -> None:
     """Compile at bind. No native module / unclosed path → ``_native_plan is None``.
 
-    One walk. Each closed family keeps its own ``compile_*`` / ``apply_*``
-    pair: Integer / Float own ``BoundUnit`` values, String / Bytes own
-    ``LengthUnit`` values, IntegerEnum / StringEnum own a member set,
-    Boolean / Decimal / Date / DateTime / Uuid / Path are type-door
-    markers. IP owns an address kind and checks a ``str``. An
-    unclosed path does not import the extra. Do not merge a pair into
-    one door.
+    One walk over ``_FAMILY_DOORS``. Each closed family keeps its own
+    ``compile_*`` / ``apply_*`` pair: Integer / Float own ``BoundUnit``
+    values, String / Bytes own ``LengthUnit`` values, IntegerEnum /
+    StringEnum own a member set, Boolean / Decimal / Date / DateTime /
+    Uuid / Path are type-door markers. IP owns an address kind and
+    checks a ``str``. An unclosed path does not import the extra. Do
+    not merge a pair into one door.
     """
-    families: tuple[tuple[Any, Any], ...] = (
-        (_closed_integer_bounds, _select_integer_bounds),
-        (_closed_float_bounds, _select_float_bounds),
-        (_closed_string_length, _select_string_length),
-        (_closed_bytes_length, _select_bytes_length),
-        (_closed_integer_enum_members, _select_integer_enum),
-        (_closed_string_enum_members, _select_string_enum),
-        (_closed_boolean, _select_boolean),
-        (_closed_decimal, _select_decimal),
-        (_closed_date, _select_date),
-        (_closed_datetime, _select_datetime),
-        (_closed_uuid, _select_uuid),
-        (_closed_ip, _select_ip),
-        (_closed_path, _select_path),
-    )
-    for detect, select in families:
-        payload = detect(owner)
+    for door in _FAMILY_DOORS:
+        payload = door.closed(owner)
         if payload is None:
             continue
         native = _load_native()
         if native is None:
             _clear_native(owner)
             return
-        apply, run, compile_fn, kwargs = select(native, payload)
+        apply, run, compile_fn, kwargs = door._select(native, payload)
         owner._native_apply = apply
         owner._native_run = run
         _bind_compiled_plan(owner, native, compile_fn, kwargs)
