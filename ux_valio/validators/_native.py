@@ -8,14 +8,14 @@ are the same walk for every family, so they stay here. This is not a
 
 ``Plan`` is one variant per family. Integer / Float own ``BoundUnit``
 values. String / Bytes own ``LengthUnit`` values. IntegerEnum /
-StringEnum own a member set. Boolean / Decimal / Date / DateTime
-are type-door markers. There is no shared unit bag.
+StringEnum own a member set. Boolean / Decimal / Date / DateTime /
+Uuid are type-door markers. There is no shared unit bag.
 
 Bind-time choice: when ``ux_valio_native`` is importable and the
 specified path is one closed family, compile that variant once.
 Type door is host-first ``isinstance`` then FFI extract (``i64`` /
 ``f64`` / ``&str`` / ``&[u8]`` / ``bool`` / ``decimal.Decimal`` /
-``datetime.date`` / ``datetime.datetime``);
+``datetime.date`` / ``datetime.datetime`` / ``uuid.UUID``);
 bound / length / member checks run after extract. StringEnum
 extract is the member's ``.value`` as UTF-8 ``&str``. Boolean
 extract is exact ``bool`` (``1`` / ``0`` are not coerced). Decimal
@@ -25,12 +25,13 @@ extract is exact ``decimal.Decimal`` (``float`` / ``int`` /
 ``datetime.date`` (a ``datetime.datetime`` extracts, because it
 subclasses ``date``; ``DateValidator`` still rejects it in the
 named extra). DateTime extract is ``datetime.datetime`` (a plain
-``date`` does not). String coerce for both stays host
+``date`` does not). Uuid extract is ``uuid.UUID`` (a raw ``str``
+does not). String coerce for Date, DateTime, and Uuid stays host
 ``_pre_validate``. Open TypeValidator / Union / TypedDict /
-Annotated / pattern / plain ``EnumValidator`` / UUID / Path / IP
+Annotated / pattern / plain ``EnumValidator`` / Path / IP
 stay on the host. A ``BooleanValidator``, ``DecimalValidator``,
-``DateValidator``, or ``DateTimeValidator`` with any extra unit
-stays on the host. Missing or failed extra → host
+``DateValidator``, ``DateTimeValidator``, or ``UUIDValidator`` with
+any extra unit stays on the host. Missing or failed extra → host
 ``_active_units`` path. No import on the hot path after that
 choice. Each family keeps its own ``compile_*`` / ``apply_*`` pair.
 Not Cap Door B.
@@ -42,6 +43,7 @@ import datetime
 import decimal
 import enum
 import types
+import uuid
 from typing import Any, Union, get_args, get_origin
 
 from ux_valio.errors import raise_collected
@@ -292,6 +294,15 @@ def _is_date_type_annotation(annotation: Any) -> bool:
     return _is_stored_or_str_annotation(annotation, datetime.date)
 
 
+def _is_uuid_type_annotation(annotation: Any) -> bool:
+    """Exact ``uuid.UUID``, or the facade coerce union ``UUID | str``.
+
+    ``UUID | None`` and every other union stay on the host. This
+    module does not import facades.
+    """
+    return _is_stored_or_str_annotation(annotation, uuid.UUID)
+
+
 def _is_datetime_type_annotation(annotation: Any) -> bool:
     """Exact ``datetime.datetime``, or the facade coerce union ``datetime | str``.
 
@@ -327,6 +338,25 @@ def _closed_date(owner: Any) -> dict[str, Any] | None:
     same door. This module does not import facades.
     """
     if not _is_date_type_annotation(getattr(owner, "annotation", None)):
+        return None
+    units = getattr(owner, "_active_units", None)
+    if units != (TypeValidator._validate_type,):
+        return None
+    return {}
+
+
+def _closed_uuid(owner: Any) -> dict[str, Any] | None:
+    """Empty compile kwargs when the path is ``uuid.UUID`` + the type door.
+
+    Annotation is ``uuid.UUID`` or the coerce union ``uuid.UUID | str``
+    (``UUIDValidator``). Only ``TypeValidator`` may be active. Extra
+    bounds (``min_value``, ``required``, choice, ``reassign=False``)
+    stay on the host. String coerce stays host ``_pre_validate``.
+    ``UUIDValidator`` is the taught facade; ``Validator[uuid.UUID]``
+    with the same closed shape is the same door. This module does not
+    import facades.
+    """
+    if not _is_uuid_type_annotation(getattr(owner, "annotation", None)):
         return None
     units = getattr(owner, "_active_units", None)
     if units != (TypeValidator._validate_type,):
@@ -545,6 +575,20 @@ def _raise_host_date_type_miss(owner: Any, value: Any) -> None:
     caller. The closed plan has no second path unit, so
     ``collect_all`` does not continue inside this raise (``validate``
     still continues into the named extra).
+    """
+    TypeValidator._validate_type(owner, None, value)
+
+
+def _raise_host_uuid_type_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording. Closed Uuid type door is host-first.
+
+    FFI type is the later ``uuid.UUID`` extract. ``int`` / ``bool`` /
+    ``bytes`` miss. A raw ``str`` misses only when the annotation
+    does not accept ``str``; the coerce union accepts ``str`` here
+    and ``_pre_validate`` has already parsed a UUID string. ``None``
+    is skipped by the caller. The closed plan has no second path
+    unit, so ``collect_all`` does not continue inside this raise
+    (``validate`` still continues into the named extra).
     """
     TypeValidator._validate_type(owner, None, value)
 
@@ -803,6 +847,32 @@ def apply_native_date(owner: Any, value: Any) -> None:
     _raise_native_bound_miss(owner, fail, value)
 
 
+def apply_native_uuid(owner: Any, value: Any) -> None:
+    """One FFI apply. Host formats KEEP wording. Non-UUID stays on host.
+
+    TypeError at ``uuid.UUID`` extract is a bridge signal (same three
+    buckets as Date: validation ``FailKind`` / bridge / native-infra
+    ``RuntimeError`` naming ``ux_valio_native``). No public L1
+    "overflow" message. Door A is ``uuid.UUID`` after host string
+    coerce. ``int`` / ``bool`` / ``bytes`` miss. No bound unit.
+    """
+    if value is None:
+        return
+    if not isinstance(value, uuid.UUID):
+        _raise_host_uuid_type_miss(owner, value)
+        return
+    try:
+        fail = owner._native_apply(owner._native_plan, value)
+    except TypeError:
+        _bridge_to_type(owner, value)
+        return
+    except Exception as err:
+        raise RuntimeError("ux_valio_native apply failed") from err
+    if fail is None:
+        return
+    _raise_native_bound_miss(owner, fail, value)
+
+
 def apply_native_datetime(owner: Any, value: Any) -> None:
     """One FFI apply. Host formats KEEP wording. Non-datetime stays on host.
 
@@ -961,6 +1031,16 @@ def _select_date(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     )
 
 
+def _select_uuid(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
+    """Closed Uuid: ``compile_uuid`` and ``apply_uuid`` stay a pair."""
+    return (
+        native.apply_uuid,
+        apply_native_uuid,
+        native.compile_uuid,
+        bounds,
+    )
+
+
 def _select_datetime(native: Any, bounds: dict[str, Any]) -> _ClosedPair:
     """Closed DateTime: ``compile_datetime`` and ``apply_datetime`` stay a pair."""
     return (
@@ -997,7 +1077,7 @@ def bind_native_plan(owner: Any) -> None:
     One walk. Each closed family keeps its own ``compile_*`` / ``apply_*``
     pair: Integer / Float own ``BoundUnit`` values, String / Bytes own
     ``LengthUnit`` values, IntegerEnum / StringEnum own a member set,
-    Boolean / Decimal / Date / DateTime are type-door markers. An
+    Boolean / Decimal / Date / DateTime / Uuid are type-door markers. An
     unclosed path does not import the extra. Do not merge a pair into
     one door.
     """
@@ -1012,6 +1092,7 @@ def bind_native_plan(owner: Any) -> None:
         (_closed_decimal, _select_decimal),
         (_closed_date, _select_date),
         (_closed_datetime, _select_datetime),
+        (_closed_uuid, _select_uuid),
     )
     for detect, select in families:
         payload = detect(owner)

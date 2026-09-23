@@ -126,7 +126,13 @@ named extra.
 ``datetime.datetime | str`` and the only active unit is the type
 door. ``compile_datetime()`` / ``apply_datetime(plan, datetime)``
 stay a pair. A plain ``date`` does not extract. String coerce stays
-host ``_pre_validate``. Unclosed
+host ``_pre_validate``.
+``UUIDValidator()`` compiles when the annotation is ``uuid.UUID``
+or the facade coerce union ``uuid.UUID | str`` and the only active
+unit is the type door. ``compile_uuid()`` /
+``apply_uuid(plan, uuid)`` stay a pair. String coerce stays host
+``_pre_validate``. Exact ``uuid.UUID`` passes, including the nil
+UUID. ``int`` / ``bool`` / ``bytes`` do not coerce. Unclosed
 paths (``required``, ``multiple_of``, pattern, choice, named
 identity, Email, a mixed bound type, Union / TypedDict /
 Annotated) stay on the host. Email / named identity were already
@@ -334,10 +340,30 @@ type doors ship. Bounds do not:
   unions — ``str`` is coerced before apply. Any other union stays
   host.
 
-HOLD after this tip: UUID/Path/IP, plain EnumValidator, Pattern /
-custom callables, named facades, Cap Door B. Date and DateTime
-bounds (min/max/gt/lt/eq) stay host. No follow-up remains on
-this Date* concern.
+HOLD after the Date tip was UUID, shipped in the next paragraphs.
+Date and DateTime bounds (min/max/gt/lt/eq) stay host. No follow-up
+remains on the Date* concern.
+
+**Uuid type door (Door A lock).** Stored type is ``uuid.UUID`` only
+after host pre-validate. One family. Bounds do not:
+
+- Host ``UUIDValidator._pre_validate`` parses UUID strings via
+  ``uuid.UUID``. The peer never sees a raw ``str``.
+- Uuid extract is ``isinstance`` of ``uuid.UUID``. Exact
+  ``uuid.UUID`` passes, including the nil UUID.
+- ``int`` / ``bool`` / ``bytes`` miss. No version policy on this door.
+- **Bounds.** ``UUIDValidator(min_value=...)`` stays on the host.
+- Cap Door B stays off. One family only (Uuid). Path / IP / plain
+  Enum / Pattern stay off this tip.
+- Pair naming: ``compile_uuid`` / ``apply_uuid``. Host
+  ``_select_uuid`` walks the one-family bind list, same shape as Date.
+- String coerce stays host. ``None`` skips. ``uuid.UUID | None``
+  stays host. The facade coerce annotation ``uuid.UUID | str`` is
+  the host coerce door.
+
+HOLD after this tip: Path/IP, plain EnumValidator, Pattern /
+custom callables, named facades, Cap Door B. Uuid bounds stay host.
+No follow-up remains on this Uuid concern.
 
 ## What never leaves the host
 
@@ -356,7 +382,7 @@ this Date* concern.
    apply. ``pip install ux-valio[native]`` installs the ``ux-valio-native``
    wheel (module ``ux_valio_native`` — not a taught import).
 2. Same field default. Same ``annotation``. Same fail-closed errors.
-   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator, BooleanValidator, DecimalValidator, DateValidator, DateTimeValidator``.
+   L1 stays ``from ux_valio import IntegerValidator, StringValidator, BytesValidator, IntegerEnumValidator, StringEnumValidator, BooleanValidator, DecimalValidator, DateValidator, DateTimeValidator, UUIDValidator``.
 3. Compile at bind, not at set. Host bind walks one family list.
    Each family keeps its ``compile_*`` / ``apply_*`` pair (those doors
    stay separate). Missing peer → host apply (no import
@@ -412,7 +438,11 @@ this Date* concern.
    (``apply_datetime``). A plain ``date`` raises at that extract;
    host ``isinstance`` misses first, and an extract TypeError falls
    through to host ``TypeValidator``. String coerce stays host
-   ``_pre_validate``.
+   ``_pre_validate``. PyO3 ``uuid.UUID`` extract is the Uuid door
+   (``apply_uuid``). A non-UUID raises at that extract; host
+   ``isinstance`` misses first (``int`` / ``bool`` / ``bytes`` /
+   raw ``str``), and an extract TypeError falls through to host
+   ``TypeValidator``. String coerce stays host ``_pre_validate``.
    ``FailKind.NotMember`` is the validation bucket
    (host type-door wording, ``match fail:``). Unexpected
    peer/infra is ``RuntimeError`` naming ``ux_valio_native``. Three
@@ -445,6 +475,7 @@ specified ``IntegerValidator(min_value=0)`` / ``FloatValidator(min_value=0.0)``
 / ``DecimalValidator()`` (exact ``decimal.Decimal``; no float bridge)
 / ``DateValidator()`` (``datetime.date``; string coerce stays host)
 / ``DateTimeValidator()`` (``datetime.datetime``; a plain ``date`` misses)
+/ ``UUIDValidator()`` (``uuid.UUID``; string coerce stays host)
 setattr stays several times slower than a one-shot native apply of that
 same plan, and the Python compile (``_active_units``, skip TypedDict,
 skip watch) is already in.
@@ -467,16 +498,19 @@ instances, so string coerce is not in the apply-only comparison), or a
 closed ``DateValidator`` date type door, or a closed
 ``DateTimeValidator`` datetime type door (values are ``date`` /
 ``datetime`` instances, so string coerce is not in the apply-only
-comparison). Hot
+comparison), or a closed ``UUIDValidator`` UUID type door (values
+are ``uuid.UUID`` instances, so string coerce is not in the
+apply-only comparison). Hot
 path B is ``compile_integer(...)``
 / ``compile_float(...)`` / ``compile_string(...)`` / ``compile_bytes(...)``
 / ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
 ``compile_boolean()`` / ``compile_decimal()`` /
-``compile_date()`` / ``compile_datetime()``
+``compile_date()`` / ``compile_datetime()`` / ``compile_uuid()``
 once then ``apply_integer`` /
 ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
-``apply_decimal`` / ``apply_date`` / ``apply_datetime`` on the
+``apply_decimal`` / ``apply_date`` / ``apply_datetime`` /
+``apply_uuid`` on the
 product peer (``native/``: private ``Plan`` enum, one variant per
 family — Integer / Float own bound units, String / Bytes own length
 units, IntegerEnum / StringEnum own their member sets, Boolean,
@@ -770,6 +804,73 @@ Boolean ~39×, and Decimal ~78× (still PASS). CPython 3.14.7 / rustc
 python benches/measure_host_peer.py
 ```
 
-HOLD after this tip: UUID/Path/IP, Pattern, plain EnumValidator,
-named facades, Cap Door B stay off this path. Date and DateTime
-bounds stay host. No follow-up remains on this Date* concern.
+HOLD after the Date tip was UUID, shipped in the next section.
+Path/IP, Pattern, plain EnumValidator, named facades, and Cap Door B
+stayed off that path. Date and DateTime bounds stay host. No
+follow-up remains on the Date* concern.
+
+**Uuid type door (Door A lock).** Stored type is ``uuid.UUID`` only
+after host pre-validate. One family. The measure cleared 3×, so the
+closed type door ships. Bounds do not:
+
+- Host ``UUIDValidator._pre_validate`` parses UUID strings via
+  ``uuid.UUID`` (hyphen, compact hex, ``urn:uuid:``, brace print
+  forms). The peer never sees a raw ``str``.
+- Uuid extract is ``isinstance`` of ``uuid.UUID``. Exact
+  ``uuid.UUID`` passes, including the nil UUID. A subclass of
+  ``uuid.UUID`` passes (same as host ``isinstance``).
+- ``int`` / ``bool`` / ``bytes`` miss. No version policy on this door.
+- **Bounds.** Door A does not add min/max/gt/lt/eq units.
+  ``UUIDValidator(min_value=...)`` stays on the host.
+- Cap Door B stays off. One family only (Uuid). Path / IP / plain
+  Enum / Pattern stay off this tip.
+- Pair naming: ``compile_uuid`` / ``apply_uuid`` (intentional pair —
+  do not merge). Host ``_select_uuid`` walks the one-family bind
+  list, same shape as Date.
+- String coerce stays host. No UUID parsing in Rust.
+- ``FailKind`` / host ``TypeError`` wording matches the other Door A
+  families. Extract miss is a bridge to host ``TypeValidator``, not
+  an L1 overflow message.
+- ``None`` skips. ``uuid.UUID | None`` stays host. The facade coerce
+  annotation ``uuid.UUID | str`` is the host coerce door, not an
+  open union — ``str`` is coerced before apply. Any other union
+  stays host.
+
+### Measured (2026-09-23) Uuid type door
+
+Same class of box, one run, 400000 iters after 20000 warmup, values
+are ``uuid.UUID`` instances (string coerce is host
+``_pre_validate``, not this apply-only comparison). CPython 3.14.7,
+rustc 1.83.0, Linux x86_64. Peer is a release cdylib
+(``python -m pip install maturin`` then ``maturin develop --release``
+via ``python benches/measure_host_peer.py``). Host units were
+``_validate_type`` only. Path A clears the native plan after bind so
+setattr is pure Python (``UUIDValidator`` still runs host string
+coerce and the named extra; the measured values are already
+``uuid.UUID``, so coerce does not parse). B is
+``apply_uuid(plan, uuid)`` only (``Python::detach``). The type door
+is exact ``uuid.UUID`` (smoke: ``apply_uuid(plan, str)`` raises
+``TypeError``; ``int`` / ``bool`` / ``bytes`` / raw ``str`` are not
+coerced; the nil UUID passes). No bound unit. Bar 3×.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| exact UUID | 7324.1 | 95.1 | **77.02×** |
+
+**Verdict: PASS.** The Uuid type door cleared the 3× bar (77.02×).
+Native apply here is ~95 ns/op (GIL released), not a 70× product
+setattr claim. Host setattr is slower than the Boolean type door
+because ``UUIDValidator`` still runs ``_pre_validate`` and the named
+extra on the Python path. Integer / Float stayed ~29–30×, String
+~28–34×, Bytes ~28–30×, IntegerEnum ~39×, StringEnum ~34×, Boolean
+~40×, Decimal ~77×, Date ~78×, and DateTime ~85× on that same run
+(still PASS). CPython 3.14.7 / rustc 1.83.0 / Linux x86_64.
+
+```console
+python benches/measure_host_peer.py
+```
+
+HOLD after this tip: Path/IP, plain EnumValidator, Pattern /
+custom callables, named facades, Cap Door B. Uuid bounds
+(min/max/gt/lt/eq) stay host. No follow-up remains on this Uuid
+concern.

@@ -159,8 +159,10 @@ closed Decimal exact-Decimal type door (`compile_decimal` /
 `apply_decimal`; `float` / `int` / `bool` are not coerced; no scale
 unit), and a closed Date type door (`compile_date` / `apply_date`;
 string coerce stays host), and a closed DateTime type door
-(`compile_datetime` / `apply_datetime`; a plain `date` misses).
-Pattern and named identity stay on the host. Next: UUID/Path/IP,
+(`compile_datetime` / `apply_datetime`; a plain `date` misses),
+and a closed Uuid type door (`compile_uuid` / `apply_uuid`; string
+coerce stays host).
+Pattern and named identity stay on the host. Next: Path/IP,
 Pattern, plain EnumValidator stay off this path. Decimal scale /
-quantize stays HOLD. Date and DateTime bounds stay host. No
-follow-up remains on this Date* concern.
+quantize stays HOLD. Date and DateTime bounds stay host. Uuid
+bounds stay host. No follow-up remains on this Uuid concern.

@@ -10,6 +10,7 @@ or a closed Boolean exact-bool type door,
 or a closed Decimal exact-Decimal type door,
 or a closed Date ``datetime.date`` type door,
 or a closed DateTime ``datetime.datetime`` type door,
+or a closed Uuid ``uuid.UUID`` type door,
 at construct. Cap Door B
 is not on this path.
 
@@ -45,7 +46,9 @@ At construct (`Validator.__init__` / `__set_name__`):
   (`compile_date` / `apply_date`; string coerce stays host;
   `datetime` extracts because it subclasses `date`) or a closed
   DateTime type door (`compile_datetime` / `apply_datetime`; a plain
-  `date` misses; string coerce stays host). Otherwise the interpreter
+  `date` misses; string coerce stays host) or a closed Uuid type door
+  (`compile_uuid` / `apply_uuid`; string coerce stays host; exact
+  `uuid.UUID` including the nil UUID passes). Otherwise the interpreter
   still walks `_active_units`
 
 At set, the interpreter walks that short tuple (or one FFI `apply_*` for
@@ -97,7 +100,8 @@ UTF-8 member set vs `apply_string_enum(plan, &str)`, and the closed
 Boolean exact-bool type door vs `apply_boolean(plan, bool)`, and the
 closed Decimal exact-Decimal type door vs `apply_decimal(plan, Decimal)`,
 and the closed Date type door vs `apply_date(plan, date)`, and the
-closed DateTime type door vs `apply_datetime(plan, datetime)`.
+closed DateTime type door vs `apply_datetime(plan, datetime)`, and the
+closed Uuid type door vs `apply_uuid(plan, uuid)`.
 
 ```console
 python benches/measure_host_peer.py
@@ -139,6 +143,12 @@ native **80.4 ns/op**, ratio **78.55×** — **PASS**. Integer / Float /
 String / Bytes stayed ~27–30×, IntegerEnum ~40×, StringEnum ~31×,
 Boolean ~39×, and Decimal ~78× on that same run (still PASS). Host
 setattr includes ``DateValidator`` / ``DateTimeValidator``
+pre-validate and the named extra; native is plan apply only.
+Uuid exact-UUID re-run on this tip: host **7324.1 ns/op**, native
+**95.1 ns/op**, ratio **77.02×** — **PASS**. Integer / Float stayed
+~29–30×, String ~28–34×, Bytes ~28–30×, IntegerEnum ~39×, StringEnum
+~34×, Boolean ~40×, Decimal ~77×, Date ~78×, and DateTime ~85× on
+that same run (still PASS). Host setattr includes ``UUIDValidator``
 pre-validate and the named extra; native is plan apply only.
 Honesty: that ratio is descriptor
 setattr vs **plan apply only** (product ``apply_integer`` uses

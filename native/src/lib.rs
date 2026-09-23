@@ -4,7 +4,7 @@
 //! family's checks: Integer / Float own [`bound::BoundUnit`] values,
 //! String / Bytes own [`length::LengthUnit`] values, IntegerEnum owns
 //! an `i64` member set, StringEnum owns a UTF-8 member set, Boolean,
-//! Decimal, Date, and DateTime are type-door markers. `apply_integer`
+//! Decimal, Date, DateTime, and Uuid are type-door markers. `apply_integer`
 //! clones the integer
 //! bounds and walks those — a length unit is the wrong type, so it
 //! cannot be passed into that walk.
@@ -15,7 +15,8 @@
 //! `apply_string_enum(plan, &str)` / `apply_boolean(plan, bool)` /
 //! `apply_decimal(plan, decimal.Decimal)` /
 //! `apply_date(plan, datetime.date)` /
-//! `apply_datetime(plan, datetime.datetime)`).
+//! `apply_datetime(plan, datetime.datetime)` /
+//! `apply_uuid(plan, uuid.UUID)`).
 //! Bound units (`MinValue` / `MaxValue` / `GreaterThan` / `LessThan` /
 //! `Equal`) run after numeric extract. Each miss arm is fail-when:
 //! `min_value` passes when `value >= bound` (miss `<`); `gt` passes
@@ -139,6 +140,32 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExtractedDateTime {
     }
 }
 
+/// Exact `uuid.UUID`. Not a string coerce.
+struct ExtractedUuid;
+
+fn cached_uuid_type(py: Python<'_>) -> PyResult<pyo3::Bound<'_, PyAny>> {
+    use pyo3::sync::PyOnceLock;
+
+    static UUID: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+    let cached = UUID.get_or_try_init(py, || {
+        Ok::<_, PyErr>(py.import("uuid")?.getattr("UUID")?.unbind())
+    })?;
+    Ok(cached.bind(py).clone())
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for ExtractedUuid {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let uuid_type = cached_uuid_type(obj.py())?;
+        if obj.is_instance(&uuid_type)? {
+            Ok(ExtractedUuid)
+        } else {
+            Err(extract_type_error(obj.py(), "uuid.UUID"))
+        }
+    }
+}
+
 /// Extract miss is a Python `TypeError`. Built from the builtin so this
 /// file does not name a reflected type object. Host `isinstance` misses
 /// first; this is the bridge for a direct `apply_*` call.
@@ -204,23 +231,28 @@ fn compile_datetime_plan() -> PyPlan {
     share_plan(Plan::DateTime)
 }
 
+fn compile_uuid_plan() -> PyPlan {
+    share_plan(Plan::Uuid)
+}
+
 /// Product native module: `compile_integer(...)` / `compile_float(...)` /
 /// `compile_string(...)` / `compile_bytes(...)` /
 /// `compile_integer_enum(...)` / `compile_string_enum(...)` /
 /// `compile_boolean()` / `compile_decimal()` / `compile_date()` /
-/// `compile_datetime()` + one-shot `apply_integer` /
+/// `compile_datetime()` / `compile_uuid()` + one-shot `apply_integer` /
 /// `apply_float` / `apply_string` / `apply_bytes` / `apply_integer_enum` /
 /// `apply_string_enum` / `apply_boolean` / `apply_decimal` /
-/// `apply_date` / `apply_datetime`.
+/// `apply_date` / `apply_datetime` / `apply_uuid`.
 ///
 /// `None` is `Ok(())`. A `FailKind` is `Err`. Plan shape is the [`Plan`]
 /// variant; extract is the FFI argument. Compile kwargs are host names
 /// (`min_value` / `gt` / `max_length` / `length`) or `members` for an
-/// enum set. Boolean, Decimal, Date, and DateTime take no kwargs.
+/// enum set. Boolean, Decimal, Date, DateTime, and Uuid take no kwargs.
 /// Decimal extract is exact `decimal.Decimal` (no float bridge, no scale
 /// unit). Date extract is `datetime.date` (`datetime.datetime` extracts
 /// because it subclasses `date`). DateTime extract is
-/// `datetime.datetime` (a plain `date` does not). String coerce stays
+/// `datetime.datetime` (a plain `date` does not). Uuid extract is
+/// exact `uuid.UUID` (a raw `str` does not). String coerce stays
 /// host. Not a taught L1 API. Compile and apply stay separate doors. A
 /// plan handed to another family's apply raises `RuntimeError` (the
 /// walk is not run).
@@ -326,7 +358,8 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal
             | Plan::Date
-            | Plan::DateTime => return Err(unexpected_family("apply_integer")),
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_integer")),
         };
         Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
@@ -357,7 +390,8 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal
             | Plan::Date
-            | Plan::DateTime => return Err(unexpected_family("apply_float")),
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_float")),
         };
         Ok(py.detach(move || apply_bound_units(&units, value).err()))
     }
@@ -386,7 +420,8 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal
             | Plan::Date
-            | Plan::DateTime => return Err(unexpected_family("apply_string")),
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_string")),
         };
         let char_len = value.chars().count();
         Ok(py.detach(move || apply_length_units(&units, char_len).err()))
@@ -416,7 +451,8 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal
             | Plan::Date
-            | Plan::DateTime => return Err(unexpected_family("apply_bytes")),
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_bytes")),
         };
         let byte_len = value.len();
         Ok(py.detach(move || apply_length_units(&units, byte_len).err()))
@@ -455,7 +491,8 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal
             | Plan::Date
-            | Plan::DateTime => return Err(unexpected_family("apply_integer_enum")),
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_integer_enum")),
         };
         Ok(py.detach(move || apply_i64_members(&members, value).err()))
     }
@@ -497,7 +534,8 @@ mod ux_valio_native {
             | Plan::Boolean
             | Plan::Decimal
             | Plan::Date
-            | Plan::DateTime => return Err(unexpected_family("apply_string_enum")),
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_string_enum")),
         };
         let owned = value.to_owned();
         Ok(py.detach(move || apply_str_members(&members, &owned).err()))
@@ -535,7 +573,8 @@ mod ux_valio_native {
             | Plan::StringEnum(_)
             | Plan::Decimal
             | Plan::Date
-            | Plan::DateTime => return Err(unexpected_family("apply_boolean")),
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_boolean")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -573,7 +612,8 @@ mod ux_valio_native {
             | Plan::StringEnum(_)
             | Plan::Boolean
             | Plan::Date
-            | Plan::DateTime => return Err(unexpected_family("apply_decimal")),
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_decimal")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -613,7 +653,8 @@ mod ux_valio_native {
             | Plan::StringEnum(_)
             | Plan::Boolean
             | Plan::Decimal
-            | Plan::DateTime => return Err(unexpected_family("apply_date")),
+            | Plan::DateTime
+            | Plan::Uuid => return Err(unexpected_family("apply_date")),
         }
         let _ = value;
         Ok(py.detach(|| None))
@@ -651,7 +692,47 @@ mod ux_valio_native {
             | Plan::StringEnum(_)
             | Plan::Boolean
             | Plan::Decimal
-            | Plan::Date => return Err(unexpected_family("apply_datetime")),
+            | Plan::Date
+            | Plan::Uuid => return Err(unexpected_family("apply_datetime")),
+        }
+        let _ = value;
+        Ok(py.detach(|| None))
+    }
+
+    /// Closed Uuid type-door plan. No kwargs. The variant is the
+    /// `Uuid` marker. Not a taught L1 API. Not a String plan.
+    /// String coerce stays on the host.
+    #[pyfunction]
+    fn compile_uuid() -> PyPlan {
+        compile_uuid_plan()
+    }
+
+    /// One-shot Uuid apply. Success is `None` for a `uuid.UUID`,
+    /// including the nil UUID.
+    ///
+    /// Closed Uuid type door is this extract. A Python `str`, `int`,
+    /// `bool`, or `bytes` raises at this FFI boundary (extract error);
+    /// host falls through to the host type door. No string coerce. No
+    /// bound unit. Releases the GIL (`Python::detach`). Compile and
+    /// apply stay a pair.
+    #[pyfunction]
+    fn apply_uuid(
+        py: Python<'_>,
+        plan: PyRef<'_, PyPlan>,
+        value: ExtractedUuid,
+    ) -> PyResult<Option<FailKind>> {
+        match &plan.body {
+            Plan::Uuid => {}
+            Plan::Integer(_)
+            | Plan::Float(_)
+            | Plan::String(_)
+            | Plan::Bytes(_)
+            | Plan::IntegerEnum(_)
+            | Plan::StringEnum(_)
+            | Plan::Boolean
+            | Plan::Decimal
+            | Plan::Date
+            | Plan::DateTime => return Err(unexpected_family("apply_uuid")),
         }
         let _ = value;
         Ok(py.detach(|| None))

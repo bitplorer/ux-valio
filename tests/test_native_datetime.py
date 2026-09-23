@@ -20,7 +20,6 @@ from tests.native_support import (
 from ux_valio import (
     DateTimeValidator,
     DateValidator,
-    UUIDValidator,
     ValidationErrors,
     Validator,
 )
@@ -176,7 +175,6 @@ def test_datetime_unclosed_stays_on_host():
     assert DateTimeValidator(required=True, debug=True, name="n")._native_plan is None
     assert DateTimeValidator(reassign=False, debug=True, name="n")._native_plan is None
     assert DateTimeValidator(in_choice=(stamped,), debug=True, name="n")._native_plan is None
-    assert UUIDValidator(debug=True, name="n")._native_plan is None
     open_union = Validator[datetime.datetime | int](debug=True, name="n")
     assert open_union._native_plan is None
     optional = Validator[datetime.datetime | None](debug=True, name="n")

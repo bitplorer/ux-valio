@@ -2,8 +2,8 @@
 """Native module layout: public doors, bare names, cross-family, Cap OFF.
 
 ``Plan`` is one variant per family (``BoundUnit`` / ``LengthUnit`` /
-member set / Boolean, Decimal, Date, and DateTime type-door
-markers). No shared unit bag. UUID / Path / IP stay HOLD. Cap Door B
+member set / Boolean, Decimal, Date, DateTime, and Uuid type-door
+markers). No shared unit bag. Path / IP stay HOLD. Cap Door B
 stays off.
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
@@ -13,6 +13,7 @@ import ast
 import datetime
 import decimal
 import re
+import uuid
 
 import pytest
 
@@ -64,13 +65,13 @@ _PUBLIC_DOORS = (
     "apply_date",
     "compile_datetime",
     "apply_datetime",
+    "compile_uuid",
+    "apply_uuid",
 )
 
 _ABSENT_DOORS = (
     "compile",
     "apply",
-    "compile_uuid",
-    "apply_uuid",
     "compile_path",
     "apply_path",
     "compile_ip",
@@ -84,7 +85,7 @@ _ABSENT_DOORS = (
 def test_bare_compile_and_apply_are_absent_on_the_native_module():
     """Hard cut: doors are family-named. No alias remains.
 
-    UUID / Path / IP stay HOLD. Cap Door B stays off this native module.
+    Path / IP stay HOLD. Cap Door B stays off this native module.
     """
     import ux_valio_native as native
 
@@ -117,9 +118,9 @@ def test_bare_compile_and_apply_are_absent_on_the_native_module():
     assert "Plan::Date" in rust
     assert "fn compile_datetime" in rust
     assert "fn apply_datetime" in rust
-    assert "fn compile_uuid" not in rust
-    assert "fn apply_uuid" not in rust
-    assert "Plan::Uuid" not in rust
+    assert "fn compile_uuid" in rust
+    assert "fn apply_uuid" in rust
+    assert "Plan::Uuid" in rust
     assert "fn compile_path" not in rust
     assert "fn apply_path" not in rust
     assert "Plan::Path" not in rust
@@ -156,6 +157,11 @@ def test_apply_door_rejects_a_different_family():
             "apply_datetime",
             native.compile_datetime(),
             datetime.datetime(2020, 1, 2, 3, 4),
+        ),
+        (
+            "apply_uuid",
+            native.compile_uuid(),
+            uuid.UUID("12345678-1234-5678-1234-567812345678"),
         ),
     )
     for door, plan, sample in doors:
