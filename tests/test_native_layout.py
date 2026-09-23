@@ -220,8 +220,7 @@ _FAMILY_SECTIONS = (
     (
         "# --- Integer ---",
         (
-            "def _closed_integer_bounds(",
-            "def apply_native_integer_bounds(",
+            "partial(_closed_value_bounds, annotation=int, bound_type=int)",
             "_INTEGER_DOOR",
             "_raise_host_value_type_miss",
         ),
@@ -229,8 +228,7 @@ _FAMILY_SECTIONS = (
     (
         "# --- Float ---",
         (
-            "def _closed_float_bounds(",
-            "def apply_native_float_bounds(",
+            "partial(_closed_value_bounds, annotation=float, bound_type=float)",
             "_FLOAT_DOOR",
             "_raise_host_value_type_miss",
         ),
@@ -238,8 +236,7 @@ _FAMILY_SECTIONS = (
     (
         "# --- String ---",
         (
-            "def _closed_string_length(",
-            "def apply_native_string_length(",
+            "partial(_closed_length, annotation=str)",
             "_STRING_DOOR",
             "_raise_host_length_type_miss",
         ),
@@ -247,8 +244,7 @@ _FAMILY_SECTIONS = (
     (
         "# --- Bytes ---",
         (
-            "def _closed_bytes_length(",
-            "def apply_native_bytes_length(",
+            "partial(_closed_length, annotation=bytes)",
             "_BYTES_DOOR",
             "_raise_host_length_type_miss",
         ),
@@ -257,7 +253,6 @@ _FAMILY_SECTIONS = (
         "# --- IntegerEnum ---",
         (
             "def _closed_integer_enum_members(",
-            "def apply_native_integer_enum(",
             "_INTEGER_ENUM_DOOR",
             "_read_owner_annotation",
         ),
@@ -267,6 +262,7 @@ _FAMILY_SECTIONS = (
         (
             "def _closed_string_enum_members(",
             "def apply_native_string_enum(",
+            "run=apply_native_string_enum",
             "_STRING_ENUM_DOOR",
             "value.value",
         ),
@@ -274,9 +270,8 @@ _FAMILY_SECTIONS = (
     (
         "# --- Boolean ---",
         (
-            "def _closed_boolean(",
             "def _raise_host_boolean_type_miss(",
-            "def apply_native_boolean(",
+            "annotation_matches=lambda annotation: annotation is bool",
             "_BOOLEAN_DOOR",
         ),
     ),
@@ -284,9 +279,8 @@ _FAMILY_SECTIONS = (
         "# --- Decimal ---",
         (
             "def _is_decimal_type_annotation(",
-            "def _closed_decimal(",
+            "partial(_closed_type_door, annotation_matches=_is_decimal_type_annotation)",
             "def _raise_host_decimal_type_miss(",
-            "def apply_native_decimal(",
             "_DECIMAL_DOOR",
         ),
     ),
@@ -294,9 +288,8 @@ _FAMILY_SECTIONS = (
         "# --- Date ---",
         (
             "def _is_date_type_annotation(",
-            "def _closed_date(",
+            "partial(_closed_type_door, annotation_matches=_is_date_type_annotation)",
             "def _raise_host_date_type_miss(",
-            "def apply_native_date(",
             "_DATE_DOOR",
         ),
     ),
@@ -304,9 +297,8 @@ _FAMILY_SECTIONS = (
         "# --- DateTime ---",
         (
             "def _is_datetime_type_annotation(",
-            "def _closed_datetime(",
+            "partial(_closed_type_door, annotation_matches=_is_datetime_type_annotation)",
             "def _raise_host_datetime_type_miss(",
-            "def apply_native_datetime(",
             "_DATETIME_DOOR",
         ),
     ),
@@ -314,9 +306,8 @@ _FAMILY_SECTIONS = (
         "# --- UUID ---",
         (
             "def _is_uuid_type_annotation(",
-            "def _closed_uuid(",
+            "partial(_closed_type_door, annotation_matches=_is_uuid_type_annotation)",
             "def _raise_host_uuid_type_miss(",
-            "def apply_native_uuid(",
             "_UUID_DOOR",
         ),
     ),
@@ -328,7 +319,6 @@ _FAMILY_SECTIONS = (
             "def _bridge_to_ip(",
             "def _closed_ip(",
             "def _raise_host_ip_type_miss(",
-            "def apply_native_ip(",
             "_IP_DOOR",
             "NotIp",
         ),
@@ -337,9 +327,8 @@ _FAMILY_SECTIONS = (
         "# --- Path ---",
         (
             "def _is_path_type_annotation(",
-            "def _closed_path(",
+            "partial(_closed_type_door, annotation_matches=_is_path_type_annotation)",
             "def _raise_host_path_type_miss(",
-            "def apply_native_path(",
             "_PATH_DOOR",
         ),
     ),
@@ -388,6 +377,28 @@ def test_native_families_are_contiguous_sections():
         "def _raise_host_float_type_miss(",
         "def _raise_host_string_type_miss(",
         "def _raise_host_bytes_type_miss(",
+        "def _closed_integer_bounds(",
+        "def _closed_float_bounds(",
+        "def _closed_string_length(",
+        "def _closed_bytes_length(",
+        "def _closed_boolean(",
+        "def _closed_decimal(",
+        "def _closed_date(",
+        "def _closed_datetime(",
+        "def _closed_uuid(",
+        "def _closed_path(",
+        "def apply_native_integer_bounds(",
+        "def apply_native_float_bounds(",
+        "def apply_native_string_length(",
+        "def apply_native_bytes_length(",
+        "def apply_native_integer_enum(",
+        "def apply_native_boolean(",
+        "def apply_native_decimal(",
+        "def apply_native_date(",
+        "def apply_native_datetime(",
+        "def apply_native_uuid(",
+        "def apply_native_ip(",
+        "def apply_native_path(",
     ):
         assert gone not in native_py, gone
     for index, (banner, names) in enumerate(_FAMILY_SECTIONS):
@@ -424,9 +435,9 @@ def test_closed_apply_slot_is_seeded_on_validator():
     """Fourth slot is the closed Python run.
 
     ``Validator.__init__`` seeds it ``None``. Product-PyO3 Rust FFI stays
-    ``_native_apply``. ``bind_native_plan`` writes ``apply_native_*``
-    onto ``_native_run``. ``apply_native_bounds`` reads the
-    attribute directly.
+    ``_native_apply``. ``bind_native_plan`` writes ``door._run_closed``
+    onto ``_native_run`` when the row has no quirk run.
+    ``apply_native_bounds`` reads the attribute directly.
     """
     plain = IntegerValidator(debug=True, name="n")
     assert plain._native_plan is None
@@ -439,29 +450,46 @@ def test_closed_apply_slot_is_seeded_on_validator():
     assert "self._native_run = None" in facade
     assert 'getattr(owner, "_native_run"' not in native_py
     assert "run = owner._native_run" in native_py
+    assert "owner._native_run = door._run_closed" in native_py
 
 
 @needs_native
 def test_bind_writes_closed_host_apply():
-    """Closed bind stores ``apply_native_*`` on ``_native_run``.
+    """Closed bind stores ``door._run_closed`` on ``_native_run``.
 
-    Product-PyO3 Rust FFI stays ``_native_apply``.
+    Product-PyO3 Rust FFI stays ``_native_apply``. A fresh attribute
+    access builds another bound method, so identity is ``__func__``
+    and ``__self__``.
     """
     import ux_valio_native as native
     from ux_valio.validators._native import (
-        apply_native_float_bounds,
-        apply_native_integer_bounds,
+        _FLOAT_DOOR,
+        _INTEGER_DOOR,
+        _FamilyDoor,
+        _closed_length,
+        _closed_value_bounds,
     )
 
     field = IntegerValidator(min_value=0, debug=True, name="n")
     assert field._native_plan is not None
     assert field._native_apply is native.apply_integer
-    assert field._native_run is apply_native_integer_bounds
+    assert field._native_run.__func__ is _FamilyDoor._run_closed
+    assert field._native_run.__self__ is _INTEGER_DOOR
+    assert field._native_run == _INTEGER_DOOR._run_closed
     assert field._native_run is not field._native_apply
+    assert _INTEGER_DOOR.closed.func is _closed_value_bounds
+    assert _INTEGER_DOOR.closed.keywords == {"annotation": int, "bound_type": int}
     floating = FloatValidator(min_value=0.0, debug=True, name="n")
     assert floating._native_apply is native.apply_float
-    assert floating._native_run is apply_native_float_bounds
+    assert floating._native_run.__func__ is _FamilyDoor._run_closed
+    assert floating._native_run.__self__ is _FLOAT_DOOR
+    assert floating._native_run == _FLOAT_DOOR._run_closed
     assert floating._native_run is not floating._native_apply
+    assert _FLOAT_DOOR.closed.func is _closed_value_bounds
+    assert _FLOAT_DOOR.closed.keywords == {"annotation": float, "bound_type": float}
+    text = StringValidator(min_length=1, debug=True, name="n")
+    assert text._native_run.__self__.closed.func is _closed_length
+    assert text._native_run.__self__.closed.keywords == {"annotation": str}
 
 
 def test_unclosed_plans_stay_on_host():

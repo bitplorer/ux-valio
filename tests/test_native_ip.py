@@ -17,6 +17,7 @@ from tests.native_support import (
     host_native_source,
     needs_native,
 )
+from ux_valio.validators._native import _IP_DOOR, _STRING_DOOR
 from ux_valio import (
     AllOf,
     IPAddressValidator,
@@ -122,7 +123,7 @@ def test_closed_ip_door_is_string_identity():
     assert "_closed_ip" in native_py
     assert "_IP_DOOR" in native_py
     assert "def _select_ip(" not in native_py
-    assert "apply_native_ip" in native_py
+    assert "def apply_native_ip(" not in native_py
     assert "_raise_host_ip_type_miss" in native_py
     assert "_bridge_to_ip" in native_py
     assert "_read_ip_facade" in native_py
@@ -144,7 +145,9 @@ def test_ip_compiles_once_at_bind():
     assert field._native_apply is not native.apply_string
     assert field._native_run is not field._native_apply
     assert field._native_run is not None
-    assert field._native_run.__name__ == "apply_native_ip"
+    assert field._native_run.__self__ is _IP_DOOR
+    assert field._native_run.__func__.__name__ == "_run_closed"
+    assert field._native_run == _IP_DOOR._run_closed
     assert field.annotation is str
     box = Box(ip=_V4)
     box.ip = "10.0.0.1"
@@ -265,19 +268,20 @@ def test_native_ip_uses_apply_ip_not_string_apply():
 def test_ip_unclosed_stays_on_host():
     """Length on an IP facade is the string door. Other extras stay host."""
     length_bound = IPv4Validator(max_length=3, debug=True, name="n")
-    assert length_bound._native_run.__name__ == "apply_native_string_length"
-    assert IPv4Validator(min_length=1, debug=True, name="n")._native_run.__name__ == (
-        "apply_native_string_length"
+    assert length_bound._native_run.__self__ is _STRING_DOOR
+    assert length_bound._native_run.__func__.__name__ == "_run_closed"
+    assert IPv4Validator(min_length=1, debug=True, name="n")._native_run.__self__ is (
+        _STRING_DOOR
     )
     assert IPv4Validator(required=True, debug=True, name="n")._native_plan is None
     assert IPv4Validator(reassign=False, debug=True, name="n")._native_plan is None
     assert IPv4Validator(in_choice=(_V4,), debug=True, name="n")._native_plan is None
     assert IPv4Validator(pattern=r"127", debug=True, name="n")._native_plan is None
-    assert IPv6Validator(max_length=2, debug=True, name="n")._native_run.__name__ == (
-        "apply_native_string_length"
+    assert IPv6Validator(max_length=2, debug=True, name="n")._native_run.__self__ is (
+        _STRING_DOOR
     )
-    assert IPAddressValidator(length=4, debug=True, name="n")._native_run.__name__ == (
-        "apply_native_string_length"
+    assert IPAddressValidator(length=4, debug=True, name="n")._native_run.__self__ is (
+        _STRING_DOOR
     )
     assert StringValidator(debug=True, name="n")._native_plan is None
     length = StringValidator(min_length=1, debug=True, name="n")

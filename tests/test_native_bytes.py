@@ -35,8 +35,9 @@ def test_closed_bytes_type_door_is_bytes_extract():
     assert "let byte_len = value.len();" in rust
     assert "Plan::Bytes" in rust
     assert "grapheme" not in rust.lower()
-    assert "_closed_bytes_length" in native_py
-    assert "apply_native_bytes_length" in native_py
+    assert "partial(_closed_length, annotation=bytes)" in native_py
+    assert "def _closed_bytes_length(" not in native_py
+    assert "def apply_native_bytes_length(" not in native_py
     assert "_bridge_to_length" in native_py
     assert 'raise ValueError("overflow' not in native_py
     assert "PyO3 bytes Overflow" not in native_py

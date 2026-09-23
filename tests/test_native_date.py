@@ -52,10 +52,11 @@ def test_closed_date_type_door_is_date_extract():
     assert "fn compile_and_apply" not in rust
     assert not re.search(r"\bfn compile\(", rust)
     assert not re.search(r"\bfn apply\(", rust)
-    assert "_closed_date" in native_py
+    assert "partial(_closed_type_door, annotation_matches=_is_date_type_annotation)" in native_py
+    assert "def _closed_date(" not in native_py
     assert "_DATE_DOOR" in native_py
     assert "def _select_date(" not in native_py
-    assert "apply_native_date" in native_py
+    assert "def apply_native_date(" not in native_py
     assert "_raise_host_date_type_miss" in native_py
     assert "_bridge_to_type" in native_py
     assert "_is_date_type_annotation" in native_py

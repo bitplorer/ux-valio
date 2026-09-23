@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Host ``_native.py`` drops thin ``apply_native_*`` shells that only
+  forwarded to ``_FamilyDoor._run_closed``. ``bind_native_plan`` stores
+  that bound method on ``_native_run``. Constant closed detectors are
+  ``functools.partial`` of ``_closed_value_bounds`` /
+  ``_closed_length`` / ``_closed_type_door``. StringEnum still applies
+  ``value.value`` via ``apply_native_string_enum``. IP ``NotIp`` and
+  the string store stay. Decimal / date annotation helpers stay.
+  Cap Door B stays off. Closed-plan behaviour is unchanged.
+
 - Host ``_native.py`` drops per-family ``_select_*`` passthroughs.
   ``bind_native_plan`` calls ``_FamilyDoor._select`` on the row.
   Isinstance families apply through ``_FamilyDoor._run_closed``

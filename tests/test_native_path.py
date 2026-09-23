@@ -86,10 +86,11 @@ def test_closed_path_type_door_is_path_extract():
     assert not re.search(r"\bfn apply\(", rust)
     assert "fn compile_enum" not in rust
     assert "fn compile_pattern" not in rust
-    assert "_closed_path" in native_py
+    assert "partial(_closed_type_door, annotation_matches=_is_path_type_annotation)" in native_py
+    assert "def _closed_path(" not in native_py
     assert "_PATH_DOOR" in native_py
     assert "def _select_path(" not in native_py
-    assert "apply_native_path" in native_py
+    assert "def apply_native_path(" not in native_py
     assert "_raise_host_path_type_miss" in native_py
     assert "_bridge_to_type" in native_py
     assert "_is_path_type_annotation" in native_py

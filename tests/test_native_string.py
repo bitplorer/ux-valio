@@ -34,8 +34,9 @@ def test_closed_string_type_door_is_str_extract():
     assert "value: &str" in rust
     assert "chars().count()" in rust
     assert "grapheme" not in rust.lower()
-    assert "_closed_string_length" in native_py
-    assert "apply_native_string_length" in native_py
+    assert "partial(_closed_length, annotation=str)" in native_py
+    assert "def _closed_string_length(" not in native_py
+    assert "def apply_native_string_length(" not in native_py
     assert "_bridge_to_length" in native_py
     assert 'raise ValueError("overflow' not in native_py
     assert "PyO3 str Overflow" not in native_py
