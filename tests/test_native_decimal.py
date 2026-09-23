@@ -63,7 +63,8 @@ def test_closed_decimal_type_door_is_decimal_extract():
     assert "_DECIMAL_DOOR" in native_py
     assert "def _select_decimal(" not in native_py
     assert "def apply_native_decimal(" not in native_py
-    assert "_raise_host_decimal_type_miss" in native_py
+    assert "type_miss=_raise_host_type_door_miss" in native_py
+    assert "def _raise_host_decimal_type_miss(" not in native_py
     assert "_bridge_to_type" in native_py
     assert "_is_decimal_type_annotation" in native_py
 

@@ -91,7 +91,8 @@ def test_closed_path_type_door_is_path_extract():
     assert "_PATH_DOOR" in native_py
     assert "def _select_path(" not in native_py
     assert "def apply_native_path(" not in native_py
-    assert "_raise_host_path_type_miss" in native_py
+    assert "type_miss=_raise_host_type_door_miss" in native_py
+    assert "def _raise_host_path_type_miss(" not in native_py
     assert "_bridge_to_type" in native_py
     assert "_is_path_type_annotation" in native_py
 

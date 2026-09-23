@@ -124,7 +124,8 @@ def test_closed_ip_door_is_string_identity():
     assert "_IP_DOOR" in native_py
     assert "def _select_ip(" not in native_py
     assert "def apply_native_ip(" not in native_py
-    assert "_raise_host_ip_type_miss" in native_py
+    assert "type_miss=_raise_host_type_door_miss" in native_py
+    assert "def _raise_host_ip_type_miss(" not in native_py
     assert "_bridge_to_ip" in native_py
     assert "_read_ip_facade" in native_py
 

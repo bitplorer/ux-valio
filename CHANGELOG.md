@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Host ``_native.py`` drops ``apply_native_string_enum``.
+  ``_FamilyDoor.extract`` defaults to identity; StringEnum sets
+  ``attrgetter("value")`` and ``_run_closed`` passes that payload
+  to the FFI apply. Decimal, Date, DateTime, Uuid, IP, and Path
+  share ``_raise_host_type_door_miss`` (the
+  ``TypeValidator._validate_type`` forward). Boolean and enum
+  type-miss raises stay. IP ``NotIp`` and the string store stay.
+  Cap Door B stays off. Closed-plan behaviour is unchanged.
+
 - Host ``_native.py`` drops thin ``apply_native_*`` shells that only
   forwarded to ``_FamilyDoor._run_closed``. ``bind_native_plan`` stores
   that bound method on ``_native_run``. Constant closed detectors are
