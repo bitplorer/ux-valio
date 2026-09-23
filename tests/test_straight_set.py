@@ -13,14 +13,39 @@ from ux_valio import IntegerValidator
 from ux_valio.errors import ValidationErrors
 from ux_valio.validators.hooks import _SET_PHASE_MASK
 
+from tests.native_support import needs_native
 
-def test_closed_int_straight_set_stores_and_rejects():
+
+def test_int_field_stores_and_rejects_without_requiring_native():
+    """Host path when the optional peer is absent. Straight line is not required."""
+
+    @dataclass
+    class Box:
+        n: int = IntegerValidator(min_value=0, debug=True)
+
+    field = Box.__dict__["n"]
+    row = Box(n=4)
+    assert row.n == 4
+    assert row.__dict__["n"] == 4
+    with pytest.raises(ValueError, match="minimum value of 0, got -1"):
+        row.n = -1
+    assert row.n == 4
+    with pytest.raises(ValidationErrors, match="expect"):
+        row.n = "x"
+    assert row.n == 4
+    if field._native_plan is None:
+        assert field._native_run is None
+
+
+@needs_native
+def test_closed_int_straight_set_when_plan_bound():
     @dataclass
     class Box:
         n: int = IntegerValidator(min_value=0, debug=True)
 
     field = Box.__dict__["n"]
     assert field._native_plan is not None
+    assert field._native_run is not None
     assert field._straight_eligible
     assert (field._phase_mask & _SET_PHASE_MASK) == 0
 
