@@ -23,7 +23,6 @@ from ux_valio import (
     IPv4Validator,
     IPv6Validator,
     MinLengthValidator,
-    PathValidator,
     StringValidator,
     ValidationErrors,
 )
@@ -120,8 +119,6 @@ def test_closed_ip_door_is_string_identity():
     assert "fn compile_and_apply" not in rust
     assert not re.search(r"\bfn compile\(", rust)
     assert not re.search(r"\bfn apply\(", rust)
-    assert "fn compile_path" not in rust
-    assert "fn apply_path" not in rust
     assert "_closed_ip" in native_py
     assert "_select_ip" in native_py
     assert "apply_native_ip" in native_py
@@ -281,7 +278,6 @@ def test_ip_unclosed_stays_on_host():
     assert IPAddressValidator(length=4, debug=True, name="n")._native_run.__name__ == (
         "apply_native_string_length"
     )
-    assert PathValidator(debug=True, name="n")._native_plan is None
     assert StringValidator(debug=True, name="n")._native_plan is None
     length = StringValidator(min_length=1, debug=True, name="n")
     assert length._native_plan is not None

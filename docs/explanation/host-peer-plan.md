@@ -139,7 +139,14 @@ the type door. ``compile_ip(kind)`` / ``apply_ip(plan, str)`` stay
 a pair. ``kind`` is ``ipv4`` / ``ipv6`` / ``ip``. The stored value
 stays the given string. There is no ``_pre_validate`` coerce to
 ``ipaddress`` objects. ``IPv4Address`` / ``IPv6Address`` /
-``ip_address`` are the parsers that kind mirrors. Unclosed
+``ip_address`` are the parsers that kind mirrors.
+``PathValidator()`` compiles when the annotation is
+``pathlib.Path`` or the facade coerce union ``pathlib.Path | str``
+and the only active unit is the type door. ``compile_path()`` /
+``apply_path(plan, path)`` stay a pair. String coerce stays host
+``_pre_validate``. Exact ``pathlib.Path`` passes, including a
+subclass. ``pathlib.PurePath`` does not. ``path_exists`` stays
+host. Unclosed
 paths (``required``, ``multiple_of``, pattern, choice, named
 identity, Email, a mixed bound type, Union / TypedDict /
 Annotated) stay on the host. Email / named identity were already
@@ -399,9 +406,40 @@ string-identity door ships. The three facades differ only by parser:
 - Pair naming: ``compile_ip`` / ``apply_ip``. Host ``_select_ip``
   walks the one-family bind list, same shape as Uuid.
 
-HOLD after this tip: Path, plain EnumValidator, Pattern /
-custom callables, named facades, Cap Door B. No follow-up remains
-on this IP concern.
+HOLD after the IP tip was Path. Path shipped in the next
+paragraphs. IP length / pattern / choice / ``required`` /
+``reassign=False`` stay host. No follow-up remains on this IP
+concern.
+
+**Path type door (Door A lock).** Stored type is ``pathlib.Path``
+only after host pre-validate. One family. Bounds and
+``path_exists`` do not:
+
+- Host ``PathValidator._pre_validate`` builds ``pathlib.Path`` from
+  a ``str``. The peer never sees a raw ``str``.
+- Path extract is ``isinstance`` of ``pathlib.Path``. Exact
+  ``pathlib.Path`` passes, including a subclass. ``PosixPath`` is
+  a ``Path``. ``pathlib.PurePath`` is not.
+- ``int`` / ``bool`` / ``bytes`` miss. No resolve, no absolute, no
+  filesystem check on this door.
+- **path_exists.** ``PathValidator(path_exists=True)`` still binds
+  the type door when that is the only active unit. The filesystem
+  check stays the named extra (``FileNotFoundError``).
+- **Bounds.** Length, choice, ``required``, and ``reassign=False``
+  stay on the host.
+- Cap Door B stays off. One family only (Path). Plain Enum /
+  Pattern stay off this tip.
+- Pair naming: ``compile_path`` / ``apply_path``. Host
+  ``_select_path`` walks the one-family bind list, same shape as
+  Uuid.
+- String coerce stays host. ``None`` skips. ``pathlib.Path | None``
+  stays host. The facade coerce annotation ``pathlib.Path | str``
+  is the host coerce door.
+
+HOLD after this tip: plain EnumValidator, Pattern / custom
+callables, named facades, Cap Door B. Path bounds and
+``path_exists`` stay host. No follow-up remains on this Path
+concern. UUID and IP closed-family HOLD stays cleared.
 
 ## What never leaves the host
 
@@ -486,6 +524,12 @@ on this IP concern.
    (``int`` / ``bytes``). An invalid address is
    ``FailKind.NotIp`` (host KEEP ``ValueError``). The stored value
    stays the given string. No coerce to ``ipaddress`` objects.
+   PyO3 ``pathlib.Path`` extract is the Path door (``apply_path``).
+   A non-Path raises at that extract; host ``isinstance`` misses
+   first (``int`` / ``bool`` / ``bytes`` / ``pathlib.PurePath`` /
+   raw ``str``), and an extract TypeError falls through to host
+   ``TypeValidator``. String coerce stays host ``_pre_validate``.
+   ``path_exists`` stays host (no filesystem check in the peer).
    ``FailKind.NotMember`` is the validation bucket
    (host type-door wording, ``match fail:``). Unexpected
    peer/infra is ``RuntimeError`` naming ``ux_valio_native``. Three
@@ -521,6 +565,8 @@ specified ``IntegerValidator(min_value=0)`` / ``FloatValidator(min_value=0.0)``
 / ``UUIDValidator()`` (``uuid.UUID``; string coerce stays host)
 / ``IPv4Validator()`` / ``IPv6Validator()`` / ``IPAddressValidator()``
 (given string; ``compile_ip(kind)`` / ``apply_ip``)
+/ ``PathValidator()`` (``pathlib.Path``; string coerce stays host;
+``path_exists`` stays host)
 setattr stays several times slower than a one-shot native apply of that
 same plan, and the Python compile (``_active_units``, skip TypedDict,
 skip watch) is already in.
@@ -547,23 +593,26 @@ comparison), or a closed ``UUIDValidator`` UUID type door (values
 are ``uuid.UUID`` instances, so string coerce is not in the
 apply-only comparison), or a closed IP string-identity door
 (values are the given address strings; the facades do not coerce
-to ``ipaddress`` objects). Hot
+to ``ipaddress`` objects), or a closed ``PathValidator`` Path type
+door (values are ``pathlib.Path`` instances, so string coerce is
+not in the apply-only comparison; ``path_exists`` is not in that
+comparison). Hot
 path B is ``compile_integer(...)``
 / ``compile_float(...)`` / ``compile_string(...)`` / ``compile_bytes(...)``
 / ``compile_integer_enum(...)`` / ``compile_string_enum(...)`` /
 ``compile_boolean()`` / ``compile_decimal()`` /
 ``compile_date()`` / ``compile_datetime()`` / ``compile_uuid()`` /
-``compile_ip(kind)``
+``compile_ip(kind)`` / ``compile_path()``
 once then ``apply_integer`` /
 ``apply_float`` / ``apply_string`` / ``apply_bytes`` /
 ``apply_integer_enum`` / ``apply_string_enum`` / ``apply_boolean`` /
 ``apply_decimal`` / ``apply_date`` / ``apply_datetime`` /
-``apply_uuid`` / ``apply_ip`` on the
+``apply_uuid`` / ``apply_ip`` / ``apply_path`` on the
 product peer (``native/``: private ``Plan`` enum, one variant per
 family — Integer / Float own bound units, String / Bytes own length
 units, IntegerEnum / StringEnum own their member sets, Boolean,
-Decimal, Date, DateTime, and Uuid are type-door markers, IP owns
-an address kind; public
+Decimal, Date, DateTime, Uuid, and Path are type-door markers, IP
+owns an address kind; public
 ``compile_*`` / ``apply_*`` names unchanged). B is **not** product setattr (no store, no
 hooks, no host raise). The harness prints one host-vs-apply ratio per
 family; the bar is **≥ 3×** for each. A family below the bar is
@@ -974,7 +1023,31 @@ StringEnum ~32×, Boolean ~38×, Decimal ~76×, Date ~77×, DateTime
 python benches/measure_host_peer.py
 ```
 
-HOLD after this tip: Path, plain EnumValidator, Pattern /
-custom callables, named facades, Cap Door B. IP length / pattern /
-choice / ``required`` / ``reassign=False`` stay host. No follow-up
-remains on this IP concern.
+HOLD after the IP tip was Path. Path shipped below. IP length /
+pattern / choice / ``required`` / ``reassign=False`` stay host. No
+follow-up remains on this IP concern.
+
+**Path type door (Door A lock).** Stored type is ``pathlib.Path``
+only after host pre-validate. One family. The measure is recorded
+with this tip. Bounds and ``path_exists`` do not:
+
+- Host ``PathValidator._pre_validate`` builds ``pathlib.Path`` from
+  a ``str``. The peer never sees a raw ``str``.
+- Path extract is ``isinstance`` of ``pathlib.Path``. A subclass
+  passes. ``PurePath`` misses.
+- ``int`` / ``bool`` / ``bytes`` miss. No filesystem check.
+- Cap Door B stays off. One family only (Path). Plain Enum /
+  Pattern stay off this tip.
+- Pair naming: ``compile_path`` / ``apply_path``. Host
+  ``_select_path``.
+
+### Measured Path type door
+
+Numbers land in this section after
+``python benches/measure_host_peer.py``. Bar 3×. Do not claim 70×
+product setattr.
+
+HOLD after this tip: plain EnumValidator, Pattern / custom
+callables, named facades, Cap Door B. Path bounds and
+``path_exists`` stay host. UUID and IP closed-family HOLD stays
+cleared. No follow-up remains on this Path concern.

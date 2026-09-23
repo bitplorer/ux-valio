@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Native Path type door: closed ``ux-valio[native]`` plans now cover
+  ``PathValidator`` when the annotation is ``pathlib.Path`` or the
+  facade coerce union ``pathlib.Path | str``, and the only active
+  unit is the type door. ``compile_path`` / ``apply_path`` stay a
+  pair. Door A lock: stored type is ``pathlib.Path`` only after host
+  ``_pre_validate`` (string coerce); the peer never sees a raw
+  ``str``. Exact ``pathlib.Path`` passes, including a subclass
+  (``PosixPath`` is a ``Path``). ``pathlib.PurePath`` misses.
+  ``int`` / ``bool`` / ``bytes`` miss. No resolve, no absolute, no
+  filesystem check. ``path_exists`` stays the named extra
+  (``FileNotFoundError``). Bounds, length, choice, ``required``,
+  and ``reassign=False`` stay host. Extract ``TypeError`` falls
+  through to host ``TypeValidator``. ``None`` skips.
+  ``pathlib.Path | None`` and other unions stay host. Cap Door B
+  stays off. Plain EnumValidator / Pattern / named facades stay
+  HOLD. No follow-up remains on this Path concern. UUID and IP
+  closed-family HOLD stays cleared. Measure
+  ``python benches/measure_host_peer.py`` (ratio filled after the
+  run); do not claim 70× product setattr.
+
 - Native IP string identity: closed ``ux-valio[native]`` plans now
   cover ``IPv4Validator``, ``IPv6Validator``, and
   ``IPAddressValidator`` when the annotation is ``str`` and the only

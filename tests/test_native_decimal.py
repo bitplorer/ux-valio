@@ -21,7 +21,6 @@ from tests.native_support import (
 from ux_valio import (
     DecimalValidator,
     EnumValidator,
-    PathValidator,
     ValidationErrors,
     Validator,
 )
@@ -193,7 +192,6 @@ def test_decimal_unclosed_stays_on_host():
         DecimalValidator(decimal_places=2)  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         DecimalValidator(quantize=decimal.Decimal("0.01"))  # type: ignore[call-arg]
-    assert PathValidator(debug=True, name="n")._native_plan is None
     assert EnumValidator(debug=True, name="n")._native_plan is None
     open_union = Validator[decimal.Decimal | int](debug=True, name="n")
     assert open_union._native_plan is None

@@ -20,7 +20,7 @@ Python ≥ 3.14 (same floor as `ux-compose`).
 ```console
 pip install -e .
 pip install ux-valio[phonenumbers]   # PhoneNumberValidator
-pip install ux-valio[native]         # optional Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean/Decimal/Date/DateTime/Uuid/IP apply peer
+pip install ux-valio[native]         # optional Integer/Float/String/Bytes/IntegerEnum/StringEnum/Boolean/Decimal/Date/DateTime/Uuid/IP/Path apply peer
 ```
 
 From a checkout the native extra is a sibling maturin wheel (`native/`),
@@ -98,7 +98,9 @@ Optional native apply (host decides, peer applies) is mapped in
 `DateTimeValidator()` (`datetime.datetime`; a plain `date` misses) /
 `UUIDValidator()` (`uuid.UUID`; string coerce stays host) /
 `IPv4Validator()` / `IPv6Validator()` / `IPAddressValidator()`
-(the given string; no coerce to `ipaddress` objects)
+(the given string; no coerce to `ipaddress` objects) /
+`PathValidator()` (`pathlib.Path`; string coerce stays host;
+`path_exists` stays host)
 may compile once and apply in one FFI
 when `ux-valio[native]` is installed; stdlib Python apply is the default
 without it. Measure with `python benches/measure_host_peer.py` (plan

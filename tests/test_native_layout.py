@@ -2,9 +2,9 @@
 """Native module layout: public doors, bare names, cross-family, Cap OFF.
 
 ``Plan`` is one variant per family (``BoundUnit`` / ``LengthUnit`` /
-member set / Boolean, Decimal, Date, DateTime, and Uuid type-door
-markers / an IP string-identity kind). No shared unit bag. Path
-stays HOLD. Cap Door B stays off.
+member set / Boolean, Decimal, Date, DateTime, Uuid, and Path
+type-door markers / an IP string-identity kind). No shared unit bag.
+Plain Enum / Pattern stay HOLD. Cap Door B stays off.
 
 No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bind (KEEP).
 """
@@ -12,6 +12,7 @@ No ``from __future__ import annotations`` — postponed ``int`` TypeErrors at bi
 import ast
 import datetime
 import decimal
+import pathlib
 import re
 import uuid
 
@@ -69,13 +70,13 @@ _PUBLIC_DOORS = (
     "apply_uuid",
     "compile_ip",
     "apply_ip",
+    "compile_path",
+    "apply_path",
 )
 
 _ABSENT_DOORS = (
     "compile",
     "apply",
-    "compile_path",
-    "apply_path",
     "compile_cap",
     "apply_cap",
 )
@@ -85,7 +86,7 @@ _ABSENT_DOORS = (
 def test_bare_compile_and_apply_are_absent_on_the_native_module():
     """Hard cut: doors are family-named. No alias remains.
 
-    Path stays HOLD. Cap Door B stays off this native module.
+    Plain Enum / Pattern stay HOLD. Cap Door B stays off this native module.
     """
     import ux_valio_native as native
 
@@ -124,9 +125,9 @@ def test_bare_compile_and_apply_are_absent_on_the_native_module():
     assert "fn compile_ip" in rust
     assert "fn apply_ip" in rust
     assert "Plan::Ip" in rust
-    assert "fn compile_path" not in rust
-    assert "fn apply_path" not in rust
-    assert "Plan::Path" not in rust
+    assert "fn compile_path" in rust
+    assert "fn apply_path" in rust
+    assert "Plan::Path" in rust
 
 
 @needs_native
@@ -164,6 +165,7 @@ def test_apply_door_rejects_a_different_family():
             uuid.UUID("12345678-1234-5678-1234-567812345678"),
         ),
         ("apply_ip", native.compile_ip("ipv4"), "127.0.0.1"),
+        ("apply_path", native.compile_path(), pathlib.Path("/tmp/ux-valio-path")),
     )
     for door, plan, sample in doors:
         assert getattr(native, door)(plan, sample) is None

@@ -53,7 +53,10 @@ At construct (`Validator.__init__` / `__set_name__`):
   (`compile_uuid` / `apply_uuid`; string coerce stays host; exact
   `uuid.UUID` including the nil UUID passes) or a closed IP
   string-identity door (`compile_ip` / `apply_ip`; the stored value
-  stays the given string; `FailKind.NotIp` on a bad address).
+  stays the given string; `FailKind.NotIp` on a bad address) or a
+  closed Path type door (`compile_path` / `apply_path`; string
+  coerce stays host; exact `pathlib.Path` passes; `PurePath`
+  misses; `path_exists` stays host).
   Otherwise the interpreter
   still walks `_active_units`
 
