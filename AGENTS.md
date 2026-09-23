@@ -63,8 +63,9 @@ a parallel folder, not inside the layer they depend on.
   Boolean exact-bool type-door apply, Decimal exact-Decimal
   type-door apply, Date ``datetime.date`` type-door apply,
   DateTime ``datetime.datetime`` type-door apply,
-  Uuid ``uuid.UUID`` type-door apply, and
-  IP string-identity apply).
+  Uuid ``uuid.UUID`` type-door apply,
+  IP string-identity apply, and
+  Path ``pathlib.Path`` type-door apply).
   Optional extra
   ``ux-valio[native]`` (sibling crate ``native/``, module
   ``ux_valio_native``) binds closed Integer and Float bound plans,
@@ -72,7 +73,8 @@ a parallel folder, not inside the layer they depend on.
   member-set plan, a closed StringEnum UTF-8 member-set plan, a
   closed Boolean type door, a closed Decimal type door, a closed
   Date type door, a closed DateTime type door, a closed
-  Uuid type door, and a closed IP string-identity plan at
+  Uuid type door, a closed IP string-identity plan, and a closed
+  Path type door at
   construct. Private ``Plan`` is one variant per family (no mixed
   ``Unit`` bag): Integer / Float own ``BoundUnit`` (shared
   ``scalar_miss`` / ``compile_bound_plan``), String / Bytes own

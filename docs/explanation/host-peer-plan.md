@@ -1028,8 +1028,8 @@ pattern / choice / ``required`` / ``reassign=False`` stay host. No
 follow-up remains on this IP concern.
 
 **Path type door (Door A lock).** Stored type is ``pathlib.Path``
-only after host pre-validate. One family. The measure is recorded
-with this tip. Bounds and ``path_exists`` do not:
+only after host pre-validate. One family. The measure cleared 3×,
+so the closed type door ships. Bounds and ``path_exists`` do not:
 
 - Host ``PathValidator._pre_validate`` builds ``pathlib.Path`` from
   a ``str``. The peer never sees a raw ``str``.
@@ -1041,11 +1041,42 @@ with this tip. Bounds and ``path_exists`` do not:
 - Pair naming: ``compile_path`` / ``apply_path``. Host
   ``_select_path``.
 
-### Measured Path type door
+### Measured (2026-09-23) Path type door
 
-Numbers land in this section after
-``python benches/measure_host_peer.py``. Bar 3×. Do not claim 70×
-product setattr.
+Same class of box, one run, 400000 iters after 20000 warmup, values
+are ``pathlib.Path`` instances (string coerce is host
+``_pre_validate``, not this apply-only comparison; ``path_exists``
+is not in the comparison). CPython 3.14.7, rustc 1.83.0, Linux
+x86_64. Peer is a release cdylib (``python -m pip install maturin``
+then ``maturin develop --release`` via
+``python benches/measure_host_peer.py``). Host units were
+``_validate_type`` only. Path A clears the native plan after bind so
+setattr is pure Python (``PathValidator`` still runs host string
+coerce and the named extra; the measured values are already
+``pathlib.Path``, so coerce does not parse). B is
+``apply_path(plan, path)`` only (``Python::detach``). The type door
+is exact ``pathlib.Path`` (smoke: ``apply_path(plan, str)`` raises
+``TypeError``; ``PurePath`` / ``int`` / ``bool`` / ``bytes`` / raw
+``str`` are not coerced; ``Path("")`` passes). No bound unit. No
+filesystem check. Bar 3×.
+
+| family | A setattr ns/op | B apply ns/op | host / native |
+|---|---|---|---|
+| exact Path | 6744.9 | 84.4 | **79.92×** |
+
+**Verdict: PASS.** The Path type door cleared the 3× bar (79.92×).
+Native apply here is ~84 ns/op (GIL released), not a 70× product
+setattr claim. Host setattr is slower than the Boolean type door
+because ``PathValidator`` still runs ``_pre_validate`` and the named
+extra on the Python path. Integer / Float stayed ~27–30×, String and
+Bytes stayed above the bar, IntegerEnum ~38×, StringEnum ~35×,
+Boolean ~40×, Decimal ~79×, Date ~78×, DateTime ~81×, Uuid ~75×,
+and IP ~15–44× on that same run (still PASS). CPython 3.14.7 /
+rustc 1.83.0 / Linux x86_64.
+
+```console
+python benches/measure_host_peer.py
+```
 
 HOLD after this tip: plain EnumValidator, Pattern / custom
 callables, named facades, Cap Door B. Path bounds and

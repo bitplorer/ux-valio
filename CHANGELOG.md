@@ -19,8 +19,9 @@
   stays off. Plain EnumValidator / Pattern / named facades stay
   HOLD. No follow-up remains on this Path concern. UUID and IP
   closed-family HOLD stays cleared. Measure
-  ``python benches/measure_host_peer.py`` (ratio filled after the
-  run); do not claim 70× product setattr.
+  ``python benches/measure_host_peer.py`` (Path **79.92×**, host
+  6744.9 ns/op, native 84.4 ns/op; CPython 3.14.7 / rustc 1.83 /
+  Linux x86_64); do not claim 70× product setattr.
 
 - Native IP string identity: closed ``ux-valio[native]`` plans now
   cover ``IPv4Validator``, ``IPv6Validator``, and
