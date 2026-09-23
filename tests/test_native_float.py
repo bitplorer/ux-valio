@@ -35,8 +35,9 @@ def test_closed_float_type_door_is_f64_extract():
     assert "total_cmp(" not in rust
     assert ".total_cmp" not in rust
     assert "NotFloat" not in rust
-    assert "_closed_float_bounds" in native_py
-    assert "apply_native_float_bounds" in native_py
+    assert "partial(_closed_value_bounds, annotation=float, bound_type=float)" in native_py
+    assert "def _closed_float_bounds(" not in native_py
+    assert "def apply_native_float_bounds(" not in native_py
     assert "isinstance(value, expected)" in native_py
     assert "_bridge_to_value" in native_py
     assert 'raise ValueError("overflow' not in native_py

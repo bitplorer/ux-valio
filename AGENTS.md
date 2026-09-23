@@ -209,15 +209,19 @@ a parallel folder, not inside the layer they depend on.
   ``bind_native_plan`` (same four slots ``_clear_native`` clears).
   The four slots are plan | apply (Rust FFI) | run (Python closed
   entry) | fail_kind. Product-PyO3 Rust door stays ``_native_apply``.
-  Closed-family Python door (``apply_native_integer_bounds`` and the
-  other family doors) is ``_native_run``. Reclaim ``_native_apply``
-  only together with ``_native_run``; alone it undoes the split.
+  Closed-family Python door is ``_native_run`` bound to
+  ``_FamilyDoor._run_closed``. StringEnum keeps
+  ``apply_native_string_enum`` (apply passes ``value.value``).
+  Reclaim ``_native_apply`` only together with ``_native_run``;
+  alone it undoes the split.
   Ownership is on ``Validator`` once — do not scatter those assigns on
   typed facades. ``bind_native_plan`` / ``_clear_native`` remain the
   writers; ``__set_name__`` rebinds when ``_native_plan is None``. Host
   ``_native.py`` stays one file. Each Door A family is one contiguous
-  section (closed detector, family-only helpers, ``apply_native_*``,
-  the ``_FamilyDoor`` row). ``_closed_type_door`` and
+  section (closed detector — ``partial`` of a shared helper when the
+  args are constants — family-only helpers, the ``_FamilyDoor`` row).
+  No ``apply_native_*`` shell in front of ``_run_closed``.
+  ``_closed_type_door`` and
   ``_run_closed`` are defined outside those sections, with the
   other shared detectors and bridges. ``_FAMILY_DOORS`` stays
   outside too. A private module is allowed only when
@@ -441,21 +445,9 @@ New private helpers are verbs that name the action:
 `PhoneNumberValidator._require_phonenumbers`,
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`,
 `read_bound`, `ValidateStep`,
-`bind_native_plan`, `apply_native_bounds`, `apply_native_integer_bounds`,
-`apply_native_float_bounds`, `apply_native_string_length`,
-`apply_native_bytes_length`, `apply_native_integer_enum`,
-`apply_native_string_enum`, `apply_native_boolean`,
-`apply_native_decimal`,
-`apply_native_date`,
-`apply_native_datetime`,
-`apply_native_uuid`,
-`apply_native_ip`,
-`apply_native_path`,
-`_load_native`, `_closed_integer_bounds`, `_closed_float_bounds`,
-`_closed_string_length`, `_closed_bytes_length`, `_closed_integer_enum_members`,
-`_closed_string_enum_members`, `_closed_boolean`, `_closed_decimal`,
-`_closed_date`, `_closed_datetime`, `_closed_uuid`, `_closed_ip`,
-`_closed_path`,
+`bind_native_plan`, `apply_native_bounds`, `apply_native_string_enum`,
+`_load_native`, `_closed_integer_enum_members`,
+`_closed_string_enum_members`, `_closed_ip`,
 `_read_ip_facade`, `_reject_ip_string`, `_bridge_to_ip`,
 `_skip_native_ip_extra`, `_run_with_native_ip_extra_skip`,
 `_is_decimal_type_annotation`,
@@ -483,6 +475,15 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `add_post_set_task`, `has_hooks`, `pre_validation_processing`,
 `post_set_processing`, `notify_pre_set`, `on_pre_set`,
 `add_pre_validate_process`, `add_pre_validate`, `add_validator`, `process_pre_validate`, `add_task_post_set`, `_init_hooks`, `_load_compose_types`,
+`apply_native_integer_bounds`, `apply_native_float_bounds`,
+`apply_native_string_length`, `apply_native_bytes_length`,
+`apply_native_integer_enum`, `apply_native_boolean`,
+`apply_native_decimal`, `apply_native_date`, `apply_native_datetime`,
+`apply_native_uuid`, `apply_native_ip`, `apply_native_path`,
+`_closed_integer_bounds`, `_closed_float_bounds`,
+`_closed_string_length`, `_closed_bytes_length`, `_closed_boolean`,
+`_closed_decimal`, `_closed_date`, `_closed_datetime`, `_closed_uuid`,
+`_closed_path`,
 `apply_native_integer_min_value`, `_closed_integer_min_value`,
 `_register_compose_types`, `_Opt.read`, `_Of._bind_kwargs`,
 `_Of._merged_attr`, `Lookup`, `_log`, `bound_value`, `door_a`,

@@ -20,6 +20,7 @@ from tests.native_support import (
     host_native_source,
     needs_native,
 )
+from ux_valio.validators._native import apply_native_string_enum
 from ux_valio import (
     BooleanValidator,
     EnumValidator,
@@ -144,6 +145,7 @@ def test_string_enum_compiles_once_at_bind():
     assert box.n is _Tint.EMPTY
     assert field._native_plan is plan
     assert field._native_apply is apply
+    assert field._native_run is apply_native_string_enum
 
 
 @needs_native

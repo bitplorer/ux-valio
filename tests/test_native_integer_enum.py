@@ -94,7 +94,7 @@ def test_closed_integer_enum_type_door_is_i64_extract():
     assert "FailKind::NotMember" in rust
     assert "fn compile_and_apply" not in rust
     assert "_closed_integer_enum_members" in native_py
-    assert "apply_native_integer_enum" in native_py
+    assert "def apply_native_integer_enum(" not in native_py
     assert "_raise_host_enum_type_miss" in native_py
     assert "_raise_host_integer_enum_type_miss" not in native_py
     assert "_bridge_to_type" in native_py

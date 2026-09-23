@@ -254,11 +254,13 @@ def _run_with_native_ip_extra_skip(owner: Any, instance: Any, value: Any) -> Non
 
     A string-length plan on the same facade is not this door. The
     named extra still parses in that case. The token follows
-    ``_native_run``, so a test wrapper around ``_native_apply`` does
-    not turn the extra back on.
+    ``_native_run``: the IP row's bound ``_run_closed`` (``apply`` is
+    ``apply_ip``). A test wrapper around ``_native_apply`` does not
+    turn the extra back on.
     """
     run = owner._native_run
-    if getattr(run, "__name__", "") != "apply_native_ip":
+    door = getattr(run, "__self__", None)
+    if getattr(door, "apply", None) != "apply_ip":
         Validator.validate(owner, instance, value)
         return
     token = _IP_EXTRA_SKIP.set(True)

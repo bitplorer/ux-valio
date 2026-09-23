@@ -57,8 +57,9 @@ The host already compiles at construct:
   ``bind_native_plan`` (``_clear_native`` clears the same four;
   writers stay ``bind_native_plan`` / ``_clear_native``).
   Product-PyO3 Rust door stays ``_native_apply``. Closed-family Python
-  door (``apply_native_integer_bounds`` and the other family doors) is
-  ``_native_run``
+  door is ``_native_run`` bound to ``_FamilyDoor._run_closed``
+  (StringEnum keeps ``apply_native_string_enum``). There is no
+  ``apply_native_*`` shell in front of ``_run_closed``.
 
 That tuple **is** the plan. Without the extra, the interpreter applies
 it. With ``ux-valio[native]``, a **closed** subset is the same tuple as
