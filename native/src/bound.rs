@@ -51,7 +51,11 @@ pub(crate) fn scalar_miss<T: PartialOrd>(kind: FailKind, value: T, bound: T) -> 
         FailKind::LessThan => value >= bound,
         // pass when value == bound; miss when value != bound (NaN never equals)
         FailKind::Equal => value != bound,
-        FailKind::MinLength | FailKind::MaxLength | FailKind::Length | FailKind::NotMember => {
+        FailKind::MinLength
+        | FailKind::MaxLength
+        | FailKind::Length
+        | FailKind::NotMember
+        | FailKind::NotIp => {
             unreachable!("scalar_miss compares bound units")
         }
     };

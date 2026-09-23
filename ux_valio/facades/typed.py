@@ -8,6 +8,7 @@ GSTIN, …) live in ``facades.named``. Construction is ``Any`` to type checkers
 
 from __future__ import annotations
 
+import contextvars
 import datetime
 import decimal
 import enum
@@ -216,6 +217,15 @@ class PathValidator(Validator[pathlib.Path]):
             raise FileNotFoundError(f"{self.name} expects an existing path, got {value}")
 
 
+# Set only for the duration of ``validate`` when a native IP plan
+# already checked a ``str``. Store-identity and ``AllOf`` re-checks
+# call the named extra without this token, so they still parse.
+_IP_EXTRA_SKIP: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "ux_valio_ip_extra_skip",
+    default=False,
+)
+
+
 def _reject_unless_ip(owner: Any, value: Any, parser: Any, label: str) -> None:
     if value is None:
         return
@@ -227,6 +237,37 @@ def _reject_unless_ip(owner: Any, value: Any, parser: Any, label: str) -> None:
         ) from err
 
 
+def _skip_native_ip_extra(owner: Any, value: Any) -> bool:
+    """Skip the named extra when this ``validate`` already ran ``apply_ip``.
+
+    A non-``str`` still runs the stdlib parser so ``collect_all`` keeps
+    the host pair (type miss, and a parser error when the parser
+    rejects). ``None`` is a skip on both doors.
+    """
+    if owner._native_plan is None or not _IP_EXTRA_SKIP.get():
+        return False
+    return value is None or isinstance(value, str)
+
+
+def _run_with_native_ip_extra_skip(owner: Any, instance: Any, value: Any) -> None:
+    """One ``validate`` pass. An IP plan sets the extra-skip token.
+
+    A string-length plan on the same facade is not this door. The
+    named extra still parses in that case. The token follows
+    ``_native_run``, so a test wrapper around ``_native_apply`` does
+    not turn the extra back on.
+    """
+    run = owner._native_run
+    if getattr(run, "__name__", "") != "apply_native_ip":
+        Validator.validate(owner, instance, value)
+        return
+    token = _IP_EXTRA_SKIP.set(True)
+    try:
+        Validator.validate(owner, instance, value)
+    finally:
+        _IP_EXTRA_SKIP.reset(token)
+
+
 class IPv4Validator(StringValidator):
     """Stores the given string if it is an IPv4 address.
 
@@ -235,7 +276,12 @@ class IPv4Validator(StringValidator):
         host: str = IPv4Validator()
     """
 
+    def validate(self, instance: Any = None, value: Any = None) -> None:
+        _run_with_native_ip_extra_skip(self, instance, value)
+
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if _skip_native_ip_extra(self, value):
+            return
         _reject_unless_ip(self, value, ipaddress.IPv4Address, "IPv4 address")
 
 
@@ -247,7 +293,12 @@ class IPv6Validator(StringValidator):
         host: str = IPv6Validator()
     """
 
+    def validate(self, instance: Any = None, value: Any = None) -> None:
+        _run_with_native_ip_extra_skip(self, instance, value)
+
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if _skip_native_ip_extra(self, value):
+            return
         _reject_unless_ip(self, value, ipaddress.IPv6Address, "IPv6 address")
 
 
@@ -259,7 +310,12 @@ class IPAddressValidator(StringValidator):
         host: str = IPAddressValidator()
     """
 
+    def validate(self, instance: Any = None, value: Any = None) -> None:
+        _run_with_native_ip_extra_skip(self, instance, value)
+
     def _validate_named_facade(self, instance: Any = None, value: Any = None) -> None:
+        if _skip_native_ip_extra(self, value):
+            return
         _reject_unless_ip(self, value, ipaddress.ip_address, "IP address")
 
 
