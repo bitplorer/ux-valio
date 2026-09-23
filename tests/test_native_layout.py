@@ -261,10 +261,8 @@ _FAMILY_SECTIONS = (
         "# --- StringEnum ---",
         (
             "def _closed_string_enum_members(",
-            "def apply_native_string_enum(",
-            "run=apply_native_string_enum",
+            'extract=attrgetter("value")',
             "_STRING_ENUM_DOOR",
-            "value.value",
         ),
     ),
     (
@@ -280,7 +278,7 @@ _FAMILY_SECTIONS = (
         (
             "def _is_decimal_type_annotation(",
             "partial(_closed_type_door, annotation_matches=_is_decimal_type_annotation)",
-            "def _raise_host_decimal_type_miss(",
+            "type_miss=_raise_host_type_door_miss",
             "_DECIMAL_DOOR",
         ),
     ),
@@ -289,7 +287,7 @@ _FAMILY_SECTIONS = (
         (
             "def _is_date_type_annotation(",
             "partial(_closed_type_door, annotation_matches=_is_date_type_annotation)",
-            "def _raise_host_date_type_miss(",
+            "type_miss=_raise_host_type_door_miss",
             "_DATE_DOOR",
         ),
     ),
@@ -298,7 +296,7 @@ _FAMILY_SECTIONS = (
         (
             "def _is_datetime_type_annotation(",
             "partial(_closed_type_door, annotation_matches=_is_datetime_type_annotation)",
-            "def _raise_host_datetime_type_miss(",
+            "type_miss=_raise_host_type_door_miss",
             "_DATETIME_DOOR",
         ),
     ),
@@ -307,7 +305,7 @@ _FAMILY_SECTIONS = (
         (
             "def _is_uuid_type_annotation(",
             "partial(_closed_type_door, annotation_matches=_is_uuid_type_annotation)",
-            "def _raise_host_uuid_type_miss(",
+            "type_miss=_raise_host_type_door_miss",
             "_UUID_DOOR",
         ),
     ),
@@ -318,7 +316,7 @@ _FAMILY_SECTIONS = (
             "def _reject_ip_string(",
             "def _bridge_to_ip(",
             "def _closed_ip(",
-            "def _raise_host_ip_type_miss(",
+            "type_miss=_raise_host_type_door_miss",
             "_IP_DOOR",
             "NotIp",
         ),
@@ -328,7 +326,7 @@ _FAMILY_SECTIONS = (
         (
             "def _is_path_type_annotation(",
             "partial(_closed_type_door, annotation_matches=_is_path_type_annotation)",
-            "def _raise_host_path_type_miss(",
+            "type_miss=_raise_host_type_door_miss",
             "_PATH_DOOR",
         ),
     ),
@@ -367,6 +365,8 @@ def test_native_families_are_contiguous_sections():
         "def _raise_host_value_type_miss(",
         "def _raise_host_length_type_miss(",
         "def _raise_host_enum_type_miss(",
+        "def _raise_host_type_door_miss(",
+        "def _extract_same(",
         "def _read_owner_annotation(",
         "def _run_closed(",
     ):
@@ -399,6 +399,13 @@ def test_native_families_are_contiguous_sections():
         "def apply_native_uuid(",
         "def apply_native_ip(",
         "def apply_native_path(",
+        "def apply_native_string_enum(",
+        "def _raise_host_decimal_type_miss(",
+        "def _raise_host_date_type_miss(",
+        "def _raise_host_datetime_type_miss(",
+        "def _raise_host_uuid_type_miss(",
+        "def _raise_host_ip_type_miss(",
+        "def _raise_host_path_type_miss(",
     ):
         assert gone not in native_py, gone
     for index, (banner, names) in enumerate(_FAMILY_SECTIONS):
@@ -407,7 +414,7 @@ def test_native_families_are_contiguous_sections():
         for name in names:
             assert name in section, (banner, name)
         if banner == "# --- StringEnum ---":
-            assert "_run_closed" not in section
+            assert "def apply_native_string_enum(" not in section
     table = native_py[native_py.index("_FAMILY_DOORS") : native_py.index("def apply_native_bounds(")]
     cursor = -1
     for door_name in (

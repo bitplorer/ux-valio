@@ -198,8 +198,8 @@ a parallel folder, not inside the layer they depend on.
   Cap Door B off. Plain Enum / Pattern stay off.
   ``compile_*`` and ``apply_*`` stay separate doors. Host bind walks
   one family list (``_FAMILY_DOORS``; each row is a private
-  ``_FamilyDoor`` of ``closed`` / ``compile`` / ``apply`` / ``run``,
-  plus ``expected`` / ``type_miss`` / ``bridge`` /
+  ``_FamilyDoor`` of ``closed`` / ``compile`` / ``apply`` / ``run`` /
+  ``extract``, plus ``expected`` / ``type_miss`` / ``bridge`` /
   ``extract_errors`` when apply is ``_run_closed``). Bind calls
   that row's ``_select``. There is no per-family ``_select_*``.
   Do not merge a pair into one door and do not restore a
@@ -210,8 +210,9 @@ a parallel folder, not inside the layer they depend on.
   The four slots are plan | apply (Rust FFI) | run (Python closed
   entry) | fail_kind. Product-PyO3 Rust door stays ``_native_apply``.
   Closed-family Python door is ``_native_run`` bound to
-  ``_FamilyDoor._run_closed``. StringEnum keeps
-  ``apply_native_string_enum`` (apply passes ``value.value``).
+  ``_FamilyDoor._run_closed``. StringEnum sets
+  ``extract=attrgetter("value")`` so apply receives the member
+  string. There is no ``apply_native_string_enum``.
   Reclaim ``_native_apply`` only together with ``_native_run``;
   alone it undoes the split.
   Ownership is on ``Validator`` once — do not scatter those assigns on
@@ -445,7 +446,7 @@ New private helpers are verbs that name the action:
 `PhoneNumberValidator._require_phonenumbers`,
 `LengthValidator._len_or_reject`, `ChoiceValidator._reject_non_container`,
 `read_bound`, `ValidateStep`,
-`bind_native_plan`, `apply_native_bounds`, `apply_native_string_enum`,
+`bind_native_plan`, `apply_native_bounds`, `_extract_same`,
 `_load_native`, `_closed_integer_enum_members`,
 `_closed_string_enum_members`, `_closed_ip`,
 `_read_ip_facade`, `_reject_ip_string`, `_bridge_to_ip`,
@@ -459,10 +460,7 @@ New private helpers are verbs that name the action:
 `_clear_native`, `_bridge_to_value`, `_bridge_to_length`, `_bridge_to_type`,
 `_raise_native_bound_miss`, `_raise_host_value_type_miss`,
 `_raise_host_length_type_miss`,
-`_raise_host_boolean_type_miss`, `_raise_host_decimal_type_miss`,
-`_raise_host_date_type_miss`, `_raise_host_datetime_type_miss`,
-`_raise_host_uuid_type_miss`, `_raise_host_ip_type_miss`,
-`_raise_host_path_type_miss`,
+`_raise_host_boolean_type_miss`, `_raise_host_type_door_miss`,
 `_raise_host_enum_type_miss`, `_raise_host_closed_type_miss`,
 `_read_owner_annotation`,
 `_ClosedPair`,
@@ -480,6 +478,10 @@ Do not reintroduce leftover aliases (`_named_extra`, `bound`,
 `apply_native_integer_enum`, `apply_native_boolean`,
 `apply_native_decimal`, `apply_native_date`, `apply_native_datetime`,
 `apply_native_uuid`, `apply_native_ip`, `apply_native_path`,
+`apply_native_string_enum`,
+`_raise_host_decimal_type_miss`, `_raise_host_date_type_miss`,
+`_raise_host_datetime_type_miss`, `_raise_host_uuid_type_miss`,
+`_raise_host_ip_type_miss`, `_raise_host_path_type_miss`,
 `_closed_integer_bounds`, `_closed_float_bounds`,
 `_closed_string_length`, `_closed_bytes_length`, `_closed_boolean`,
 `_closed_decimal`, `_closed_date`, `_closed_datetime`, `_closed_uuid`,

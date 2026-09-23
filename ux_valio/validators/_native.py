@@ -6,14 +6,16 @@ shows one family's walk and nothing else. Shared detectors, bridges,
 and the bind table still serve every family, so they stay here.
 Each Door A family is one contiguous section. ``bind_native_plan``
 walks ``_FAMILY_DOORS`` (a private frozen ``_FamilyDoor`` row:
-``closed`` / ``compile`` / ``apply`` / ``run``, and
+``closed`` / ``compile`` / ``apply`` / ``run`` / ``extract``, and
 ``expected`` / ``type_miss`` / ``bridge`` / ``extract_errors``
 when apply is ``_run_closed``). Bind calls that row's ``_select``.
-A closed family with no quirk stores ``door._run_closed`` on
-``_native_run``. StringEnum keeps ``apply_native_string_enum``
-because apply passes ``value.value``. Constant closed detectors
-are ``functools.partial`` of the shared helper. There is no
-per-family ``_select_*`` and no shell in front of ``_run_closed``.
+Every closed family stores ``door._run_closed`` on ``_native_run``.
+``extract`` is identity except StringEnum, which passes
+``attrgetter("value")`` so apply receives the member string.
+Constant closed detectors are ``functools.partial`` of the shared
+helper. Decimal, Date, DateTime, Uuid, IP, and Path share
+``_raise_host_type_door_miss``. There is no per-family
+``_select_*`` and no shell in front of ``_run_closed``.
 That row is not a product type door and not a class-per-type
 mirror of Rust ``Plan``. This is not a ``plan`` / ``bound`` /
 ``length`` mirror of the Rust crate.
@@ -32,8 +34,9 @@ Type door is host-first ``isinstance`` then FFI extract (``i64`` /
 ``datetime.date`` / ``datetime.datetime`` / ``uuid.UUID`` /
 ``pathlib.Path`` / ``str`` for IP);
 bound / length / member checks run after extract. StringEnum
-extract is the member's ``.value`` as UTF-8 ``&str``. Boolean
-extract is exact ``bool`` (``1`` / ``0`` are not coerced). Decimal
+``extract`` is ``attrgetter("value")`` (UTF-8 ``&str`` of the
+member). Boolean extract is exact ``bool`` (``1`` / ``0`` are not
+coerced). Decimal
 extract is exact ``decimal.Decimal`` (``float`` / ``int`` /
 ``bool`` are not coerced; string coerce stays host
 ``_pre_validate``). No scale unit. Date extract is
@@ -70,6 +73,7 @@ import pathlib
 import types
 import uuid
 from functools import partial
+from operator import attrgetter
 from typing import Any, NamedTuple, Union, get_args, get_origin
 
 from ux_valio.errors import raise_collected
@@ -360,12 +364,26 @@ def _raise_host_enum_type_miss(owner: Any, value: Any) -> None:
     ``int`` / ``str`` / ``bool`` / another enum misses here — including
     another enum whose value collides with a member. ``None`` is
     skipped by the caller. ``collect_all`` continues into the named
-    enum extra from ``validate``, not inside this raise.
+    enum extra from ``validate``, not inside this raise. This raise
+    does not enter ``TypeValidator`` (Boolean is the same class of
+    miss). Do not fold it into ``_raise_host_type_door_miss``.
     """
     raise TypeError(
         f"{owner.name} expect {owner.annotation} type, "
         f"got {type(value).__name__} type instead"
     )
+
+
+def _raise_host_type_door_miss(owner: Any, value: Any) -> None:
+    """KEEP TypeError wording for a closed type door that only forwards.
+
+    Decimal, Date, DateTime, Uuid, IP, and Path call
+    ``TypeValidator._validate_type``. The sentence matches that door.
+    ``collect_all`` does not continue inside this raise (``validate``
+    still continues into a named extra). Boolean and enum keep their
+    own raises.
+    """
+    TypeValidator._validate_type(owner, None, value)
 
 
 def _bind_compiled_plan(
@@ -387,6 +405,11 @@ def _read_owner_annotation(owner: Any) -> Any:
     return owner.annotation
 
 
+def _extract_same(value: Any) -> Any:
+    """Identity payload. StringEnum overrides this with member ``.value``."""
+    return value
+
+
 type _ClosedPair = tuple[Any, Any, Any, dict[str, Any]]
 
 
@@ -394,15 +417,15 @@ class _FamilyDoor(NamedTuple):
     """Private bind row for one closed family. Not a product type door.
 
     ``closed`` detects the family. ``compile`` / ``apply`` name the
-    Rust pair. ``run`` is set only when the family does not use
-    ``_run_closed`` (StringEnum passes ``value.value``). Omitted
-    ``run`` means bind stores this row's ``_run_closed``.
+    Rust pair. Omitted ``run`` means bind stores this row's
+    ``_run_closed``. ``extract`` maps the host value to the FFI
+    payload (identity, or ``attrgetter("value")`` for StringEnum).
     ``expected`` is the host ``isinstance`` type, or a callable of
-    ``owner`` when that type is the annotation (IntegerEnum).
-    ``type_miss`` formats the KEEP TypeError. ``bridge`` is the
-    extract-miss fallthrough. ``extract_errors`` are the FFI signals
-    that bridge. A member list is compile kwargs ``members=``;
-    any other payload is already those kwargs.
+    ``owner`` when that type is the annotation (IntegerEnum /
+    StringEnum). ``type_miss`` formats the KEEP TypeError.
+    ``bridge`` is the extract-miss fallthrough. ``extract_errors``
+    are the FFI signals that bridge. A member list is compile
+    kwargs ``members=``; any other payload is already those kwargs.
     """
 
     closed: Any
@@ -413,6 +436,7 @@ class _FamilyDoor(NamedTuple):
     type_miss: Any = None
     bridge: Any = None
     extract_errors: Any = OverflowError
+    extract: Any = _extract_same
 
     def _select(self, native: Any, payload: Any) -> _ClosedPair:
         """Pair for this row. Compile and apply stay separate."""
@@ -439,7 +463,7 @@ class _FamilyDoor(NamedTuple):
             self.type_miss(owner, value)
             return
         try:
-            fail = owner._native_apply(owner._native_plan, value)
+            fail = owner._native_apply(owner._native_plan, self.extract(value))
         except self.extract_errors:
             self.bridge(owner, value)
             return
@@ -608,43 +632,15 @@ def _closed_string_enum_members(owner: Any) -> list[str] | None:
     return members
 
 
-def apply_native_string_enum(owner: Any, value: Any) -> None:
-    """One FFI apply. Host formats KEEP wording. Non-UTF-8 stays on host.
-
-    The FFI argument is ``value.value`` (UTF-8 ``&str``), not the enum
-    object. OverflowError / UnicodeError at ``&str`` extract is a
-    bridge signal (same three buckets as String length: validation
-    ``FailKind`` / bridge / native-infra ``RuntimeError`` naming
-    ``ux_valio_native``). No public L1 "overflow" message. Door A
-    membership is the concrete enum class first, then exact UTF-8
-    equality with the compiled member values.
-    """
-    if value is None:
-        return
-    if not isinstance(value, owner.annotation):
-        _raise_host_enum_type_miss(owner, value)
-        return
-    raw = value.value
-    if type(raw) is not str:
-        _bridge_to_type(owner, value)
-        return
-    try:
-        fail = owner._native_apply(owner._native_plan, raw)
-    except (OverflowError, UnicodeError):
-        _bridge_to_type(owner, value)
-        return
-    except Exception as err:
-        raise RuntimeError("ux_valio_native apply failed") from err
-    if fail is None:
-        return
-    _raise_native_bound_miss(owner, fail, value)
-
-
 _STRING_ENUM_DOOR = _FamilyDoor(
     closed=_closed_string_enum_members,
     compile="compile_string_enum",
     apply="apply_string_enum",
-    run=apply_native_string_enum,
+    expected=_read_owner_annotation,
+    type_miss=_raise_host_enum_type_miss,
+    bridge=_bridge_to_type,
+    extract_errors=(OverflowError, UnicodeError),
+    extract=attrgetter("value"),
 )
 
 
@@ -693,27 +689,12 @@ def _is_decimal_type_annotation(annotation: Any) -> bool:
     return _is_stored_or_str_annotation(annotation, decimal.Decimal)
 
 
-def _raise_host_decimal_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Decimal type door is host-first.
-
-    FFI type is the later ``decimal.Decimal`` extract. ``float`` /
-    ``int`` / ``bool`` miss (no silent float→Decimal). A raw ``str``
-    misses only when the annotation does not accept ``str``; the coerce
-    union accepts ``str`` here and the named extra still requires
-    ``Decimal``. ``None`` is skipped by the caller. The closed plan has
-    no second path unit and no scale unit, so ``collect_all`` does not
-    continue inside this raise (``validate`` still continues into the
-    named extra).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
 _DECIMAL_DOOR = _FamilyDoor(
     closed=partial(_closed_type_door, annotation_matches=_is_decimal_type_annotation),
     compile="compile_decimal",
     apply="apply_decimal",
     expected=decimal.Decimal,
-    type_miss=_raise_host_decimal_type_miss,
+    type_miss=_raise_host_type_door_miss,
     bridge=_bridge_to_type,
     extract_errors=TypeError,
 )
@@ -733,28 +714,12 @@ def _is_date_type_annotation(annotation: Any) -> bool:
     return _is_stored_or_str_annotation(annotation, datetime.date)
 
 
-def _raise_host_date_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Date type door is host-first.
-
-    FFI type is the later ``datetime.date`` extract. ``int`` / ``str`` /
-    ``bool`` miss. A ``datetime.datetime`` is a ``date`` and does not
-    miss here (``DateValidator`` rejects it in the named extra). A raw
-    ``str`` misses only when the annotation does not accept ``str``;
-    the coerce union accepts ``str`` here and ``_pre_validate`` has
-    already parsed a calendar string. ``None`` is skipped by the
-    caller. The closed plan has no second path unit, so
-    ``collect_all`` does not continue inside this raise (``validate``
-    still continues into the named extra).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
 _DATE_DOOR = _FamilyDoor(
     closed=partial(_closed_type_door, annotation_matches=_is_date_type_annotation),
     compile="compile_date",
     apply="apply_date",
     expected=datetime.date,
-    type_miss=_raise_host_date_type_miss,
+    type_miss=_raise_host_type_door_miss,
     bridge=_bridge_to_type,
     extract_errors=TypeError,
 )
@@ -773,27 +738,12 @@ def _is_datetime_type_annotation(annotation: Any) -> bool:
     return _is_stored_or_str_annotation(annotation, datetime.datetime)
 
 
-def _raise_host_datetime_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed DateTime type door is host-first.
-
-    FFI type is the later ``datetime.datetime`` extract. A plain
-    ``datetime.date`` / ``int`` / ``str`` / ``bool`` miss. A raw
-    ``str`` misses only when the annotation does not accept ``str``;
-    the coerce union accepts ``str`` here and ``_pre_validate`` has
-    already parsed an ISO string. ``None`` is skipped by the caller.
-    The closed plan has no second path unit, so ``collect_all`` does
-    not continue inside this raise (``validate`` still continues into
-    the named extra).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
 _DATETIME_DOOR = _FamilyDoor(
     closed=partial(_closed_type_door, annotation_matches=_is_datetime_type_annotation),
     compile="compile_datetime",
     apply="apply_datetime",
     expected=datetime.datetime,
-    type_miss=_raise_host_datetime_type_miss,
+    type_miss=_raise_host_type_door_miss,
     bridge=_bridge_to_type,
     extract_errors=TypeError,
 )
@@ -811,26 +761,12 @@ def _is_uuid_type_annotation(annotation: Any) -> bool:
     return _is_stored_or_str_annotation(annotation, uuid.UUID)
 
 
-def _raise_host_uuid_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Uuid type door is host-first.
-
-    FFI type is the later ``uuid.UUID`` extract. ``int`` / ``bool`` /
-    ``bytes`` miss. A raw ``str`` misses only when the annotation
-    does not accept ``str``; the coerce union accepts ``str`` here
-    and ``_pre_validate`` has already parsed a UUID string. ``None``
-    is skipped by the caller. The closed plan has no second path
-    unit, so ``collect_all`` does not continue inside this raise
-    (``validate`` still continues into the named extra).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
 _UUID_DOOR = _FamilyDoor(
     closed=partial(_closed_type_door, annotation_matches=_is_uuid_type_annotation),
     compile="compile_uuid",
     apply="apply_uuid",
     expected=uuid.UUID,
-    type_miss=_raise_host_uuid_type_miss,
+    type_miss=_raise_host_type_door_miss,
     bridge=_bridge_to_type,
     extract_errors=TypeError,
 )
@@ -909,24 +845,12 @@ def _closed_ip(owner: Any) -> dict[str, str] | None:
     return {"kind": spec[0]}
 
 
-def _raise_host_ip_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed IP type door is host-first.
-
-    FFI type is the later ``str`` extract. ``int`` / ``bytes`` /
-    ``ipaddress`` objects miss here. A ``str`` does not. ``None`` is
-    skipped by the caller. The closed plan has no second path unit,
-    so ``collect_all`` does not continue inside this raise
-    (``validate`` still continues into the named extra for a non-str).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
 _IP_DOOR = _FamilyDoor(
     closed=_closed_ip,
     compile="compile_ip",
     apply="apply_ip",
     expected=str,
-    type_miss=_raise_host_ip_type_miss,
+    type_miss=_raise_host_type_door_miss,
     bridge=_bridge_to_ip,
     extract_errors=(UnicodeError, OverflowError, TypeError),
 )
@@ -945,27 +869,12 @@ def _is_path_type_annotation(annotation: Any) -> bool:
     return _is_stored_or_str_annotation(annotation, pathlib.Path)
 
 
-def _raise_host_path_type_miss(owner: Any, value: Any) -> None:
-    """KEEP TypeError wording. Closed Path type door is host-first.
-
-    FFI type is the later ``pathlib.Path`` extract. ``int`` / ``bool``
-    / ``bytes`` / ``pathlib.PurePath`` miss. A raw ``str`` misses only
-    when the annotation does not accept ``str``; the coerce union
-    accepts ``str`` here and ``_pre_validate`` has already built a
-    ``Path``. ``None`` is skipped by the caller. The closed plan has
-    no second path unit, so ``collect_all`` does not continue inside
-    this raise (``validate`` still continues into the named extra,
-    including ``path_exists``).
-    """
-    TypeValidator._validate_type(owner, None, value)
-
-
 _PATH_DOOR = _FamilyDoor(
     closed=partial(_closed_type_door, annotation_matches=_is_path_type_annotation),
     compile="compile_path",
     apply="apply_path",
     expected=pathlib.Path,
-    type_miss=_raise_host_path_type_miss,
+    type_miss=_raise_host_type_door_miss,
     bridge=_bridge_to_type,
     extract_errors=TypeError,
 )
@@ -995,8 +904,8 @@ def apply_native_bounds(owner: Any, value: Any) -> None:
     """Call the bind-time family run. Unset bundle is a caller bug.
 
     ``_native_apply`` is the product-PyO3 Rust FFI. ``_native_run`` is
-    the closed-family Python entry (``_FamilyDoor._run_closed``, or
-    ``apply_native_string_enum`` when apply passes ``value.value``).
+    the closed-family Python entry (``_FamilyDoor._run_closed``).
+    StringEnum ``extract`` passes ``value.value`` into that apply.
     """
     run = owner._native_run
     if run is None:

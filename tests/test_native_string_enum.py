@@ -20,7 +20,7 @@ from tests.native_support import (
     host_native_source,
     needs_native,
 )
-from ux_valio.validators._native import apply_native_string_enum
+from ux_valio.validators._native import _STRING_ENUM_DOOR, _FamilyDoor
 from ux_valio import (
     BooleanValidator,
     EnumValidator,
@@ -117,7 +117,8 @@ def test_closed_string_enum_type_door_is_str_extract():
     assert "Plan::StringEnum" in rust
     assert "fn compile_and_apply" not in rust
     assert "_closed_string_enum_members" in native_py
-    assert "apply_native_string_enum" in native_py
+    assert "apply_native_string_enum" not in native_py
+    assert 'extract=attrgetter("value")' in native_py
     assert "_raise_host_enum_type_miss" in native_py
     assert "_raise_host_string_enum_type_miss" not in native_py
     assert "_bridge_to_type" in native_py
@@ -145,7 +146,10 @@ def test_string_enum_compiles_once_at_bind():
     assert box.n is _Tint.EMPTY
     assert field._native_plan is plan
     assert field._native_apply is apply
-    assert field._native_run is apply_native_string_enum
+    assert field._native_run.__func__ is _FamilyDoor._run_closed
+    assert field._native_run.__self__ is _STRING_ENUM_DOOR
+    assert field._native_run == _STRING_ENUM_DOOR._run_closed
+    assert _STRING_ENUM_DOOR.extract(_Tint.PALE) == "pale"
 
 
 @needs_native

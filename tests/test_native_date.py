@@ -57,7 +57,8 @@ def test_closed_date_type_door_is_date_extract():
     assert "_DATE_DOOR" in native_py
     assert "def _select_date(" not in native_py
     assert "def apply_native_date(" not in native_py
-    assert "_raise_host_date_type_miss" in native_py
+    assert "type_miss=_raise_host_type_door_miss" in native_py
+    assert "def _raise_host_date_type_miss(" not in native_py
     assert "_bridge_to_type" in native_py
     assert "_is_date_type_annotation" in native_py
 
