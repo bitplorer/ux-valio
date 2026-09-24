@@ -1,12 +1,15 @@
 # SPDX-License-Identifier: MIT
 """TypedDict is the schema. No BaseModel / Schema twin. field-default hangs on keys."""
 
+import inspect
 from dataclasses import dataclass
 from typing import Annotated, TypedDict
 
 import pytest
 
 from ux_valio import EmailValidator, StringValidator, ValidationErrors, Validator
+from ux_valio.validators import base as base_mod
+from ux_valio.validators.leaves import _validate_typed_dict
 
 
 class Movie(TypedDict):
@@ -230,6 +233,44 @@ def test_typeddict_pre_validate():
     built = Profile()
     assert not isinstance(built.get("name"), StringValidator)
     assert Box(person={"name": "  Ada  "}).person["name"] == "Ada"
+
+
+def test_typed_dict_checker_is_cached_across_validate():
+    """The walker is bound once. A later type check does not import it again."""
+    assert "import " not in inspect.getsource(base_mod.ValidateProperty._validate_type)
+    assert base_mod._validate_typed_dict_fn is _validate_typed_dict
+
+    previous = base_mod._validate_typed_dict_fn
+    calls: list[object] = []
+
+    def _counting(owner, value, annotation=None):
+        calls.append(value)
+        return _validate_typed_dict(owner, value, annotation)
+
+    base_mod._validate_typed_dict_fn = _counting
+    try:
+        assert Catalog(movie={"title": "Heat", "year": 1995}).movie["title"] == "Heat"
+        with pytest.raises(ValueError, match="person.name"):
+            Signup(person={"name": "A", "email": "ada@example.com", "age": 30})
+        assert len(calls) == 2
+        assert base_mod._validate_typed_dict_fn is _counting
+    finally:
+        base_mod._validate_typed_dict_fn = previous
+
+
+def test_unbound_typed_dict_checker_loads_once_and_still_validates():
+    previous = base_mod._validate_typed_dict_fn
+    base_mod._validate_typed_dict_fn = None
+    try:
+        assert Catalog(movie={"title": "Heat", "year": 1995}).movie["year"] == 1995
+        loaded = base_mod._validate_typed_dict_fn
+        assert loaded is _validate_typed_dict
+        with pytest.raises(TypeError):
+            Catalog(movie={"year": 1995})
+        assert Catalog(movie={"title": "Ali", "year": 2001}).movie["year"] == 2001
+        assert base_mod._validate_typed_dict_fn is loaded
+    finally:
+        base_mod._validate_typed_dict_fn = previous
 
 
 def test_typeddict_validator():
