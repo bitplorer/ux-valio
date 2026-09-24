@@ -454,11 +454,16 @@ def test_same_class_name_different_modules_get_distinct_owner_keys():
 
 def test_lookup_uses_same_key_helper_as_register():
     """No __name__-only lookup path; register and lookup share _owner_key."""
-    for meth in ("_run_tasks", "_run_processors", "_run_custom_validators"):
+    for meth in ("_run_tasks", "_run_processors"):
         src = inspect.getsource(getattr(Validator, meth))
         assert "instance.__class__.__name__" not in src
         assert "_collect_owner_keys" in src
-    assert "_owner_key" in inspect.getsource(HookHost._collect_owner_keys)
+    custom = inspect.getsource(Validator._run_custom_validators)
+    assert "instance.__class__.__name__" not in custom
+    assert "_collect_owner_keys" not in custom
+    assert "_read_owner_keys" in inspect.getsource(HookHost._compile_closed)
+    assert "_read_owner_keys" in inspect.getsource(HookHost._collect_owner_keys)
+    assert "_owner_key" in inspect.getsource(HookHost._read_owner_keys)
     ns_src = inspect.getsource(HookHost._resolve_owner_key)
     assert 'split(".")[0]' not in ns_src
     assert "_owner_key" in ns_src

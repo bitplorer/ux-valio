@@ -202,12 +202,22 @@ def _is_stored_or_str_annotation(annotation: Any, stored: type) -> bool:
     return frozenset(get_args(annotation)) == frozenset((stored, str))
 
 
+def _recompile_closed_owners(owner: Any) -> None:
+    """Refresh sealed set-phase lists after a plan bind or clear."""
+    closed = getattr(owner, "_closed", None)
+    recompile = getattr(owner, "_recompile_closed", None)
+    if not closed or not callable(recompile):
+        return
+    recompile(tuple(closed))
+
+
 def _clear_native(owner: Any) -> None:
     """One host-fallback clear for the bind-time native bundle."""
     owner._native_plan = None
     owner._native_apply = None
     owner._native_fail_kind = None
     owner._native_run = None
+    _recompile_closed_owners(owner)
 
 
 def _bridge_to_value(owner: Any, value: Any) -> None:
@@ -942,5 +952,7 @@ def bind_native_plan(owner: Any) -> None:
         else:
             owner._native_run = run
         _bind_compiled_plan(owner, native, compile_fn, kwargs)
+        if owner._native_plan is not None:
+            _recompile_closed_owners(owner)
         return
     _clear_native(owner)
