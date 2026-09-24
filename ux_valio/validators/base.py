@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, Iterable, TypeVar, get_origin, is_typeddi
 
 from ux_valio.descriptor import Property, _Opts, _UNSET, is_subclass_of
 from ux_valio.errors import ValidationErrors, raise_collected, run_steps
-from ux_valio.validators.hooks import HookHost
+from ux_valio.validators.hooks import HookHost, _SET_PHASE_MASK
 
 T = TypeVar("T")
 
@@ -56,6 +56,25 @@ class ValidateProperty(HookHost, Property[T], ABC):
 
     if TYPE_CHECKING:
         def __new__(cls, *args: Any, **kwargs: Any) -> Any: ...
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        super().__set_name__(owner, name)
+        self._closed_uses_owner = is_typeddict(owner)
+        self._warm_closed(owner)
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        """Run the sealed set-phase list. A miss does not walk open MRO.
+
+        No set-phase hang skips the lookup and stays on ``Property.__set__``
+        (the #135 straight line, when it applies, returns before this).
+        """
+        if (self._phase_mask & _SET_PHASE_MASK) != 0:
+            try:
+                self._require_closed(obj)
+            except Exception as err:
+                self._swallow_or_raise(err)
+                return
+        Property.__set__(self, obj, value)
 
     def _run_pre_set(self, obj: Any, value: Any) -> Any:
         self._take_subscript_annotation()

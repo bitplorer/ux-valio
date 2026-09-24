@@ -231,6 +231,12 @@ class Validator(ValidateProperty[T]):
             if self.errors:
                 self.errors.clear()
             return
+        if (self._phase_mask & _SET_PHASE_MASK) != 0:
+            try:
+                self._require_closed(obj)
+            except Exception as err:
+                self._swallow_or_raise(err)
+                return
         ValidateProperty.__set__(self, obj, value)
 
     def __set_name__(self, owner: type, name: str) -> None:

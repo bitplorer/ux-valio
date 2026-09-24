@@ -266,7 +266,16 @@ a parallel folder, not inside the layer they depend on.
   `__set_name__`. Dataclass default is that descriptor; `__set__`
   treats `value is self` as unset. No Field mixin, no outer
   `username_field` twin unless sharing one descriptor across classes.
-  Lookup walks the instance MRO (base first) so a child runs parent hooks.
+  Lookup for get/delete walks the instance MRO (base first) so a child
+  runs parent hooks. Set-phase hangs (`pre_validate`, `post_validate`,
+  `post_set`, `validator`, and their `task_*`) compile to
+  `_closed[owner]`: an MRO-flattened ordered tuple (base first) plus
+  `task_*`. Open buckets stay the source of truth. `_register` and
+  native plan bind/clear call `_recompile_closed`; `__set_name__` may
+  warm-bake. `__set__` looks up `_closed[type(obj)]` and runs that list.
+  A miss is fail-closed when any set-phase hang exists. With no
+  set-phase hang the straight line is unchanged. Assignment does not
+  walk open MRO. No new public hang API. Hangs stay Python.
   A free function on an unbound descriptor still needs `namespace=`
   (the owning class, or its `module.qualname` str);
   on a bound field the owner key is the bound owner.

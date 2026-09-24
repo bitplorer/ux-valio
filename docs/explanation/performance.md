@@ -67,6 +67,24 @@ Registered hangs still run in Python, in that same order, and their
 return rules are unchanged. Without the extra, the interpreter walks
 `_active_units`, then those hangs, then store, then `post_set`.
 
+Set-phase hangs compile per owning class. `_closed[owner]` is the
+MRO-flattened list (base first) of that phase's callables and of
+`task_*`. The open owner-key buckets stay the source of truth.
+Registering a hang, binding the class, and binding or clearing a
+native plan rebuild the lists for the affected owners. `__set__`
+looks up `_closed[type(obj)]` and runs it. A missing entry is
+fail-closed while any set-phase hang exists. Get and delete still
+walk the MRO. Hangs stay Python.
+
+On one Linux x86_64 box, CPython 3.14.7, six runs of
+`python benches/measure_product_setattr.py` (warmup 4_000, median of
+7 × 80_000), then the upper middle of those six medians: at a933dc0,
+no hangs **0.352 µs**, empty pre+post **3.622 µs**, thin pre+post
+**3.582 µs**. After the sealed lists, no hangs **0.362 µs**, empty
+pre+post **3.115 µs**, thin pre+post **3.095 µs**. Empty-hang dropped.
+The no-hang straight line is the same door; do not quote another
+host's 0.445 µs / 4.541 µs / 4.617 µs as this change.
+
 Mutating `min_value` after construct does nothing to the path. Pass
 bounds at construct.
 
@@ -77,7 +95,7 @@ bounds at construct.
 | specified units | every set that is not a closed native straight line | the loop you actually want |
 | native `apply_*` | every set when the closed plan is bound | one FFI; store stays on the host; a miss uses the full descriptor |
 | named extra | every set on that facade | checksums are cheap vs I/O; these facades are not the straight line |
-| `pre_validate` / `post_validate` | when that phase is registered | your code; an empty phase is not walked |
+| `pre_validate` / `post_validate` | when that phase is registered | your code, from the compiled per-owner list; an unregistered phase is not walked |
 | `post_set` | when that phase is registered, after a successful store | persist/reserve; fail-closed; return is not stored |
 | `task_*` | spawn, setter does not wait | I/O belongs here |
 | `collect_all=True` | failures | continues remaining concerns; one failure still re-raises as itself |
@@ -93,7 +111,8 @@ a library bag.
 Pydantic-core compiles a Rust plan and applies scalars natively.
 With `ux-valio[native]`, a closed int field and no set-phase hangs is
 one native apply plus store (median about 0.35 µs on one Linux x86_64
-box; empty pre/post validate hangs on that box stayed about 3.5 µs).
+box; empty pre/post validate hangs on that box are about 3.1 µs after
+the sealed lists).
 Without the extra, or when a set-phase hang is registered, the set is
 still the Python descriptor (`__set__`, specified units, store). Hangs
 stay Python. Named identities (email, GSTIN) stay Python — do not start

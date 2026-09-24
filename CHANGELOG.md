@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Set-phase hangs (`pre_validate`, `post_validate`, `post_set`,
+  `validator`, and their `task_*`) compile to a per-owner closed list
+  (`_closed`) when the hang is registered, when the class is bound,
+  and when a native plan binds or clears. `__set__` runs that list.
+  Open owner-key buckets stay the source of truth. A missing entry is
+  fail-closed. Get and delete still walk the MRO. The no-hang straight
+  line is unchanged. Hangs stay Python. Cap Door B stays off.
+
 - Host ``_native.py`` drops ``apply_native_string_enum``.
   ``_FamilyDoor.extract`` defaults to identity; StringEnum sets
   ``attrgetter("value")`` and ``_run_closed`` passes that payload

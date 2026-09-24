@@ -128,8 +128,12 @@ Person and Vendor) uses the class you accessed:
 
 Processor and task registries use the owning class’s `module.qualname`.
 Two classes named `User` in different modules do not share hooks.
-Lookup walks the instance MRO (base first), so a child runs parent
-field hooks. A free function on an **unbound** descriptor needs
+Lookup for get and delete walks the instance MRO (base first), so a
+child runs parent field hooks. Set-phase hangs (`pre_validate`,
+`post_validate`, `post_set`, `validator`, and their `task_*`) are
+compiled per owning class when you hang them and when the class is
+bound. Assignment runs that compiled list. A class with no compiled
+list fails closed. Get and delete still walk the MRO. A free function on an **unbound** descriptor needs
 `namespace=` (the owning class, or its `module.qualname` str).
 `namespace="Register"` is not rewritten to match lookup. A processor
 that forgets to return the value stores `None`.
