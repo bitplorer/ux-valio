@@ -22,7 +22,11 @@ from typing import Annotated, Any, Literal, TypeVar, Union, get_args, get_origin
 
 from ux_valio.errors import continue_or_raise, raise_collected
 from ux_valio.pattern import PatternType
-from ux_valio.validators.base import ValidateProperty, _register_annotation_checker
+from ux_valio.validators.base import (
+    ValidateProperty,
+    _register_annotation_checker,
+    _register_typed_dict_checker,
+)
 from ux_valio.validators.bounds import read_bound
 
 _TYPED_DICT_QUALIFIERS = tuple(
@@ -505,3 +509,4 @@ class ChoiceValidator(ValidateProperty):
 
 
 _register_annotation_checker(is_instance_of)
+_register_typed_dict_checker(_validate_typed_dict)

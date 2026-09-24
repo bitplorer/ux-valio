@@ -7,7 +7,10 @@ once — they do not multiple-inherit each other. ``&`` / ``|`` (and
 field default, leaf or facade.
 
 
-``leaves.py`` binds ``is_instance_of`` once for the store type door.
+``leaves.py`` binds ``is_instance_of`` once for the store type door,
+and ``_validate_typed_dict`` once for the TypedDict key walk. ``leaves``
+imports this module, so those names stay a one-time cache rather than a
+module-level import.
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from ux_valio.validators.hooks import HookHost, _SET_PHASE_MASK
 T = TypeVar("T")
 
 _matches_annotation = None
+_validate_typed_dict_fn = None
 
 
 def _register_annotation_checker(checker: Any) -> None:
@@ -30,8 +34,18 @@ def _register_annotation_checker(checker: Any) -> None:
     _matches_annotation = checker
 
 
+def _register_typed_dict_checker(checker: Any) -> None:
+    """Bind ``_validate_typed_dict`` once. ``leaves.py`` calls this at import."""
+    global _validate_typed_dict_fn
+    _validate_typed_dict_fn = checker
+
+
 def _annotation_accepts(annotation: Any, value: Any) -> bool:
-    """Type-door membership. Loads ``is_instance_of`` at most once."""
+    """Type-door membership. Loads ``is_instance_of`` at most once.
+
+    The import stays in this function: ``leaves`` imports this module, so a
+    module-level import of ``leaves`` would cycle.
+    """
     if _matches_annotation is None:
         from ux_valio.validators.leaves import is_instance_of
 
@@ -40,6 +54,22 @@ def _annotation_accepts(annotation: Any, value: Any) -> bool:
     if checker is None:
         raise TypeError("type-door checker is not bound")
     return checker(value, annotation)
+
+
+def _run_typed_dict_check(owner: Any, value: Any) -> None:
+    """TypedDict key walk. Loads ``_validate_typed_dict`` at most once.
+
+    ``leaves`` imports this module (cycle), and binds the walker at its
+    import. A call that arrives first imports once into
+    ``_validate_typed_dict_fn`` and reuses that.
+    """
+    fn = _validate_typed_dict_fn
+    if fn is None:
+        from ux_valio.validators.leaves import _validate_typed_dict
+
+        _register_typed_dict_checker(_validate_typed_dict)
+        fn = _validate_typed_dict
+    fn(owner, value)
 
 
 class ValidateProperty(HookHost, Property[T], ABC):
@@ -95,7 +125,7 @@ class ValidateProperty(HookHost, Property[T], ABC):
 
     def _validate_type(self, instance: Any, value: Any) -> None:
         self._take_subscript_annotation()
-        annotation = getattr(self, "annotation", None)
+        annotation = self.annotation
         if annotation is not None and value is not None and not _annotation_accepts(
             annotation, value
         ):
@@ -108,9 +138,7 @@ class ValidateProperty(HookHost, Property[T], ABC):
             and not is_typeddict(annotation)
         ):
             return
-        from ux_valio.validators.leaves import _validate_typed_dict
-
-        _validate_typed_dict(self, value)
+        _run_typed_dict_check(self, value)
 
     def _reject_store_type_mismatch(self, value: Any) -> None:
         """Annotation is a store invariant: post_validate cannot smuggle a bad type.
@@ -118,7 +146,7 @@ class ValidateProperty(HookHost, Property[T], ABC):
         Untyped ``Validator()`` (annotation None) does not gate. ``None`` stays
         skip, same as the type path. Custom validators are not re-run.
         """
-        annotation = getattr(self, "annotation", None)
+        annotation = self.annotation
         if annotation is None or value is None:
             return
         if not _annotation_accepts(annotation, value):

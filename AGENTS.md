@@ -317,7 +317,11 @@ a parallel folder, not inside the layer they depend on.
   `&` / `|` return `AllOf` / `AnyOf` from the same module
   (`ValidateProperty.__and__` / `__or__`). Do not reintroduce a compose
   module or `_register_compose_types` lazy cache. `leaves.py` binds `is_instance_of`
-  once via `_register_annotation_checker`. Origin tables `_ORIGIN_CHECKERS`
+  once via `_register_annotation_checker`, and `_validate_typed_dict` once via
+  `_register_typed_dict_checker` (`_validate_typed_dict_fn`). `_validate_type`
+  does not import `leaves` on each call. The fallback import stays in
+  `_run_typed_dict_check` / `_annotation_accepts` because `leaves` imports
+  `base`. Origin tables `_ORIGIN_CHECKERS`
   / `_ORIGIN_GROUPS` live next to `is_instance_of`, not on `TypeValidator`.
   `not_in_choice` skips `None`, same as `in_choice`.
   `in_choice` / `not_in_choice` that are not a ``Container`` TypeError at
@@ -434,7 +438,8 @@ stored-type param is `Validator[T]`; `Property` uses `_StoreT`.
 on the facade — do not fashion-rename them.
 
 New private helpers are verbs that name the action:
-`_register_annotation_checker`, `_reject_store_type_mismatch`,
+`_register_annotation_checker`, `_register_typed_dict_checker`,
+`_run_typed_dict_check`, `_reject_store_type_mismatch`,
 `_reject_store_identity`, `_reject_slots_without_dict`,
 `_require_instance_dict`, `_read_from_instance`, `_drop_from_instance`,
 `_record_error`, `_store_on_instance`, `_match_one_alternative`,

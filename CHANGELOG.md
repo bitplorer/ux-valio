@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- ``_validate_type`` no longer imports ``_validate_typed_dict`` on every
+  call that is not a plain class. ``leaves`` binds the walker once
+  (``_validate_typed_dict_fn``); a call that arrives first imports once.
+  Module-level import stays out: ``leaves`` imports ``base``. TypedDict
+  accept/reject is unchanged. ``is_instance_of`` and ``ux_valio_native``
+  stay lazy-once. ``phonenumbers`` stays on ``PhoneNumberValidator``
+  construct (optional extra; not the setattr path).
+
 - Set-phase hangs (`pre_validate`, `post_validate`, `post_set`,
   `validator`, and their `task_*`) compile to a per-owner closed list
   (`_closed`) when the hang is registered, when the class is bound,
