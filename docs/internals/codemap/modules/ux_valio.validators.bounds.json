@@ -1,0 +1,72 @@
+{
+ "ux_valio.validators.bounds": {
+  "consumers": [
+   "tests/test_bound_honesty.py",
+   "tests/test_origin_table_and_hooks.py"
+  ],
+  "doc": "Bound presence helpers. ``None`` is unset; ``0`` is specified.",
+  "exported_as": [],
+  "features": [
+   "concern-leaves"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators.leaves",
+    "ux_valio.validators.length",
+    "ux_valio.validators.value"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "validators",
+  "path": "ux_valio/validators/bounds.py",
+  "public": [
+   "read_bound",
+   "reject_exclusive",
+   "reject_inverted",
+   "specified"
+  ],
+  "symbols": {
+   "read_bound": {
+    "doc": "Return ``owner.name`` when it is not ``None``; else ``None``.",
+    "kind": "function",
+    "public": true,
+    "signature": "(owner: Any, name: str) -> Any"
+   },
+   "reject_exclusive": {
+    "doc": "",
+    "kind": "function",
+    "public": true,
+    "signature": "(left: Any, right: Any, message: str) -> None"
+   },
+   "reject_inverted": {
+    "doc": "",
+    "kind": "function",
+    "public": true,
+    "signature": "(lo: Any, hi: Any, message: str) -> None"
+   },
+   "specified": {
+    "doc": "True when every bound is present. None-only; ``0`` is specified.",
+    "kind": "function",
+    "public": true,
+    "signature": "(*bounds: Any) -> bool"
+   }
+  }
+ }
+}

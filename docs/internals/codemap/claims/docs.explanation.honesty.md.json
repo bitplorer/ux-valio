@@ -1,0 +1,16 @@
+{
+ "docs/explanation/honesty.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:IntegerValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:UUIDValidator"
+   }
+  ]
+ }
+}

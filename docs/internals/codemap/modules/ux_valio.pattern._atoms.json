@@ -1,0 +1,182 @@
+{
+ "ux_valio.pattern._atoms": {
+  "consumers": [
+   "docs/how-to/compose.md",
+   "docs/reference/pattern.md",
+   "docs/reference/validator.md",
+   "docs/tutorial.md",
+   "examples/catalog.py",
+   "examples/signup.py",
+   "tests/test_pattern_findall.py",
+   "tests/test_pattern_package.py"
+  ],
+  "doc": "Stdlib ``re`` atoms and ``^`` / ``$`` anchors on the Pattern algebra.",
+  "exported_as": [
+   "ux_valio:Digit",
+   "ux_valio:EndsWith",
+   "ux_valio:NonDigit",
+   "ux_valio:NonWhiteSpace",
+   "ux_valio:NonWord",
+   "ux_valio:StartsWith",
+   "ux_valio:WhiteSpace",
+   "ux_valio:Word",
+   "ux_valio:WordBoundary"
+  ],
+  "features": [
+   "pattern-algebra"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.pattern"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.pattern._algebra"
+   ],
+   "type_checking": []
+  },
+  "is_public": false,
+  "layer": "pattern",
+  "path": "ux_valio/pattern/_atoms.py",
+  "public": [
+   "Digit",
+   "EndsWith",
+   "NonDigit",
+   "NonWhiteSpace",
+   "NonWord",
+   "StartsWith",
+   "WhiteSpace",
+   "Word",
+   "WordBoundary"
+  ],
+  "symbols": {
+   "Digit": {
+    "bases": [
+     "_StdlibAtom"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "EndsWith": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "``fragment$`` — valio ``regexer/regexps.py`` ``EndsWith`` L421.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: PatternType, alias: str | None=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "NonDigit": {
+    "bases": [
+     "_StdlibAtom"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "NonWhiteSpace": {
+    "bases": [
+     "_StdlibAtom"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "NonWord": {
+    "bases": [
+     "_StdlibAtom"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "StartsWith": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "``^fragment`` — valio ``regexer/regexps.py`` ``StartsWith`` L414.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: PatternType, alias: str | None=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "WhiteSpace": {
+    "bases": [
+     "_StdlibAtom"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "Word": {
+    "bases": [
+     "_StdlibAtom"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "WordBoundary": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, alias: str | None=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "_StdlibAtom": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "Quantified stdlib ``re`` atom on the existing Pattern algebra.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, count: int | None=None, count_min: int | None=None, count_max: int | None=None, greedy: bool=True, alias: str | None=None) -> None"
+     }
+    },
+    "public": false
+   }
+  }
+ }
+}

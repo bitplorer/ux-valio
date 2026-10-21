@@ -1,0 +1,21 @@
+{
+ "docs/explanation/layering.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio.facades.named.india.gst:GSTINValidator"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio.facades.named.india.gst"
+   }
+  ]
+ }
+}

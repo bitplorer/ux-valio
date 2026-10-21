@@ -1,0 +1,200 @@
+{
+ "ux_valio.validators.facade": {
+  "consumers": [
+   "docs/how-to/hang.md",
+   "docs/how-to/typed-dict.md",
+   "docs/how-to/workflows.md",
+   "docs/reference/validator.md",
+   "docs/tutorial.md",
+   "examples/catalog.py",
+   "examples/checkout.py",
+   "examples/filing.py",
+   "examples/invite.py",
+   "examples/kyc.py",
+   "examples/signup.py",
+   "examples/storefront.py",
+   "examples/validator_kwargs.py",
+   "examples/vendor.py",
+   "tests/test_annotation_conflict.py",
+   "tests/test_async_callables.py",
+   "tests/test_bound_honesty.py",
+   "tests/test_choice_honesty.py",
+   "tests/test_collect_all.py",
+   "tests/test_compose_hooks.py",
+   "tests/test_compose_not_inherit.py",
+   "tests/test_descriptor_honesty.py",
+   "tests/test_descriptor_lifecycle.py",
+   "tests/test_expiry_validator.py",
+   "tests/test_falsy_defaults.py",
+   "tests/test_generics_honesty.py",
+   "tests/test_hooks_namespace.py",
+   "tests/test_native_boolean.py",
+   "tests/test_native_bytes.py",
+   "tests/test_native_date.py",
+   "tests/test_native_datetime.py",
+   "tests/test_native_decimal.py",
+   "tests/test_native_float.py",
+   "tests/test_native_integer.py",
+   "tests/test_native_integer_enum.py",
+   "tests/test_native_layout.py",
+   "tests/test_native_path.py",
+   "tests/test_native_string.py",
+   "tests/test_native_string_enum.py",
+   "tests/test_native_uuid.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_path_fail_closed.py",
+   "tests/test_phone_number.py",
+   "tests/test_processors_then_tasks.py",
+   "tests/test_product_surface.py",
+   "tests/test_readme_shape.py",
+   "tests/test_real_world_use.py",
+   "tests/test_sealed_hangs.py",
+   "tests/test_typed_dict_schema.py",
+   "tests/test_validator_compose.py",
+   "tests/test_validator_generic.py",
+   "tests/typing/field_custom.py",
+   "tests/typing/field_user.py"
+  ],
+  "doc": "Descriptor field default that runs concern leaves in a fixed order.",
+  "exported_as": [
+   "ux_valio:Validator"
+  ],
+  "features": [
+   "validate-door"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.expiry",
+    "ux_valio.facades.typed",
+    "ux_valio.validators"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.descriptor",
+    "ux_valio.errors",
+    "ux_valio.validators._native",
+    "ux_valio.validators.base",
+    "ux_valio.validators.hooks",
+    "ux_valio.validators.leaves",
+    "ux_valio.validators.length",
+    "ux_valio.validators.value"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "validators",
+  "path": "ux_valio/validators/facade.py",
+  "public": [
+   "DEFAULT_PATH_UNITS",
+   "T",
+   "ValidateStep",
+   "ValidationPath",
+   "Validator"
+  ],
+  "symbols": {
+   "ValidationPath": {
+    "bases": [],
+    "doc": "Ordered unique concern callables. A second ``validate()`` is a new pass.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, units: Iterable[ValidateStep]) -> None"
+     },
+     "run": {
+      "doc": "Run unique units. Uniqueness is ``__init__``; no per-pass set/list.",
+      "kind": "function",
+      "signature": "(self, owner: Any, instance: Any, value: Any, collect_all: bool=True) -> None"
+     }
+    },
+    "public": true
+   },
+   "Validator": {
+    "bases": [
+     "ValidateProperty[T]"
+    ],
+    "doc": "Descriptor field default that composes concern leaves.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, default: Any=None, default_factory: Any=None, name: str | None=None, doc: str | None=None, required: bool | None=None, pattern: Any=None, reassign: bool | None=None, multiple_of: Any=None, min_value: Any=None, value: Any=None, max_value: Any=None, gt: Any=None, eq: Any=None, lt: Any=None, min_length: int | None=None, length: int | None=None, max_length: int | None=None, in_choice: Any=None, not_in_choice: Any=None, debug: bool | None=None, logger: Any=_UNSET, collect_all: Any=_UNSET) -> None"
+     },
+     "__set__": {
+      "doc": "Closed native set when no set-phase hang can change the value.",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> None"
+     },
+     "__set_name__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, owner: type, name: str) -> None"
+     },
+     "_apply_specified_path": {
+      "doc": "Native closed plan when bound; else host ``_active_units``.",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_coerce_str": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, value: Any, conv: Callable[[str], Any], what: str) -> Any"
+     },
+     "_notify_post_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> None"
+     },
+     "_notify_pre_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> None"
+     },
+     "_post_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_reject_unless_instance": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, value: Any, expected: type) -> None"
+     },
+     "_validate_named_facade": {
+      "doc": "Named-facade extra check after the inherited path. Default is none.",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "_specified_units": {
+    "doc": "Default-path units whose bound is set. Type always (annotation may bind later).",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any) -> tuple[ValidateStep, ...]"
+   }
+  }
+ }
+}

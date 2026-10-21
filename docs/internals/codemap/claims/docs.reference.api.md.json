@@ -1,0 +1,11 @@
+{
+ "docs/reference/api.md": {
+  "claims": [
+   {
+    "kind": "module",
+    "resolved": false,
+    "text": "ux_valio.regexer"
+   }
+  ]
+ }
+}

@@ -1,0 +1,21 @@
+{
+ "docs/how-to/typed-dict.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:EmailValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:StringValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Validator"
+   }
+  ]
+ }
+}

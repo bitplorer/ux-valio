@@ -1,0 +1,41 @@
+{
+ "docs/how-to/compose.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:AllOf"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Digit"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:LengthValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Pattern"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:RequiredValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:SetOf"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:StringValidator"
+   }
+  ]
+ }
+}

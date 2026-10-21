@@ -1,0 +1,93 @@
+{
+ "ux_valio.facades.named.expiry": {
+  "consumers": [
+   "examples/checkout.py",
+   "tests/test_collect_all.py",
+   "tests/test_expiry_validator.py",
+   "tests/test_named_validate_once.py",
+   "tests/test_native_date.py",
+   "tests/test_origin_table_and_hooks.py"
+  ],
+  "doc": "Expiry. Exclusive expire_* kwargs; expire_before is its own bound.",
+  "exported_as": [
+   "ux_valio:ExpiryValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "datetime",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators.facade"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.expiry",
+  "path": "ux_valio/facades/named/expiry.py",
+  "public": [
+   "ExpiryValidator"
+  ],
+  "symbols": {
+   "ExpiryValidator": {
+    "bases": [
+     "Validator"
+    ],
+    "doc": "Gate assignment when *now* matches an exclusive timeline.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, expire_after: Any=None, expire_on: Any=None, expire_before: Any=None, **kwargs: Any) -> None"
+     },
+     "_configure_expiry": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Bind one exclusive timeline. Each kwarg is pattern-checked on itself.",
+      "kind": "function",
+      "signature": "(obj: Any, expire_after: Any=None, expire_on: Any=None, expire_before: Any=None) -> None"
+     },
+     "_parse_expiry_datetime": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Stdlib ISO / date / datetime / time. Not valio relib / pyparsing.",
+      "kind": "function",
+      "signature": "(value: Any) -> datetime.datetime"
+     },
+     "_validate_expiry": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

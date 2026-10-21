@@ -1,0 +1,153 @@
+{
+ "ux_valio.validators.value": {
+  "consumers": [
+   "tests/test_bound_honesty.py",
+   "tests/test_compose_not_inherit.py",
+   "tests/test_path_fail_closed.py"
+  ],
+  "doc": "Value-bound concern leaves. Min/max/eq are leaf-owned methods.",
+  "exported_as": [
+   "ux_valio:MaxValueValidator",
+   "ux_valio:MinValueValidator",
+   "ux_valio:ValueValidator"
+  ],
+  "features": [
+   "concern-leaves"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators",
+    "ux_valio.validators._native",
+    "ux_valio.validators.facade"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators.base",
+    "ux_valio.validators.bounds"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "validators",
+  "path": "ux_valio/validators/value.py",
+  "public": [
+   "MaxValueValidator",
+   "MinValueValidator",
+   "ValueValidator"
+  ],
+  "symbols": {
+   "MaxValueValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, max_value: Any=None, lt: Any=None, **kwargs: Any) -> None"
+     },
+     "_validate_max_value": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self: Any, instance: Any, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "MinValueValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, min_value: Any=None, gt: Any=None, **kwargs: Any) -> None"
+     },
+     "_validate_min_value": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self: Any, instance: Any, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "ValueValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "Inclusive min/max, exclusive gt/lt, exact value/eq. Composes bound checks.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, min_value: Any=None, gt: Any=None, value: Any=None, eq: Any=None, max_value: Any=None, lt: Any=None, **kwargs: Any) -> None"
+     },
+     "_validate_eq_value": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_validate_max_value": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_validate_min_value": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_validate_value": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "bind_bounds": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(obj: Any, min_value: Any, gt: Any, value: Any, eq: Any, max_value: Any, lt: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

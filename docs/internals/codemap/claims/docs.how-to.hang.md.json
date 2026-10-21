@@ -1,0 +1,16 @@
+{
+ "docs/how-to/hang.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:StringValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Validator"
+   }
+  ]
+ }
+}

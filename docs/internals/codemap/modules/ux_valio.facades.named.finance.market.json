@@ -1,0 +1,123 @@
+{
+ "ux_valio.facades.named.finance.market": {
+  "consumers": [
+   "tests/test_identity_facades.py",
+   "tests/test_named_validate_once.py",
+   "tests/test_saas_commerce_facades.py"
+  ],
+  "doc": "International securities / KYB (ISIN, LEI).",
+  "exported_as": [
+   "ux_valio:ISINValidator",
+   "ux_valio:LEIValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.finance"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.finance.market",
+  "path": "ux_valio/facades/named/finance/market.py",
+  "public": [
+   "ISINValidator",
+   "LEIValidator"
+  ],
+  "symbols": {
+   "ISINValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "ISIN: ISO 6166, 12 chars ∩ Luhn after A=10…Z=35 expansion.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_isin": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_luhn_check_digit": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(body: str) -> str"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "LEIValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Legal Entity Identifier: 20 chars ∩ ISO 17442 mod-97.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_lei": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_mod97": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(text: str) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

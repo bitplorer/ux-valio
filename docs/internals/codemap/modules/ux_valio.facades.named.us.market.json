@@ -1,0 +1,83 @@
+{
+ "ux_valio.facades.named.us.market": {
+  "consumers": [
+   "tests/test_everyday_facades.py"
+  ],
+  "doc": "US securities identity (CUSIP).",
+  "exported_as": [
+   "ux_valio:CUSIPValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.us"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.us.market",
+  "path": "ux_valio/facades/named/us/market.py",
+  "public": [
+   "CUSIPValidator"
+  ],
+  "symbols": {
+   "CUSIPValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "CUSIP: 9-char US security id ∩ check digit. Complements ISIN.",
+    "kind": "class",
+    "methods": {
+     "_cusip_value": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(char: str) -> int"
+     },
+     "_is_valid_cusip": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

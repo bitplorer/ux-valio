@@ -1,0 +1,225 @@
+# Features registry (curated). scripts/codemap.py validates every reference:
+# modules must be mapped, ``symbols`` (``module:Name`` or ``module:Class.method``)
+# must resolve, and ``tests`` / ``docs`` paths must exist. The validated entries
+# are folded into codemap/index.json, and each module shard lists its features.
+# Edit this file in the same PR that moves a feature. See CODEMAP.md.
+
+[[feature]]
+id = "field-store"
+purpose = "Property: the descriptor that is the dataclass field default; binds to its owner, stores on instance.__dict__, logs per field."
+modules = ["ux_valio.descriptor", "ux_valio.errors"]
+symbols = [
+  "ux_valio.descriptor:Property",
+  "ux_valio.descriptor:Property.__set_name__",
+  "ux_valio.descriptor:Property._bind_field_logger",
+  "ux_valio.descriptor:is_subclass_of",
+  "ux_valio.errors:ValidationErrors",
+]
+tests = [
+  "tests/test_descriptor_lifecycle.py",
+  "tests/test_descriptor_honesty.py",
+  "tests/test_falsy_defaults.py",
+  "tests/test_slots_unsupported.py",
+]
+docs = ["docs/explanation/honesty.md", "docs/how-to/logging.md"]
+
+[[feature]]
+id = "validate-door"
+purpose = "ValidateProperty and the Validator facade: the specified validation path, compiled once, composed with & / | into AllOf / AnyOf."
+modules = ["ux_valio.validators", "ux_valio.validators.base", "ux_valio.validators.facade"]
+symbols = [
+  "ux_valio.validators.base:ValidateProperty",
+  "ux_valio.validators.base:ValidateProperty.__and__",
+  "ux_valio.validators.base:ValidateProperty.__or__",
+  "ux_valio.validators.base:AllOf",
+  "ux_valio.validators.base:AnyOf",
+  "ux_valio.validators.facade:Validator",
+  "ux_valio.validators.facade:ValidationPath",
+]
+tests = [
+  "tests/test_validator_compose.py",
+  "tests/test_compose_not_inherit.py",
+  "tests/test_collect_all.py",
+  "tests/test_straight_set.py",
+  "tests/test_annotation_conflict.py",
+]
+docs = ["docs/reference/validator.md", "docs/how-to/compose.md"]
+
+[[feature]]
+id = "concern-leaves"
+purpose = "Single-concern validators (type, required, pattern, reassign, multiple, choice, length, value bounds) that compose instead of multiple-inheriting."
+modules = [
+  "ux_valio.validators.leaves",
+  "ux_valio.validators.length",
+  "ux_valio.validators.value",
+  "ux_valio.validators.bounds",
+]
+symbols = [
+  "ux_valio.validators.leaves:TypeValidator",
+  "ux_valio.validators.leaves:RequiredValidator",
+  "ux_valio.validators.leaves:PatternValidator",
+  "ux_valio.validators.leaves:ChoiceValidator",
+  "ux_valio.validators.length:LengthValidator",
+  "ux_valio.validators.value:ValueValidator",
+  "ux_valio.validators.bounds:read_bound",
+]
+tests = ["tests/test_bound_honesty.py", "tests/test_choice_honesty.py", "tests/test_path_fail_closed.py"]
+docs = ["docs/reference/validator.md"]
+
+[[feature]]
+id = "hangs"
+purpose = "Hang pre_validate / post_validate / post_set / validator and task_* on the field name; set-phase hangs compile per owner; async via the nest-safe bridge."
+modules = ["ux_valio.validators.hooks", "ux_valio.validators.async_bridge"]
+symbols = [
+  "ux_valio.validators.hooks:HookHost",
+  "ux_valio.validators.hooks:HookHost.pre_validate",
+  "ux_valio.validators.hooks:HookHost.validator",
+  "ux_valio.validators.hooks:HookHost.post_set",
+  "ux_valio.validators.hooks:HookHost.task_post_set",
+  "ux_valio.validators.hooks:HookHost.wait_tasks",
+  "ux_valio.validators.async_bridge:nest_safe_bridge",
+]
+tests = [
+  "tests/test_sealed_hangs.py",
+  "tests/test_hooks_namespace.py",
+  "tests/test_async_callables.py",
+  "tests/test_processors_then_tasks.py",
+  "tests/test_compose_hooks.py",
+]
+docs = ["docs/how-to/hang.md"]
+
+[[feature]]
+id = "type-door"
+purpose = "Annotation checks: is_instance_of over origin tables, Validator[T] subscripts and TypedDict as the schema."
+modules = ["ux_valio.validators.leaves", "ux_valio.validators.base"]
+symbols = [
+  "ux_valio.validators.leaves:is_instance_of",
+  "ux_valio.validators.leaves:_validate_typed_dict",
+  "ux_valio.validators.base:_register_annotation_checker",
+]
+tests = [
+  "tests/test_typed_dict_schema.py",
+  "tests/test_generics_honesty.py",
+  "tests/test_origin_table_and_hooks.py",
+  "tests/test_validator_generic.py",
+]
+docs = ["docs/how-to/typed-dict.md", "docs/reference/validator.md"]
+
+[[feature]]
+id = "typed-facades"
+purpose = "Primitive field-default facades (int, str, bool, float, Decimal, bytes, date, datetime, UUID, Path, IP, enums); coercing facades parse str on assignment."
+modules = ["ux_valio.facades.typed"]
+symbols = [
+  "ux_valio.facades.typed:IntegerValidator",
+  "ux_valio.facades.typed:StringValidator",
+  "ux_valio.facades.typed:DateValidator",
+  "ux_valio.facades.typed:DecimalValidator",
+  "ux_valio.facades.typed:PathValidator",
+  "ux_valio.facades.typed:IPv4Validator",
+  "ux_valio.facades.typed:StringEnumValidator",
+]
+tests = ["tests/test_typed_facades.py", "tests/test_everyday_facades.py"]
+docs = ["docs/reference/typed.md"]
+
+[[feature]]
+id = "named-identities"
+purpose = "Identity facades per domain (India, US, UK, Canada, Mexico, finance, catalog, contact, device, portal, expiry): format identity plus checksum, stored in compact form."
+modules = [
+  "ux_valio.facades",
+  "ux_valio.facades.named",
+  "ux_valio.facades.named.india.gst",
+  "ux_valio.facades.named.india.kyc",
+  "ux_valio.facades.named.india.bank",
+  "ux_valio.facades.named.india.postal",
+  "ux_valio.facades.named.india.registry",
+  "ux_valio.facades.named.us.bank",
+  "ux_valio.facades.named.us.kyc",
+  "ux_valio.facades.named.us.market",
+  "ux_valio.facades.named.us.postal",
+  "ux_valio.facades.named.uk.bank",
+  "ux_valio.facades.named.uk.kyc",
+  "ux_valio.facades.named.uk.postal",
+  "ux_valio.facades.named.canada.kyc",
+  "ux_valio.facades.named.canada.postal",
+  "ux_valio.facades.named.mexico.bank",
+  "ux_valio.facades.named.mexico.kyc",
+  "ux_valio.facades.named.finance.card",
+  "ux_valio.facades.named.finance.currency",
+  "ux_valio.facades.named.finance.market",
+  "ux_valio.facades.named.finance.rail",
+  "ux_valio.facades.named.catalog",
+  "ux_valio.facades.named.contact",
+  "ux_valio.facades.named.device",
+  "ux_valio.facades.named.portal",
+  "ux_valio.facades.named.expiry",
+]
+symbols = [
+  "ux_valio.facades.named.india.gst:GSTINValidator",
+  "ux_valio.facades.named.india.kyc:AadhaarCardValidator",
+  "ux_valio.facades.named.india.kyc:PANCardValidator",
+  "ux_valio.facades.named.finance.rail:IBANValidator",
+  "ux_valio.facades.named.finance.card:PaymentCardValidator",
+  "ux_valio.facades.named.contact:EmailValidator",
+  "ux_valio.facades.named.contact:PhoneNumberValidator",
+  "ux_valio.facades.named.expiry:ExpiryValidator",
+]
+tests = [
+  "tests/test_identity_facades.py",
+  "tests/test_named_validate_once.py",
+  "tests/test_gstin.py",
+  "tests/test_iban.py",
+  "tests/test_aadhaar_card.py",
+  "tests/test_pan_card.py",
+  "tests/test_payment_card.py",
+  "tests/test_phone_number.py",
+  "tests/test_expiry_validator.py",
+  "tests/test_saas_commerce_facades.py",
+]
+docs = ["docs/reference/named.md"]
+
+[[feature]]
+id = "pattern-algebra"
+purpose = "PatternType algebra (atoms, sets, lookarounds, & / |) compiled to findall regexes; re-exported from the package root."
+modules = [
+  "ux_valio.pattern",
+  "ux_valio.pattern._algebra",
+  "ux_valio.pattern._atoms",
+  "ux_valio.pattern._sets",
+  "ux_valio.pattern._lookaround",
+]
+symbols = [
+  "ux_valio.pattern._algebra:Pattern",
+  "ux_valio.pattern._algebra:PatternType",
+  "ux_valio.pattern._atoms:Digit",
+  "ux_valio.pattern._atoms:StartsWith",
+  "ux_valio.pattern._sets:SetOf",
+  "ux_valio.pattern._lookaround:IfPrecededBy",
+]
+tests = ["tests/test_pattern_findall.py", "tests/test_pattern_package.py"]
+docs = ["docs/reference/pattern.md"]
+
+[[feature]]
+id = "native-peer"
+purpose = "Optional ux-valio[native] apply: the host decides and compiles a closed plan at bind, the PyO3 peer applies it; stdlib Python stays the default."
+modules = ["ux_valio.validators._native"]
+symbols = [
+  "ux_valio.validators._native:bind_native_plan",
+  "ux_valio.validators._native:apply_native_bounds",
+  "ux_valio.validators._native:_FamilyDoor",
+]
+tests = [
+  "tests/test_native_layout.py",
+  "tests/test_native_integer.py",
+  "tests/test_native_string.py",
+  "tests/test_native_ip.py",
+  "tests/test_host_peer_measure.py",
+]
+docs = ["docs/explanation/host-peer-plan.md", "docs/explanation/performance.md"]
+
+[[feature]]
+id = "typing-plugin"
+purpose = "mypy plugin that types facade construction as Any, so `name: str = StringValidator()` type-checks."
+modules = ["ux_valio.mypy_plugin"]
+symbols = ["ux_valio.mypy_plugin:UxValioPlugin", "ux_valio.mypy_plugin:plugin"]
+tests = ["tests/test_field_default_typing.py"]
+docs = ["docs/how-to/typing.md"]

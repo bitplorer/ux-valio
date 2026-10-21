@@ -1,0 +1,226 @@
+{
+ "ux_valio.facades.named.india.registry": {
+  "consumers": [
+   "examples/vendor.py",
+   "tests/test_identity_facades.py"
+  ],
+  "doc": "India registrations (TAN, CIN, Udyam, DIN, LLPIN, FSSAI).",
+  "exported_as": [
+   "ux_valio:CINValidator",
+   "ux_valio:DINValidator",
+   "ux_valio:FSSAIValidator",
+   "ux_valio:LLPINValidator",
+   "ux_valio:TANValidator",
+   "ux_valio:UdyamValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.india"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.india.registry",
+  "path": "ux_valio/facades/named/india/registry.py",
+  "public": [
+   "CINValidator",
+   "DINValidator",
+   "FSSAIValidator",
+   "LLPINValidator",
+   "TANValidator",
+   "UdyamValidator"
+  ],
+  "symbols": {
+   "CINValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Corporate Identity Number: 21-char MCA format.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_cin": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "DINValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "MCA Director Identification Number: 8 digits.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_din": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "FSSAIValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "FSSAI licence / registration: 14 digits.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_fssai": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "LLPINValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "MCA LLP Identification Number: ``AAA-1234``.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_llpin": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "TANValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Tax Deduction Account Number: 10-char ITD identity.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_tan": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "UdyamValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Udyam MSME registration identity.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_udyam": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

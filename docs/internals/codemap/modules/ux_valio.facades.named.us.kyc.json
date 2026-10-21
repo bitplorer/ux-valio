@@ -1,0 +1,135 @@
+{
+ "ux_valio.facades.named.us.kyc": {
+  "consumers": [
+   "tests/test_onboarding_kyc.py"
+  ],
+  "doc": "US person / business KYC (SSN, ITIN, EIN).",
+  "exported_as": [
+   "ux_valio:EINValidator",
+   "ux_valio:ITINValidator",
+   "ux_valio:SSNValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.us"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.us.kyc",
+  "path": "ux_valio/facades/named/us/kyc.py",
+  "public": [
+   "EINValidator",
+   "ITINValidator",
+   "SSNValidator"
+  ],
+  "symbols": {
+   "EINValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "US Employer Identification Number: 9 digits.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_ein": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "ITINValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "US Individual Taxpayer Identification Number: 9 digits.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_itin": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "SSNValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "US Social Security number: 9 digits, SSA area/group/serial rules.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_ssn": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

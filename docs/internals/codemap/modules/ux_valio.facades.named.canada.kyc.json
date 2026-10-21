@@ -1,0 +1,74 @@
+{
+ "ux_valio.facades.named.canada.kyc": {
+  "consumers": [
+   "tests/test_onboarding_kyc.py"
+  ],
+  "doc": "Canada person KYC (SIN).",
+  "exported_as": [
+   "ux_valio:CanadianSINValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.canada"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.canada.kyc",
+  "path": "ux_valio/facades/named/canada/kyc.py",
+  "public": [
+   "CanadianSINValidator"
+  ],
+  "symbols": {
+   "CanadianSINValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Canadian Social Insurance Number: 9 digits ∩ Luhn.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_sin": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

@@ -1,0 +1,66 @@
+{
+ "ux_valio.validators": {
+  "consumers": [
+   "tests/test_async_callables.py",
+   "tests/test_descriptor_honesty.py",
+   "tests/test_descriptor_lifecycle.py",
+   "tests/test_hooks_namespace.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_product_surface.py",
+   "tests/test_typed_dict_schema.py",
+   "tests/test_validator_compose.py"
+  ],
+  "doc": "Validate door. ``ValidateProperty`` : ``Property``. Named products live in",
+  "exported_as": [],
+  "features": [
+   "validate-door"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {},
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.errors",
+    "ux_valio.validators.base",
+    "ux_valio.validators.facade",
+    "ux_valio.validators.leaves",
+    "ux_valio.validators.length",
+    "ux_valio.validators.value"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "validators",
+  "path": "ux_valio/validators/__init__.py",
+  "public": [
+   "AllOf",
+   "AnyOf",
+   "ChoiceValidator",
+   "LengthValidator",
+   "MaxLengthValidator",
+   "MaxValueValidator",
+   "MinLengthValidator",
+   "MinValueValidator",
+   "MultipleValidator",
+   "PatternValidator",
+   "ReassignValidator",
+   "RequiredValidator",
+   "TypeValidator",
+   "ValidateProperty",
+   "ValidationErrors",
+   "Validator",
+   "ValueValidator"
+  ],
+  "symbols": {}
+ }
+}

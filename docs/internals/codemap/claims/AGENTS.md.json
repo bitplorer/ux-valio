@@ -1,0 +1,46 @@
+{
+ "AGENTS.md": {
+  "claims": [
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio.errors"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio.mypy_plugin"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio.pattern"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio/descriptor.py"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio/errors.py"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio/facades/"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio/pattern/"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio/validators/"
+   }
+  ]
+ }
+}

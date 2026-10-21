@@ -1,0 +1,76 @@
+{
+ "ux_valio.pattern._sets": {
+  "consumers": [
+   "docs/how-to/compose.md",
+   "docs/reference/pattern.md",
+   "docs/tutorial.md",
+   "examples/catalog.py",
+   "examples/signup.py",
+   "tests/test_pattern_package.py"
+  ],
+  "doc": "Character-class ``SetOf`` on the Pattern algebra.",
+  "exported_as": [
+   "ux_valio:SetOf"
+  ],
+  "features": [
+   "pattern-algebra"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.pattern"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.pattern._algebra"
+   ],
+   "type_checking": []
+  },
+  "is_public": false,
+  "layer": "pattern",
+  "path": "ux_valio/pattern/_sets.py",
+  "public": [
+   "SetOf"
+  ],
+  "symbols": {
+   "SetOf": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "``[raw]`` character class. ``~SetOf(...)`` is the negated class.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: PatternType, count: int | None=None, count_min: int | None=None, count_max: int | None=None, greedy: bool=True, alias: str | None=None, *, _negated: bool=False) -> None"
+     },
+     "__invert__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self) -> 'SetOf'"
+     }
+    },
+    "public": true
+   },
+   "_char_class": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(inner: str | bytes, negated: bool, quantifier: str) -> str | bytes"
+   }
+  }
+ }
+}

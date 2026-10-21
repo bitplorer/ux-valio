@@ -57,3 +57,112 @@ ignore_missing_imports = true
 
 [tool.uv.sources]
 ux-valio-native = { path = "native" }
+
+[tool.codemap]
+packages = ["ux_valio"]
+out_dir = "docs/internals/codemap"
+features = "docs/internals/features.toml"
+domain = "docs/internals/domain.toml"
+narrative = ["docs/explanation/layering.md"]
+# Docs whose reference-style claims are indexed and resolved against the code
+# (findings only, never failed; see "Doc claims" in ux-dom's CODEMAP.md).
+claims_docs = ["README.md", "AGENTS.md", "docs", "examples/README.md"]
+# The map's own doc names modules only to describe the map.
+self_files = ["docs/internals/CODEMAP.md"]
+
+[tool.codemap.consumers]
+docs = [".md"]
+examples = [".py", ".md"]
+benches = [".py"]
+tests = [".py"]
+
+[tool.codemap.public_api]
+rule = "all_or_derived"
+packages = ["ux_valio"]
+
+# Module prefix -> layer (longest prefix wins; a package name matches only its
+# own __init__). From AGENTS.md and docs/explanation/layering.md: errors is
+# layer 0, the store (descriptor) sits on it, pattern is a sibling of the
+# store, validators is the validate door, facades.typed the primitives, and
+# every named identity module is its own layer because named modules (and
+# india/ us/ uk/ ... leaves) must not import each other. The package
+# __init__ files are re-export barrels.
+[tool.codemap.layers]
+"ux_valio" = "root"
+"ux_valio.errors" = "errors"
+"ux_valio.descriptor" = "store"
+"ux_valio.pattern" = "pattern"
+"ux_valio.validators" = "validators"
+"ux_valio.facades.typed" = "typed"
+"ux_valio.mypy_plugin" = "tooling"
+"ux_valio.facades" = "barrel"
+"ux_valio.facades.named" = "barrel"
+"ux_valio.facades.named.canada" = "barrel"
+"ux_valio.facades.named.finance" = "barrel"
+"ux_valio.facades.named.india" = "barrel"
+"ux_valio.facades.named.mexico" = "barrel"
+"ux_valio.facades.named.uk" = "barrel"
+"ux_valio.facades.named.us" = "barrel"
+"ux_valio.facades.named.canada.kyc" = "named.canada.kyc"
+"ux_valio.facades.named.canada.postal" = "named.canada.postal"
+"ux_valio.facades.named.catalog" = "named.catalog"
+"ux_valio.facades.named.contact" = "named.contact"
+"ux_valio.facades.named.device" = "named.device"
+"ux_valio.facades.named.expiry" = "named.expiry"
+"ux_valio.facades.named.finance.card" = "named.finance.card"
+"ux_valio.facades.named.finance.currency" = "named.finance.currency"
+"ux_valio.facades.named.finance.market" = "named.finance.market"
+"ux_valio.facades.named.finance.rail" = "named.finance.rail"
+"ux_valio.facades.named.india.bank" = "named.india.bank"
+"ux_valio.facades.named.india.gst" = "named.india.gst"
+"ux_valio.facades.named.india.kyc" = "named.india.kyc"
+"ux_valio.facades.named.india.postal" = "named.india.postal"
+"ux_valio.facades.named.india.registry" = "named.india.registry"
+"ux_valio.facades.named.mexico.bank" = "named.mexico.bank"
+"ux_valio.facades.named.mexico.kyc" = "named.mexico.kyc"
+"ux_valio.facades.named.portal" = "named.portal"
+"ux_valio.facades.named.uk.bank" = "named.uk.bank"
+"ux_valio.facades.named.uk.kyc" = "named.uk.kyc"
+"ux_valio.facades.named.uk.postal" = "named.uk.postal"
+"ux_valio.facades.named.us.bank" = "named.us.bank"
+"ux_valio.facades.named.us.kyc" = "named.us.kyc"
+"ux_valio.facades.named.us.market" = "named.us.market"
+"ux_valio.facades.named.us.postal" = "named.us.postal"
+
+# Layer -> other layers it may import at module or function level (own layer
+# always allowed; TYPE_CHECKING exempt). Lower layers never import higher;
+# typed does not import named; a named module may use every lower layer
+# but never a sibling named module.
+# root and barrel only re-export and stay unconstrained.
+[tool.codemap.layer_rules]
+errors = []
+store = ["errors"]
+pattern = []
+validators = ["errors", "pattern", "store"]
+typed = ["validators"]
+tooling = []
+"named.canada.kyc" = ["errors", "pattern", "store", "typed", "validators"]
+"named.canada.postal" = ["errors", "pattern", "store", "typed", "validators"]
+"named.catalog" = ["errors", "pattern", "store", "typed", "validators"]
+"named.contact" = ["errors", "pattern", "store", "typed", "validators"]
+"named.device" = ["errors", "pattern", "store", "typed", "validators"]
+"named.expiry" = ["errors", "pattern", "store", "typed", "validators"]
+"named.finance.card" = ["errors", "pattern", "store", "typed", "validators"]
+"named.finance.currency" = ["errors", "pattern", "store", "typed", "validators"]
+"named.finance.market" = ["errors", "pattern", "store", "typed", "validators"]
+"named.finance.rail" = ["errors", "pattern", "store", "typed", "validators"]
+"named.india.bank" = ["errors", "pattern", "store", "typed", "validators"]
+"named.india.gst" = ["errors", "pattern", "store", "typed", "validators"]
+"named.india.kyc" = ["errors", "pattern", "store", "typed", "validators"]
+"named.india.postal" = ["errors", "pattern", "store", "typed", "validators"]
+"named.india.registry" = ["errors", "pattern", "store", "typed", "validators"]
+"named.mexico.bank" = ["errors", "pattern", "store", "typed", "validators"]
+"named.mexico.kyc" = ["errors", "pattern", "store", "typed", "validators"]
+"named.portal" = ["errors", "pattern", "store", "typed", "validators"]
+"named.uk.bank" = ["errors", "pattern", "store", "typed", "validators"]
+"named.uk.kyc" = ["errors", "pattern", "store", "typed", "validators"]
+"named.uk.postal" = ["errors", "pattern", "store", "typed", "validators"]
+"named.us.bank" = ["errors", "pattern", "store", "typed", "validators"]
+"named.us.kyc" = ["errors", "pattern", "store", "typed", "validators"]
+"named.us.market" = ["errors", "pattern", "store", "typed", "validators"]
+"named.us.postal" = ["errors", "pattern", "store", "typed", "validators"]

@@ -1,0 +1,36 @@
+{
+ "docs/reference/validator.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Digit"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:IntegerValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:StringValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:UUIDValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:ValidationErrors"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Validator"
+   }
+  ]
+ }
+}

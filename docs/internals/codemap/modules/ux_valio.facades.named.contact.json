@@ -1,0 +1,177 @@
+{
+ "ux_valio.facades.named.contact": {
+  "consumers": [
+   "docs/how-to/typed-dict.md",
+   "examples/invite.py",
+   "examples/kyc.py",
+   "examples/signup.py",
+   "examples/storefront.py",
+   "tests/test_collect_all.py",
+   "tests/test_descriptor_lifecycle.py",
+   "tests/test_named_validate_once.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_phone_number.py",
+   "tests/test_product_surface.py",
+   "tests/test_real_world_use.py",
+   "tests/test_saas_commerce_facades.py",
+   "tests/test_sealed_hangs.py",
+   "tests/test_typed_dict_schema.py",
+   "tests/test_typed_facades.py",
+   "tests/test_validator_compose.py"
+  ],
+  "doc": "How to reach (email, phone, URL, hostname). Parallel to portal.",
+  "exported_as": [
+   "ux_valio:EmailValidator",
+   "ux_valio:HostnameValidator",
+   "ux_valio:PhoneNumberValidator",
+   "ux_valio:URLValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {
+    "phonenumbers": [
+     "phonenumbers"
+    ]
+   },
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing",
+     "urllib.parse"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed",
+    "ux_valio.pattern",
+    "ux_valio.validators.leaves"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.contact",
+  "path": "ux_valio/facades/named/contact.py",
+  "public": [
+   "EmailValidator",
+   "HostnameValidator",
+   "PhoneNumberValidator",
+   "URLValidator"
+  ],
+  "symbols": {
+   "EmailValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Addr-spec identity of the **whole** string (fullmatch).",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: Any=_EMAIL_PATTERN, **kwargs: Any) -> None"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "HostnameValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "DNS hostname identity (no scheme). Complements ``URLValidator``.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_hostname": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "PhoneNumberValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Valid number for an explicit ``region=``.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, *, region: str, **kwargs: Any) -> None"
+     },
+     "_require_phonenumbers": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Load the optional ``phonenumbers`` engine. No carrier / geocoder network.",
+      "kind": "function",
+      "signature": "()"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     },
+     "_validate_phone_number": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "URLValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "URL identity: scheme + netloc (stdlib ``urlparse``).",
+    "kind": "class",
+    "methods": {
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

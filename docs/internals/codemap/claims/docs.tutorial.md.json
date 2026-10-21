@@ -1,0 +1,51 @@
+{
+ "docs/tutorial.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:AllOf"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Digit"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:GSTINValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:IBANValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:IntegerValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Pattern"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:SetOf"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:StringValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Validator"
+   }
+  ]
+ }
+}

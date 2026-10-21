@@ -1,0 +1,75 @@
+{
+ "ux_valio.facades.named.finance.currency": {
+  "consumers": [
+   "examples/storefront.py",
+   "tests/test_saas_commerce_facades.py"
+  ],
+  "doc": "ISO 4217 alpha currency.",
+  "exported_as": [
+   "ux_valio:CurrencyCodeValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.finance"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.finance.currency",
+  "path": "ux_valio/facades/named/finance/currency.py",
+  "public": [
+   "CurrencyCodeValidator"
+  ],
+  "symbols": {
+   "CurrencyCodeValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "ISO 4217 alpha (``INR``, ``USD``). Stores uppercase.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_currency": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

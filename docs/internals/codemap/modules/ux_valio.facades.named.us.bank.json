@@ -1,0 +1,74 @@
+{
+ "ux_valio.facades.named.us.bank": {
+  "consumers": [
+   "tests/test_saas_commerce_facades.py"
+  ],
+  "doc": "US bank rail (ABA routing).",
+  "exported_as": [
+   "ux_valio:ABARoutingValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.us"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.us.bank",
+  "path": "ux_valio/facades/named/us/bank.py",
+  "public": [
+   "ABARoutingValidator"
+  ],
+  "symbols": {
+   "ABARoutingValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "US ABA routing number. Complements ``IFSCValidator``.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_aba": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

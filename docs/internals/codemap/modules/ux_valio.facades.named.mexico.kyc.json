@@ -1,0 +1,83 @@
+{
+ "ux_valio.facades.named.mexico.kyc": {
+  "consumers": [
+   "tests/test_onboarding_kyc.py"
+  ],
+  "doc": "Mexico tax identity (RFC).",
+  "exported_as": [
+   "ux_valio:MexicoRFCValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.mexico"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.mexico.kyc",
+  "path": "ux_valio/facades/named/mexico/kyc.py",
+  "public": [
+   "MexicoRFCValidator"
+  ],
+  "symbols": {
+   "MexicoRFCValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Mexican RFC: 12 (moral) or 13 (física) ∩ SAT check digit.",
+    "kind": "class",
+    "methods": {
+     "_check_digit": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(body: str) -> str"
+     },
+     "_is_valid_rfc": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

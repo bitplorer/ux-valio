@@ -1,0 +1,370 @@
+{
+ "ux_valio.validators.leaves": {
+  "consumers": [
+   "docs/how-to/compose.md",
+   "docs/how-to/logging.md",
+   "docs/reference/pattern.md",
+   "tests/test_bound_honesty.py",
+   "tests/test_choice_honesty.py",
+   "tests/test_collect_all.py",
+   "tests/test_compose_hooks.py",
+   "tests/test_compose_not_inherit.py",
+   "tests/test_descriptor_lifecycle.py",
+   "tests/test_falsy_defaults.py",
+   "tests/test_generics_honesty.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_path_fail_closed.py",
+   "tests/test_pattern_findall.py",
+   "tests/test_pattern_package.py",
+   "tests/test_sealed_hangs.py",
+   "tests/test_typed_dict_schema.py",
+   "tests/test_validator_compose.py",
+   "tests/typing/field_str.py"
+  ],
+  "doc": "Single-concern validator leaves. Each leaf owns its validate methods.",
+  "exported_as": [
+   "ux_valio:ChoiceValidator",
+   "ux_valio:MultipleValidator",
+   "ux_valio:PatternValidator",
+   "ux_valio:ReassignValidator",
+   "ux_valio:RequiredValidator",
+   "ux_valio:TypeValidator"
+  ],
+  "features": [
+   "concern-leaves",
+   "type-door"
+  ],
+  "imported_by": {
+   "function_level": [
+    "ux_valio.validators.base"
+   ],
+   "module_level": [
+    "ux_valio.facades.named.contact",
+    "ux_valio.validators",
+    "ux_valio.validators._native",
+    "ux_valio.validators.facade"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "collections.abc",
+     "re",
+     "types",
+     "typing",
+     "weakref"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.errors",
+    "ux_valio.pattern",
+    "ux_valio.validators.base",
+    "ux_valio.validators.bounds"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "validators",
+  "path": "ux_valio/validators/leaves.py",
+  "public": [
+   "ChoiceValidator",
+   "MultipleValidator",
+   "PatternValidator",
+   "ReassignValidator",
+   "RequiredValidator",
+   "TypeValidator",
+   "is_instance_of"
+  ],
+  "symbols": {
+   "ChoiceValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, in_choice: Any=None, not_in_choice: Any=None, **kwargs: Any) -> None"
+     },
+     "_reject_non_container": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Choice values must support ``in``. ``None`` is unspecified.",
+      "kind": "function",
+      "signature": "(label: str, container: Any) -> None"
+     },
+     "_validate_choice": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "MultipleValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, multiple_of: Any=None, **kwargs: Any) -> None"
+     },
+     "_validate_multiple_of": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "PatternValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: Any=None, **kwargs: Any) -> None"
+     },
+     "_compiled_finder": {
+      "doc": "Return the cached ``re.Pattern`` for ``source``.",
+      "kind": "function",
+      "signature": "(self: Any, source: str | bytes) -> re.Pattern[Any]"
+     },
+     "_validate_pattern": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "ReassignValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, reassign: bool | None=None, **kwargs: Any) -> None"
+     },
+     "_notify_post_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self: Any, obj: Any) -> None"
+     },
+     "_notify_pre_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self: Any, obj: Any) -> None"
+     },
+     "_post_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self: Any, instance: Any, value: Any) -> Any"
+     },
+     "_validate_reassignment": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_watch_assignment": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self: Any, obj: Any) -> int"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "RequiredValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, required: bool | None=None, **kwargs: Any) -> None"
+     },
+     "_validate_required": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "TypeValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "Single-concern type door. ``is_instance_of`` owns the origin tables.",
+    "kind": "class",
+    "methods": {
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "_PeelFailType": {
+    "bases": [],
+    "doc": "",
+    "kind": "class",
+    "methods": {},
+    "public": false
+   },
+   "_annotated_store_type": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> Any"
+   },
+   "_check_annotated": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, args: tuple[Any, ...]) -> bool"
+   },
+   "_check_callable": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, args: tuple[Any, ...]) -> bool"
+   },
+   "_check_literal": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, args: tuple[Any, ...]) -> bool"
+   },
+   "_check_none": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, args: tuple[Any, ...]) -> bool"
+   },
+   "_check_union": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, args: tuple[Any, ...]) -> bool"
+   },
+   "_elements_match": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, args: tuple[Any, ...]) -> bool"
+   },
+   "_exact_type": {
+    "doc": "``isinstance(value, typ)`` then the same-shape matcher.",
+    "kind": "function",
+    "public": false,
+    "signature": "(typ: type, matcher: Any)"
+   },
+   "_isinstance_closed": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, target: Any) -> bool"
+   },
+   "_mapping_match": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, args: tuple[Any, ...]) -> bool"
+   },
+   "_peel_annotation": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> Any"
+   },
+   "_tuple_match": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, args: tuple[Any, ...]) -> bool"
+   },
+   "_typed_dict_key_validators": {
+    "doc": "Class-body field default, then ``Annotated`` extras. One object once.",
+    "kind": "function",
+    "public": false,
+    "signature": "(schema: Any, key: str, field_ann: Any) -> tuple[Any, ...]"
+   },
+   "_typed_dict_match": {
+    "doc": "Mapping vs TypedDict using the metaclass keys, not a second parser.",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any, annotation: Any) -> bool"
+   },
+   "_unwrap_field_annotation": {
+    "doc": "Peel ``Annotated`` and TypedDict qualifiers. Keep validator extras.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> tuple[Any, tuple[Any, ...]]"
+   },
+   "_validate_typed_dict": {
+    "doc": "Run key validators on a TypedDict mapping.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any, annotation: Any=None) -> None"
+   },
+   "is_instance_of": {
+    "doc": "Value vs annotation at set. Twin of ``is_subclass_of`` (bind).",
+    "kind": "function",
+    "public": true,
+    "signature": "(value: Any, annotation: Any) -> bool"
+   }
+  }
+ }
+}

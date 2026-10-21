@@ -1,0 +1,21 @@
+{
+ "docs/how-to/workflows.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:StringValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Validator"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio"
+   }
+  ]
+ }
+}

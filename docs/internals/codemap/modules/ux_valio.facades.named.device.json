@@ -1,0 +1,116 @@
+{
+ "ux_valio.facades.named.device": {
+  "consumers": [
+   "examples/vendor.py",
+   "tests/test_identity_facades.py",
+   "tests/test_imei.py",
+   "tests/test_origin_table_and_hooks.py"
+  ],
+  "doc": "Hardware identity (IMEI, MAC). Parallel to catalog.",
+  "exported_as": [
+   "ux_valio:IMEIValidator",
+   "ux_valio:MACAddressValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.device",
+  "path": "ux_valio/facades/named/device.py",
+  "public": [
+   "IMEIValidator",
+   "MACAddressValidator"
+  ],
+  "symbols": {
+   "IMEIValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "IMEI: 15 digits ∩ Luhn.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_imei": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_luhn_ok": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(digits: str) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "MACAddressValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "48-bit (6-octet) MAC. Stores 12 uppercase hex digits.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_mac": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

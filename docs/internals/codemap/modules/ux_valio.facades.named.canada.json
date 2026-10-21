@@ -1,0 +1,36 @@
+{
+ "ux_valio.facades.named.canada": {
+  "consumers": [],
+  "doc": "Canada statutory identity. Folder of domain layers.",
+  "exported_as": [],
+  "features": [],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {},
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.canada.kyc",
+    "ux_valio.facades.named.canada.postal"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "barrel",
+  "path": "ux_valio/facades/named/canada/__init__.py",
+  "public": [
+   "CAPostalCodeValidator",
+   "CanadianSINValidator"
+  ],
+  "symbols": {}
+ }
+}
