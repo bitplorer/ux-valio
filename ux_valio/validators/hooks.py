@@ -71,7 +71,7 @@ _TRACKED_FIELDS: weakref.WeakKeyDictionary[type, list[weakref.ref[Any]]] = (
 _ARMED_OWNERS: weakref.WeakSet[type] = weakref.WeakSet()
 
 
-def _push_owner(owner: Any, pending: list[type], seen: set[type]) -> None:
+def _push_owner(owner: type[object], pending: list[type], seen: set[type]) -> None:
     if not isinstance(owner, type) or owner is object or owner in seen:
         return
     seen.add(owner)
