@@ -1,0 +1,102 @@
+{
+ "ux_valio.facades.named": {
+  "consumers": [
+   "tests/test_product_surface.py"
+  ],
+  "doc": "Named identity facades, grouped by where they are used.",
+  "exported_as": [],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {},
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.canada",
+    "ux_valio.facades.named.catalog",
+    "ux_valio.facades.named.contact",
+    "ux_valio.facades.named.device",
+    "ux_valio.facades.named.expiry",
+    "ux_valio.facades.named.finance",
+    "ux_valio.facades.named.india",
+    "ux_valio.facades.named.mexico",
+    "ux_valio.facades.named.portal",
+    "ux_valio.facades.named.uk",
+    "ux_valio.facades.named.us"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "barrel",
+  "path": "ux_valio/facades/named/__init__.py",
+  "public": [
+   "ABARoutingValidator",
+   "AadhaarCardValidator",
+   "BICValidator",
+   "CAPostalCodeValidator",
+   "CINValidator",
+   "CLABEValidator",
+   "CUSIPValidator",
+   "CanadianSINValidator",
+   "CardExpiryValidator",
+   "CountryCodeValidator",
+   "CurrencyCodeValidator",
+   "DINValidator",
+   "EANValidator",
+   "EINValidator",
+   "EmailValidator",
+   "ExpiryValidator",
+   "FSSAIValidator",
+   "GSTINValidator",
+   "GTINValidator",
+   "HSNCodeValidator",
+   "HostnameValidator",
+   "IBANValidator",
+   "IFSCValidator",
+   "IMEIValidator",
+   "ISBNValidator",
+   "ISINValidator",
+   "ISSNValidator",
+   "ITINValidator",
+   "IndiaStateCodeValidator",
+   "IndianPassportValidator",
+   "LEIValidator",
+   "LLPINValidator",
+   "LocaleValidator",
+   "MACAddressValidator",
+   "MexicoRFCValidator",
+   "NINOValidator",
+   "PANCardValidator",
+   "PaymentCardValidator",
+   "PhoneNumberValidator",
+   "PinCodeValidator",
+   "SSNValidator",
+   "SemVerValidator",
+   "SlugValidator",
+   "TANValidator",
+   "TimezoneValidator",
+   "UKPostcodeValidator",
+   "UKSortCodeValidator",
+   "ULIDValidator",
+   "UPIIdValidator",
+   "URLValidator",
+   "USStateValidator",
+   "USZipCodeValidator",
+   "UdyamValidator",
+   "VINValidator",
+   "VoterIdValidator"
+  ],
+  "symbols": {}
+ }
+}

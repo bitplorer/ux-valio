@@ -1,0 +1,75 @@
+{
+ "ux_valio.facades.named.uk.bank": {
+  "consumers": [
+   "tests/test_everyday_facades.py"
+  ],
+  "doc": "UK bank rail (sort code).",
+  "exported_as": [
+   "ux_valio:UKSortCodeValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.uk"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.uk.bank",
+  "path": "ux_valio/facades/named/uk/bank.py",
+  "public": [
+   "UKSortCodeValidator"
+  ],
+  "symbols": {
+   "UKSortCodeValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "UK sort code: 6 digits. Complements ABA / IFSC.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_sort_code": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

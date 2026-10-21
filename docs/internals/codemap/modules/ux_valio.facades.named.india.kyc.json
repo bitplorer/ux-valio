@@ -1,0 +1,206 @@
+{
+ "ux_valio.facades.named.india.kyc": {
+  "consumers": [
+   "examples/kyc.py",
+   "tests/test_aadhaar_card.py",
+   "tests/test_collect_all.py",
+   "tests/test_identity_facades.py",
+   "tests/test_named_validate_once.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_pan_card.py",
+   "tests/test_real_world_use.py"
+  ],
+  "doc": "India person KYC (Aadhaar, PAN, EPIC, passport).",
+  "exported_as": [
+   "ux_valio:AadhaarCardValidator",
+   "ux_valio:IndianPassportValidator",
+   "ux_valio:PANCardValidator",
+   "ux_valio:VoterIdValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.india"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.india.kyc",
+  "path": "ux_valio/facades/named/india/kyc.py",
+  "public": [
+   "AadhaarCardValidator",
+   "IndianPassportValidator",
+   "PANCardValidator",
+   "VoterIdValidator"
+  ],
+  "symbols": {
+   "AadhaarCardValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "UIDAI Aadhaar: 12 digits ∩ Verhoeff.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_aadhaar": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "UIDAI print form is 4-4-4. Store the 12-digit identity.",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_aadhaar": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     },
+     "_verhoeff_ok": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(digits: str) -> bool"
+     }
+    },
+    "public": true
+   },
+   "IndianPassportValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Indian passport number: 1 letter + 7 digits.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_passport": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "PANCardValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Income-tax PAN: 10-char identity ∩ Luhn mod 26.",
+    "kind": "class",
+    "methods": {
+     "_decode_pan_char": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(char: str) -> int"
+     },
+     "_is_valid_pan": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "True only when the whole string matches the PAN shape **and** Luhn mod 26.",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_luhn_mod_26": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(text: str) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "ITD letters are case-insensitive. Store the A–Z identity.",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     },
+     "_validate_pan": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "VoterIdValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Indian EPIC voter ID: 3 letters + 7 digits.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_voter_id": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

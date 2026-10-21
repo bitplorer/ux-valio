@@ -1,0 +1,107 @@
+{
+ "ux_valio.facades.named.india.bank": {
+  "consumers": [
+   "tests/test_ifsc.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_upi.py"
+  ],
+  "doc": "India payment rails (IFSC, UPI).",
+  "exported_as": [
+   "ux_valio:IFSCValidator",
+   "ux_valio:UPIIdValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.india"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.india.bank",
+  "path": "ux_valio/facades/named/india/bank.py",
+  "public": [
+   "IFSCValidator",
+   "UPIIdValidator"
+  ],
+  "symbols": {
+   "IFSCValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Indian Financial System Code: 11-char RBI identity.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_ifsc": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "UPIIdValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "UPI VPA: ``local@handle`` (NPCI identity).",
+    "kind": "class",
+    "methods": {
+     "_is_valid_upi_id": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

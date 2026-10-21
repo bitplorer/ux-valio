@@ -1,0 +1,446 @@
+{
+ "ux_valio.facades.typed": {
+  "consumers": [
+   "benches/measure_host_peer.py",
+   "benches/measure_product_setattr.py",
+   "docs/explanation/honesty.md",
+   "docs/explanation/host-peer-plan.md",
+   "docs/how-to/compose.md",
+   "docs/how-to/hang.md",
+   "docs/how-to/logging.md",
+   "docs/how-to/typed-dict.md",
+   "docs/how-to/workflows.md",
+   "docs/reference/validator.md",
+   "docs/tutorial.md",
+   "examples/catalog.py",
+   "examples/checkout.py",
+   "examples/field_logging.py",
+   "examples/filing.py",
+   "examples/invite.py",
+   "examples/signup.py",
+   "examples/validator_kwargs.py",
+   "tests/native_support.py",
+   "tests/test_annotation_conflict.py",
+   "tests/test_bound_honesty.py",
+   "tests/test_collect_all.py",
+   "tests/test_compose_hooks.py",
+   "tests/test_compose_not_inherit.py",
+   "tests/test_descriptor_honesty.py",
+   "tests/test_descriptor_lifecycle.py",
+   "tests/test_falsy_defaults.py",
+   "tests/test_hooks_namespace.py",
+   "tests/test_named_validate_once.py",
+   "tests/test_native_boolean.py",
+   "tests/test_native_bytes.py",
+   "tests/test_native_date.py",
+   "tests/test_native_datetime.py",
+   "tests/test_native_decimal.py",
+   "tests/test_native_float.py",
+   "tests/test_native_integer.py",
+   "tests/test_native_integer_enum.py",
+   "tests/test_native_ip.py",
+   "tests/test_native_layout.py",
+   "tests/test_native_path.py",
+   "tests/test_native_string.py",
+   "tests/test_native_string_enum.py",
+   "tests/test_native_uuid.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_pattern_findall.py",
+   "tests/test_product_surface.py",
+   "tests/test_readme_shape.py",
+   "tests/test_real_world_use.py",
+   "tests/test_sealed_hangs.py",
+   "tests/test_slots_unsupported.py",
+   "tests/test_straight_set.py",
+   "tests/test_typed_dict_schema.py",
+   "tests/test_typed_facades.py",
+   "tests/test_validator_compose.py",
+   "tests/test_validator_generic.py",
+   "tests/typing/field_custom.py",
+   "tests/typing/field_str.py",
+   "tests/typing/field_user.py"
+  ],
+  "doc": "Typed validator facades. No Field/Schema twin; no RGB/HSL; no HexColor public facade.",
+  "exported_as": [
+   "ux_valio:BooleanValidator",
+   "ux_valio:BytesValidator",
+   "ux_valio:DateTimeValidator",
+   "ux_valio:DateValidator",
+   "ux_valio:DecimalValidator",
+   "ux_valio:EnumValidator",
+   "ux_valio:FloatValidator",
+   "ux_valio:IPAddressValidator",
+   "ux_valio:IPv4Validator",
+   "ux_valio:IPv6Validator",
+   "ux_valio:IntegerEnumValidator",
+   "ux_valio:IntegerValidator",
+   "ux_valio:PathValidator",
+   "ux_valio:StringEnumValidator",
+   "ux_valio:StringValidator",
+   "ux_valio:UUIDValidator"
+  ],
+  "features": [
+   "typed-facades"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades",
+    "ux_valio.facades.named.canada.kyc",
+    "ux_valio.facades.named.canada.postal",
+    "ux_valio.facades.named.catalog",
+    "ux_valio.facades.named.contact",
+    "ux_valio.facades.named.device",
+    "ux_valio.facades.named.finance.card",
+    "ux_valio.facades.named.finance.currency",
+    "ux_valio.facades.named.finance.market",
+    "ux_valio.facades.named.finance.rail",
+    "ux_valio.facades.named.india.bank",
+    "ux_valio.facades.named.india.gst",
+    "ux_valio.facades.named.india.kyc",
+    "ux_valio.facades.named.india.postal",
+    "ux_valio.facades.named.india.registry",
+    "ux_valio.facades.named.mexico.bank",
+    "ux_valio.facades.named.mexico.kyc",
+    "ux_valio.facades.named.portal",
+    "ux_valio.facades.named.uk.bank",
+    "ux_valio.facades.named.uk.kyc",
+    "ux_valio.facades.named.uk.postal",
+    "ux_valio.facades.named.us.bank",
+    "ux_valio.facades.named.us.kyc",
+    "ux_valio.facades.named.us.market",
+    "ux_valio.facades.named.us.postal"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "contextvars",
+     "datetime",
+     "decimal",
+     "enum",
+     "ipaddress",
+     "pathlib",
+     "re",
+     "typing",
+     "uuid"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators.facade"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "typed",
+  "path": "ux_valio/facades/typed.py",
+  "public": [
+   "BooleanValidator",
+   "BytesValidator",
+   "DateTimeValidator",
+   "DateValidator",
+   "DecimalValidator",
+   "EnumValidator",
+   "FloatValidator",
+   "IPAddressValidator",
+   "IPv4Validator",
+   "IPv6Validator",
+   "IntegerEnumValidator",
+   "IntegerValidator",
+   "PathValidator",
+   "StringEnumValidator",
+   "StringValidator",
+   "UUIDValidator"
+  ],
+  "symbols": {
+   "BooleanValidator": {
+    "bases": [
+     "Validator[bool]"
+    ],
+    "doc": "Stored ``bool``.",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "BytesValidator": {
+    "bases": [
+     "Validator[bytes]"
+    ],
+    "doc": "Stored ``bytes``.",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "DateTimeValidator": {
+    "bases": [
+     "Validator[datetime.datetime]"
+    ],
+    "doc": "Stores ``datetime.datetime``. ISO via fromisoformat.",
+    "kind": "class",
+    "methods": {
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "DateValidator": {
+    "bases": [
+     "Validator[datetime.date]"
+    ],
+    "doc": "Stores ``datetime.date``. EU ``YYYY-MM-DD`` / IND ``DD-MM-YYYY``.",
+    "kind": "class",
+    "methods": {
+     "_parse_eu_ind_date": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(text: str) -> datetime.date | None"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "DecimalValidator": {
+    "bases": [
+     "Validator[decimal.Decimal]"
+    ],
+    "doc": "Stores ``decimal.Decimal``. Coerces Decimal strings; rejects float.",
+    "kind": "class",
+    "methods": {
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "EnumValidator": {
+    "bases": [
+     "Validator[enum.Enum]"
+    ],
+    "doc": "Stores an ``enum.Enum`` member.",
+    "kind": "class",
+    "methods": {
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "FloatValidator": {
+    "bases": [
+     "Validator[float]"
+    ],
+    "doc": "Stored ``float``.",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "IPAddressValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Stores the given string if it is IPv4 or IPv6.",
+    "kind": "class",
+    "methods": {
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "IPv4Validator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Stores the given string if it is an IPv4 address.",
+    "kind": "class",
+    "methods": {
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "IPv6Validator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Stores the given string if it is an IPv6 address.",
+    "kind": "class",
+    "methods": {
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "IntegerEnumValidator": {
+    "bases": [
+     "Validator[enum.IntEnum]"
+    ],
+    "doc": "Stores an ``enum.IntEnum`` member.",
+    "kind": "class",
+    "methods": {
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "IntegerValidator": {
+    "bases": [
+     "Validator[int]"
+    ],
+    "doc": "Stored ``int``.",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "PathValidator": {
+    "bases": [
+     "Validator[pathlib.Path]"
+    ],
+    "doc": "Stores ``pathlib.Path``. Coerces ``str``. ``path_exists=True`` is FS.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, path_exists: bool | None=None, **kwargs: Any) -> None"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "StringEnumValidator": {
+    "bases": [
+     "Validator[enum.Enum]"
+    ],
+    "doc": "Stores an ``enum.Enum`` member whose ``.value`` is ``str``.",
+    "kind": "class",
+    "methods": {
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "StringValidator": {
+    "bases": [
+     "Validator[str]"
+    ],
+    "doc": "Stored ``str``.",
+    "kind": "class",
+    "methods": {},
+    "public": true
+   },
+   "UUIDValidator": {
+    "bases": [
+     "Validator[uuid.UUID]"
+    ],
+    "doc": "Stores ``uuid.UUID``. Coerces UUID strings.",
+    "kind": "class",
+    "methods": {
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "_reject_unless_ip": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any, parser: Any, label: str) -> None"
+   },
+   "_run_with_native_ip_extra_skip": {
+    "doc": "One ``validate`` pass. An IP plan sets the extra-skip token.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, instance: Any, value: Any) -> None"
+   },
+   "_skip_native_ip_extra": {
+    "doc": "Skip the named extra when this ``validate`` already ran ``apply_ip``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> bool"
+   }
+  }
+ }
+}

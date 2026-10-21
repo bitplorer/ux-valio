@@ -1,0 +1,16 @@
+{
+ "docs/how-to/typing.md": {
+  "claims": [
+   {
+    "kind": "config",
+    "resolved": true,
+    "text": "[tool.mypy]"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio.mypy_plugin"
+   }
+  ]
+ }
+}

@@ -1,0 +1,11 @@
+{
+ "examples/README.md": {
+  "claims": [
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio"
+   }
+  ]
+ }
+}

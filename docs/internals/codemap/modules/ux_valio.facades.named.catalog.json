@@ -1,0 +1,217 @@
+{
+ "ux_valio.facades.named.catalog": {
+  "consumers": [
+   "docs/reference/named.md",
+   "examples/storefront.py",
+   "examples/vendor.py",
+   "tests/test_everyday_facades.py",
+   "tests/test_identity_facades.py",
+   "tests/test_named_validate_once.py",
+   "tests/test_saas_commerce_facades.py"
+  ],
+  "doc": "Goods identity (ISBN/ISSN/EAN/GTIN/VIN). Parallel to finance/india.",
+  "exported_as": [
+   "ux_valio:EANValidator",
+   "ux_valio:GTINValidator",
+   "ux_valio:ISBNValidator",
+   "ux_valio:ISSNValidator",
+   "ux_valio:VINValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.catalog",
+  "path": "ux_valio/facades/named/catalog.py",
+  "public": [
+   "EANValidator",
+   "GTINValidator",
+   "ISBNValidator",
+   "ISSNValidator",
+   "VINValidator"
+  ],
+  "symbols": {
+   "EANValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "EAN-13: 13 digits ∩ GS1 check.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_ean": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "GTINValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "GTIN-8 / UPC-A (12) / EAN-13 / GTIN-14 ∩ GS1 check.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_gtin": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "ISBNValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "ISBN-10 (mod 11, trailing ``X``) or ISBN-13 (978/979 ∩ EAN check).",
+    "kind": "class",
+    "methods": {
+     "_is_valid_isbn": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_isbn10_ok": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(digits: str) -> bool"
+     },
+     "_isbn13_ok": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(digits: str) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "ISSNValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "ISSN: 8 chars ∩ mod-11 (trailing ``X``). Complements ISBN.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_issn": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "VINValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Vehicle identification number: ISO 3779, 17 chars ∩ check digit.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_vin": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

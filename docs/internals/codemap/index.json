@@ -1,0 +1,1069 @@
+{
+ "assets": {},
+ "coupling": {
+  "mypy": {
+   "distinct_names": 6,
+   "hard_coupling": [
+    "isinstance ux_valio.mypy_plugin(mypy.nodes:TypeInfo)",
+    "subclass ux_valio.mypy_plugin.UxValioPlugin(mypy.plugin:Plugin)"
+   ],
+   "import_sites": 3,
+   "importing_modules": [
+    "ux_valio.mypy_plugin"
+   ],
+   "port_candidates": [
+    "mypy.plugin:FunctionContext",
+    "mypy.types:Type"
+   ]
+  },
+  "phonenumbers": {
+   "distinct_names": 3,
+   "hard_coupling": [],
+   "import_sites": 1,
+   "importing_modules": [
+    "ux_valio.facades.named.contact"
+   ],
+   "port_candidates": []
+  },
+  "ux-valio-native": {
+   "distinct_names": 1,
+   "hard_coupling": [],
+   "import_sites": 1,
+   "importing_modules": [
+    "ux_valio.validators._native"
+   ],
+   "port_candidates": []
+  }
+ },
+ "cycles_module_level": [],
+ "doc_claims": {
+  "code_ahead": [],
+  "docs_ahead": [
+   "README.md: module `ux_valio.regexer`",
+   "docs/reference/api.md: module `ux_valio.regexer`"
+  ],
+  "summary": {
+   "claims": 67,
+   "docs": 21,
+   "unresolved": 2
+  }
+ },
+ "domain": {
+  "depends_on": {
+   "mypy": {
+    "imports": [
+     "mypy"
+    ],
+    "names": [
+     "mypy.nodes:TypeInfo",
+     "mypy.plugin:FunctionContext",
+     "mypy.plugin:Plugin",
+     "mypy.types:AnyType",
+     "mypy.types:Type",
+     "mypy.types:TypeOfAny"
+    ]
+   },
+   "phonenumbers": {
+    "imports": [
+     "phonenumbers"
+    ],
+    "names": [
+     "phonenumbers:NumberParseException",
+     "phonenumbers:is_valid_number_for_region",
+     "phonenumbers:parse"
+    ]
+   },
+   "ux-valio-native": {
+    "imports": [
+     "ux_valio_native"
+    ],
+    "names": [
+     "ux_valio_native"
+    ]
+   }
+  },
+  "domain": "ux-valio is the single source of truth for dataclass field validation: the validator is the field default descriptor, from type door and bounds to named identity checks.",
+  "non_goals": {
+   "color-values": {
+    "keywords": [
+     "color",
+     "colour",
+     "hsl",
+     "rgb"
+    ],
+    "owner": "none (not shipped)"
+   },
+   "html-trees": {
+    "keywords": [
+     "dom",
+     "html",
+     "render"
+    ],
+    "owner": "ux-dom"
+   },
+   "intent-cap-result": {
+    "keywords": [
+     "cap",
+     "channel",
+     "intent",
+     "result"
+    ],
+    "owner": "ux-channel"
+   },
+   "product-behavior": {
+    "keywords": [
+     "action",
+     "dispatch",
+     "morph"
+    ],
+    "owner": "ux-behavior"
+   },
+   "schema-model-twin": {
+    "keywords": [
+     "basemodel",
+     "model",
+     "schema"
+    ],
+    "owner": "none (TypedDict is the schema)"
+   }
+  },
+  "owns": {
+   "annotation-type-door": {
+    "modules": [
+     "ux_valio.validators.leaves"
+    ],
+    "symbols": [
+     "ux_valio.validators.leaves:is_instance_of"
+    ]
+   },
+   "field-default-descriptor": {
+    "modules": [
+     "ux_valio.descriptor",
+     "ux_valio.validators.base",
+     "ux_valio.validators.facade"
+    ],
+    "symbols": [
+     "ux_valio.descriptor:Property",
+     "ux_valio:ValidateProperty",
+     "ux_valio:Validator"
+    ]
+   },
+   "field-hangs": {
+    "modules": [
+     "ux_valio.validators.async_bridge",
+     "ux_valio.validators.hooks"
+    ],
+    "symbols": [
+     "ux_valio.validators.hooks:HookHost"
+    ]
+   },
+   "field-validation-errors": {
+    "modules": [
+     "ux_valio.errors"
+    ],
+    "symbols": [
+     "ux_valio:ValidationErrors"
+    ]
+   },
+   "identity-validators": {
+    "modules": [
+     "ux_valio.facades.named"
+    ],
+    "symbols": [
+     "ux_valio:EmailValidator",
+     "ux_valio:GSTINValidator",
+     "ux_valio:IBANValidator"
+    ]
+   },
+   "pattern-algebra": {
+    "modules": [
+     "ux_valio.pattern",
+     "ux_valio.pattern._algebra"
+    ],
+    "symbols": [
+     "ux_valio:Pattern",
+     "ux_valio:SetOf"
+    ]
+   },
+   "typed-field-facades": {
+    "modules": [
+     "ux_valio.facades.typed"
+    ],
+    "symbols": [
+     "ux_valio:DateValidator",
+     "ux_valio:IntegerValidator",
+     "ux_valio:StringValidator"
+    ]
+   },
+   "validator-composition": {
+    "modules": [
+     "ux_valio.validators.base"
+    ],
+    "symbols": [
+     "ux_valio:AllOf",
+     "ux_valio:AnyOf"
+    ]
+   }
+  },
+  "public_api": [
+   "ux_valio:AllOf",
+   "ux_valio:AnyOf",
+   "ux_valio:BooleanValidator",
+   "ux_valio:ChoiceValidator",
+   "ux_valio:DateValidator",
+   "ux_valio:EmailValidator",
+   "ux_valio:EnumValidator",
+   "ux_valio:FloatValidator",
+   "ux_valio:GSTINValidator",
+   "ux_valio:IBANValidator",
+   "ux_valio:IntegerEnumValidator",
+   "ux_valio:IntegerValidator",
+   "ux_valio:LengthValidator",
+   "ux_valio:Pattern",
+   "ux_valio:PatternType",
+   "ux_valio:PatternValidator",
+   "ux_valio:SetOf",
+   "ux_valio:StringEnumValidator",
+   "ux_valio:StringValidator",
+   "ux_valio:ValidateProperty",
+   "ux_valio:ValidationErrors",
+   "ux_valio:Validator"
+  ]
+ },
+ "entry_points": {
+  "asgi": [],
+  "entry_points": {},
+  "main_modules": [],
+  "scripts": {}
+ },
+ "external_usage": {
+  "mypy": [
+   "mypy.nodes:TypeInfo",
+   "mypy.plugin:FunctionContext",
+   "mypy.plugin:Plugin",
+   "mypy.types:AnyType",
+   "mypy.types:Type",
+   "mypy.types:TypeOfAny"
+  ],
+  "phonenumbers": [
+   "phonenumbers:NumberParseException",
+   "phonenumbers:is_valid_number_for_region",
+   "phonenumbers:parse"
+  ],
+  "ux-valio-native": [
+   "ux_valio_native"
+  ]
+ },
+ "features": {
+  "concern-leaves": {
+   "docs": [
+    "docs/reference/validator.md"
+   ],
+   "modules": [
+    "ux_valio.validators.bounds",
+    "ux_valio.validators.leaves",
+    "ux_valio.validators.length",
+    "ux_valio.validators.value"
+   ],
+   "purpose": "Single-concern validators (type, required, pattern, reassign, multiple, choice, length, value bounds) that compose instead of multiple-inheriting.",
+   "symbols": [
+    "ux_valio.validators.bounds:read_bound",
+    "ux_valio.validators.leaves:ChoiceValidator",
+    "ux_valio.validators.leaves:PatternValidator",
+    "ux_valio.validators.leaves:RequiredValidator",
+    "ux_valio.validators.leaves:TypeValidator",
+    "ux_valio.validators.length:LengthValidator",
+    "ux_valio.validators.value:ValueValidator"
+   ],
+   "tests": [
+    "tests/test_bound_honesty.py",
+    "tests/test_choice_honesty.py",
+    "tests/test_path_fail_closed.py"
+   ]
+  },
+  "field-store": {
+   "docs": [
+    "docs/explanation/honesty.md",
+    "docs/how-to/logging.md"
+   ],
+   "modules": [
+    "ux_valio.descriptor",
+    "ux_valio.errors"
+   ],
+   "purpose": "Property: the descriptor that is the dataclass field default; binds to its owner, stores on instance.__dict__, logs per field.",
+   "symbols": [
+    "ux_valio.descriptor:Property",
+    "ux_valio.descriptor:Property.__set_name__",
+    "ux_valio.descriptor:Property._bind_field_logger",
+    "ux_valio.descriptor:is_subclass_of",
+    "ux_valio.errors:ValidationErrors"
+   ],
+   "tests": [
+    "tests/test_descriptor_honesty.py",
+    "tests/test_descriptor_lifecycle.py",
+    "tests/test_falsy_defaults.py",
+    "tests/test_slots_unsupported.py"
+   ]
+  },
+  "hangs": {
+   "docs": [
+    "docs/how-to/hang.md"
+   ],
+   "modules": [
+    "ux_valio.validators.async_bridge",
+    "ux_valio.validators.hooks"
+   ],
+   "purpose": "Hang pre_validate / post_validate / post_set / validator and task_* on the field name; set-phase hangs compile per owner; async via the nest-safe bridge.",
+   "symbols": [
+    "ux_valio.validators.async_bridge:nest_safe_bridge",
+    "ux_valio.validators.hooks:HookHost",
+    "ux_valio.validators.hooks:HookHost.post_set",
+    "ux_valio.validators.hooks:HookHost.pre_validate",
+    "ux_valio.validators.hooks:HookHost.task_post_set",
+    "ux_valio.validators.hooks:HookHost.validator",
+    "ux_valio.validators.hooks:HookHost.wait_tasks"
+   ],
+   "tests": [
+    "tests/test_async_callables.py",
+    "tests/test_compose_hooks.py",
+    "tests/test_hooks_namespace.py",
+    "tests/test_processors_then_tasks.py",
+    "tests/test_sealed_hangs.py"
+   ]
+  },
+  "named-identities": {
+   "docs": [
+    "docs/reference/named.md"
+   ],
+   "modules": [
+    "ux_valio.facades",
+    "ux_valio.facades.named",
+    "ux_valio.facades.named.canada.kyc",
+    "ux_valio.facades.named.canada.postal",
+    "ux_valio.facades.named.catalog",
+    "ux_valio.facades.named.contact",
+    "ux_valio.facades.named.device",
+    "ux_valio.facades.named.expiry",
+    "ux_valio.facades.named.finance.card",
+    "ux_valio.facades.named.finance.currency",
+    "ux_valio.facades.named.finance.market",
+    "ux_valio.facades.named.finance.rail",
+    "ux_valio.facades.named.india.bank",
+    "ux_valio.facades.named.india.gst",
+    "ux_valio.facades.named.india.kyc",
+    "ux_valio.facades.named.india.postal",
+    "ux_valio.facades.named.india.registry",
+    "ux_valio.facades.named.mexico.bank",
+    "ux_valio.facades.named.mexico.kyc",
+    "ux_valio.facades.named.portal",
+    "ux_valio.facades.named.uk.bank",
+    "ux_valio.facades.named.uk.kyc",
+    "ux_valio.facades.named.uk.postal",
+    "ux_valio.facades.named.us.bank",
+    "ux_valio.facades.named.us.kyc",
+    "ux_valio.facades.named.us.market",
+    "ux_valio.facades.named.us.postal"
+   ],
+   "purpose": "Identity facades per domain (India, US, UK, Canada, Mexico, finance, catalog, contact, device, portal, expiry): format identity plus checksum, stored in compact form.",
+   "symbols": [
+    "ux_valio.facades.named.contact:EmailValidator",
+    "ux_valio.facades.named.contact:PhoneNumberValidator",
+    "ux_valio.facades.named.expiry:ExpiryValidator",
+    "ux_valio.facades.named.finance.card:PaymentCardValidator",
+    "ux_valio.facades.named.finance.rail:IBANValidator",
+    "ux_valio.facades.named.india.gst:GSTINValidator",
+    "ux_valio.facades.named.india.kyc:AadhaarCardValidator",
+    "ux_valio.facades.named.india.kyc:PANCardValidator"
+   ],
+   "tests": [
+    "tests/test_aadhaar_card.py",
+    "tests/test_expiry_validator.py",
+    "tests/test_gstin.py",
+    "tests/test_iban.py",
+    "tests/test_identity_facades.py",
+    "tests/test_named_validate_once.py",
+    "tests/test_pan_card.py",
+    "tests/test_payment_card.py",
+    "tests/test_phone_number.py",
+    "tests/test_saas_commerce_facades.py"
+   ]
+  },
+  "native-peer": {
+   "docs": [
+    "docs/explanation/host-peer-plan.md",
+    "docs/explanation/performance.md"
+   ],
+   "modules": [
+    "ux_valio.validators._native"
+   ],
+   "purpose": "Optional ux-valio[native] apply: the host decides and compiles a closed plan at bind, the PyO3 peer applies it; stdlib Python stays the default.",
+   "symbols": [
+    "ux_valio.validators._native:_FamilyDoor",
+    "ux_valio.validators._native:apply_native_bounds",
+    "ux_valio.validators._native:bind_native_plan"
+   ],
+   "tests": [
+    "tests/test_host_peer_measure.py",
+    "tests/test_native_integer.py",
+    "tests/test_native_ip.py",
+    "tests/test_native_layout.py",
+    "tests/test_native_string.py"
+   ]
+  },
+  "pattern-algebra": {
+   "docs": [
+    "docs/reference/pattern.md"
+   ],
+   "modules": [
+    "ux_valio.pattern",
+    "ux_valio.pattern._algebra",
+    "ux_valio.pattern._atoms",
+    "ux_valio.pattern._lookaround",
+    "ux_valio.pattern._sets"
+   ],
+   "purpose": "PatternType algebra (atoms, sets, lookarounds, & / |) compiled to findall regexes; re-exported from the package root.",
+   "symbols": [
+    "ux_valio.pattern._algebra:Pattern",
+    "ux_valio.pattern._algebra:PatternType",
+    "ux_valio.pattern._atoms:Digit",
+    "ux_valio.pattern._atoms:StartsWith",
+    "ux_valio.pattern._lookaround:IfPrecededBy",
+    "ux_valio.pattern._sets:SetOf"
+   ],
+   "tests": [
+    "tests/test_pattern_findall.py",
+    "tests/test_pattern_package.py"
+   ]
+  },
+  "type-door": {
+   "docs": [
+    "docs/how-to/typed-dict.md",
+    "docs/reference/validator.md"
+   ],
+   "modules": [
+    "ux_valio.validators.base",
+    "ux_valio.validators.leaves"
+   ],
+   "purpose": "Annotation checks: is_instance_of over origin tables, Validator[T] subscripts and TypedDict as the schema.",
+   "symbols": [
+    "ux_valio.validators.base:_register_annotation_checker",
+    "ux_valio.validators.leaves:_validate_typed_dict",
+    "ux_valio.validators.leaves:is_instance_of"
+   ],
+   "tests": [
+    "tests/test_generics_honesty.py",
+    "tests/test_origin_table_and_hooks.py",
+    "tests/test_typed_dict_schema.py",
+    "tests/test_validator_generic.py"
+   ]
+  },
+  "typed-facades": {
+   "docs": [
+    "docs/reference/typed.md"
+   ],
+   "modules": [
+    "ux_valio.facades.typed"
+   ],
+   "purpose": "Primitive field-default facades (int, str, bool, float, Decimal, bytes, date, datetime, UUID, Path, IP, enums); coercing facades parse str on assignment.",
+   "symbols": [
+    "ux_valio.facades.typed:DateValidator",
+    "ux_valio.facades.typed:DecimalValidator",
+    "ux_valio.facades.typed:IPv4Validator",
+    "ux_valio.facades.typed:IntegerValidator",
+    "ux_valio.facades.typed:PathValidator",
+    "ux_valio.facades.typed:StringEnumValidator",
+    "ux_valio.facades.typed:StringValidator"
+   ],
+   "tests": [
+    "tests/test_everyday_facades.py",
+    "tests/test_typed_facades.py"
+   ]
+  },
+  "typing-plugin": {
+   "docs": [
+    "docs/how-to/typing.md"
+   ],
+   "modules": [
+    "ux_valio.mypy_plugin"
+   ],
+   "purpose": "mypy plugin that types facade construction as Any, so `name: str = StringValidator()` type-checks.",
+   "symbols": [
+    "ux_valio.mypy_plugin:UxValioPlugin",
+    "ux_valio.mypy_plugin:plugin"
+   ],
+   "tests": [
+    "tests/test_field_default_typing.py"
+   ]
+  },
+  "validate-door": {
+   "docs": [
+    "docs/how-to/compose.md",
+    "docs/reference/validator.md"
+   ],
+   "modules": [
+    "ux_valio.validators",
+    "ux_valio.validators.base",
+    "ux_valio.validators.facade"
+   ],
+   "purpose": "ValidateProperty and the Validator facade: the specified validation path, compiled once, composed with & / | into AllOf / AnyOf.",
+   "symbols": [
+    "ux_valio.validators.base:AllOf",
+    "ux_valio.validators.base:AnyOf",
+    "ux_valio.validators.base:ValidateProperty",
+    "ux_valio.validators.base:ValidateProperty.__and__",
+    "ux_valio.validators.base:ValidateProperty.__or__",
+    "ux_valio.validators.facade:ValidationPath",
+    "ux_valio.validators.facade:Validator"
+   ],
+   "tests": [
+    "tests/test_annotation_conflict.py",
+    "tests/test_collect_all.py",
+    "tests/test_compose_not_inherit.py",
+    "tests/test_straight_set.py",
+    "tests/test_validator_compose.py"
+   ]
+  }
+ },
+ "generator": {
+  "name": "codemap",
+  "sha256": "b8fc853ee27b634ac463b630ef3935419a136b806f6ee80779eb116753c1dd84",
+  "version": "2.0.0"
+ },
+ "layer_exceptions": [],
+ "layer_graph": {
+  "barrel": [
+   "named.canada.kyc",
+   "named.canada.postal",
+   "named.catalog",
+   "named.contact",
+   "named.device",
+   "named.expiry",
+   "named.finance.card",
+   "named.finance.currency",
+   "named.finance.market",
+   "named.finance.rail",
+   "named.india.bank",
+   "named.india.gst",
+   "named.india.kyc",
+   "named.india.postal",
+   "named.india.registry",
+   "named.mexico.bank",
+   "named.mexico.kyc",
+   "named.portal",
+   "named.uk.bank",
+   "named.uk.kyc",
+   "named.uk.postal",
+   "named.us.bank",
+   "named.us.kyc",
+   "named.us.market",
+   "named.us.postal",
+   "typed"
+  ],
+  "named.canada.kyc": [
+   "typed"
+  ],
+  "named.canada.postal": [
+   "typed"
+  ],
+  "named.catalog": [
+   "typed"
+  ],
+  "named.contact": [
+   "pattern",
+   "typed",
+   "validators"
+  ],
+  "named.device": [
+   "typed"
+  ],
+  "named.expiry": [
+   "validators"
+  ],
+  "named.finance.card": [
+   "typed"
+  ],
+  "named.finance.currency": [
+   "typed"
+  ],
+  "named.finance.market": [
+   "typed"
+  ],
+  "named.finance.rail": [
+   "typed"
+  ],
+  "named.india.bank": [
+   "typed"
+  ],
+  "named.india.gst": [
+   "typed"
+  ],
+  "named.india.kyc": [
+   "typed"
+  ],
+  "named.india.postal": [
+   "typed"
+  ],
+  "named.india.registry": [
+   "typed"
+  ],
+  "named.mexico.bank": [
+   "typed"
+  ],
+  "named.mexico.kyc": [
+   "typed"
+  ],
+  "named.portal": [
+   "typed"
+  ],
+  "named.uk.bank": [
+   "typed"
+  ],
+  "named.uk.kyc": [
+   "typed"
+  ],
+  "named.uk.postal": [
+   "typed"
+  ],
+  "named.us.bank": [
+   "typed"
+  ],
+  "named.us.kyc": [
+   "typed"
+  ],
+  "named.us.market": [
+   "typed"
+  ],
+  "named.us.postal": [
+   "typed"
+  ],
+  "root": [
+   "barrel",
+   "errors",
+   "pattern",
+   "store",
+   "validators"
+  ],
+  "store": [
+   "errors"
+  ],
+  "typed": [
+   "validators"
+  ],
+  "validators": [
+   "errors",
+   "pattern",
+   "store"
+  ]
+ },
+ "layer_rules": {
+  "errors": [],
+  "named.canada.kyc": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.canada.postal": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.catalog": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.contact": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.device": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.expiry": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.finance.card": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.finance.currency": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.finance.market": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.finance.rail": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.india.bank": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.india.gst": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.india.kyc": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.india.postal": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.india.registry": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.mexico.bank": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.mexico.kyc": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.portal": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.uk.bank": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.uk.kyc": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.uk.postal": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.us.bank": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.us.kyc": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.us.market": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "named.us.postal": [
+   "errors",
+   "pattern",
+   "store",
+   "typed",
+   "validators"
+  ],
+  "pattern": [],
+  "store": [
+   "errors"
+  ],
+  "tooling": [],
+  "typed": [
+   "validators"
+  ],
+  "validators": [
+   "errors",
+   "pattern",
+   "store"
+  ]
+ },
+ "layer_violations": [],
+ "layers": {
+  "ux_valio": "root",
+  "ux_valio.descriptor": "store",
+  "ux_valio.errors": "errors",
+  "ux_valio.facades": "barrel",
+  "ux_valio.facades.named": "barrel",
+  "ux_valio.facades.named.canada": "barrel",
+  "ux_valio.facades.named.canada.kyc": "named.canada.kyc",
+  "ux_valio.facades.named.canada.postal": "named.canada.postal",
+  "ux_valio.facades.named.catalog": "named.catalog",
+  "ux_valio.facades.named.contact": "named.contact",
+  "ux_valio.facades.named.device": "named.device",
+  "ux_valio.facades.named.expiry": "named.expiry",
+  "ux_valio.facades.named.finance": "barrel",
+  "ux_valio.facades.named.finance.card": "named.finance.card",
+  "ux_valio.facades.named.finance.currency": "named.finance.currency",
+  "ux_valio.facades.named.finance.market": "named.finance.market",
+  "ux_valio.facades.named.finance.rail": "named.finance.rail",
+  "ux_valio.facades.named.india": "barrel",
+  "ux_valio.facades.named.india.bank": "named.india.bank",
+  "ux_valio.facades.named.india.gst": "named.india.gst",
+  "ux_valio.facades.named.india.kyc": "named.india.kyc",
+  "ux_valio.facades.named.india.postal": "named.india.postal",
+  "ux_valio.facades.named.india.registry": "named.india.registry",
+  "ux_valio.facades.named.mexico": "barrel",
+  "ux_valio.facades.named.mexico.bank": "named.mexico.bank",
+  "ux_valio.facades.named.mexico.kyc": "named.mexico.kyc",
+  "ux_valio.facades.named.portal": "named.portal",
+  "ux_valio.facades.named.uk": "barrel",
+  "ux_valio.facades.named.uk.bank": "named.uk.bank",
+  "ux_valio.facades.named.uk.kyc": "named.uk.kyc",
+  "ux_valio.facades.named.uk.postal": "named.uk.postal",
+  "ux_valio.facades.named.us": "barrel",
+  "ux_valio.facades.named.us.bank": "named.us.bank",
+  "ux_valio.facades.named.us.kyc": "named.us.kyc",
+  "ux_valio.facades.named.us.market": "named.us.market",
+  "ux_valio.facades.named.us.postal": "named.us.postal",
+  "ux_valio.facades.typed": "typed",
+  "ux_valio.mypy_plugin": "tooling",
+  "ux_valio.pattern": "pattern",
+  "ux_valio.validators": "validators"
+ },
+ "modules": {
+  "ux_valio": "root",
+  "ux_valio.descriptor": "store",
+  "ux_valio.errors": "errors",
+  "ux_valio.facades": "barrel",
+  "ux_valio.facades.named": "barrel",
+  "ux_valio.facades.named.canada": "barrel",
+  "ux_valio.facades.named.canada.kyc": "named.canada.kyc",
+  "ux_valio.facades.named.canada.postal": "named.canada.postal",
+  "ux_valio.facades.named.catalog": "named.catalog",
+  "ux_valio.facades.named.contact": "named.contact",
+  "ux_valio.facades.named.device": "named.device",
+  "ux_valio.facades.named.expiry": "named.expiry",
+  "ux_valio.facades.named.finance": "barrel",
+  "ux_valio.facades.named.finance.card": "named.finance.card",
+  "ux_valio.facades.named.finance.currency": "named.finance.currency",
+  "ux_valio.facades.named.finance.market": "named.finance.market",
+  "ux_valio.facades.named.finance.rail": "named.finance.rail",
+  "ux_valio.facades.named.india": "barrel",
+  "ux_valio.facades.named.india.bank": "named.india.bank",
+  "ux_valio.facades.named.india.gst": "named.india.gst",
+  "ux_valio.facades.named.india.kyc": "named.india.kyc",
+  "ux_valio.facades.named.india.postal": "named.india.postal",
+  "ux_valio.facades.named.india.registry": "named.india.registry",
+  "ux_valio.facades.named.mexico": "barrel",
+  "ux_valio.facades.named.mexico.bank": "named.mexico.bank",
+  "ux_valio.facades.named.mexico.kyc": "named.mexico.kyc",
+  "ux_valio.facades.named.portal": "named.portal",
+  "ux_valio.facades.named.uk": "barrel",
+  "ux_valio.facades.named.uk.bank": "named.uk.bank",
+  "ux_valio.facades.named.uk.kyc": "named.uk.kyc",
+  "ux_valio.facades.named.uk.postal": "named.uk.postal",
+  "ux_valio.facades.named.us": "barrel",
+  "ux_valio.facades.named.us.bank": "named.us.bank",
+  "ux_valio.facades.named.us.kyc": "named.us.kyc",
+  "ux_valio.facades.named.us.market": "named.us.market",
+  "ux_valio.facades.named.us.postal": "named.us.postal",
+  "ux_valio.facades.typed": "typed",
+  "ux_valio.mypy_plugin": "tooling",
+  "ux_valio.pattern": "pattern",
+  "ux_valio.pattern._algebra": "pattern",
+  "ux_valio.pattern._atoms": "pattern",
+  "ux_valio.pattern._lookaround": "pattern",
+  "ux_valio.pattern._sets": "pattern",
+  "ux_valio.validators": "validators",
+  "ux_valio.validators._native": "validators",
+  "ux_valio.validators.async_bridge": "validators",
+  "ux_valio.validators.base": "validators",
+  "ux_valio.validators.bounds": "validators",
+  "ux_valio.validators.facade": "validators",
+  "ux_valio.validators.hooks": "validators",
+  "ux_valio.validators.leaves": "validators",
+  "ux_valio.validators.length": "validators",
+  "ux_valio.validators.value": "validators"
+ },
+ "narrative_docs": [
+  "docs/explanation/layering.md"
+ ],
+ "non_goal_warnings": [],
+ "packages": {
+  "ux_valio": "ux_valio"
+ },
+ "projects": [
+  "pyproject.toml"
+ ],
+ "public_api": {
+  "ux_valio": {
+   "ABARoutingValidator": "ux_valio.facades.named.us.bank",
+   "AadhaarCardValidator": "ux_valio.facades.named.india.kyc",
+   "AllOf": "ux_valio.validators.base",
+   "AnyOf": "ux_valio.validators.base",
+   "BICValidator": "ux_valio.facades.named.finance.rail",
+   "BooleanValidator": "ux_valio.facades.typed",
+   "BytesValidator": "ux_valio.facades.typed",
+   "CAPostalCodeValidator": "ux_valio.facades.named.canada.postal",
+   "CINValidator": "ux_valio.facades.named.india.registry",
+   "CLABEValidator": "ux_valio.facades.named.mexico.bank",
+   "CUSIPValidator": "ux_valio.facades.named.us.market",
+   "CanadianSINValidator": "ux_valio.facades.named.canada.kyc",
+   "CardExpiryValidator": "ux_valio.facades.named.finance.card",
+   "ChoiceValidator": "ux_valio.validators.leaves",
+   "CountryCodeValidator": "ux_valio.facades.named.portal",
+   "CurrencyCodeValidator": "ux_valio.facades.named.finance.currency",
+   "DINValidator": "ux_valio.facades.named.india.registry",
+   "DateTimeValidator": "ux_valio.facades.typed",
+   "DateValidator": "ux_valio.facades.typed",
+   "DecimalValidator": "ux_valio.facades.typed",
+   "Digit": "ux_valio.pattern._atoms",
+   "EANValidator": "ux_valio.facades.named.catalog",
+   "EINValidator": "ux_valio.facades.named.us.kyc",
+   "EmailValidator": "ux_valio.facades.named.contact",
+   "EndsWith": "ux_valio.pattern._atoms",
+   "EnumValidator": "ux_valio.facades.typed",
+   "ExpiryValidator": "ux_valio.facades.named.expiry",
+   "FSSAIValidator": "ux_valio.facades.named.india.registry",
+   "FloatValidator": "ux_valio.facades.typed",
+   "GSTINValidator": "ux_valio.facades.named.india.gst",
+   "GTINValidator": "ux_valio.facades.named.catalog",
+   "HSNCodeValidator": "ux_valio.facades.named.india.gst",
+   "HostnameValidator": "ux_valio.facades.named.contact",
+   "IBANValidator": "ux_valio.facades.named.finance.rail",
+   "IFSCValidator": "ux_valio.facades.named.india.bank",
+   "IMEIValidator": "ux_valio.facades.named.device",
+   "IPAddressValidator": "ux_valio.facades.typed",
+   "IPv4Validator": "ux_valio.facades.typed",
+   "IPv6Validator": "ux_valio.facades.typed",
+   "ISBNValidator": "ux_valio.facades.named.catalog",
+   "ISINValidator": "ux_valio.facades.named.finance.market",
+   "ISSNValidator": "ux_valio.facades.named.catalog",
+   "ITINValidator": "ux_valio.facades.named.us.kyc",
+   "IfFollowedBy": "ux_valio.pattern._lookaround",
+   "IfNotFollowedBy": "ux_valio.pattern._lookaround",
+   "IfNotPrecededBy": "ux_valio.pattern._lookaround",
+   "IfPrecededBy": "ux_valio.pattern._lookaround",
+   "IndiaStateCodeValidator": "ux_valio.facades.named.india.postal",
+   "IndianPassportValidator": "ux_valio.facades.named.india.kyc",
+   "IntegerEnumValidator": "ux_valio.facades.typed",
+   "IntegerValidator": "ux_valio.facades.typed",
+   "LEIValidator": "ux_valio.facades.named.finance.market",
+   "LLPINValidator": "ux_valio.facades.named.india.registry",
+   "LengthValidator": "ux_valio.validators.length",
+   "LocaleValidator": "ux_valio.facades.named.portal",
+   "MACAddressValidator": "ux_valio.facades.named.device",
+   "MaxLengthValidator": "ux_valio.validators.length",
+   "MaxValueValidator": "ux_valio.validators.value",
+   "MexicoRFCValidator": "ux_valio.facades.named.mexico.kyc",
+   "MinLengthValidator": "ux_valio.validators.length",
+   "MinValueValidator": "ux_valio.validators.value",
+   "MultipleValidator": "ux_valio.validators.leaves",
+   "NINOValidator": "ux_valio.facades.named.uk.kyc",
+   "NonDigit": "ux_valio.pattern._atoms",
+   "NonWhiteSpace": "ux_valio.pattern._atoms",
+   "NonWord": "ux_valio.pattern._atoms",
+   "PANCardValidator": "ux_valio.facades.named.india.kyc",
+   "PathValidator": "ux_valio.facades.typed",
+   "Pattern": "ux_valio.pattern._algebra",
+   "PatternType": "ux_valio.pattern._algebra",
+   "PatternValidator": "ux_valio.validators.leaves",
+   "PaymentCardValidator": "ux_valio.facades.named.finance.card",
+   "PhoneNumberValidator": "ux_valio.facades.named.contact",
+   "PinCodeValidator": "ux_valio.facades.named.india.postal",
+   "Property": "ux_valio.descriptor",
+   "ReassignValidator": "ux_valio.validators.leaves",
+   "RequiredValidator": "ux_valio.validators.leaves",
+   "SSNValidator": "ux_valio.facades.named.us.kyc",
+   "SemVerValidator": "ux_valio.facades.named.portal",
+   "SetOf": "ux_valio.pattern._sets",
+   "SlugValidator": "ux_valio.facades.named.portal",
+   "StartsWith": "ux_valio.pattern._atoms",
+   "StringEnumValidator": "ux_valio.facades.typed",
+   "StringValidator": "ux_valio.facades.typed",
+   "TANValidator": "ux_valio.facades.named.india.registry",
+   "TimezoneValidator": "ux_valio.facades.named.portal",
+   "TypeValidator": "ux_valio.validators.leaves",
+   "UKPostcodeValidator": "ux_valio.facades.named.uk.postal",
+   "UKSortCodeValidator": "ux_valio.facades.named.uk.bank",
+   "ULIDValidator": "ux_valio.facades.named.portal",
+   "UPIIdValidator": "ux_valio.facades.named.india.bank",
+   "URLValidator": "ux_valio.facades.named.contact",
+   "USStateValidator": "ux_valio.facades.named.us.postal",
+   "USZipCodeValidator": "ux_valio.facades.named.us.postal",
+   "UUIDValidator": "ux_valio.facades.typed",
+   "UdyamValidator": "ux_valio.facades.named.india.registry",
+   "VINValidator": "ux_valio.facades.named.catalog",
+   "ValidateProperty": "ux_valio.validators.base",
+   "ValidationErrors": "ux_valio.errors",
+   "Validator": "ux_valio.validators.facade",
+   "ValueValidator": "ux_valio.validators.value",
+   "VoterIdValidator": "ux_valio.facades.named.india.kyc",
+   "WhiteSpace": "ux_valio.pattern._atoms",
+   "Word": "ux_valio.pattern._atoms",
+   "WordBoundary": "ux_valio.pattern._atoms",
+   "__version__": "ux_valio",
+   "wait_tasks": "ux_valio.validators.async_bridge"
+  }
+ },
+ "schema": 2
+}

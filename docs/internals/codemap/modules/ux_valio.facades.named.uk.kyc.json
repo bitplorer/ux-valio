@@ -1,0 +1,75 @@
+{
+ "ux_valio.facades.named.uk.kyc": {
+  "consumers": [
+   "tests/test_onboarding_kyc.py"
+  ],
+  "doc": "UK person KYC (NINO).",
+  "exported_as": [
+   "ux_valio:NINOValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.uk"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.uk.kyc",
+  "path": "ux_valio/facades/named/uk/kyc.py",
+  "public": [
+   "NINOValidator"
+  ],
+  "symbols": {
+   "NINOValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "UK National Insurance number.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_nino": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

@@ -1,0 +1,36 @@
+{
+ "docs/reference/pattern.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Digit"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Pattern"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:PatternValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:SetOf"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:StartsWith"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio.pattern"
+   }
+  ]
+ }
+}

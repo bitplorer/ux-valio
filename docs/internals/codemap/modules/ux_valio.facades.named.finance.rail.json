@@ -1,0 +1,120 @@
+{
+ "ux_valio.facades.named.finance.rail": {
+  "consumers": [
+   "docs/reference/named.md",
+   "docs/tutorial.md",
+   "examples/vendor.py",
+   "tests/test_address_workflow.py",
+   "tests/test_iban.py",
+   "tests/test_identity_facades.py",
+   "tests/test_named_validate_once.py",
+   "tests/test_origin_table_and_hooks.py"
+  ],
+  "doc": "International bank rails (IBAN, BIC).",
+  "exported_as": [
+   "ux_valio:BICValidator",
+   "ux_valio:IBANValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.finance"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.finance.rail",
+  "path": "ux_valio/facades/named/finance/rail.py",
+  "public": [
+   "BICValidator",
+   "IBANValidator"
+  ],
+  "symbols": {
+   "BICValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "SWIFT/BIC bank identifier (ISO 9362).",
+    "kind": "class",
+    "methods": {
+     "_is_valid_bic": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "IBANValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "IBAN: ISO 13616 registry length ∩ rearrange-and-mod-97 == 1.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_iban": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_mod97": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(text: str) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

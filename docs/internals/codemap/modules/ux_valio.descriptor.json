@@ -1,0 +1,333 @@
+{
+ "ux_valio.descriptor": {
+  "consumers": [
+   "tests/test_annotation_conflict.py",
+   "tests/test_async_callables.py",
+   "tests/test_descriptor_honesty.py",
+   "tests/test_hooks_namespace.py",
+   "tests/test_origin_table_and_hooks.py"
+  ],
+  "doc": "Descriptor lifecycle.",
+  "exported_as": [
+   "ux_valio:Property"
+  ],
+  "features": [
+   "field-store"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio",
+    "ux_valio.validators.base",
+    "ux_valio.validators.facade"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "dataclasses",
+     "logging",
+     "types",
+     "typing"
+    ]
+   },
+   "type_checking": {
+    "stdlib": [
+     "typing"
+    ]
+   }
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.errors"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "store",
+  "path": "ux_valio/descriptor.py",
+  "public": [
+   "Property",
+   "is_subclass_of"
+  ],
+  "symbols": {
+   "Property": {
+    "bases": [
+     "Generic[_StoreT]"
+    ],
+    "doc": "Data descriptor used as a dataclass field default.",
+    "kind": "class",
+    "methods": {
+     "__delete__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> None"
+     },
+     "__get__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, obj_type: type | None=None) -> Any"
+     },
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, name: str | None=None, default: Any=None, default_factory: Any=None, doc: str | None=None, debug: bool | None=None, logger: Any=_UNSET, collect_all: Any=_UNSET, *, _opts: _Opts | None=None) -> None"
+     },
+     "__set__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> None"
+     },
+     "__set_name__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, owner: type, name: str) -> None"
+     },
+     "__str__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self) -> str"
+     },
+     "_bind_field_logger": {
+      "doc": "``logger=True`` becomes a stdlib logger named for this field.",
+      "kind": "function",
+      "signature": "(self, owner: type, name: str) -> None"
+     },
+     "_bind_owner_annotation": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, owner: type, name: str) -> None"
+     },
+     "_drop_from_instance": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> None"
+     },
+     "_emit_log": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, level: str, message: str) -> None"
+     },
+     "_missing_attribute": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> AttributeError"
+     },
+     "_owner_omits_instance_dict": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "True when instances of ``owner`` have no ``__dict__`` (slots-only MRO).",
+      "kind": "function",
+      "signature": "(owner: type) -> bool"
+     },
+     "_read_from_instance": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> Any"
+     },
+     "_record_error": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, err: BaseException) -> None"
+     },
+     "_reject_slots_without_dict": {
+      "doc": "Fail-closed when the field cannot store on the instance.",
+      "kind": "function",
+      "signature": "(self, owner: type, name: str) -> None"
+     },
+     "_require_instance_dict": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> dict[str, Any]"
+     },
+     "_run_post_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_post_get": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_post_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_pre_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_pre_get": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_pre_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_slot_names": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(slots: Any) -> tuple[str, ...]"
+     },
+     "_store_on_instance": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> None"
+     },
+     "_swallow_or_raise": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, err: BaseException) -> None"
+     },
+     "_take_subscript_annotation": {
+      "doc": "``Validator[int]()`` fills annotation from ``__orig_class__``.",
+      "kind": "function",
+      "signature": "(self) -> None"
+     }
+    },
+    "public": true
+   },
+   "_Opt": {
+    "bases": [],
+    "doc": "One specified-theory: omitted vs caller-set.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, value: Any, specified: bool) -> None"
+     },
+     "keeps_nesting": {
+      "doc": "True when this descriptor's spec should not flatten into members.",
+      "kind": "function",
+      "signature": "(self, members: '_Opt') -> bool"
+     },
+     "merge": {
+      "decorators": [
+       "classmethod"
+      ],
+      "doc": "One specified value, or TypeError on conflict.",
+      "kind": "function",
+      "signature": "(cls, *opts: '_Opt', what: str | None=None) -> '_Opt'"
+     },
+     "omitted": {
+      "decorators": [
+       "classmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(cls, default: Any) -> '_Opt'"
+     },
+     "set": {
+      "decorators": [
+       "classmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(cls, value: Any) -> '_Opt'"
+     }
+    },
+    "public": false
+   },
+   "_Opts": {
+    "bases": [],
+    "decorators": [
+     "dataclass(slots=True)"
+    ],
+    "doc": "Specified-theory for one descriptor. Fields are the source of truth.",
+    "kind": "class",
+    "methods": {
+     "from_call": {
+      "decorators": [
+       "classmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(cls, *, debug: bool | None=None, default: Any=None, default_factory: Any=None, doc: str | None=None, logger: Any=_UNSET, collect_all: Any=_UNSET) -> '_Opts'"
+     },
+     "keeps_nesting": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, members: '_Opts') -> bool"
+     },
+     "merge": {
+      "decorators": [
+       "classmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(cls, *rows: '_Opts') -> '_Opts'"
+     },
+     "overlay": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, *, debug: bool | None=None, default: Any=None, default_factory: Any=None, doc: str | None=None, logger: Any=_UNSET, collect_all: Any=_UNSET) -> '_Opts'"
+     }
+    },
+    "public": false
+   },
+   "_annotation_identity": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> Any"
+   },
+   "_annotation_label": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> str"
+   },
+   "_is_unconstrained_typevar": {
+    "doc": "Unconstrained TypeVar is typing-only. Runtime cannot specialize per T.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> bool"
+   },
+   "_is_unresolved_annotation": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> bool"
+   },
+   "_issubclass_closed": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(subtype: Any, supertype: Any) -> bool"
+   },
+   "_owner_store_annotation": {
+    "doc": "If the class annotation is a Property (or ``Property[T]``), peel to T.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> tuple[bool, Any]"
+   },
+   "_union_args": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> tuple[Any, ...] | None"
+   },
+   "is_subclass_of": {
+    "doc": "Owner annotation vs validator annotation at bind.",
+    "kind": "function",
+    "public": true,
+    "signature": "(subtype: Any, supertype: Any) -> bool"
+   }
+  }
+ }
+}

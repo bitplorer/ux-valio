@@ -1,0 +1,342 @@
+{
+ "ux_valio.validators.hooks": {
+  "consumers": [
+   "tests/test_async_callables.py",
+   "tests/test_compose_hooks.py",
+   "tests/test_compose_not_inherit.py",
+   "tests/test_descriptor_honesty.py",
+   "tests/test_descriptor_lifecycle.py",
+   "tests/test_hooks_namespace.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_processors_then_tasks.py",
+   "tests/test_sealed_hangs.py",
+   "tests/test_straight_set.py",
+   "tests/test_typed_facades.py",
+   "tests/test_validator_compose.py"
+  ],
+  "doc": "Processor and task registries.",
+  "exported_as": [],
+  "features": [
+   "hangs"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators.base",
+    "ux_valio.validators.facade"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "collections",
+     "types",
+     "typing",
+     "weakref"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.errors",
+    "ux_valio.validators.async_bridge"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "validators",
+  "path": "ux_valio/validators/hooks.py",
+  "public": [
+   "HookHost"
+  ],
+  "symbols": {
+   "HookHost": {
+    "bases": [],
+    "doc": "Processor and task registries on the validating descriptor.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, *args: Any, **kwargs: Any) -> None"
+     },
+     "_affected_owners": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, key: str, hinted: type | None) -> tuple[type, ...]"
+     },
+     "_collect_owner_keys": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Owner keys from base to derived. Inherited hooks fire on a child.",
+      "kind": "function",
+      "signature": "(instance: Any, bound: type | None=None) -> tuple[str, ...]"
+     },
+     "_compile_closed": {
+      "doc": "Flatten open buckets across ``owner``'s MRO. Does not replace them.",
+      "kind": "function",
+      "signature": "(self, owner: type) -> _ClosedHangs"
+     },
+     "_has_hooks": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "True when this host has a custom, processor, or task callable registered.",
+      "kind": "function",
+      "signature": "(item: Any) -> bool"
+     },
+     "_owner_key": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Owning class identity for register and lookup: ``module.qualname``.",
+      "kind": "function",
+      "signature": "(cls: Any) -> str"
+     },
+     "_owning_class_qualname": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Owning-class qualname, or None for a free function.",
+      "kind": "function",
+      "signature": "(func: Callable[..., Any]) -> str | None"
+     },
+     "_post_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_post_get": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_post_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_post_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_pre_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_pre_get": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_process_then_tasks": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, phase: str, instance: Any, value: Any) -> Any"
+     },
+     "_read_owner_keys": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Owner keys from base to derived for one class's MRO.",
+      "kind": "function",
+      "signature": "(cls: type) -> tuple[str, ...]"
+     },
+     "_recompile_closed": {
+      "doc": "WRITE path. Rebuild ``_closed`` for these owners and known subclasses.",
+      "kind": "function",
+      "signature": "(self, affected_owners: tuple[type, ...] | list[type]) -> None"
+     },
+     "_recompile_tree": {
+      "doc": "Recompile this field and nested ``_Of`` members for ``affected_owners``.",
+      "kind": "function",
+      "signature": "(self, affected_owners: tuple[type, ...] | list[type]) -> None"
+     },
+     "_register": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, bucket: dict[str, list[Callable[..., Any]]], func: Callable[..., Any], namespace: type | str | None=None, phase_bit: int=0) -> Callable[..., Any]"
+     },
+     "_require_closed": {
+      "doc": "READ path. Missing owner is fail-closed. ``None`` instance skips.",
+      "kind": "function",
+      "signature": "(self, instance: Any) -> _ClosedHangs | None"
+     },
+     "_resolve_owner_key": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Owner key used when registering a hook.",
+      "kind": "function",
+      "signature": "(func: Callable[..., Any], namespace: type | str | None, bound_owner: type | None=None) -> str"
+     },
+     "_run_closed_processors": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, funcs: tuple[Callable[..., Any], ...], instance: Any, value: Any) -> Any"
+     },
+     "_run_custom_validators": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_run_processors": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, phase: str, instance: Any, value: Any) -> Any"
+     },
+     "_run_sealed_phase": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, closed: _ClosedHangs, phase: str, instance: Any, value: Any) -> Any"
+     },
+     "_run_tasks": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, phase: str, instance: Any, value: Any) -> Any"
+     },
+     "_spawn_closed_tasks": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, funcs: tuple[Callable[..., Any], ...], instance: Any, value: Any) -> None"
+     },
+     "_warm_closed": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, owner: type) -> None"
+     },
+     "post_delete": {
+      "doc": "Transform after delete. Return is not stored.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "post_get": {
+      "doc": "Transform after read. Return is not the stored value.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "post_set": {
+      "doc": "Transform after store. Return is not stored.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "post_validate": {
+      "doc": "Transform after validate. Return is stored (inside ``_run_pre_set``).",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "pre_delete": {
+      "doc": "Transform before delete. Return is not stored.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "pre_get": {
+      "doc": "Transform before read. Return is not the stored value.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "pre_validate": {
+      "doc": "Transform before validate. Return is stored (inside ``_run_pre_set``).",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "task_post_delete": {
+      "doc": "Background side effect after delete. Return ignored. Setter does not wait.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "task_post_get": {
+      "doc": "Background side effect after read. Return ignored. Setter does not wait.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "task_post_set": {
+      "doc": "Background after store (email). Return ignored. Setter does not wait.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "task_post_validate": {
+      "doc": "Background side effect after validate. Return ignored. Setter does not wait.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "task_pre_delete": {
+      "doc": "Background side effect before delete. Return ignored. Setter does not wait.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "task_pre_get": {
+      "doc": "Background side effect before read. Return ignored. Setter does not wait.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "task_pre_validate": {
+      "doc": "Background side effect before validate. Return ignored. Setter does not wait.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "validator": {
+      "doc": "Check during ``validate()``. Return ignored.",
+      "kind": "function",
+      "signature": "(self, func: Callable[..., Any], namespace: type | str | None=None) -> Callable[..., Any]"
+     },
+     "wait_tasks": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "Wait for background ``task_*`` work.",
+      "kind": "function",
+      "signature": "(timeout: float | None=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "_ClosedHangs": {
+    "bases": [
+     "NamedTuple"
+    ],
+    "doc": "MRO-flattened set-phase callables for one owning class.",
+    "kind": "class",
+    "methods": {},
+    "public": false
+   },
+   "_arm_owner_recompile": {
+    "doc": "Future subclasses get a closed list before any assignment.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: type) -> None"
+   },
+   "_push_owner": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: type[object], pending: list[type], seen: set[type]) -> None"
+   },
+   "_recompile_tracked_fields": {
+    "doc": "Bake inherited fields for a class created after the last register.",
+    "kind": "function",
+    "public": false,
+    "signature": "(cls: type) -> None"
+   },
+   "_track_field_owner": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: type, field: Any) -> None"
+   }
+  }
+ }
+}

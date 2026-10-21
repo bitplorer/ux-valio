@@ -44,6 +44,7 @@ facade you want.
 | Why these defaults exist | [Choices](explanation/choices.md) |
 | debug, logger, slots, falsy `0` | [Honesty](explanation/honesty.md) |
 | Import graph | [Layering](explanation/layering.md) |
+| Generated code map (layers, features, domain charter) | [Code map](internals/CODEMAP.md) |
 | What is fast / what is not | [Performance](explanation/performance.md) |
 | Host / peer | [Host / peer](explanation/host-peer-plan.md) |
 

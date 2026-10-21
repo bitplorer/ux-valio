@@ -1,0 +1,184 @@
+{
+ "ux_valio.pattern._algebra": {
+  "consumers": [
+   "docs/how-to/compose.md",
+   "docs/reference/pattern.md",
+   "docs/tutorial.md",
+   "examples/catalog.py",
+   "examples/signup.py",
+   "tests/test_pattern_findall.py",
+   "tests/test_pattern_package.py"
+  ],
+  "doc": "Pattern algebra: fragments, ``&`` / ``|``, quantifiers.",
+  "exported_as": [
+   "ux_valio:Pattern",
+   "ux_valio:PatternType"
+  ],
+  "features": [
+   "pattern-algebra"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.pattern",
+    "ux_valio.pattern._atoms",
+    "ux_valio.pattern._lookaround",
+    "ux_valio.pattern._sets"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [],
+   "type_checking": []
+  },
+  "is_public": false,
+  "layer": "pattern",
+  "path": "ux_valio/pattern/_algebra.py",
+  "public": [
+   "AndPattern",
+   "OrPattern",
+   "Pattern",
+   "PatternSource",
+   "PatternType",
+   "prefix_fragment",
+   "quantifier_token",
+   "require_pattern_type",
+   "suffix_fragment",
+   "wrap_fragment"
+  ],
+  "symbols": {
+   "AndPattern": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, first: PatternType, second: PatternType) -> None"
+     }
+    },
+    "public": true
+   },
+   "OrPattern": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, first: PatternType, second: PatternType) -> None"
+     }
+    },
+    "public": true
+   },
+   "Pattern": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: str | bytes, raw_pattern: str | bytes | None=None, quantifier: str | None=None, count: int | None=None, count_min: int | None=None, count_max: int | None=None, greedy: bool=True, alias: str | None=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "PatternType": {
+    "bases": [],
+    "doc": "Regex fragment with ``&`` / ``|`` composition.",
+    "kind": "class",
+    "methods": {
+     "__and__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, other: object) -> 'AndPattern'"
+     },
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: PatternSource | None=None, alias: str | None=None) -> None"
+     },
+     "__or__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, other: object) -> 'OrPattern'"
+     },
+     "__str__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self) -> str"
+     }
+    },
+    "public": true
+   },
+   "_attach_quantifier": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(pattern: str | bytes, quantifier: str) -> str | bytes"
+   },
+   "_join_fragments": {
+    "doc": "Concatenate same-kind str or bytes fragments. Missing or mixed is TypeError.",
+    "kind": "function",
+    "public": false,
+    "signature": "(left: object, right: object, joiner: str='') -> str | bytes"
+   },
+   "_wrap_alternation": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(combined: str | bytes) -> str | bytes"
+   },
+   "prefix_fragment": {
+    "doc": "Prefix an ascii regex token onto a same-kind fragment.",
+    "kind": "function",
+    "public": true,
+    "signature": "(token: str, fragment: str | bytes | None) -> str | bytes"
+   },
+   "quantifier_token": {
+    "doc": "",
+    "kind": "function",
+    "public": true,
+    "signature": "(count: int | None, count_min: int | None, count_max: int | None, greedy: bool) -> str"
+   },
+   "require_pattern_type": {
+    "doc": "Fail-closed PatternType with a present fragment.",
+    "kind": "function",
+    "public": true,
+    "signature": "(value: object) -> PatternType"
+   },
+   "suffix_fragment": {
+    "doc": "Suffix an ascii regex token onto a same-kind fragment.",
+    "kind": "function",
+    "public": true,
+    "signature": "(fragment: str | bytes | None, token: str) -> str | bytes"
+   },
+   "wrap_fragment": {
+    "doc": "Wrap a fragment with ascii open/close tokens. Bytes stay bytes.",
+    "kind": "function",
+    "public": true,
+    "signature": "(open_token: str, fragment: str | bytes | None, close_token: str) -> str | bytes"
+   }
+  }
+ }
+}

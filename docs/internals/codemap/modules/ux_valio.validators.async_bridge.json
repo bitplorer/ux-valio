@@ -1,0 +1,105 @@
+{
+ "ux_valio.validators.async_bridge": {
+  "consumers": [
+   "tests/test_async_callables.py",
+   "tests/test_hooks_namespace.py"
+  ],
+  "doc": "Nest-safe processor bridge and background task spawn.",
+  "exported_as": [
+   "ux_valio:wait_tasks"
+  ],
+  "features": [
+   "hangs"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio",
+    "ux_valio.validators.hooks"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "asyncio",
+     "atexit",
+     "concurrent.futures",
+     "inspect",
+     "threading",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "validators",
+  "path": "ux_valio/validators/async_bridge.py",
+  "public": [
+   "ASYNC_NEEDS_LOOP",
+   "NEST_SAFE_REENTERED",
+   "invoke_callable",
+   "nest_safe_bridge",
+   "resolve_coroutine",
+   "spawn_task",
+   "wait_tasks"
+  ],
+  "symbols": {
+   "_call_task": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(host: Any, func: Callable[..., Any], instance: Any, value: Any) -> None"
+   },
+   "_forget": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(fut: concurrent.futures.Future[Any]) -> None"
+   },
+   "_track": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(fut: concurrent.futures.Future[Any]) -> None"
+   },
+   "invoke_callable": {
+    "doc": "",
+    "kind": "function",
+    "public": true,
+    "signature": "(func: Callable[..., Any], instance: Any, value: Any) -> Any"
+   },
+   "nest_safe_bridge": {
+    "doc": "Drive ``coro`` on a private loop in a worker thread.",
+    "kind": "function",
+    "public": true,
+    "signature": "(coro: Any) -> Any"
+   },
+   "resolve_coroutine": {
+    "doc": "Apply run rules to a processor/validator return.",
+    "kind": "function",
+    "public": true,
+    "signature": "(result: Any) -> Any"
+   },
+   "spawn_task": {
+    "doc": "Fire-and-forget. Setter does not wait. Return ignored.",
+    "kind": "function",
+    "public": true,
+    "signature": "(host: Any, func: Callable[..., Any], instance: Any, value: Any) -> None"
+   },
+   "wait_tasks": {
+    "doc": "Wait for background ``task_*`` work. Tests and shutdown.",
+    "kind": "function",
+    "public": true,
+    "signature": "(timeout: float | None=None) -> None"
+   }
+  }
+ }
+}

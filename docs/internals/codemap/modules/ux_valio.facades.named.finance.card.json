@@ -1,0 +1,126 @@
+{
+ "ux_valio.facades.named.finance.card": {
+  "consumers": [
+   "examples/checkout.py",
+   "tests/test_collect_all.py",
+   "tests/test_descriptor_lifecycle.py",
+   "tests/test_named_validate_once.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_payment_card.py",
+   "tests/test_real_world_use.py",
+   "tests/test_saas_commerce_facades.py",
+   "tests/test_validator_compose.py"
+  ],
+  "doc": "Payment card number and MM/YY print form.",
+  "exported_as": [
+   "ux_valio:CardExpiryValidator",
+   "ux_valio:PaymentCardValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.finance"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.finance.card",
+  "path": "ux_valio/facades/named/finance/card.py",
+  "public": [
+   "CardExpiryValidator",
+   "PaymentCardValidator"
+  ],
+  "symbols": {
+   "CardExpiryValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Payment-card month/year as printed. Stores ``MMYY``.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_card_expiry": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "PaymentCardValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Visa / Mastercard / Amex / Discover / Rupay / UnionPay / JCB / Diners ∩ Luhn.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_payment_card": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "True only when Luhn holds **and** the number matches a known brand.",
+      "kind": "function",
+      "signature": "(card_number: str) -> bool"
+     },
+     "_luhn_correctness": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(card_number: str) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "Printed cards group digits. Store the compact brand∩Luhn identity.",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     },
+     "_validate_payment_card": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

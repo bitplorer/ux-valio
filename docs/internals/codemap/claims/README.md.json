@@ -1,0 +1,31 @@
+{
+ "README.md": {
+  "claims": [
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:IntegerValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:StringValidator"
+   },
+   {
+    "kind": "import",
+    "resolved": true,
+    "text": "ux_valio:Validator"
+   },
+   {
+    "kind": "module",
+    "resolved": true,
+    "text": "ux_valio"
+   },
+   {
+    "kind": "module",
+    "resolved": false,
+    "text": "ux_valio.regexer"
+   }
+  ]
+ }
+}

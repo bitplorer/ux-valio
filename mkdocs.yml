@@ -41,4 +41,5 @@ nav:
       - Layering: explanation/layering.md
       - Performance: explanation/performance.md
       - Host / peer: explanation/host-peer-plan.md
+      - Code map: internals/CODEMAP.md
 docs_dir: docs

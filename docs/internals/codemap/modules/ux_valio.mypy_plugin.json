@@ -1,0 +1,80 @@
+{
+ "ux_valio.mypy_plugin": {
+  "consumers": [
+   "docs/explanation/choices.md",
+   "docs/how-to/typing.md",
+   "docs/tutorial.md"
+  ],
+  "doc": "mypy: a ValidateProperty constructor is assignable to the field annotation.",
+  "exported_as": [],
+  "features": [
+   "typing-plugin"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "mypy": [
+     "mypy.nodes",
+     "mypy.plugin",
+     "mypy.types"
+    ],
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "tooling",
+  "path": "ux_valio/mypy_plugin.py",
+  "public": [
+   "UxValioPlugin",
+   "plugin"
+  ],
+  "symbols": {
+   "UxValioPlugin": {
+    "bases": [
+     "Plugin"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "_info": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, fullname: str) -> TypeInfo | None"
+     },
+     "get_function_hook": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, fullname: str) -> Callable[[FunctionContext], Type] | None"
+     }
+    },
+    "public": true
+   },
+   "_as_any": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(ctx: FunctionContext) -> Type"
+   },
+   "plugin": {
+    "doc": "",
+    "kind": "function",
+    "public": true,
+    "signature": "(version: str) -> type[Plugin]"
+   }
+  }
+ }
+}

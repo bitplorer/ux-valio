@@ -1,0 +1,114 @@
+{
+ "ux_valio.errors": {
+  "consumers": [
+   "docs/reference/validator.md",
+   "examples/field_logging.py",
+   "examples/kyc.py",
+   "examples/signup.py",
+   "examples/validator_kwargs.py",
+   "tests/test_collect_all.py",
+   "tests/test_examples.py",
+   "tests/test_native_boolean.py",
+   "tests/test_native_bytes.py",
+   "tests/test_native_date.py",
+   "tests/test_native_datetime.py",
+   "tests/test_native_decimal.py",
+   "tests/test_native_float.py",
+   "tests/test_native_integer.py",
+   "tests/test_native_integer_enum.py",
+   "tests/test_native_ip.py",
+   "tests/test_native_path.py",
+   "tests/test_native_string.py",
+   "tests/test_native_string_enum.py",
+   "tests/test_native_uuid.py",
+   "tests/test_real_world_use.py",
+   "tests/test_sealed_hangs.py",
+   "tests/test_slots_unsupported.py",
+   "tests/test_straight_set.py",
+   "tests/test_typed_dict_schema.py",
+   "tests/test_typed_facades.py",
+   "tests/test_validator_compose.py",
+   "tests/test_validator_generic.py"
+  ],
+  "doc": "Collected validation failures from collect_all.",
+  "exported_as": [
+   "ux_valio:ValidationErrors"
+  ],
+  "features": [
+   "field-store"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio",
+    "ux_valio.descriptor",
+    "ux_valio.validators",
+    "ux_valio.validators._native",
+    "ux_valio.validators.base",
+    "ux_valio.validators.facade",
+    "ux_valio.validators.hooks",
+    "ux_valio.validators.leaves"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "errors",
+  "path": "ux_valio/errors.py",
+  "public": [
+   "ValidationErrors",
+   "continue_or_raise",
+   "raise_collected",
+   "run_steps"
+  ],
+  "symbols": {
+   "ValidationErrors": {
+    "bases": [
+     "ValueError"
+    ],
+    "doc": "Every concern that failed when ``collect_all=True``.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, errors: list[BaseException], name: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "continue_or_raise": {
+    "doc": "",
+    "kind": "function",
+    "public": true,
+    "signature": "(collect_all: bool, errors: list[BaseException], err: BaseException) -> None"
+   },
+   "raise_collected": {
+    "doc": "",
+    "kind": "function",
+    "public": true,
+    "signature": "(errors: list[BaseException], name: Any=None) -> None"
+   },
+   "run_steps": {
+    "doc": "One collect-or-raise loop. Facade / AllOf / extras share this.",
+    "kind": "function",
+    "public": true,
+    "signature": "(steps: Any, collect_all: bool, name: Any=None) -> None"
+   }
+  }
+ }
+}

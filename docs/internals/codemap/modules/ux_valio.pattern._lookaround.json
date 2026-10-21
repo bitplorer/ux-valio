@@ -1,0 +1,112 @@
+{
+ "ux_valio.pattern._lookaround": {
+  "consumers": [
+   "examples/catalog.py",
+   "tests/test_pattern_package.py"
+  ],
+  "doc": "Thin stdlib lookaround PatternTypes.",
+  "exported_as": [
+   "ux_valio:IfFollowedBy",
+   "ux_valio:IfNotFollowedBy",
+   "ux_valio:IfNotPrecededBy",
+   "ux_valio:IfPrecededBy"
+  ],
+  "features": [
+   "pattern-algebra"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.pattern"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.pattern._algebra"
+   ],
+   "type_checking": []
+  },
+  "is_public": false,
+  "layer": "pattern",
+  "path": "ux_valio/pattern/_lookaround.py",
+  "public": [
+   "IfFollowedBy",
+   "IfNotFollowedBy",
+   "IfNotPrecededBy",
+   "IfPrecededBy"
+  ],
+  "symbols": {
+   "IfFollowedBy": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "``(?=fragment)`` — valio ``regexer/regexps.py`` L463.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: PatternType, alias: str | None=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "IfNotFollowedBy": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "``(?!fragment)`` — valio ``regexer/regexps.py`` L470.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: PatternType, alias: str | None=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "IfNotPrecededBy": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "``(?<!fragment)`` — valio ``regexer/regexps.py`` L456.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: PatternType, alias: str | None=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "IfPrecededBy": {
+    "bases": [
+     "PatternType"
+    ],
+    "doc": "``(?<=fragment)`` — valio ``regexer/regexps.py`` L449.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, pattern: PatternType, alias: str | None=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

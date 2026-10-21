@@ -1,0 +1,59 @@
+{
+ "ux_valio.pattern": {
+  "consumers": [
+   "docs/reference/pattern.md",
+   "tests/test_pattern_package.py"
+  ],
+  "doc": "Pattern combinators.",
+  "exported_as": [],
+  "features": [
+   "pattern-algebra"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio",
+    "ux_valio.facades.named.contact",
+    "ux_valio.validators.leaves"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {},
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.pattern._algebra",
+    "ux_valio.pattern._atoms",
+    "ux_valio.pattern._lookaround",
+    "ux_valio.pattern._sets"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "pattern",
+  "path": "ux_valio/pattern/__init__.py",
+  "public": [
+   "Digit",
+   "EndsWith",
+   "IfFollowedBy",
+   "IfNotFollowedBy",
+   "IfNotPrecededBy",
+   "IfPrecededBy",
+   "NonDigit",
+   "NonWhiteSpace",
+   "NonWord",
+   "Pattern",
+   "PatternType",
+   "SetOf",
+   "StartsWith",
+   "WhiteSpace",
+   "Word",
+   "WordBoundary"
+  ],
+  "symbols": {}
+ }
+}

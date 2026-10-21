@@ -1,0 +1,335 @@
+{
+ "ux_valio.validators.base": {
+  "consumers": [
+   "docs/how-to/compose.md",
+   "docs/how-to/logging.md",
+   "docs/tutorial.md",
+   "examples/signup.py",
+   "tests/test_collect_all.py",
+   "tests/test_compose_hooks.py",
+   "tests/test_compose_not_inherit.py",
+   "tests/test_descriptor_lifecycle.py",
+   "tests/test_native_ip.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_sealed_hangs.py",
+   "tests/test_slots_unsupported.py",
+   "tests/test_typed_dict_schema.py",
+   "tests/test_validator_compose.py"
+  ],
+  "doc": "Descriptor that validates in ``pre_set`` before store.",
+  "exported_as": [
+   "ux_valio:AllOf",
+   "ux_valio:AnyOf",
+   "ux_valio:ValidateProperty"
+  ],
+  "features": [
+   "type-door",
+   "validate-door"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators",
+    "ux_valio.validators.facade",
+    "ux_valio.validators.leaves",
+    "ux_valio.validators.length",
+    "ux_valio.validators.value"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "abc",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [
+    "ux_valio.validators.leaves"
+   ],
+   "module_level": [
+    "ux_valio.descriptor",
+    "ux_valio.errors",
+    "ux_valio.validators.hooks"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "validators",
+  "path": "ux_valio/validators/base.py",
+  "public": [
+   "AllOf",
+   "AnyOf",
+   "T",
+   "ValidateProperty"
+  ],
+  "symbols": {
+   "AllOf": {
+    "bases": [
+     "_Of"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "_reject_store_identity": {
+      "doc": "Each member named extra is an AND identity. Path bounds are not re-run.",
+      "kind": "function",
+      "signature": "(self, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "AnyOf": {
+    "bases": [
+     "_Of"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "_match_one_alternative": {
+      "doc": "Succeed when one member validates. Else none-of-the-alternatives.",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_reject_store_identity": {
+      "doc": "Stored value must still match one alternative.",
+      "kind": "function",
+      "signature": "(self, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "ValidateProperty": {
+    "bases": [
+     "HookHost",
+     "Property[T]",
+     "ABC"
+    ],
+    "doc": "Descriptor that validates in ``_run_pre_set`` before store.",
+    "kind": "class",
+    "methods": {
+     "__and__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, other: object) -> Any"
+     },
+     "__or__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, other: object) -> Any"
+     },
+     "__set__": {
+      "doc": "Run the sealed set-phase list. A miss does not walk open MRO.",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> None"
+     },
+     "__set_name__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, owner: type, name: str) -> None"
+     },
+     "_notify_post_set": {
+      "doc": "Lifecycle hook for composition; default no-op.",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> None"
+     },
+     "_notify_pre_set": {
+      "doc": "Lifecycle hook for composition; default no-op.",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> None"
+     },
+     "_reject_store_identity": {
+      "doc": "Named-facade extra is a store invariant: post_validate cannot smuggle a lie.",
+      "kind": "function",
+      "signature": "(self, value: Any) -> None"
+     },
+     "_reject_store_type_mismatch": {
+      "doc": "Annotation is a store invariant: post_validate cannot smuggle a bad type.",
+      "kind": "function",
+      "signature": "(self, value: Any) -> None"
+     },
+     "_run_post_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_post_get": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_post_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_pre_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_pre_get": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_run_pre_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any, value: Any) -> Any"
+     },
+     "_validate_type": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "validate": {
+      "decorators": [
+       "abstractmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "_Of": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "AllOf / AnyOf share flatten, specified-theory merge, and member order.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, *validators: ValidateProperty, name: str | None=None, default: Any=None, default_factory: Any=None, doc: str | None=None, debug: bool | None=None, logger: Any=_UNSET, collect_all: Any=_UNSET, **kwargs: Any) -> None"
+     },
+     "__set_name__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, owner: type, name: str) -> None"
+     },
+     "_as_validators": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(parts: Iterable[Any]) -> tuple[ValidateProperty, ...]"
+     },
+     "_flatten": {
+      "decorators": [
+       "classmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(cls, parts: Iterable[ValidateProperty]) -> tuple[ValidateProperty, ...]"
+     },
+     "_keep_nested": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(item: Any) -> bool"
+     },
+     "_merged_annotation": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(validators: tuple[ValidateProperty, ...]) -> Any"
+     },
+     "_notify_post_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> None"
+     },
+     "_notify_pre_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, obj: Any) -> None"
+     },
+     "_post_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_post_get": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_post_set": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_post_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_pre_delete": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_pre_get": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     }
+    },
+    "public": false
+   },
+   "_annotation_accepts": {
+    "doc": "Type-door membership. Loads ``is_instance_of`` at most once.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any, value: Any) -> bool"
+   },
+   "_register_annotation_checker": {
+    "doc": "Bind ``is_instance_of`` once. ``leaves.py`` calls this at import.",
+    "kind": "function",
+    "public": false,
+    "signature": "(checker: Any) -> None"
+   },
+   "_register_typed_dict_checker": {
+    "doc": "Bind ``_validate_typed_dict`` once. ``leaves.py`` calls this at import.",
+    "kind": "function",
+    "public": false,
+    "signature": "(checker: Any) -> None"
+   },
+   "_run_typed_dict_check": {
+    "doc": "TypedDict key walk. Loads ``_validate_typed_dict`` at most once.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   }
+  }
+ }
+}

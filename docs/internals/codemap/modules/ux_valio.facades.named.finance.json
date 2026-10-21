@@ -1,0 +1,45 @@
+{
+ "ux_valio.facades.named.finance": {
+  "consumers": [
+   "tests/test_origin_table_and_hooks.py"
+  ],
+  "doc": "International money identity. Folder of domain layers.",
+  "exported_as": [],
+  "features": [],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {},
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.finance.card",
+    "ux_valio.facades.named.finance.currency",
+    "ux_valio.facades.named.finance.market",
+    "ux_valio.facades.named.finance.rail"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "barrel",
+  "path": "ux_valio/facades/named/finance/__init__.py",
+  "public": [
+   "BICValidator",
+   "CardExpiryValidator",
+   "CurrencyCodeValidator",
+   "IBANValidator",
+   "ISINValidator",
+   "LEIValidator",
+   "PaymentCardValidator"
+  ],
+  "symbols": {}
+ }
+}

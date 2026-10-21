@@ -1,0 +1,228 @@
+{
+ "ux_valio.facades.named.portal": {
+  "consumers": [
+   "examples/storefront.py",
+   "tests/test_everyday_facades.py",
+   "tests/test_saas_commerce_facades.py"
+  ],
+  "doc": "SaaS portal identity (slug, country, timezone, ULID). Parallel to contact.",
+  "exported_as": [
+   "ux_valio:CountryCodeValidator",
+   "ux_valio:LocaleValidator",
+   "ux_valio:SemVerValidator",
+   "ux_valio:SlugValidator",
+   "ux_valio:TimezoneValidator",
+   "ux_valio:ULIDValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "functools",
+     "re",
+     "typing",
+     "zoneinfo"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.portal",
+  "path": "ux_valio/facades/named/portal.py",
+  "public": [
+   "CountryCodeValidator",
+   "LocaleValidator",
+   "SemVerValidator",
+   "SlugValidator",
+   "TimezoneValidator",
+   "ULIDValidator"
+  ],
+  "symbols": {
+   "CountryCodeValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "ISO 3166-1 alpha-2 (``IN``, ``US``). Stores uppercase.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_country": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "LocaleValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "BCP 47 language (``hi``) or language-region (``en-IN``).",
+    "kind": "class",
+    "methods": {
+     "_is_valid_locale": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "SemVerValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Semantic version: ``MAJOR.MINOR.PATCH`` (+ optional pre/build).",
+    "kind": "class",
+    "methods": {
+     "_is_valid_semver": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "SlugValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Product / tenant / page slug.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_slug": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "TimezoneValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "IANA tz database key (``Asia/Kolkata``, ``UTC``).",
+    "kind": "class",
+    "methods": {
+     "_is_valid_timezone": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "ULIDValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "ULID public id (26 chars). Complements ``UUIDValidator``.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_ulid": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "_zones": {
+    "decorators": [
+     "cache"
+    ],
+    "doc": "IANA keys. Built on first TimezoneValidator check, not import.",
+    "kind": "function",
+    "public": false,
+    "signature": "() -> frozenset[str]"
+   }
+  }
+ }
+}

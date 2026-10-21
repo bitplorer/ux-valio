@@ -1,0 +1,170 @@
+{
+ "ux_valio.validators.length": {
+  "consumers": [
+   "docs/how-to/compose.md",
+   "docs/how-to/logging.md",
+   "tests/test_bound_honesty.py",
+   "tests/test_collect_all.py",
+   "tests/test_compose_hooks.py",
+   "tests/test_compose_not_inherit.py",
+   "tests/test_descriptor_lifecycle.py",
+   "tests/test_falsy_defaults.py",
+   "tests/test_native_ip.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_sealed_hangs.py",
+   "tests/test_validator_compose.py"
+  ],
+  "doc": "Length concern leaves. Min/max/exact are leaf-owned methods.",
+  "exported_as": [
+   "ux_valio:LengthValidator",
+   "ux_valio:MaxLengthValidator",
+   "ux_valio:MinLengthValidator"
+  ],
+  "features": [
+   "concern-leaves"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators",
+    "ux_valio.validators._native",
+    "ux_valio.validators.facade"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators.base",
+    "ux_valio.validators.bounds"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "validators",
+  "path": "ux_valio/validators/length.py",
+  "public": [
+   "LengthValidator",
+   "MaxLengthValidator",
+   "MinLengthValidator"
+  ],
+  "symbols": {
+   "LengthValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "Exact length plus inclusive min/max. Composes bound checks as methods.",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, min_length: int | None=None, length: int | None=None, max_length: int | None=None, **kwargs: Any) -> None"
+     },
+     "_len_or_reject": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "``len(value)``, or a named TypeError when the value is not sized.",
+      "kind": "function",
+      "signature": "(owner: Any, value: Any) -> int"
+     },
+     "_validate_exact_length": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_validate_length": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_validate_max_length": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "_validate_min_length": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> None"
+     },
+     "bind_bounds": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(obj: Any, min_length: Any, length: Any, max_length: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "MaxLengthValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, max_length: int | None=None, **kwargs: Any) -> None"
+     },
+     "_validate_max_length": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self: Any, instance: Any, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "MinLengthValidator": {
+    "bases": [
+     "ValidateProperty"
+    ],
+    "doc": "",
+    "kind": "class",
+    "methods": {
+     "__init__": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, min_length: int | None=None, **kwargs: Any) -> None"
+     },
+     "_validate_min_length": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self: Any, instance: Any, value: Any) -> None"
+     },
+     "validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

@@ -1,0 +1,75 @@
+{
+ "ux_valio.facades.named.uk.postal": {
+  "consumers": [
+   "tests/test_everyday_facades.py"
+  ],
+  "doc": "UK postal identity (Royal Mail postcode).",
+  "exported_as": [
+   "ux_valio:UKPostcodeValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.uk"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.uk.postal",
+  "path": "ux_valio/facades/named/uk/postal.py",
+  "public": [
+   "UKPostcodeValidator"
+  ],
+  "symbols": {
+   "UKPostcodeValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "UK postcode (Royal Mail outward + inward).",
+    "kind": "class",
+    "methods": {
+     "_is_valid_uk_postcode": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

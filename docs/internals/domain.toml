@@ -1,0 +1,126 @@
+# Domain charter (curated): what ux-valio is the single source of truth for,
+# the narrow public surface higher libraries build on, what it must not own,
+# and which lower libraries (and which of their public names) it may use.
+# scripts/codemap.py validates every reference and folds the charter into
+# codemap/index.json. A new import of another distribution, or of a name not
+# listed under its depends_on entry, fails `codemap.py --check`, so coupling is
+# a conscious edit here. Sources: AGENTS.md, docs/explanation/*.md. See
+# CODEMAP.md.
+
+domain = "ux-valio is the single source of truth for dataclass field validation: the validator is the field default descriptor, from type door and bounds to named identity checks."
+
+# The taught import is the package root (docs/explanation/layering.md).
+# ux-dom builds on Validator, StringValidator, the enum facades, Pattern and SetOf.
+public_api = [
+  "ux_valio:Validator",
+  "ux_valio:ValidateProperty",
+  "ux_valio:AllOf",
+  "ux_valio:AnyOf",
+  "ux_valio:ValidationErrors",
+  "ux_valio:IntegerValidator",
+  "ux_valio:StringValidator",
+  "ux_valio:FloatValidator",
+  "ux_valio:BooleanValidator",
+  "ux_valio:DateValidator",
+  "ux_valio:EnumValidator",
+  "ux_valio:IntegerEnumValidator",
+  "ux_valio:StringEnumValidator",
+  "ux_valio:PatternValidator",
+  "ux_valio:LengthValidator",
+  "ux_valio:ChoiceValidator",
+  "ux_valio:Pattern",
+  "ux_valio:PatternType",
+  "ux_valio:SetOf",
+  "ux_valio:EmailValidator",
+  "ux_valio:GSTINValidator",
+  "ux_valio:IBANValidator",
+]
+
+[[owns]]
+concept = "field-default-descriptor"
+modules = ["ux_valio.descriptor", "ux_valio.validators.base", "ux_valio.validators.facade"]
+symbols = ["ux_valio.descriptor:Property", "ux_valio:ValidateProperty", "ux_valio:Validator"]
+
+[[owns]]
+concept = "field-validation-errors"
+modules = ["ux_valio.errors"]
+symbols = ["ux_valio:ValidationErrors"]
+
+[[owns]]
+concept = "validator-composition"
+modules = ["ux_valio.validators.base"]
+symbols = ["ux_valio:AllOf", "ux_valio:AnyOf"]
+
+[[owns]]
+concept = "field-hangs"
+modules = ["ux_valio.validators.hooks", "ux_valio.validators.async_bridge"]
+symbols = ["ux_valio.validators.hooks:HookHost"]
+
+[[owns]]
+concept = "annotation-type-door"
+modules = ["ux_valio.validators.leaves"]
+symbols = ["ux_valio.validators.leaves:is_instance_of"]
+
+[[owns]]
+concept = "typed-field-facades"
+modules = ["ux_valio.facades.typed"]
+symbols = ["ux_valio:IntegerValidator", "ux_valio:StringValidator", "ux_valio:DateValidator"]
+
+[[owns]]
+concept = "identity-validators"
+modules = ["ux_valio.facades.named"]
+symbols = ["ux_valio:GSTINValidator", "ux_valio:IBANValidator", "ux_valio:EmailValidator"]
+
+[[owns]]
+concept = "pattern-algebra"
+modules = ["ux_valio.pattern", "ux_valio.pattern._algebra"]
+symbols = ["ux_valio:Pattern", "ux_valio:SetOf"]
+
+# Concepts ux-valio must NOT own (AGENTS.md "No Cap Host, mount_channel, Field
+# twin, Schema twin, rule/, Result type, RGB/HSL"; the ux stack layer table).
+# `keywords` drive a warning-only heuristic: any module or top-level symbol
+# whose name contains one as a whole word is listed under
+# `non_goal_warnings` in index.json.
+[[non_goals]]
+concept = "schema-model-twin"
+owner = "none (TypedDict is the schema)"
+keywords = ["schema", "basemodel", "model"]
+
+[[non_goals]]
+concept = "intent-cap-result"
+owner = "ux-channel"
+keywords = ["cap", "channel", "intent", "result"]
+
+[[non_goals]]
+concept = "html-trees"
+owner = "ux-dom"
+keywords = ["html", "dom", "render"]
+
+[[non_goals]]
+concept = "product-behavior"
+owner = "ux-behavior"
+keywords = ["action", "morph", "dispatch"]
+
+[[non_goals]]
+concept = "color-values"
+owner = "none (not shipped)"
+keywords = ["rgb", "hsl", "color", "colour"]
+
+# Lower libraries ux-valio may use, and exactly which of their names.
+# Optional extra `ux-valio[phonenumbers]`, imported lazily by PhoneNumberValidator.
+[[depends_on]]
+distribution = "phonenumbers"
+imports = "phonenumbers"
+names = ["phonenumbers:NumberParseException", "phonenumbers:is_valid_number_for_region", "phonenumbers:parse"]
+
+# Optional extra `ux-valio[native]` (sibling crate native/), imported at bind.
+[[depends_on]]
+distribution = "ux-valio-native"
+imports = "ux_valio_native"
+names = ["ux_valio_native"]
+
+# Type checker host for ux_valio.mypy_plugin (dev extra; never imported at runtime).
+[[depends_on]]
+distribution = "mypy"
+imports = "mypy"
+names = ["mypy.nodes:TypeInfo", "mypy.plugin:FunctionContext", "mypy.plugin:Plugin", "mypy.types:AnyType", "mypy.types:Type", "mypy.types:TypeOfAny"]

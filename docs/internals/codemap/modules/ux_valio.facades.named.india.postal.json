@@ -1,0 +1,107 @@
+{
+ "ux_valio.facades.named.india.postal": {
+  "consumers": [
+   "tests/test_address_workflow.py",
+   "tests/test_origin_table_and_hooks.py",
+   "tests/test_pincode.py"
+  ],
+  "doc": "India postal / address identity (PIN, state).",
+  "exported_as": [
+   "ux_valio:IndiaStateCodeValidator",
+   "ux_valio:PinCodeValidator"
+  ],
+  "features": [
+   "named-identities"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.india"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "re",
+     "typing"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.typed"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "named.india.postal",
+  "path": "ux_valio/facades/named/india/postal.py",
+  "public": [
+   "IndiaStateCodeValidator",
+   "PinCodeValidator"
+  ],
+  "symbols": {
+   "IndiaStateCodeValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "Indian administrative 2-letter state / UT (``MH``, ``DL``, ``CG``).",
+    "kind": "class",
+    "methods": {
+     "_is_valid_state": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   },
+   "PinCodeValidator": {
+    "bases": [
+     "StringValidator"
+    ],
+    "doc": "India Post PIN: 6 digits, first 1–9.",
+    "kind": "class",
+    "methods": {
+     "_is_valid_pincode": {
+      "decorators": [
+       "staticmethod"
+      ],
+      "doc": "",
+      "kind": "function",
+      "signature": "(value: Any) -> bool"
+     },
+     "_pre_validate": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any, value: Any) -> Any"
+     },
+     "_validate_named_facade": {
+      "doc": "",
+      "kind": "function",
+      "signature": "(self, instance: Any=None, value: Any=None) -> None"
+     }
+    },
+    "public": true
+   }
+  }
+ }
+}

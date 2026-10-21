@@ -1,0 +1,55 @@
+{
+ "ux_valio.facades.named.india": {
+  "consumers": [
+   "tests/test_origin_table_and_hooks.py"
+  ],
+  "doc": "India statutory identity. Folder of domain layers.",
+  "exported_as": [],
+  "features": [],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {},
+   "module_level": {},
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.facades.named.india.bank",
+    "ux_valio.facades.named.india.gst",
+    "ux_valio.facades.named.india.kyc",
+    "ux_valio.facades.named.india.postal",
+    "ux_valio.facades.named.india.registry"
+   ],
+   "type_checking": []
+  },
+  "is_public": true,
+  "layer": "barrel",
+  "path": "ux_valio/facades/named/india/__init__.py",
+  "public": [
+   "AadhaarCardValidator",
+   "CINValidator",
+   "DINValidator",
+   "FSSAIValidator",
+   "GSTINValidator",
+   "HSNCodeValidator",
+   "IFSCValidator",
+   "IndiaStateCodeValidator",
+   "IndianPassportValidator",
+   "LLPINValidator",
+   "PANCardValidator",
+   "PinCodeValidator",
+   "TANValidator",
+   "UPIIdValidator",
+   "UdyamValidator",
+   "VoterIdValidator"
+  ],
+  "symbols": {}
+ }
+}

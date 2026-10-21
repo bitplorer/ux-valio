@@ -1,0 +1,284 @@
+{
+ "ux_valio.validators._native": {
+  "consumers": [
+   "benches/measure_host_peer.py",
+   "tests/native_support.py",
+   "tests/test_native_ip.py",
+   "tests/test_native_layout.py",
+   "tests/test_native_string_enum.py",
+   "tests/test_sealed_hangs.py"
+  ],
+  "doc": "Optional native apply (product PyO3 ``ux_valio_native``). Not a taught import.",
+  "exported_as": [],
+  "features": [
+   "native-peer"
+  ],
+  "imported_by": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.validators.facade"
+   ],
+   "type_checking": []
+  },
+  "imports_external": {
+   "function_level": {
+    "ux-valio-native": [
+     "ux_valio_native"
+    ]
+   },
+   "module_level": {
+    "stdlib": [
+     "__future__",
+     "datetime",
+     "decimal",
+     "enum",
+     "functools",
+     "ipaddress",
+     "operator",
+     "pathlib",
+     "types",
+     "typing",
+     "uuid"
+    ]
+   },
+   "type_checking": {}
+  },
+  "imports_internal": {
+   "function_level": [],
+   "module_level": [
+    "ux_valio.errors",
+    "ux_valio.validators.leaves",
+    "ux_valio.validators.length",
+    "ux_valio.validators.value"
+   ],
+   "type_checking": []
+  },
+  "is_public": false,
+  "layer": "validators",
+  "path": "ux_valio/validators/_native.py",
+  "public": [
+   "apply_native_bounds",
+   "bind_native_plan"
+  ],
+  "symbols": {
+   "_FamilyDoor": {
+    "bases": [
+     "NamedTuple"
+    ],
+    "doc": "Private bind row for one closed family. Not a product type door.",
+    "kind": "class",
+    "methods": {
+     "_run_closed": {
+      "doc": "One FFI apply. Host formats KEEP wording. Extract miss stays on host.",
+      "kind": "function",
+      "signature": "(self, owner: Any, value: Any) -> None"
+     },
+     "_select": {
+      "doc": "Pair for this row. Compile and apply stay separate.",
+      "kind": "function",
+      "signature": "(self, native: Any, payload: Any) -> _ClosedPair"
+     }
+    },
+    "public": false
+   },
+   "_bind_compiled_plan": {
+    "doc": "",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, native: Any, compile_fn: Any, bounds: dict[str, Any]) -> None"
+   },
+   "_bridge_to_ip": {
+    "doc": "Extract miss before native IP apply.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "_bridge_to_length": {
+    "doc": "Extract miss before native length apply.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "_bridge_to_type": {
+    "doc": "Extract miss before native type-door or member-set apply.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "_bridge_to_value": {
+    "doc": "Extract miss before native value/bound apply.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "_clear_native": {
+    "doc": "One host-fallback clear for the bind-time native bundle.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any) -> None"
+   },
+   "_closed_integer_enum_members": {
+    "doc": "Member ``i64`` values when the path is ``IntegerEnumValidator`` + type.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any) -> list[int] | None"
+   },
+   "_closed_ip": {
+    "doc": "Compile kwargs when the path is an IP facade + the type door.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any) -> dict[str, str] | None"
+   },
+   "_closed_length": {
+    "doc": "Compile kwargs when the specified path is annotation + LengthValidator.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, annotation: type) -> dict[str, int] | None"
+   },
+   "_closed_string_enum_members": {
+    "doc": "UTF-8 member values when the path is ``StringEnumValidator`` + type.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any) -> list[str] | None"
+   },
+   "_closed_type_door": {
+    "doc": "Empty compile kwargs when only the type door is active.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, annotation_matches: Any) -> dict[str, Any] | None"
+   },
+   "_closed_value_bounds": {
+    "doc": "Compile kwargs when the specified path is annotation + ValueValidator bounds.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, annotation: type, bound_type: type) -> dict[str, Any] | None"
+   },
+   "_extract_same": {
+    "doc": "Identity payload. StringEnum overrides this with member ``.value``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(value: Any) -> Any"
+   },
+   "_is_date_type_annotation": {
+    "doc": "Exact ``datetime.date``, or the facade coerce union ``date | str``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> bool"
+   },
+   "_is_datetime_type_annotation": {
+    "doc": "Exact ``datetime.datetime``, or the facade coerce union ``datetime | str``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> bool"
+   },
+   "_is_decimal_type_annotation": {
+    "doc": "Exact ``decimal.Decimal``, or the facade coerce union ``Decimal | str``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> bool"
+   },
+   "_is_path_type_annotation": {
+    "doc": "Exact ``pathlib.Path``, or the facade coerce union ``Path | str``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> bool"
+   },
+   "_is_stored_or_str_annotation": {
+    "doc": "Exact ``stored``, or the coerce union ``stored | str``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any, stored: type) -> bool"
+   },
+   "_is_uuid_type_annotation": {
+    "doc": "Exact ``uuid.UUID``, or the facade coerce union ``UUID | str``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(annotation: Any) -> bool"
+   },
+   "_load_native": {
+    "doc": "Import the extra once. Failed install is host apply, not a hot-path error.",
+    "kind": "function",
+    "public": false,
+    "signature": "() -> Any | None"
+   },
+   "_raise_host_boolean_type_miss": {
+    "doc": "KEEP TypeError wording. Closed Boolean type door is host-first.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "_raise_host_closed_type_miss": {
+    "doc": "KEEP TypeError wording for a closed Integer, Float, String, or Bytes plan.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any, continue_unit: Any) -> None"
+   },
+   "_raise_host_enum_type_miss": {
+    "doc": "KEEP TypeError wording for a closed IntegerEnum or StringEnum plan.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "_raise_host_length_type_miss": {
+    "doc": "KEEP TypeError wording for a closed String or Bytes plan.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "_raise_host_type_door_miss": {
+    "doc": "KEEP TypeError wording for a closed type door that only forwards.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "_raise_host_value_type_miss": {
+    "doc": "KEEP TypeError wording for a closed Integer or Float plan.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "_raise_native_bound_miss": {
+    "doc": "Map native ``FailKind`` to Door A KEEP wording. Unexpected kind is infra.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, fail: Any, value: Any) -> None"
+   },
+   "_read_ip_facade": {
+    "doc": "``(kind, parser, label)`` for a closed IP facade. Else ``None``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any) -> tuple[str, Any, str] | None"
+   },
+   "_read_owner_annotation": {
+    "doc": "Host isinstance type when the closed plan stores the annotation.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any) -> Any"
+   },
+   "_recompile_closed_owners": {
+    "doc": "Refresh sealed set-phase lists after a plan bind or clear.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any) -> None"
+   },
+   "_reject_ip_string": {
+    "doc": "KEEP IP ``ValueError`` wording. Same text as ``_reject_unless_ip``.",
+    "kind": "function",
+    "public": false,
+    "signature": "(owner: Any, value: Any, parser: Any, label: str) -> None"
+   },
+   "apply_native_bounds": {
+    "doc": "Call the bind-time family run. Unset bundle is a caller bug.",
+    "kind": "function",
+    "public": true,
+    "signature": "(owner: Any, value: Any) -> None"
+   },
+   "bind_native_plan": {
+    "doc": "Compile at bind. No native module / unclosed path → ``_native_plan is None``.",
+    "kind": "function",
+    "public": true,
+    "signature": "(owner: Any) -> None"
+   }
+  }
+ }
+}
